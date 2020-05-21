@@ -15,7 +15,6 @@ from selenium.webdriver.chrome.options import Options
 
 class OptionsManager(object):
     """管理配置文件内容的类"""
-
     def __init__(self, path: str = None):
         """初始化，读取配置文件，如没有设置临时文件夹，则设置并新建"""
         self.path = path or Path(__file__).parent / 'configs.ini'

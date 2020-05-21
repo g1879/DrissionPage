@@ -131,7 +131,7 @@ class MixPage(Null, SessionPage, DriverPage):
         return self._response
 
     @property
-    def cookies(self) -> Union[dict, list]:  # TODO:统一到一种类型
+    def cookies(self) -> Union[dict, list]:
         """返回cookies，根据模式获取"""
         if self._mode == 's':
             return super().cookies
@@ -167,7 +167,7 @@ class MixPage(Null, SessionPage, DriverPage):
         if self._mode == 'd':
             super(SessionPage, self).get(url=to_url, go_anyway=go_anyway)
             if self.session_url == self.url:
-                self._url_available = True if self._response and self._response.status_code == 200 else False
+                self._url_available = True if self._response and self._response.ok else False
             else:
                 self._url_available = self.check_page()
             return self._url_available
@@ -191,8 +191,8 @@ class MixPage(Null, SessionPage, DriverPage):
             # return super(SessionPage, self).ele(loc_or_ele, mode=mode, timeout=timeout, show_errmsg=show_errmsg)
             return DriverPage.ele(self, loc_or_ele, mode=mode, timeout=timeout, show_errmsg=show_errmsg)
 
-    def eles(self, loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg: bool = False) -> List[
-        DriverElement]:
+    def eles(self, loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg: bool = False)\
+            -> List[DriverElement]:
         """查找符合条件的所有元素"""
         if self._mode == 's':
             return super().eles(loc_or_str, show_errmsg)

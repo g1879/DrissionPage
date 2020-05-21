@@ -20,7 +20,7 @@ from .config import OptionsManager
 
 
 class DriverElement(DrissionElement):
-    '''driver模式的元素对象，包装了一个WebElement对象，并封装了常用功能'''
+    """driver模式的元素对象，包装了一个WebElement对象，并封装了常用功能"""
 
     def __init__(self, ele: WebElement, timeout: float = 10):
         super().__init__(ele)

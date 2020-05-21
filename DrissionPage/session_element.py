@@ -14,8 +14,7 @@ from .common import DrissionElement, get_loc_from_str, translate_loc_to_xpath
 
 
 class SessionElement(DrissionElement):
-    '''session模式的元素对象，包装了一个Element对象，并封装了常用功能'''
-
+    """session模式的元素对象，包装了一个Element对象，并封装了常用功能"""
     def __init__(self, ele: Element):
         super().__init__(ele)
 
@@ -25,7 +24,7 @@ class SessionElement(DrissionElement):
 
     @property
     def attrs(self) -> dict:
-        '''以字典格式返回元素所有属性的名称和值'''
+        """以字典格式返回元素所有属性的名称和值"""
         attrs = dict(self.inner_ele.attrs)
         for attr in ['class', 'rel']:
             if attr in attrs:

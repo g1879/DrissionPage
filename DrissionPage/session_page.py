@@ -92,7 +92,7 @@ class SessionPage(object):
         self._response = self._make_response(to_url, **kwargs)
         if self._response:
             self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
-        self._url_available = True if self._response and self._response.status_code == 200 else False
+        self._url_available = True if self._response and self._response.ok else False
         return self._url_available
 
     def post(self, url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) \

@@ -105,7 +105,7 @@ Drission对象用于管理driver和session对象。本库维护了一个ini文�
 - 注意chromedriver.exe和chrome.exe版本匹配。
 
 ```python
-# 两个路径已写入系统变量
+# 两个路径已写入系统变量或ini文件
 drission = Drission()  
 
 # 用传入的配置信息创建
@@ -513,7 +513,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	返回driver对象，如没有则创建，调用时会切换到driver模式。
 
-###　session
+### session
 
 ​	返回session对象，如没有则创建。
 
