@@ -1,0 +1,4 @@
+selenium~=3.141.0
+requests-html~=0.10.0
+requests~=2.23.0
+tldextract~=2.2.2
