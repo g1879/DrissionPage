@@ -151,7 +151,7 @@ global_tmp_path  # 临时文件夹路径
 Tips：
 
 - 不同项目可能须要不同版本的chrome和chromedriver，你还可保存多个ini文件，按须使用。
-- 推荐使用绿色版chrome，并手动设置路径，比较浏览器升级造成与chromedriver版本不匹配。
+- 推荐使用绿色版chrome，并手动设置路径，避免浏览器升级造成与chromedriver版本不匹配。
 - 调试项目时推荐设置debugger_address，使用手动打开的浏览器调试，省时省力。
 
 
