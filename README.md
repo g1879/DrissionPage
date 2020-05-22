@@ -18,6 +18,13 @@ DrissionPage，即driver和session的合体。
 
 除了合并两者，本库还以网页为单位封装了常用功能，简化了selenium的操作和语句，在用于网页自动化操作时，减少考虑细节，专注功能实现，使用更方便。
 
+**项目地址：**
+
+- https://github.com/g1879/DrissionPage
+- https://gitee.com/g1879/DrissionPage
+
+**联系邮箱：**g1879@qq.com
+
 # 特性
 
 ***
@@ -96,7 +103,7 @@ from DrissionPage import *
 
 ## 创建驱动器对象
 
-Drission对象用于管理driver和session对象。本库维护了一个ini文件，可直接从里面的配置信息创建驱动器。详细方法见[保存配置](# 保存配置)。也可以在初始化时传入配置信息。
+Drission对象用于管理driver和session对象。本库维护了一个ini文件，可直接从里面的配置信息创建驱动器。详细方法见[保存配置]。也可以在初始化时传入配置信息。
 
 **driver模式注意事项（只使用session模式可忽略）：**
 
@@ -115,7 +122,7 @@ driver_options.binary_location = 'D:\\chrome\\chrome.exe'  # chrome.exe路径
 driver_path = 'C:\\chrome\\chromedriver.exe'  # driver_path路径
 drission = Drission(driver_options = driver_options, driver_path = driver_path) 
 
-# 保存到ini文件
+# 把两个路径保存到ini文件
 from DrissionPage.config import OptionsManager
 options = OptionsManager()
 driver_path = 'C:\\chrome\\chromedriver.exe'  # driver_path路径
@@ -234,39 +241,80 @@ element.location  # 元素位置
 
 ## 保存配置
 
-因chrome和headers配置繁多，故设置一个ini文件专门用于保存常用配置，你可使用OptionsManager对象获取和保存配置，用DriverOptions对象修改chrome配置。
+因chrome和headers配置繁多，故设置一个ini文件专门用于保存常用配置，你可使用OptionsManager对象获取和保存配置，用DriverOptions对象修改chrome配置。你也可以保存多个ini文件，按不同项目须要调用。
+
+注：建议把常用配置文件保存到别的路径，以防本库升级时配置被重置。
 
 ### ini文件内容
 
-ini文件默认拥有三部分配置：paths、chrome_options、session_options。
+ini文件默认拥有三部分配置：paths、chrome_options、session_options，初始内容如下。
 
 ```ini
 [paths]
-chromedriver_path = 
 ; chromedriver.exe路径
-global_tmp_path = 
+chromedriver_path =
 ; 临时文件夹路径，用于保存截图、文件下载等
+global_tmp_path =
 
 [chrome_options]
-debugger_address =
 ; 已打开的浏览器地址和端口，如127.0.0.1:9222
-binary_location = 
+debugger_address =
 ; chrome.exe路径
-arguments = []
-; 配置信息，如'--headless',
-extensions = []
+binary_location =
+; 配置信息
+arguments = [
+            ; 隐藏浏览器窗口
+            '--headless',
+            ; 静音
+            '--mute-audio',
+            ; 不使用沙盒
+            '--no-sandbox',
+            ; 谷歌文档提到需要加上这个属性来规避bug
+            '--disable-gpu'
+            ]
 ; 插件
-experimental_options = {}
+extensions = []
 ; 实验性配置
+experimental_options = {
+                       'prefs': {
+                       ; 下载不弹出窗口
+                       'profile.default_content_settings.popups': 0,
+                       ; 无弹窗
+                       'profile.default_content_setting_values': {'notifications': 2},
+                       ; 禁用PDF插件
+                       'plugins.plugins_list': [{"enabled": False, "name": "Chrome PDF Viewer"}],
+                       ; 设置为开发者模式，防反爬虫（无用）
+                       'excludeSwitches': ["ignore-certificate-errors", "enable-automation"],
+                       'useAutomationExtension': False
+                       }
+                       }
 
 [session_options]
 headers = {
           "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "zh-cn",
           "Connection": "keep-alive",
-          "Accept-Charset": "GB2312,utf-8;q=0.7,*;q=0.7"
+          "Accept-Charset": "utf-8;q=0.7,*;q=0.7"
           }
+```
+
+### 使用示例
+
+```python
+from DrissionPage import *
+from DrissionPage.configs import *
+
+driver_options = DriverOptions()  # 从默认ini文件读取配置
+driver_options = DriverOptions('D:\\settings.ini')  # 从传入的ini文件读取配置
+driver_options.add_argument('--headless')  # 添加配置
+driver_options.remove_experimental_options('prefs')  # 移除配置
+driver_options.save()  # 保存配置
+driver_options.save('D:\\settings.ini')  # 保存到其它路径
+
+options_manager = OptionsManager()  # 创建OptionsManager对象
+driver_path = options_manager.get_value('paths', 'chromedriver_path')  # 读取路径信息
+
+drission = Drission(driver_options, driver_path)  # 使用配置创建Drission对象
 ```
 
 ### OptionsManager对象
@@ -277,8 +325,11 @@ OptionsManager对象用于读取、设置和保存配置。
 get_value(section, item) -> str  # 获取某个配置的值
 get_option(section) -> dict  # 以字典格式返回配置全部属性
 set_item(section, item, value)  # 设置配置属性
-save()  # 保存配置到ini文件
+save()  # 保存配置到默认ini文件
+save('D:\\settings.ini')  # 保存到其它路径
 ```
+
+**注意**：保存时若不传入路径，会保存到模块目录下的ini文件，即使读取的不是默认ini文件也一样。
 
 ### DriverOptions对象
 
@@ -289,24 +340,9 @@ remove_argument(value)  # 删除某argument值
 remove_experimental_option(key)  # 删除某experimental_option设置
 remove_all_extensions()  # 删除全部插件
 save()  # 保存配置到ini文件
+save('D:\\settings.ini')  # 保存到其它路径
 ```
 
-### 使用示例
-
-```python
-from DrissionPage import *
-from DrissionPage.configs import *
-
-driver_options = DriverOptions()  # 默认从ini文件读取配置
-driver_options.add_argument('--headless')  # 添加配置
-driver_options.remove_experimental_options('prefs')  # 移除配置
-driver_options.save()  # 保存配置
-
-options_manager = OptionsManager()  # 创建OptionsManager对象
-driver_path = options_manager.get_value('paths', 'chromedriver_path')  # 读取路径信息
-
-drission = Drission(driver_options, driver_path)  # 使用配置创建Drission对象
-```
 
 # PO模式
 
@@ -1127,9 +1163,13 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### save
 
-​	save() -> None
+​	save(path: str = None) -> None
 
 ​	保存设置到文件。
+
+​	参数说明：
+
+- path - ini文件的路径，默认保存到模块文件夹下的
 
 
 
@@ -1171,6 +1211,10 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### save()
 
-​	save() -> None
+​	save(path: str = None) -> None
 
 ​	保存设置到文件。
+
+​	参数说明：
+
+- path - ini文件的路径，默认保存到模块文件夹下的
