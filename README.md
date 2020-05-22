@@ -1,12 +1,11 @@
 # 简介
 ***
 
-DrissionPage，即driver和session的合体。  
-它是一个python库，是个Web自动化操作集成工具。  
+DrissionPage，即driver和session的合体，是个基于python的Web自动化操作集成工具。  
 它整合了selenium和requests_html，实现了它们之间的无缝切换。  
 因此可以兼顾selenium的便利性和requests的高效率。  
 它封装了页面元素常用的方法，很适合自动化操作PO模式的扩展。  
-更棒的是，它的使用方式非常人性化，代码量少，对新手友好。  
+更棒的是，它的使用方式非常简洁和人性化，代码量少，对新手友好。  
 
 # 背景
 
@@ -18,6 +17,15 @@ DrissionPage，即driver和session的合体。
 
 除了合并两者，本库还以网页为单位封装了常用功能，简化了selenium的操作和语句，在用于网页自动化操作时，减少考虑细节，专注功能实现，使用更方便。
 
+本人学习过程中踩了很多坑，因此这个库的设计理念是一切从简，尽量提供简单直接的使用方法，对新手更友好。
+
+**项目地址：**
+
+- https://github.com/g1879/DrissionPage
+- https://gitee.com/g1879/DrissionPage
+
+**联系邮箱：** g1879@qq.com
+
 # 特性
 
 ***
@@ -26,6 +34,7 @@ DrissionPage，即driver和session的合体。
 - 两种模式提供统一的操作方法，使用体验一致。  
 - 以页面为单位封装常用方法，便于PO模式扩展。  
 - 人性化的页面元素操作方法，减轻页面分析工作量和编码量。  
+- 把配置信息保存到文件，方便调用。
 - 对某些常用功能（如点击）作了优化，更符合实际使用需要。  
 
 # 简单演示
@@ -79,7 +88,7 @@ Git 命令学习 https://oschina.gitee.io/learn-git-branching/
 pip install DrissionPage
 ```
 只支持python3.6及以上版本，driver模式目前只支持chrome。  
-若要使用driver模式，须下载chrome和对应版本的chromedriver。[[chromedriver下载]](https://chromedriver.chromium.org/downloads)  
+若要使用driver模式，须下载chrome和 **对应版本** 的chromedriver。[[chromedriver下载]](https://chromedriver.chromium.org/downloads)  
 目前只在Windows环境下作了测试。
 
 # 使用方法
@@ -94,43 +103,87 @@ from DrissionPage import *
 
 
 
-## 创建驱动器对象
+## 初始化
 
-Drission对象用于管理driver和session对象。本库维护了一个ini文件，可直接从里面的配置信息创建驱动器。详细方法见[保存配置](# 保存配置)。也可以在初始化时传入配置信息。
+使用selenium前，必须配置chrome.exe和chromedriver.exe的路径，并确保它们版本匹配。
 
-**driver模式注意事项（只使用session模式可忽略）：**
+如果你只使用session模式，可跳过本节。
 
-- 须指定driver_chrome.exe和chrome.exe路径。
-- 两个路径可创建时传入，也可保存到ini文件中，还可以写入系统变量（三选一）。
-- 注意chromedriver.exe和chrome.exe版本匹配。
+配置路径有三种方法：
+
+- 将两个路径路径写入系统变量。
+- 使用时手动传入路径。
+- 将路径写入本库的ini文件（推荐）。
+
+若你选择第三种方式，请在第一次使用本库前，运行这几行代码，把这两个路径记录到ini文件中。
 
 ```python
-# 两个路径已写入系统变量或ini文件
-drission = Drission()  
+from DrissionPage.easy_set import set_paths
+driver_path = 'C:\\chrome\\chromedriver.exe'  # 你的driver_path路径，可选
+chrome_path = 'D:\\chrome\\chrome.exe'  # 你的chrome.exe路径，可选
+set_paths(driver_path, chrome_path)
+```
 
-# 用传入的配置信息创建
+该方法还会检查chrome和chromedriver版本是否匹配，显示：
+
+```
+版本匹配，可正常使用。
+
+或
+
+版本不兼容。
+请下载与当前chrome版本匹配的chromedriver。
+当前chromedriver版本：<你的chromedriver版本号>
+查看chrome版本方法：帮助 -> 关于Google Chrome
+chromedriver下载网址：https://chromedriver.chromium.org/downloads
+```
+
+检查通过后，即可正常使用driver模式。
+
+除了上述两个路径，该方法还可以设置以下路径：
+
+```python
+debugger_address  # 调试浏览器地址，如：127.0.0.1:9222
+download_path  # 下载文件路径
+global_tmp_path  # 临时文件夹路径
+```
+
+Tips：
+
+- 不同项目可能须要不同版本的chrome和chromedriver，你还可保存多个ini文件，按须使用。
+- 推荐使用绿色版chrome，并手动设置路径，比较浏览器升级造成与chromedriver版本不匹配。
+- 调试项目时推荐设置debugger_address，使用手动打开的浏览器调试，省时省力。
+
+
+
+## 创建驱动器对象Drission
+
+Drission对象用于管理driver和session对象。可直接读取ini文件配置信息创建，也可以在初始化时传入配置信息。
+
+```python
+# 由ini文件创建
+drission = Drission()  
+```
+
+若要手动传入配置：
+
+```python
+# 用传入的配置信息创建（忽略ini文件）
 from DrissionPage.config import DriverOptions
+
 driver_options = DriverOptions()  # 创建driver配置对象
 driver_options.binary_location = 'D:\\chrome\\chrome.exe'  # chrome.exe路径
+session_options = {'headers': {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
 driver_path = 'C:\\chrome\\chromedriver.exe'  # driver_path路径
-drission = Drission(driver_options = driver_options, driver_path = driver_path) 
 
-# 保存到ini文件
-from DrissionPage.config import OptionsManager
-options = OptionsManager()
-driver_path = 'C:\\chrome\\chromedriver.exe'  # driver_path路径
-chrome_path = 'D:\\chrome\\chrome.exe'  # chrome.exe路径
-options.set_item('paths', 'chromedriver_path', driver_path)  # 设置driver_path路径
-options.set_item('chrome_options', 'binary_location', chrome_path)  # 设置chrome.exe路径
-options.save()  # 保存到ini文件
-drission = Drission()  # 以后可直接创建
+drission = Drission(driver_options, session_options, driver_path)  # 传入配置
 ```
 
 
 
-## 使用页面对象
+## 使用页面对象MixPage
 
-页面对象封装了常用的网页操作，并实现driver和session模式之间的切换。
+MixPage页面对象封装了常用的网页操作，并实现driver和session模式之间的切换。
 
 ```python
 page = MixPage(drission)  # 默认driver模式
@@ -153,7 +206,7 @@ page.scrool_to_see(element)  # 滚动直到某元素可见
 # 详见APIs...
 ```
 
-注：调用只属于driver模式的方法，会自动切换到driver模式。
+Tips：调用只属于driver模式的方法，会自动切换到driver模式。
 
 
 
@@ -234,39 +287,80 @@ element.location  # 元素位置
 
 ## 保存配置
 
-因chrome和headers配置繁多，故设置一个ini文件专门用于保存常用配置，你可使用OptionsManager对象获取和保存配置，用DriverOptions对象修改chrome配置。
+因chrome和headers配置繁多，故设置一个ini文件专门用于保存常用配置，你可使用OptionsManager对象获取和保存配置，用DriverOptions对象修改chrome配置。你也可以保存多个ini文件，按不同项目须要调用。
+
+Tips：建议把常用配置文件保存到别的路径，以防本库升级时配置被重置。
 
 ### ini文件内容
 
-ini文件默认拥有三部分配置：paths、chrome_options、session_options。
+ini文件默认拥有三部分配置：paths、chrome_options、session_options，初始内容如下。
 
 ```ini
 [paths]
-chromedriver_path = 
 ; chromedriver.exe路径
-global_tmp_path = 
+chromedriver_path =
 ; 临时文件夹路径，用于保存截图、文件下载等
+global_tmp_path =
 
 [chrome_options]
-debugger_address =
 ; 已打开的浏览器地址和端口，如127.0.0.1:9222
-binary_location = 
+debugger_address =
 ; chrome.exe路径
-arguments = []
-; 配置信息，如'--headless',
-extensions = []
+binary_location =
+; 配置信息
+arguments = [
+            ; 隐藏浏览器窗口
+            '--headless',
+            ; 静音
+            '--mute-audio',
+            ; 不使用沙盒
+            '--no-sandbox',
+            ; 谷歌文档提到需要加上这个属性来规避bug
+            '--disable-gpu'
+            ]
 ; 插件
-experimental_options = {}
+extensions = []
 ; 实验性配置
+experimental_options = {
+                       'prefs': {
+                       ; 下载不弹出窗口
+                       'profile.default_content_settings.popups': 0,
+                       ; 无弹窗
+                       'profile.default_content_setting_values': {'notifications': 2},
+                       ; 禁用PDF插件
+                       'plugins.plugins_list': [{"enabled": False, "name": "Chrome PDF Viewer"}],
+                       ; 设置为开发者模式，防反爬虫（无用）
+                       'excludeSwitches': ["ignore-certificate-errors", "enable-automation"],
+                       'useAutomationExtension': False
+                       }
+                       }
 
 [session_options]
 headers = {
           "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "zh-cn",
           "Connection": "keep-alive",
-          "Accept-Charset": "GB2312,utf-8;q=0.7,*;q=0.7"
+          "Accept-Charset": "utf-8;q=0.7,*;q=0.7"
           }
+```
+
+### 使用示例
+
+```python
+from DrissionPage import *
+from DrissionPage.configs import *
+
+driver_options = DriverOptions()  # 从默认ini文件读取配置
+driver_options = DriverOptions('D:\\settings.ini')  # 从传入的ini文件读取配置
+driver_options.add_argument('--headless')  # 添加配置
+driver_options.remove_experimental_options('prefs')  # 移除配置
+driver_options.save()  # 保存配置
+driver_options.save('D:\\settings.ini')  # 保存到其它路径
+
+options_manager = OptionsManager()  # 创建OptionsManager对象
+driver_path = options_manager.get_value('paths', 'chromedriver_path')  # 读取路径信息
+
+drission = Drission(driver_options, driver_path)  # 使用配置创建Drission对象
 ```
 
 ### OptionsManager对象
@@ -277,8 +371,11 @@ OptionsManager对象用于读取、设置和保存配置。
 get_value(section, item) -> str  # 获取某个配置的值
 get_option(section) -> dict  # 以字典格式返回配置全部属性
 set_item(section, item, value)  # 设置配置属性
-save()  # 保存配置到ini文件
+save()  # 保存配置到默认ini文件
+save('D:\\settings.ini')  # 保存到其它路径
 ```
+
+**注意**：保存时若不传入路径，会保存到模块目录下的ini文件，即使读取的不是默认ini文件也一样。
 
 ### DriverOptions对象
 
@@ -289,24 +386,9 @@ remove_argument(value)  # 删除某argument值
 remove_experimental_option(key)  # 删除某experimental_option设置
 remove_all_extensions()  # 删除全部插件
 save()  # 保存配置到ini文件
+save('D:\\settings.ini')  # 保存到其它路径
 ```
 
-### 使用示例
-
-```python
-from DrissionPage import *
-from DrissionPage.configs import *
-
-driver_options = DriverOptions()  # 默认从ini文件读取配置
-driver_options.add_argument('--headless')  # 添加配置
-driver_options.remove_experimental_options('prefs')  # 移除配置
-driver_options.save()  # 保存配置
-
-options_manager = OptionsManager()  # 创建OptionsManager对象
-driver_path = options_manager.get_value('paths', 'chromedriver_path')  # 读取路径信息
-
-drission = Drission(driver_options, driver_path)  # 使用配置创建Drission对象
-```
 
 # PO模式
 
@@ -1127,9 +1209,13 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### save
 
-​	save() -> None
+​	save(path: str = None) -> None
 
 ​	保存设置到文件。
+
+​	参数说明：
+
+- path - ini文件的路径，默认保存到模块文件夹下的
 
 
 
@@ -1171,6 +1257,39 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### save()
 
-​	save() -> None
+​	save(path: str = None) -> None
 
 ​	保存设置到文件。
+
+​	参数说明：
+
+- path - ini文件的路径，默认保存到模块文件夹下的
+
+
+
+## 有用的方法
+
+### set_paths
+
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None) -> None
+
+​	便捷的设置路径方法，把传入的路径保存到默认ini文件，并检查chrome和chromedriver版本是否匹配。
+
+​	参数说明：
+
+- driver_path - chromedriver.exe路径
+- chrome_path - chrome.exe路径
+- debugger_address - 调试浏览器地址，例：127.0.0.1:9222
+- download_path - 下载文件路径
+- global_tmp_path - 临时文件夹路径
+
+### check_driver_version
+
+​	check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool
+
+​	检查chrome与chromedriver版本是否匹配。
+
+​	参数说明：
+
+- driver_path - chromedriver.exe路径
+- chrome_path - chrome.exe路径

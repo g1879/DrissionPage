@@ -15,8 +15,11 @@ from selenium.webdriver.chrome.options import Options
 
 class OptionsManager(object):
     """管理配置文件内容的类"""
+
     def __init__(self, path: str = None):
-        """初始化，读取配置文件，如没有设置临时文件夹，则设置并新建"""
+        """初始化，读取配置文件，如没有设置临时文件夹，则设置并新建
+        :param path: ini文件的路径，默认读取模块文件夹下的
+        """
         self.path = path or Path(__file__).parent / 'configs.ini'
         self._conf = ConfigParser()
         self._conf.read(self.path, encoding='utf-8')
@@ -46,13 +49,17 @@ class OptionsManager(object):
                 option[j[0]] = self._conf.get(section, j[0])
         return option
 
-    def set_item(self, section: str, item: str, value: str):
+    def set_item(self, section: str, item: str, value: str) -> None:
         """设置配置值"""
         self._conf.set(section, item, str(value))
 
-    def save(self):
-        """保存配置文件"""
-        self._conf.write(open(self.path, 'w'))
+    def save(self, path: str = None) -> None:
+        """保存配置文件
+        :param path: ini文件的路径，默认保存到模块文件夹下的
+        :return: None
+        """
+        path = path or Path(__file__).parent / 'configs.ini'
+        self._conf.write(open(path, 'w'))
 
 
 class DriverOptions(Options):
@@ -68,25 +75,28 @@ class DriverOptions(Options):
                 'experimental_options'] if 'experimental_options' in options_dict else {}
             self._debugger_address = options_dict['debugger_address'] if 'debugger_address' in options_dict else None
 
-    def save(self):
-        """保存设置到文件"""
+    def save(self, path: str = None) -> None:
+        """保存设置到文件
+        :param path: ini文件的路径，默认保存到模块文件夹下的
+        :return: None
+        """
         om = OptionsManager()
         options = _chrome_options_to_dict(self)
         for i in options:
             om.set_item('chrome_options', i, options[i])
-        om.save()
+        om.save(path)
 
-    def remove_argument(self, value: str):
+    def remove_argument(self, value: str) -> None:
         """移除一个设置"""
         if value in self._arguments:
             self._arguments.remove(value)
 
-    def remove_experimental_option(self, key: str):
+    def remove_experimental_option(self, key: str) -> None:
         """移除一个实验设置，传入key值删除"""
         if key in self._experimental_options:
             self._experimental_options.pop(key)
 
-    def remove_all_extensions(self):
+    def remove_all_extensions(self) -> None:
         """移除所有插件
         因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设"""
         self._extensions = []
