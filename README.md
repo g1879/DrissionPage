@@ -86,7 +86,7 @@ Git 命令学习 https://oschina.gitee.io/learn-git-branching/
 pip install DrissionPage
 ```
 只支持python3.6及以上版本，driver模式目前只支持chrome。  
-若要使用driver模式，须下载chrome和对应版本的chromedriver。[[chromedriver下载]](https://chromedriver.chromium.org/downloads)  
+若要使用driver模式，须下载chrome和 **对应版本** 的chromedriver。[[chromedriver下载]](https://chromedriver.chromium.org/downloads)  
 目前只在Windows环境下作了测试。
 
 # 使用方法
@@ -101,41 +101,59 @@ from DrissionPage import *
 
 
 
-## 创建驱动器对象
+## 初始化
 
-Drission对象用于管理driver和session对象。本库维护了一个ini文件，可直接从里面的配置信息创建驱动器。详细方法见[保存配置]。也可以在初始化时传入配置信息。
+使用selenium前，必须告诉它chrome.exe和chromedriver.exe的路径。
 
-**driver模式注意事项（只使用session模式可忽略）：**
+如果你已经很清楚selenium配置，或只使用session模式，可跳过这段。
 
-- 须指定driver_chrome.exe和chrome.exe路径。
-- 两个路径可创建时传入，也可保存到ini文件中，还可以写入系统变量（三选一）。
-- 注意chromedriver.exe和chrome.exe版本匹配。
+配置路径有三种方法：
+
+- 将两个路径路径写入系统变量。
+- 使用时手动传入路径。
+- 将路径写入本库的ini文件，以下详细说明。
+
+本库维护了一个ini文件，在第一次使用本库前，运行以下代码，会把这两个路径记录到ini文件中，以后再使用就不用重复传入。
 
 ```python
-# 两个路径已写入系统变量或ini文件
+from DrissionPage.config import OptionsManager  # 导入配置管理包
+
+options = OptionsManager()  # 创建配置管理对象
+driver_path = 'C:\\chrome\\chromedriver.exe'  # 你的driver_path路径
+chrome_path = 'D:\\chrome\\chrome.exe'  # 你的chrome.exe路径
+
+options.set_item('paths', 'chromedriver_path', driver_path)  # 设置driver_path路径
+options.set_item('chrome_options', 'binary_location', chrome_path)  # 设置chrome.exe路径
+
+options.save()  # 保存到默认ini文件
+```
+
+注：不同项目可能须要不同版本的chrome和chromedriver，你还可保存多个ini文件，按须使用。
+
+
+
+## 创建驱动器对象Drission
+
+Drission对象用于管理driver和session对象。可直接读取ini文件配置信息创建，也可以在初始化时传入配置信息。
+
+```python
+# 读取ini文件创建
 drission = Drission()  
 
 # 用传入的配置信息创建
 from DrissionPage.config import DriverOptions
+
 driver_options = DriverOptions()  # 创建driver配置对象
 driver_options.binary_location = 'D:\\chrome\\chrome.exe'  # chrome.exe路径
+session_options = {'headers': {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
 driver_path = 'C:\\chrome\\chromedriver.exe'  # driver_path路径
-drission = Drission(driver_options = driver_options, driver_path = driver_path) 
 
-# 把两个路径保存到ini文件
-from DrissionPage.config import OptionsManager
-options = OptionsManager()
-driver_path = 'C:\\chrome\\chromedriver.exe'  # driver_path路径
-chrome_path = 'D:\\chrome\\chrome.exe'  # chrome.exe路径
-options.set_item('paths', 'chromedriver_path', driver_path)  # 设置driver_path路径
-options.set_item('chrome_options', 'binary_location', chrome_path)  # 设置chrome.exe路径
-options.save()  # 保存到ini文件
-drission = Drission()  # 以后可直接创建
+drission = Drission(driver_options, session_options, driver_path) 
 ```
 
 
 
-## 使用页面对象
+## 使用页面对象MixPage
 
 页面对象封装了常用的网页操作，并实现driver和session模式之间的切换。
 
