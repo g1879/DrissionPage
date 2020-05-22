@@ -23,7 +23,7 @@ DrissionPage，即driver和session的合体。
 - https://github.com/g1879/DrissionPage
 - https://gitee.com/g1879/DrissionPage
 
-**联系邮箱：**g1879@qq.com
+**联系邮箱：** g1879@qq.com
 
 # 特性
 

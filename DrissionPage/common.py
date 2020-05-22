@@ -125,7 +125,8 @@ def avoid_duplicate_name(folder_path: str, file_name: str) -> str:
     :param file_name: 要检查的文件名
     :return: 可用的文件名
     """
-    while (file_Path := Path(folder_path).joinpath(file_name)).exists():
+    file_Path = Path(folder_path).joinpath(file_name)
+    while file_Path.exists():
         ext_name = file_Path.suffix
         base_name = file_Path.stem
         num = base_name.split(' ')[-1]
@@ -134,4 +135,5 @@ def avoid_duplicate_name(folder_path: str, file_name: str) -> str:
             file_name = f'{base_name.replace(f"({num})", "", -1)}({num + 1}){ext_name}'
         else:
             file_name = f'{base_name} (1){ext_name}'
+        file_Path = Path(folder_path).joinpath(file_name)
     return file_name
