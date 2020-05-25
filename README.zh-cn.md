@@ -111,7 +111,7 @@ from DrissionPage import *
 
 配置路径有三种方法：
 
-- 将两个路径路径写入系统变量。
+- 将两个路径写入系统变量。
 - 使用时手动传入路径。
 - 将路径写入本库的ini文件（推荐）。
 
@@ -119,7 +119,7 @@ from DrissionPage import *
 
 ```python
 from DrissionPage.easy_set import set_paths
-driver_path = 'C:\\chrome\\chromedriver.exe'  # 你的driver_path路径，可选
+driver_path = 'C:\\chrome\\chromedriver.exe'  # 你的chromedriver.exe路径，可选
 chrome_path = 'D:\\chrome\\chrome.exe'  # 你的chrome.exe路径，可选
 set_paths(driver_path, chrome_path)
 ```
@@ -490,9 +490,11 @@ print(page.ele('@id:su').text)  # 输出：百度一下
 
 ## Drission类
 
-class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None)
+​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None)
 
-用于管理driver和session对象。参数说明：
+​	用于管理driver和session对象。
+
+​	参数说明：
 
 - driver_options - chrome配置参数，可接收Options对象或字典
 - session_options - session配置参数，接收字典
