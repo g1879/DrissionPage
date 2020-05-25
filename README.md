@@ -68,7 +68,7 @@ first_col = foot.ele('css:>div')  # Find first div element in the lower level of
 lnk = first_col.ele('text:Git Branching')  # Find elements by text content
 text = lnk.text  # Get element text
 href = lnk.attr('href')  # Get element attribute value
- 
+
 print(first_col)
 print(text, href)
 ```
@@ -82,7 +82,7 @@ Title after login: Dashboard - Gitee
 Learn Git Branching https://oschina.gitee.io/learn-git-branching/
 ```
 
-# Installation
+# Install
 
 ***
 
