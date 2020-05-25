@@ -157,6 +157,23 @@ class MixPage(Null, SessionPage, DriverPage):
         self.change_mode('s', go=False)
         return super().post(url, params, data, go_anyway, **kwargs)
 
+    # ----------------重写DriverPage的函数-----------------------
+
+    def chrome_downloading(self, download_path: str = None) -> list:
+        """检查浏览器下载情况，返回正在下载的文件列表
+        :param download_path: 下载文件夹路径，默认读取配置信息
+        :return: 正在下载的文件列表
+        """
+        try:
+            path = download_path or self._drission.driver_options['experimental_options']['prefs'][
+                'download.default_directory']
+            if not path:
+                raise KeyError
+        except KeyError:
+            raise KeyError('Download path not found.')
+
+        return super().chrome_downloading(path)
+
     # ----------------以下为共用函数-----------------------
 
     def get(self, url: str, params: dict = None, go_anyway=False, **kwargs) -> Union[bool, None]:
@@ -191,7 +208,7 @@ class MixPage(Null, SessionPage, DriverPage):
             # return super(SessionPage, self).ele(loc_or_ele, mode=mode, timeout=timeout, show_errmsg=show_errmsg)
             return DriverPage.ele(self, loc_or_ele, mode=mode, timeout=timeout, show_errmsg=show_errmsg)
 
-    def eles(self, loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg: bool = False)\
+    def eles(self, loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg: bool = False) \
             -> List[DriverElement]:
         """查找符合条件的所有元素"""
         if self._mode == 's':
