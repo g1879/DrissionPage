@@ -7,7 +7,7 @@
 """
 from configparser import ConfigParser, NoSectionError, NoOptionError
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -140,12 +140,18 @@ def _dict_to_chrome_options(options: dict) -> Options:
     return chrome_options
 
 
-def _chrome_options_to_dict(options: Options) -> dict:
+def _chrome_options_to_dict(options: Union[dict, Options, None]) -> Union[dict, None]:
+    if options is None or isinstance(options, dict):
+        return options
+
     re_dict = dict()
-    re_dict['binary_location'] = options.binary_location
-    re_dict['debugger_address'] = options.debugger_address
-    re_dict['arguments'] = options.arguments
-    re_dict['extensions'] = options.extensions
-    re_dict['experimental_options'] = options.experimental_options
-    # re_dict['capabilities'] = options.capabilities
+    if options.debugger_address:
+        re_dict['debugger_address'] = options.debugger_address
+    else:
+        re_dict['binary_location'] = options.binary_location
+        re_dict['debugger_address'] = options.debugger_address
+        re_dict['arguments'] = options.arguments
+        re_dict['extensions'] = options.extensions
+        re_dict['experimental_options'] = options.experimental_options
+        # re_dict['capabilities'] = options.capabilities
     return re_dict
