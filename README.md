@@ -1,4 +1,10 @@
+# 中文README
+***
+
+[点击这里](https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md)
+
 # Introduction
+
 ***
 
 DrissionPage, the combination of driver and session, is a Python-based Web automation operation integration tool.  
