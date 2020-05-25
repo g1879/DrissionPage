@@ -210,13 +210,6 @@ class DriverPage(object):
             new_y = y or self.driver.get_window_size()['height']
             self.driver.set_window_size(new_x, new_y)
 
-    def is_downloading(self, download_path: str = None) -> bool:
-        if download_path:
-            p = download_path
-        else:
-            try:
-                p = OptionsManager().get_value('chrome_options', 'experimental_options')['prefs'][
-                    'download.default_directory']
-            except IOError('No download path found.'):
-                raise
-        return not glob(f'{p}\\*.crdownload')
+    def chrome_downloading(self, download_path: str) -> list:
+        """检查下载情况"""
+        return glob(f'{download_path}\\*.crdownload')
