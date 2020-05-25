@@ -15,7 +15,7 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 
-from .config import _dict_to_chrome_options, OptionsManager
+from .config import _dict_to_chrome_options, OptionsManager, _chrome_options_to_dict
 
 
 class Drission(object):
@@ -33,7 +33,7 @@ class Drission(object):
         self._driver = None
         om = OptionsManager(ini_path)
         self._session_options = session_options or om.get_option('session_options')
-        self._driver_options = driver_options or om.get_option('chrome_options')
+        self._driver_options = _chrome_options_to_dict(driver_options) or om.get_option('chrome_options')
 
         if driver_path:
             self._driver_path = driver_path
@@ -59,14 +59,7 @@ class Drission(object):
     def driver(self):
         """获取WebDriver对象，按传入配置信息初始化"""
         if self._driver is None:
-            if isinstance(self._driver_options, Options):
-                options = self._driver_options
-                if options.debugger_address:
-                    # 因同时设置调试浏览器和其他配置会导致异常，故新建一个对象
-                    debugger_address = options.debugger_address
-                    options = webdriver.ChromeOptions()
-                    options.debugger_address = debugger_address
-            elif isinstance(self._driver_options, dict):
+            if isinstance(self._driver_options, dict):
                 options = _dict_to_chrome_options(self._driver_options)
             else:
                 raise KeyError('Driver options invalid')
@@ -83,6 +76,10 @@ class Drission(object):
             })
 
         return self._driver
+
+    @property
+    def driver_options(self) -> dict:
+        return self._driver_options
 
     @property
     def session_options(self) -> dict:
