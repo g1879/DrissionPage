@@ -513,6 +513,10 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ​	获取WebDriver对象，调用时自动创建，按传入配置或ini文件配置初始化。
 
+### driver_options
+
+​	以字典格式返回或设置driver配置。
+
 ### session_options
 
 ​	以字典格式返回或设置session配置。
@@ -859,15 +863,15 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 - path - 截图保存路径，默认为ini文件中指定的临时文件夹
 - filename - 截图文件名，默认为页面title为文件名
 
-### is_downloading
+### chrome_downloading
 
-​	is_downloading(download_path: str = None) -> bool
+​	chrome_downloading(download_path: str = None) -> list
 
-​	检测浏览器是否下载完毕。
+​	查看浏览器下载情况。
 
 ​	参数说明：
 
-- download_path - 下载路径，默认为ini文件中定义的路径
+- download_path - 下载路径，默认为chrome options配置中的下载路径
 
 ### close_driver
 

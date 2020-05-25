@@ -1,11 +1,8 @@
 # 中文README
-
 ***
-
 [点击这里](https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md)
 
 # Introduction
-
 ***
 
 DrissionPage, the combination of driver and session, is a Python-based Web automation operation integration tool.  
@@ -517,9 +514,13 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ​	Obtain the WebDriver object, which is automatically created when it is called and initialized according to the incoming configuration or ini file configuration.
 
+### driver_options
+
+​	Return driver configuration in dictionary format.
+
 ### session_options
 
-​	Return or set session configuration in dictionary format.
+​	Return session configuration in dictionary format.
 
 ### cookies_to_session
 
@@ -863,15 +864,15 @@ Parameter Description:
 - path - Screenshot save path, default is the temporary folder specified in the ini file
 - filename - Screenshot file name, default is page title as file name
 
-### is_downloading
+### chrome_downloading
 
-​	is_downloading(download_path: str = None) -> bool
+​	chrome_downloading(download_path: str = None) -> list
 
 ​	Check whether the browser is downloaded.
 
 ​	Parameter Description:
 
-- download_path - Download path, the default is the path defined in the ini file
+- download_path - Download path, the default is the download path in chrome options configuration
 
 ### close_driver
 
