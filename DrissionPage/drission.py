@@ -19,19 +19,19 @@ from .config import _dict_to_chrome_options, OptionsManager
 
 
 class Drission(object):
-    """Drission类整合了WebDriver对象和HTLSession对象，可按要求创建、关闭及同步cookies
-    """
+    """Drission类整合了WebDriver对象和HTLSession对象，可按要求创建、关闭及同步cookies"""
 
     def __init__(self, driver_options: Union[dict, Options] = None, session_options: dict = None,
-                 driver_path: str = None):
+                 driver_path: str = None, ini_path: str = None):
         """初始化配置信息，但不生成session和driver实例
         :param driver_options: chrome设置，Options类或设置字典
         :param session_options: session设置
         :param driver_path: chromedriver路径，如为空，则为'chromedriver'
+        :param ini_path: ini文件路径'
         """
         self._session = None
         self._driver = None
-        om = OptionsManager()
+        om = OptionsManager(ini_path)
         self._session_options = session_options or om.get_option('session_options')
         self._driver_options = driver_options or om.get_option('chrome_options')
 

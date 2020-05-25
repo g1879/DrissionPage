@@ -161,8 +161,11 @@ Tips：
 Drission对象用于管理driver和session对象。可直接读取ini文件配置信息创建，也可以在初始化时传入配置信息。
 
 ```python
-# 由ini文件创建
+# 由默认ini文件创建
 drission = Drission()  
+
+# 由其它ini文件创建
+drission = Drission(ini_path = 'D:\\settings.ini')  
 ```
 
 若要手动传入配置：
@@ -359,8 +362,9 @@ driver_options.save('D:\\settings.ini')  # 保存到其它路径
 
 options_manager = OptionsManager()  # 创建OptionsManager对象
 driver_path = options_manager.get_value('paths', 'chromedriver_path')  # 读取路径信息
-
 drission = Drission(driver_options, driver_path)  # 使用配置创建Drission对象
+
+drission = Drission(ini_path = 'D:\\settings.ini')  # 使用其它ini文件创建对象
 ```
 
 ### OptionsManager对象
@@ -490,15 +494,16 @@ print(page.ele('@id:su').text)  # 输出：百度一下
 
 ## Drission类
 
-​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None)
+class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path: str = None)
 
-​	用于管理driver和session对象。
+用于管理driver和session对象。
 
 ​	参数说明：
 
 - driver_options - chrome配置参数，可接收Options对象或字典
 - session_options - session配置参数，接收字典
 - driver_path - chromedriver.exe路径，如不设置，须在系统设置系统变量
+- ini_path - ini文件路径，默认为DrissionPage文件夹下的ini文件
 
 ### session
 

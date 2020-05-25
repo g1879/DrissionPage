@@ -1,4 +1,5 @@
 # 中文README
+
 ***
 
 [点击这里](https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md)
@@ -165,8 +166,11 @@ Tips：
 Drission objects are used to manage driver and session objects. It can be created by directly reading the configuration information of the ini file, or it can be passed in during initialization.
 
 ```python
-# Created by ini file
+# Created by default ini file
 drission = Drission()  
+
+# Created by other ini files
+drission = Drission(ini_path = 'D:\\settings.ini') 
 ```
 
 To manually pass in the configuration:
@@ -363,8 +367,9 @@ driver_options.save('D:\\settings.ini')  # Save to other path
 
 options_manager = OptionsManager()  # Create OptionsManager object
 driver_path = options_manager.get_value('paths', 'chromedriver_path')  # Read path information
-
 drission = Drission(driver_options, driver_path)  # Create a Drission object using configuration
+
+drission = Drission(ini_path = 'D:\\settings.ini')  # Use other ini files to create objects
 ```
 
 ### OptionsManager object
@@ -493,7 +498,7 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ## Drission class
 
-​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None)
+​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path = None)
 
 ​	Used to manage driver and session objects.
 
@@ -502,6 +507,7 @@ print(page.ele('@id:su').text)  # Output:百度一下
 - driver_options - Chrome configuration parameters, can receive Options object or dictionary
 - session_options - session configuration parameters, receive dictionary
 - driver_path - chromedriver.exe path, if not set, system variables must be set in the system
+- ini_path - ini file path, the default is the ini file in the DrissionPage folder
 
 ### session
 
