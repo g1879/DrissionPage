@@ -20,11 +20,10 @@ from .driver_element import DriverElement, execute_driver_find
 class DriverPage(object):
     """DriverPage封装了页面操作的常用功能，使用selenium来获取、解析、操作网页"""
 
-    def __init__(self, driver: WebDriver, timeout: float = 10):  # , locs=None
+    def __init__(self, driver: WebDriver, timeout: float = 10):
         """初始化函数，接收一个WebDriver对象，用来操作网页"""
         self._driver = driver
         self.timeout = timeout
-        # self._locs = locs
         self._url = None
         self._url_available = None
 
@@ -225,14 +224,11 @@ class DriverPage(object):
             alertObject = self.driver.switch_to.alert
         except NoAlertPresentException:
             return None
-
         if text:
             alertObject.send_keys(text)
-
         text = alertObject.text
         if mode == 'cancel':
             alertObject.dismiss()
         elif mode == 'ok':
             alertObject.accept()
-
         return text
