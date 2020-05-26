@@ -8,6 +8,7 @@ from glob import glob
 from typing import Union, List, Any
 from urllib import parse
 
+from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
@@ -213,3 +214,25 @@ class DriverPage(object):
     def chrome_downloading(self, download_path: str) -> list:
         """检查下载情况"""
         return glob(f'{download_path}\\*.crdownload')
+
+    def process_alert(self, mode: str = 'ok', text: str = None) -> Union[str, None]:
+        """处理提示框
+        :param mode: 'ok' 或 'cancel'，若输入其它值，不会按按钮但依然返回文本值
+        :param text: 处理prompt提示框时可输入文本
+        :return:
+        """
+        try:
+            alertObject = self.driver.switch_to.alert
+        except NoAlertPresentException:
+            return None
+
+        if text:
+            alertObject.send_keys(text)
+
+        text = alertObject.text
+        if mode == 'cancel':
+            alertObject.dismiss()
+        elif mode == 'ok':
+            alertObject.accept()
+
+        return text

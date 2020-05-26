@@ -864,6 +864,17 @@ Parameter Description:
 - path - Screenshot save path, default is the temporary folder specified in the ini file
 - filename - Screenshot file name, default is page title as file name
 
+### process_alert
+
+​	process_alert(mode: str = 'ok', text: str = None) -> Union[str, None]
+
+​	Processing alert, confirm and prompt box.
+
+​	Parameter Description:
+
+- mode - 'ok' or 'cancel', if enter another value, the button will not be pressed but the text value will still be returned
+- text - Text can be entered when processing prompt box
+
 ### chrome_downloading
 
 ​	chrome_downloading(download_path: str = None) -> list
@@ -1082,6 +1093,16 @@ Parameter Description:
 
 - attr - parameter name
 - value - Parameter value
+
+### drag_to
+
+​	drag_to( ele_or_loc: Union[tuple, WebElement, DrissionElement]) -> bool
+
+​	Drag the current element, the target is another element or coordinate tuple, and return whether the drag is successful.
+
+​	Parameter Description:
+
+- ele_or_loc - Another element or relative current position
 
 
 

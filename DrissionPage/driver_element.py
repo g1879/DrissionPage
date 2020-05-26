@@ -25,6 +25,7 @@ class DriverElement(DrissionElement):
     def __init__(self, ele: WebElement, timeout: float = 10):
         super().__init__(ele)
         self.timeout = timeout
+        self._driver = ele.parent
 
     def __repr__(self):
         attrs = [f"{attr}='{self.attrs[attr]}'" for attr in self.attrs]
@@ -120,7 +121,7 @@ class DriverElement(DrissionElement):
                 try:
                     self.inner_ele.click()
                     return True
-                except Exception as e:
+                except:
                     # print(e)
                     sleep(0.2)
         # 若点击失败，用js方式点击
@@ -217,6 +218,29 @@ class DriverElement(DrissionElement):
             return True
         except:
             raise
+
+    def drag_to(self, ele_or_loc: Union[tuple, WebElement, DrissionElement]) -> bool:
+        """拖拽当前元素，目标为另一个元素或坐标元组
+        :param ele_or_loc: 另一个元素或相对当前位置
+        :return: 是否拖拽成功
+        """
+        from selenium.webdriver import ActionChains
+        loc1 = self.location
+        actions = ActionChains(self._driver)
+
+        if isinstance(ele_or_loc, DriverElement):
+            actions.drag_and_drop(self.inner_ele, ele_or_loc.inner_ele)
+        elif isinstance(ele_or_loc, WebElement):
+            actions.drag_and_drop(self.inner_ele, ele_or_loc)
+        elif isinstance(ele_or_loc, tuple):
+            actions.drag_and_drop_by_offset(self.inner_ele, ele_or_loc[0], ele_or_loc[1])
+        else:
+            raise KeyError('Need WebElement object or coordinate information.')
+        actions.perform()
+        loc2 = self.location
+        if loc1 == loc2:
+            return False
+        return True
 
 
 def execute_driver_find(page_or_ele: Union[WebElement, WebDriver], loc: tuple, mode: str = 'single',

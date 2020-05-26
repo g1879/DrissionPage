@@ -873,6 +873,17 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 - download_path - 下载路径，默认为chrome options配置中的下载路径
 
+### process_alert
+
+​	process_alert(mode: str = 'ok', text: str = None) -> Union[str, None]
+
+​	处理提示框。
+
+​	参数说明：
+
+- mode - 'ok' 或 'cancel'，若输入其它值，不会按按钮但依然返回文本值
+- text - 处理prompt提示框时可输入文本
+
 ### close_driver
 
 ​	close_driver() -> None
@@ -1081,6 +1092,16 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 - attr - 参数名
 - value - 参数值
+
+### drag_to
+
+​	drag_to( ele_or_loc: Union[tuple, WebElement, DrissionElement]) -> bool
+
+​	拖拽当前元素，目标为另一个元素或坐标元组，返回是否拖拽成功。
+
+​	参数说明：
+
+- ele_or_loc - 另一个元素或相对当前位置
 
 
 
