@@ -10,6 +10,7 @@ from random import random
 from time import time
 from typing import Union, List
 from urllib import parse
+from urllib.parse import urlparse
 
 from requests_html import HTMLSession, HTMLResponse
 
@@ -180,14 +181,18 @@ class SessionPage(object):
         if mode not in ['get', 'post']:
             raise ValueError("mode must be 'get' or 'post'.")
 
-        # 设置referer值
+        # 设置referer和host值
         if self._url:
             if 'headers' in set(x.lower() for x in kwargs):
-                if 'referer' not in set(x.lower() for x in kwargs['headers']):
+                keys = set(x.lower() for x in kwargs['headers'])
+                if 'referer' not in keys:
                     kwargs['headers']['Referer'] = self._url
+                if 'host' not in keys:
+                    kwargs['headers']['Host'] = urlparse(self._url).hostname
             else:
                 kwargs['headers'] = self.session.headers
                 kwargs['headers']['Referer'] = self._url
+                kwargs['headers']['Host'] = urlparse(self._url).hostname
 
         try:
             r = None
