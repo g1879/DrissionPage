@@ -59,7 +59,7 @@ class OptionsManager(object):
         :return: None
         """
         path = path or Path(__file__).parent / 'configs.ini'
-        self._conf.write(open(path, 'w'))
+        self._conf.write(open(path, 'w', encoding='utf-8'))
 
 
 class DriverOptions(Options):
