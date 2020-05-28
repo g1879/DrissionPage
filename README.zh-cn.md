@@ -723,7 +723,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### download
 
-​	download(file_url: str, goal_path: str = None, rename: str = None, **kwargs) -> tuple
+​	download(file_url: str, goal_path: str = None, rename: str = None, show_msg: bool = False, **kwargs) -> tuple
 
 ​	下载一个文件，返回是否成功和下载信息字符串。改方法会自动避免和目标路径现有文件重名。
 
@@ -732,6 +732,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 - file_url - 文件URL
 - goal_path - 存放路径，默认为ini文件中指定的临时文件夹
 - rename - 重命名文件名，默认不重命名
+- show_msg - 是否显示下载信息
 - kwargs - 用于requests的连接参数
 
 

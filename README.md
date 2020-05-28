@@ -725,7 +725,7 @@ Parameter Description:
 
 ### download
 
-​	download(file_url: str, goal_path: str = None, rename: str = None, **kwargs) -> tuple
+​	download(file_url: str, goal_path: str = None, rename: str = None, show_msg: bool = False, **kwargs) -> tuple
 
 ​	Download a file, return success and download information string. Changing the method will automatically avoid renaming the existing file in the target path.
 
@@ -734,6 +734,7 @@ Parameter Description:
 - file_url - File URL
 - goal_path - Storage path, the default is the temporary folder specified in the ini file
 - rename - Rename the file name, not renamed by default
+- show_msg - Show download massage or not.
 - kwargs - Connection parameters for requests
 
 
