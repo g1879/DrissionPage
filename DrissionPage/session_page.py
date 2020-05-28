@@ -200,11 +200,11 @@ class SessionPage(object):
                 if 'referer' not in keys:
                     kwargs['headers']['Referer'] = self._url
                 if 'host' not in keys:
-                    kwargs['headers']['Host'] = urlparse(self._url).hostname
+                    kwargs['headers']['Host'] = urlparse(url).hostname
             else:
                 kwargs['headers'] = self.session.headers
                 kwargs['headers']['Referer'] = self._url
-                kwargs['headers']['Host'] = urlparse(self._url).hostname
+                kwargs['headers']['Host'] = urlparse(url).hostname
 
         try:
             r = None
