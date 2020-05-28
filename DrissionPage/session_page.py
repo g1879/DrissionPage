@@ -203,6 +203,14 @@ class SessionPage(object):
         except:
             return_value = False
         else:
-            # r.encoding = 'utf-8'
+            headers = dict(r.headers)
+            if 'Content-Type' not in headers:
+                charset = 'utf-8'
+            else:
+                if 'charset' not in headers['Content-Type']:
+                    charset = 'utf-8'
+                else:
+                    charset = headers['Content-Type'].split('=')[1]
+            r.encoding = charset
             return_value = r
         return return_value
