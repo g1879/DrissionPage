@@ -41,26 +41,28 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 
 ***
 
-例：用selenium登录网站，然后切换到requests读取网页，打印元素属性。
+例：用selenium登录网站，然后切换到requests读取网页。
 
 ```python
-from DrissionPage import *
-from time import sleep
-
 drission = Drission()  # 创建驱动器对象
 page = MixPage(drission)  # 创建页面对象，默认driver模式
 page.get('https://gitee.com/profile')  # 访问个人中心页面（未登录，重定向到登录页面）
 
-# 使用selenium输入账号密码登录
-page.ele('@id:user_login').input('your_user_name')
+page.ele('@id:user_login').input('your_user_name')  # 使用selenium输入账号密码登录
 page.ele('@id:user_password').input('your_password\n')
-sleep(1)  # 等待登录
 
 page.change_mode()  # 切换到session模式
-
 print('登录后title：', page.title, '\n')  # 登录后session模式的输出
+```
 
-# 获取并打印属性
+输出：
+
+```
+登录后title： 个人资料 - 码云 Gitee.com
+```
+
+例：获取并打印属性
+```python
 foot = page.ele('@id:footer-left')  # 用id查找元素
 first_col = foot.ele('css:>div')  # 使用css selector在元素的下级中查找元素（第一个）
 lnk = first_col.ele('text:命令学')  # 使用文本内容查找元素
@@ -74,8 +76,6 @@ print(text, href)
 输出：
 
 ```
-登录后title： 个人资料 - 码云 Gitee.com
-
 <SessionElement div class='column'>
 Git 命令学习 https://oschina.gitee.io/learn-git-branching/
 ```

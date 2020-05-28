@@ -24,7 +24,7 @@ class OptionsManager(object):
         self._conf = ConfigParser()
         self._conf.read(self.path, encoding='utf-8')
         if 'global_tmp_path' not in self.get_option('paths') or not self.get_value('paths', 'global_tmp_path'):
-            global_tmp_path = f'{str(Path(__file__).parent)}\\tmp'
+            global_tmp_path = str((Path(__file__).parent / 'tmp').absolute())
             Path(global_tmp_path).mkdir(parents=True, exist_ok=True)
             self.set_item('paths', 'global_tmp_path', global_tmp_path)
             self.save()
@@ -59,7 +59,7 @@ class OptionsManager(object):
         :return: None
         """
         path = path or Path(__file__).parent / 'configs.ini'
-        self._conf.write(open(path, 'w'))
+        self._conf.write(open(path, 'w', encoding='utf-8'))
 
 
 class DriverOptions(Options):

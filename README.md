@@ -43,28 +43,31 @@ The design concept of this library is to keep everything simple, try to provide 
 
 ***
 
-Example: Log in to the website with selenium, then switch to requests to read the web page, and print the element attributes.
+Example: Log in to the website with selenium, then switch to requests to read the web page.
 
 ```python
-from DrissionPage import *
-from time import sleep
-
 drission = Drission()  # Create Drive Object
 page = MixPage(drission)  # Create page object, default driver mode
-page.get('https://gitee.com/profile')  # Visit the personal center page (not logged in, redirect to the login page)
+page.get('https://gitee.com/profile')  # Visit personal center page (redirect to the login page)
 
-# Use selenium to enter the account password to log in
-page.ele('@id:user_login').input('your_user_name')
+page.ele('@id:user_login').input('your_user_name')  # Use selenium to log in
 page.ele('@id:user_password').input('your_password\n')
-sleep(1)  # Wait for login
 
 page.change_mode()  # Switch to session mode
-
 print('Title after login:', page.title, '\n')  # Output of session mode after login
+```
 
-# Get and print attributes
+Output:
+
+```
+Title after login: Dashboard - Gitee
+```
+
+Example: Find element and print attributes.
+
+```python
 foot = page.ele('@id:footer-left')  # Find elements by id
-first_col = foot.ele('css:>div')  # Find first div element in the lower level of foot element by css selector.
+first_col = foot.ele('css:>div')  # Find first div element in the lower level by css selector.
 lnk = first_col.ele('text:Git Branching')  # Find elements by text content
 text = lnk.text  # Get element text
 href = lnk.attr('href')  # Get element attribute value
@@ -76,8 +79,6 @@ print(text, href)
 Output:
 
 ```
-Title after login: Dashboard - Gitee
-
 <SessionElement div class='column'>
 Learn Git Branching https://oschina.gitee.io/learn-git-branching/
 ```
