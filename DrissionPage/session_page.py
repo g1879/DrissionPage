@@ -109,8 +109,17 @@ class SessionPage(object):
         self._url_available = True if self._response and self._response.status_code == 200 else False
         return self._url_available
 
-    def download(self, file_url: str, goal_path: str = None, rename: str = None, **kwargs) -> tuple:
-        """下载一个文件，生成的response不写入self._response，是临时的"""
+    def download(self, file_url: str, goal_path: str = None, rename: str = None, show_msg: bool = False,
+                 **kwargs) -> tuple:
+        """下载一个文件
+        生成的response不写入self._response，是临时的
+        :param file_url: 文件url
+        :param goal_path: 存放路径url
+        :param rename: 重命名
+        :param kwargs: 连接参数
+        :param show_msg: 是否显示下载信息
+        :return: 元组，bool和状态信息（成功时信息为文件名）
+        """
         goal_path = goal_path or OptionsManager().get_value('paths', 'global_tmp_path')
         if not goal_path:
             raise IOError('No path specified.')
@@ -121,7 +130,8 @@ class SessionPage(object):
 
         r = self._make_response(file_url, mode='get', **kwargs)
         if not r:
-            print('Invalid link')
+            if show_msg:
+                print('Invalid link')
             return False, 'Invalid link'
         # -------------------获取文件名-------------------
         # header里有文件名，则使用它，否则在url里截取，但不能保证url包含文件名
@@ -135,8 +145,9 @@ class SessionPage(object):
         # 避免和现有文件重名
         file_full_name = avoid_duplicate_name(goal_path, file_full_name)
         # 打印要下载的文件
-        print_txt = file_full_name if file_name == file_full_name else f'{file_name} -> {file_full_name}'
-        print(print_txt)
+        if show_msg:
+            print_txt = file_full_name if file_name == file_full_name else f'{file_name} -> {file_full_name}'
+            print(print_txt)
         # -------------------开始下载-------------------
         # 获取远程文件大小
         file_size = int(r.headers['Content-Length']) if 'Content-Length' in r.headers else None
@@ -166,7 +177,8 @@ class SessionPage(object):
                 full_path.unlink()
             r.close()
         # -------------------显示并返回值-------------------
-        print(info, '\n')
+        if show_msg:
+            print(info, '\n')
         info = file_full_name if download_status else info
         return download_status, info
 
