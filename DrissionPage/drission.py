@@ -173,4 +173,7 @@ class Drission(object):
             self.close_session()
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except ImportError:
+            pass
