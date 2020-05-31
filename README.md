@@ -134,10 +134,9 @@ This method also checks if the chrome and chromedriver versions match, and displ
 
 or
 
-版本不兼容。
-请下载与当前chrome版本匹配的chromedriver。
-当前chromedriver版本：<你的chromedriver版本号>
-查看chrome版本方法：帮助 -> 关于Google Chrome
+出现异常：
+Message: session not created: Chrome version must be between 70 and 73
+  (Driver info: chromedriver=73.0.3683.68 (47787ec04b6e38e22703e856e101e840b65afe72),platform=Windows NT 10.0.19631 x86_64)
 chromedriver下载网址：https://chromedriver.chromium.org/downloads
 ```
 
@@ -799,17 +798,19 @@ Parameter Description:
 
 ### to_iframe
 
-​	to_iframe(loc_or_ele: Union[str, tuple, WebElement] = 'main') -> bool
+​	to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None
 
-​	Jump to iframe, default jump to the highest level.
+​	Jump to iframe, compatible with selenium native parameters.
 
 ​	Parameter Description:
 
-- loc_or_ele - The search condition of the iframe element is the same as the search condition of the ele () method.
+- loc_or_ele - To search for iframe element conditions, you can receive iframe serial number (starting at 0), id or name, control string, loc parameter, WebElement object, DriverElement object, and pass 'main' to jump to the top level.
 
 ​	Examples:
 - to_iframe('@id:iframe_id')
 - to_iframe(iframe_element)
+- to_iframe(0)
+- to_iframe('iframe_name')
 
 ### scroll_to_see
 
@@ -1306,7 +1307,7 @@ Parameter Description:
 
 ### set_paths
 
-​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None) -> None
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, check_version: bool = True) -> None
 
 ​	Convenient way to set the path, save the incoming path to the default ini file, and check whether the chrome and chromedriver versions match.
 
@@ -1317,6 +1318,17 @@ Parameter Description:
 - debugger_address - Debug browser address, for example: 127.0.0.1:9222
 - download_path - Download path
 - global_tmp_path - Temporary folder path
+- check_version - Whether to check whether chromedriver and chrome match
+
+### set_headless
+
+​	set_headless(on_off: bool) -> None
+
+​	Convenient headless switch.
+
+​	Parameter Description:
+
+- on_off - Whether to enable headless mode
 
 ### check_driver_version
 

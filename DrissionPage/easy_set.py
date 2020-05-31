@@ -5,7 +5,6 @@
 @File    :   driver_page.py
 """
 from selenium import webdriver
-import re
 
 from DrissionPage.config import OptionsManager, DriverOptions
 
@@ -14,13 +13,15 @@ def set_paths(driver_path: str = None,
               chrome_path: str = None,
               debugger_address: str = None,
               global_tmp_path: str = None,
-              download_path: str = None) -> None:
+              download_path: str = None,
+              check_version: bool = True) -> None:
     """简易设置路径函数
     :param driver_path: chromedriver.exe路径
     :param chrome_path: chrome.exe路径
     :param debugger_address: 调试浏览器地址，例：127.0.0.1:9222
     :param download_path: 下载文件路径
     :param global_tmp_path: 临时文件夹路径
+    :param check_version: 是否检查chromedriver和chrome是否匹配
     :return: None
     """
     om = OptionsManager()
@@ -37,10 +38,24 @@ def set_paths(driver_path: str = None,
         experimental_options['prefs']['download.default_directory'] = download_path
         om.set_item('chrome_options', 'experimental_options', experimental_options)
     om.save()
-    check_driver_version(driver_path, chrome_path)
+    if check_version:
+        check_driver_version(driver_path, chrome_path)
+
+
+def set_headless(on_off: bool) -> None:
+    """设置headless"""
+    do = DriverOptions()
+    if on_off:
+        if '--headless' not in do.arguments:
+            do.add_argument('--headless')
+    else:
+        do.remove_argument('--headless')
+    do.save()
 
 
 def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool:
+    """检查传入的chrome和chromedriver是否匹配"""
+    print('正在检测可用性...')
     om = OptionsManager()
     driver_path = driver_path or om.get_value('paths', 'chromedriver_path') or 'chromedriver'
     chrome_path = chrome_path or om.get_value('chrome_options', 'binary_location')
@@ -54,13 +69,9 @@ def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bo
         print('版本匹配，可正常使用。')
         return True
     except Exception as e:
-        r = re.search(r'chromedriver=(.+?) ', str(e))
         info = f'''
-版本不兼容。
-请下载与当前chrome版本匹配的chromedriver。
-当前chromedriver版本：{r.group(1)}
-查看chrome版本方法：帮助 -> 关于Google Chrome
-chromedriver下载网址：https://chromedriver.chromium.org/downloads
+出现异常：
+{e}chromedriver下载网址：https://chromedriver.chromium.org/downloads
 '''
         print(info)
         return False

@@ -135,18 +135,33 @@ class DriverPage(object):
                 self.close_current_tab()
         self.driver.switch_to.window(page_handle)  # 把权柄定位回保留的页面
 
-    def to_iframe(self, loc_or_ele: Union[str, tuple, WebElement] = 'main') -> bool:
-        """跳转到iframe，若传入字符串main则跳转到最高级"""
-        if loc_or_ele == 'main':
-            self.driver.switch_to.default_content()
-            return True
-        else:
-            ele = self.ele(loc_or_ele)
-            try:
+    def to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None:
+        """跳转到iframe
+        :param loc_or_ele: 可接收iframe序号(0开始)、id或name、控制字符串、loc tuple、WebElement对象、DriverElement对象，
+                            传入'main'则跳到最高层
+        :return: None
+        """
+        if isinstance(loc_or_ele, int):
+            # 根据序号跳转
+            self.driver.switch_to.frame(loc_or_ele)
+        elif isinstance(loc_or_ele, str):
+            if loc_or_ele == 'main':
+                # 跳转到最上级
+                self.driver.switch_to.default_content()
+            elif ':' not in loc_or_ele:
+                # 传入id或name
+                self.driver.switch_to.frame(loc_or_ele)
+            else:
+                # 传入控制字符串
+                ele = self.ele(loc_or_ele)
                 self.driver.switch_to.frame(ele.inner_ele)
-                return True
-            except:
-                raise
+        elif isinstance(loc_or_ele, WebElement):
+            self.driver.switch_to.frame(loc_or_ele)
+        elif isinstance(loc_or_ele, DriverElement):
+            self.driver.switch_to.frame(loc_or_ele.inner_ele)
+        elif isinstance(loc_or_ele, tuple):
+            ele = self.ele(loc_or_ele)
+            self.driver.switch_to.frame(ele.inner_ele)
 
     def screenshot(self, path: str = None, filename: str = None) -> str:
         """获取网页截图"""

@@ -37,9 +37,15 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 - 把配置信息保存到文件，方便调用。
 - 对某些常用功能（如点击）作了优化，更符合实际使用需要。  
 
-# 简单演示
+# 示例
 
 ***
+
+## 示例网址
+
+[使用DrissionPage爬取常见网站](https://github.com/g1879/DrissionPage-examples)
+
+## 简单演示
 
 例：用selenium登录网站，然后切换到requests读取网页。
 
@@ -131,10 +137,9 @@ set_paths(driver_path, chrome_path)
 
 或
 
-版本不兼容。
-请下载与当前chrome版本匹配的chromedriver。
-当前chromedriver版本：<你的chromedriver版本号>
-查看chrome版本方法：帮助 -> 关于Google Chrome
+出现异常：
+Message: session not created: Chrome version must be between 70 and 73
+  (Driver info: chromedriver=73.0.3683.68 (47787ec04b6e38e22703e856e101e840b65afe72),platform=Windows NT 10.0.19631 x86_64)
 chromedriver下载网址：https://chromedriver.chromium.org/downloads
 ```
 
@@ -797,17 +802,19 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### to_iframe
 
-​	to_iframe(loc_or_ele: Union[str, tuple, WebElement] = 'main') -> bool
+​	to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None
 
-​	跳转到iframe，默认跳转到最高层级。
+​	跳转到iframe，默认跳转到最高层级，兼容selenium原生参数。
 
 ​	参数说明：
 
-- loc_or_ele - 查找iframe元素的条件，和ele()方法的查找条件一致。
+- loc_or_ele - 查找iframe元素的条件，可接收iframe序号(0开始)、id或name、控制字符串、loc参数、WebElement对象、DriverElement对象，传入'main'则跳到最高层。
 
 ​	示例：
 - to_iframe('@id:iframe_id')
 - to_iframe(iframe_element)
+- to_iframe(0)
+- to_iframe('iframe_name')
 
 ### scroll_to_see
 
@@ -1304,7 +1311,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_paths
 
-​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None) -> None
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, check_version: bool = True) -> None
 
 ​	便捷的设置路径方法，把传入的路径保存到默认ini文件，并检查chrome和chromedriver版本是否匹配。
 
@@ -1315,6 +1322,17 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 - debugger_address - 调试浏览器地址，例：127.0.0.1:9222
 - download_path - 下载文件路径
 - global_tmp_path - 临时文件夹路径
+- check_version - 是否检查chromedriver和chrome是否匹配
+
+### set_headless
+
+​	set_headless(on_off: bool) -> None
+
+​	便捷的headless开关。
+
+​	参数说明：
+
+- on_off - 是否开启headless模式
 
 ### check_driver_version
 
