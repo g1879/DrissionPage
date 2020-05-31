@@ -7,6 +7,15 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 它封装了页面元素常用的方法，很适合自动化操作PO模式的扩展。  
 更棒的是，它的使用方式非常简洁和人性化，代码量少，对新手友好。  
 
+**项目地址：**
+
+- https://github.com/g1879/DrissionPage
+- https://gitee.com/g1879/DrissionPage
+
+**示例地址：** [使用DrissionPage爬取常见网站](https://github.com/g1879/DrissionPage-examples)
+
+**联系邮箱：** g1879@qq.com
+
 # 背景
 
 ***
@@ -19,13 +28,6 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 
 本人学习过程中踩了很多坑，因此这个库的设计理念是一切从简，尽量提供简单直接的使用方法，对新手更友好。
 
-**项目地址：**
-
-- https://github.com/g1879/DrissionPage
-- https://gitee.com/g1879/DrissionPage
-
-**联系邮箱：** g1879@qq.com
-
 # 特性
 
 ***
@@ -37,15 +39,9 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 - 把配置信息保存到文件，方便调用。
 - 对某些常用功能（如点击）作了优化，更符合实际使用需要。  
 
-# 示例
+# 简单演示
 
 ***
-
-## 示例网址
-
-[使用DrissionPage爬取常见网站](https://github.com/g1879/DrissionPage-examples)
-
-## 简单演示
 
 例：用selenium登录网站，然后切换到requests读取网页。
 
