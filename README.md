@@ -1,6 +1,6 @@
 # 中文README
 ***
-- 项目：[点击这里](https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md)
+- 中文README：[点击这里](https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md)
 - 示例：[点击这里](https://github.com/g1879/DrissionPage-examples)
 
 # Introduction
