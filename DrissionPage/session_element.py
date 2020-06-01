@@ -11,7 +11,6 @@ from typing import Union, List
 from requests_html import Element, BaseParser
 
 from .common import DrissionElement, get_loc_from_str, translate_loc_to_xpath
-from urllib.parse import urlparse, urljoin
 
 
 class SessionElement(DrissionElement):
@@ -105,15 +104,16 @@ class SessionElement(DrissionElement):
         """获取属性值"""
         try:
             if attr == 'href':
-                # TODO: 须测试
                 # 如直接获取attr只能获取相对地址
                 link = self._inner_ele.attrs['href']
-                parsed = urlparse(link)
-                if not parsed.netloc:
-                    return urljoin(self._inner_ele.url, link)
-                if not parsed.scheme:
-                    return urljoin(urlparse(self._inner_ele.url).scheme, link)
-                return link
+                if link.startswith('?'):  # 避免当相对URL以?开头时requests-html丢失参数的bug
+                    if '?' in self.inner_ele.url:
+                        return re.sub(r'\?.*', link, self.inner_ele.url)
+                    else:
+                        return f'{self.inner_ele.url}{link}'
+                else:
+                    for link in self._inner_ele.absolute_links:
+                        return link
             elif attr == 'class':
                 class_str = ''
                 for key, i in enumerate(self._inner_ele.attrs['class']):
