@@ -13,7 +13,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 
 class DrissionElement(object):
-    def __init__(self, ele):
+    def __init__(self, ele: Union[Element, WebElement]):
         self._inner_ele = ele
 
     @property
