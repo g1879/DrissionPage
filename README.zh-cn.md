@@ -1,4 +1,5 @@
 # 简介
+
 ***
 
 DrissionPage，即driver和session的合体，是个基于python的Web自动化操作集成工具。  
@@ -16,6 +17,67 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 
 **联系邮箱：** g1879@qq.com
 
+# 特性
+
+***
+
+- 允许在selenium和requests间无缝切换，共享session。  
+- 两种模式提供统一的操作方法，使用体验一致。  
+- 以页面为单位封装常用方法，便于PO模式扩展。  
+- 人性化的页面元素操作方法，减轻页面分析工作量和编码量。  
+- 把配置信息保存到文件，方便调用。
+- 对某些常用功能（如点击）作了优化，更符合实际使用需要。  
+
+# 理念
+
+***
+
+## 简洁、易用 、可扩展
+
+- DrissionPage以简洁的代码为第一追求，对冗长的语句做了精简，并完全保留了其功能。
+- DrissionPage封装了许多常用功能，使用更便捷。
+- DrissionPage的核心是个页面类，可直接派生子类页面，适应各种场景须要。
+
+以下代码实现一模一样的功能，对比两者的代码量：
+
+1、查找所有name为ele_name的元素
+
+```python
+# selenium:
+element = WebDriverWait(driver).until(ec.presence_of_all_elements_located((By.XPATH, '//*[@name="ele_name"]')))
+# DrissionPage:
+element = page.eles('@name:ele_name')
+```
+
+2、查找第一个文本包含some text的元素
+
+```python
+# selenium:
+element = WebDriverWait(driver, timeout = 2).until(ec.presence_of_element_located((By.XPATH, '//*[contains(text(), "some text")]')))
+# DrissionPage:
+element = page.ele('some text', timeout = 2)
+```
+
+3、跳转到第一个标签页
+
+```python
+# selenium
+driver.switch_to.window(driver.window_handles[0])
+# DrissionPage
+page.to_tab(0)
+```
+
+4、拖拽一个元素
+
+```python
+# selenium
+ActionChains(driver).drag_and_drop(ele1, ele2).perform()
+# DrissionPage
+ele1.drag_to(ele2)
+```
+
+
+
 # 背景
 
 ***
@@ -27,17 +89,6 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 除了合并两者，本库还以网页为单位封装了常用功能，简化了selenium的操作和语句，在用于网页自动化操作时，减少考虑细节，专注功能实现，使用更方便。
 
 本人学习过程中踩了很多坑，因此这个库的设计理念是一切从简，尽量提供简单直接的使用方法，对新手更友好。
-
-# 特性
-
-***
-
-- 允许在selenium和requests间无缝切换，共享session。  
-- 两种模式提供统一的操作方法，使用体验一致。  
-- 以页面为单位封装常用方法，便于PO模式扩展。  
-- 人性化的页面元素操作方法，减轻页面分析工作量和编码量。  
-- 把配置信息保存到文件，方便调用。
-- 对某些常用功能（如点击）作了优化，更符合实际使用需要。  
 
 # 简单演示
 
