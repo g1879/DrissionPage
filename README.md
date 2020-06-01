@@ -44,7 +44,7 @@ Even better, it is very concise and user-friendly, with little code and friendly
 
 The following code implements exactly the same function, comparing the code amounts of the two:
 
-1、Find all elements whose name is ele_name
+1. Find all elements whose name is ele_name
 
 ```python
 # selenium:
@@ -53,7 +53,7 @@ element = WebDriverWait(driver).until(ec.presence_of_all_elements_located((By.XP
 element = page.eles('@name:ele_name')
 ```
 
-2、Find the element whose first text contains 'some text'
+2. Find the element whose first text contains 'some text'
 
 ```python
 # selenium:
@@ -62,7 +62,7 @@ element = WebDriverWait(driver, timeout = 2).until(ec.presence_of_element_locate
 element = page.ele('some text', timeout = 2)
 ```
 
-3、Jump to the first tab
+3. Jump to the first tab
 
 ```python
 # selenium
@@ -71,13 +71,22 @@ driver.switch_to.window(driver.window_handles[0])
 page.to_tab(0)
 ```
 
-4、Drag an element
+4. Drag an element
 
 ```python
 # selenium
 ActionChains(driver).drag_and_drop(ele1, ele2).perform()
 # DrissionPage
 ele1.drag_to(ele2)
+```
+
+5. Scroll the window to the bottom (keep the horizontal scroll bar unchanged)
+
+```python
+# selenium
+driver.execute_script("window.scrollTo(document.documentElement.scrollLeft,document.body.scrollHeight);")
+# DrissionPage
+page.scroll_to('bottom')
 ```
 
 # Background

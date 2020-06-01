@@ -76,7 +76,14 @@ ActionChains(driver).drag_and_drop(ele1, ele2).perform()
 ele1.drag_to(ele2)
 ```
 
+5、滚动窗口到底部（保持水平滚动条不变）
 
+```python
+# selenium
+driver.execute_script("window.scrollTo(document.documentElement.scrollLeft,document.body.scrollHeight);")
+# DrissionPage
+page.scroll_to('bottom')
+```
 
 # 背景
 
