@@ -236,14 +236,14 @@ class DriverPage(object):
         :return:
         """
         try:
-            alertObject = self.driver.switch_to.alert
+            alert = self.driver.switch_to.alert
         except NoAlertPresentException:
             return None
         if text:
-            alertObject.send_keys(text)
-        text = alertObject.text
+            alert.send_keys(text)
+        text = alert.text
         if mode == 'cancel':
-            alertObject.dismiss()
+            alert.dismiss()
         elif mode == 'ok':
-            alertObject.accept()
+            alert.accept()
         return text
