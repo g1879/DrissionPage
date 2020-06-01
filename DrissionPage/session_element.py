@@ -11,10 +11,12 @@ from typing import Union, List
 from requests_html import Element, BaseParser
 
 from .common import DrissionElement, get_loc_from_str, translate_loc_to_xpath
+from urllib.parse import urlparse, urljoin
 
 
 class SessionElement(DrissionElement):
     """session模式的元素对象，包装了一个Element对象，并封装了常用功能"""
+
     def __init__(self, ele: Element):
         super().__init__(ele)
 
@@ -103,9 +105,15 @@ class SessionElement(DrissionElement):
         """获取属性值"""
         try:
             if attr == 'href':
+                # TODO: 须测试
                 # 如直接获取attr只能获取相对地址
-                for link in self._inner_ele.absolute_links:
-                    return link
+                link = self._inner_ele.attrs['href']
+                parsed = urlparse(link)
+                if not parsed.netloc:
+                    return urljoin(self._inner_ele.url, link)
+                if not parsed.scheme:
+                    return urljoin(urlparse(self._inner_ele.url).scheme, link)
+                return link
             elif attr == 'class':
                 class_str = ''
                 for key, i in enumerate(self._inner_ele.attrs['class']):
