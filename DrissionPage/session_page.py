@@ -5,6 +5,7 @@
 @File    :   session_page.py
 """
 import os
+import re
 from pathlib import Path
 from random import random
 from time import time
@@ -216,13 +217,14 @@ class SessionPage(object):
             return_value = False
         else:
             headers = dict(r.headers)
-            if 'Content-Type' not in headers:
-                charset = 'utf-8'
-            else:
-                if 'charset' not in headers['Content-Type']:
+            if 'Content-Type' not in headers or 'charset' not in headers['Content-Type']:
+                re_result = re.search(r'<meta.*?charset=([^"\']+)', r.text)
+                try:
+                    charset = re_result.group(1)
+                except:
                     charset = 'utf-8'
-                else:
-                    charset = headers['Content-Type'].split('=')[1]
+            else:
+                charset = headers['Content-Type'].split('=')[1]
             r.encoding = charset
             return_value = r
         return return_value
