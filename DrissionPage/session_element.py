@@ -106,7 +106,14 @@ class SessionElement(DrissionElement):
             if attr == 'href':
                 # 如直接获取attr只能获取相对地址
                 link = self._inner_ele.attrs['href']
-                if link.startswith('?'):  # 避免当相对URL以?开头时requests-html丢失参数的bug
+                if link.startswith(('javascript:', 'mailto:')):
+                    return link
+                elif link.startswith('#'):
+                    if '#' in self.inner_ele.url:
+                        return re.sub(r'#.*', link, self.inner_ele.url)
+                    else:
+                        return f'{self.inner_ele.url}{link}'
+                elif link.startswith('?'):  # 避免当相对URL以?开头时requests-html丢失参数的bug
                     if '?' in self.inner_ele.url:
                         return re.sub(r'\?.*', link, self.inner_ele.url)
                     else:
