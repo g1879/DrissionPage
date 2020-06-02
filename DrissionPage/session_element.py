@@ -114,6 +114,8 @@ class SessionElement(DrissionElement):
                 else:
                     for link in self._inner_ele.absolute_links:
                         return link
+            elif attr == 'src':
+                return self._inner_ele._make_absolute(self._inner_ele.attrs['src'])
             elif attr == 'class':
                 class_str = ''
                 for key, i in enumerate(self._inner_ele.attrs['class']):
