@@ -116,11 +116,6 @@ class DriverPage(object):
         handle_list = self.driver.window_handles
         return handle_list.index(handle)
 
-    def to_tab(self, index: int = 0) -> None:
-        """跳转到第几个标签页，从0开始算"""
-        tabs = self.driver.window_handles  # 获得所有标签页权柄
-        self.driver.switch_to.window(tabs[index])
-
     def close_current_tab(self) -> None:
         """关闭当前标签页"""
         self.driver.close()
@@ -135,10 +130,15 @@ class DriverPage(object):
                 self.close_current_tab()
         self.driver.switch_to.window(page_handle)  # 把权柄定位回保留的页面
 
+    def to_tab(self, index: int = 0) -> None:
+        """跳转到第几个标签页，从0开始算"""
+        tabs = self.driver.window_handles  # 获得所有标签页权柄
+        self.driver.switch_to.window(tabs[index])
+
     def to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None:
         """跳转到iframe
         :param loc_or_ele: 可接收iframe序号(0开始)、id或name、控制字符串、loc tuple、WebElement对象、DriverElement对象，
-                            传入'main'则跳到最高层
+                            传入'main'跳到最高层，传入'parent'跳到上一层
         :return: None
         """
         if isinstance(loc_or_ele, int):
@@ -148,6 +148,8 @@ class DriverPage(object):
             if loc_or_ele == 'main':
                 # 跳转到最上级
                 self.driver.switch_to.default_content()
+            elif loc_or_ele == 'parent':
+                self.driver.switch_to.parent_frame()
             elif ':' not in loc_or_ele:
                 # 传入id或name
                 self.driver.switch_to.frame(loc_or_ele)
