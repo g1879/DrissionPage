@@ -106,7 +106,7 @@ class SessionElement(DrissionElement):
             if attr == 'href':
                 # 如直接获取attr只能获取相对地址
                 link = self._inner_ele.attrs['href']
-                if link.startswith(('javascript:', 'mailto:')):
+                if link.lower().startswith(('javascript:', 'mailto:')):
                     return link
                 elif link.startswith('#'):
                     if '#' in self.inner_ele.url:
