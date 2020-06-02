@@ -832,16 +832,6 @@ The following methods only take effect in driver mode, and will automatically sw
 
 ​	Returns the serial number of the current tab.
 
-### to_tab
-
-​	to_tab(index: int = 0) -> None
-
-​	Jump to a tab page with a serial number.
-
-Parameter Description:
-
-- index - The serial number of the target tab, start from 0
-
 ### close_current_tab
 
 ​	close_current_tab() -> None
@@ -858,6 +848,16 @@ Parameter Description:
 
 - index - The serial number of the reserved tab, start from 0
 
+### to_tab
+
+​	to_tab(index: int = 0) -> None
+
+​	Jump to a tab page with a serial number.
+
+Parameter Description:
+
+- index - The serial number of the target tab, start from 0
+
 ### to_iframe
 
 ​	to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None
@@ -866,7 +866,7 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_ele - To search for iframe element conditions, you can receive iframe serial number (starting at 0), id or name, control string, loc parameter, WebElement object, DriverElement object, and pass 'main' to jump to the top level.
+- loc_or_ele - To search for iframe element conditions, you can receive iframe serial number (starting at 0), id or name, control string, loc parameter, WebElement object, DriverElement object, pass 'main' to jump to the top level, pass 'parent' to jump to parent level.
 
 ​	Examples:
 - to_iframe('@id:iframe_id')

@@ -828,16 +828,6 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	返回当前标签页序号。
 
-### to_tab
-
-​	to_tab(index: int = 0) -> None
-
-​	跳转到某序号的标签页。
-
-参数说明：
-
-- index - 目标标签页序号，从0开始计算
-
 ### close_current_tab
 
 ​	close_current_tab() -> None
@@ -854,6 +844,16 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 - index - 保留的标签页序号，从0开始计算
 
+### to_tab
+
+​	to_tab(index: int = 0) -> None
+
+​	跳转到某序号的标签页。
+
+参数说明：
+
+- index - 目标标签页序号，从0开始计算
+
 ### to_iframe
 
 ​	to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None
@@ -862,7 +862,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- loc_or_ele - 查找iframe元素的条件，可接收iframe序号(0开始)、id或name、控制字符串、loc参数、WebElement对象、DriverElement对象，传入'main'则跳到最高层。
+- loc_or_ele - 查找iframe元素的条件，可接收iframe序号(0开始)、id或name、控制字符串、loc参数、WebElement对象、DriverElement对象，传入'main'跳到最高层，传入'parent'跳到上一层。
 
 ​	示例：
 - to_iframe('@id:iframe_id')
