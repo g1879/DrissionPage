@@ -1,7 +1,7 @@
 # 中文README
 ***
 - 中文README：[点击这里](https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md)
-- 示例：[点击这里](https://github.com/g1879/DrissionPage-examples)
+- 示例：[点击这里](https://gitee.com/g1879/DrissionPage-demos)
 
 # Introduction
 ***
@@ -17,7 +17,7 @@ Even better, it is very concise and user-friendly, with little code and friendly
 - https://github.com/g1879/DrissionPage
 - https://gitee.com/g1879/DrissionPage
 
-**Demos:** [https://github.com/g1879/DrissionPage-examples](https://github.com/g1879/DrissionPage-examples)
+**Demos:** [https://gitee.com/g1879/DrissionPage-demos](https://gitee.com/g1879/DrissionPage-demos)
 
 **email：** g1879@qq.com
 
