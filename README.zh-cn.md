@@ -872,7 +872,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### scroll_to_see
 
-​	scroll_to_see(loc_or_ele: Union[WebElement, tuple]) -> None
+​	scroll_to_see(loc_or_ele: Union[str, tuple, WebElement, DriverElement]) -> None
 
 ​	滚动直到元素可见。
 

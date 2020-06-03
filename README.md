@@ -876,7 +876,7 @@ Parameter Description:
 
 ### scroll_to_see
 
-​	scroll_to_see(loc_or_ele: Union[WebElement, tuple]) -> None
+​	scroll_to_see(loc_or_ele: Union[str, tuple, WebElement, DriverElement]) -> None
 
 ​	Scroll until the element is visible.
 
