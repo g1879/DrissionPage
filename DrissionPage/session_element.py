@@ -25,11 +25,10 @@ class SessionElement(DrissionElement):
 
     @property
     def attrs(self) -> dict:
-        """以字典格式返回元素所有属性的名称和值"""
-        attrs = dict(self.inner_ele.attrs)
-        for attr in ['class', 'rel']:
-            if attr in attrs:
-                attrs[attr] = ' '.join(attrs[attr])
+        """返回元素所有属性及值"""
+        attrs = dict()
+        for attr in self.inner_ele.attrs:
+            attrs[attr] = self.attr(attr)
         return attrs
 
     @property
@@ -124,11 +123,7 @@ class SessionElement(DrissionElement):
             elif attr == 'src':
                 return self._inner_ele._make_absolute(self._inner_ele.attrs['src'])
             elif attr == 'class':
-                class_str = ''
-                for key, i in enumerate(self._inner_ele.attrs['class']):
-                    class_str += ' ' if key > 0 else ''
-                    class_str += i
-                return class_str
+                return ' '.join(self._inner_ele.attrs['class'])
             elif attr == 'text':
                 return self.text
             else:
