@@ -149,6 +149,7 @@ class SessionPage(object):
         if show_msg:
             print_txt = file_full_name if file_name == file_full_name else f'{file_name} -> {file_full_name}'
             print(print_txt)
+            print(f'Downloading to: {goal_path}')
         # -------------------开始下载-------------------
         # 获取远程文件大小
         file_size = int(r.headers['Content-Length']) if 'Content-Length' in r.headers else None
@@ -158,12 +159,11 @@ class SessionPage(object):
         full_path = Path(f'{goal_path}\\{file_full_name}')
         try:
             with open(str(full_path), 'wb') as tmpFile:
-                print(f'Downloading to: {goal_path}')
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         tmpFile.write(chunk)
                         # 如表头有返回文件大小，显示进度
-                        if file_size:
+                        if show_msg and file_size:
                             downloaded_size += 1024
                             rate = downloaded_size / file_size if downloaded_size < file_size else 1
                             print('\r {:.0%} '.format(rate), end="")
