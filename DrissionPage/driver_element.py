@@ -36,18 +36,23 @@ class DriverElement(DrissionElement):
         """返回元素所有属性及值"""
         js = '''
         var dom=arguments[0];
-        var names="{";
+        var names="(";
         var len = dom.attributes.length;
         for(var i=0;i<len;i++){
             let it = dom.attributes[i];
             let localName = it.localName;
-            let value = it.value;
-            names += "'" + localName + "':'" + value.replace(/'/g,"\\\\'") + "', ";  
+            //let value = it.value;
+            //names += "'" + localName + "':'" + value.replace(/'/g,"\\\\'") + "', ";  
+            names += "'" + localName + "',";  
         }
-        names+="}"
+        names+=")"
         return names;  
         '''
-        return eval(self.run_script(js))
+        attrs = dict()
+        print(eval(self.run_script(js)))
+        for attr in eval(self.run_script(js)):
+            attrs[attr] = self.attr(attr)
+        return attrs
 
     @property
     def text(self) -> str:
