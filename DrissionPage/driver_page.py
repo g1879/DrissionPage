@@ -176,7 +176,7 @@ class DriverPage(object):
         ele.screenshot(path, name)
         return img_path
 
-    def scroll_to_see(self, loc_or_ele: Union[WebElement, tuple]) -> None:
+    def scroll_to_see(self, loc_or_ele: Union[str, tuple, WebElement, DriverElement]) -> None:
         """滚动直到元素可见"""
         ele = self.ele(loc_or_ele)
         ele.run_script("arguments[0].scrollIntoView();")
