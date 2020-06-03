@@ -49,7 +49,6 @@ class DriverElement(DrissionElement):
         return names;  
         '''
         attrs = dict()
-        print(eval(self.run_script(js)))
         for attr in eval(self.run_script(js)):
             attrs[attr] = self.attr(attr)
         return attrs
