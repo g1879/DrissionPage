@@ -49,7 +49,7 @@ class OptionsManager(object):
                 option[j[0]] = self._conf.get(section, j[0])
         return option
 
-    def set_item(self, section: str, item: str, value: str) -> None:
+    def set_item(self, section: str, item: str, value: Any) -> None:
         """设置配置值"""
         self._conf.set(section, item, str(value))
 
@@ -145,13 +145,11 @@ def _chrome_options_to_dict(options: Union[dict, Options, None]) -> Union[dict, 
         return options
 
     re_dict = dict()
-    if options.debugger_address:
-        re_dict['debugger_address'] = options.debugger_address
-    else:
-        re_dict['binary_location'] = options.binary_location
-        re_dict['debugger_address'] = options.debugger_address
-        re_dict['arguments'] = options.arguments
-        re_dict['extensions'] = options.extensions
-        re_dict['experimental_options'] = options.experimental_options
-        # re_dict['capabilities'] = options.capabilities
+    re_dict['debugger_address'] = options.debugger_address
+    re_dict['binary_location'] = options.binary_location
+    re_dict['debugger_address'] = options.debugger_address
+    re_dict['arguments'] = options.arguments
+    re_dict['extensions'] = options.extensions
+    re_dict['experimental_options'] = options.experimental_options
+    # re_dict['capabilities'] = options.capabilities
     return re_dict
