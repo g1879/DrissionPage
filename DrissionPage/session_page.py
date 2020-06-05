@@ -218,7 +218,7 @@ class SessionPage(object):
         else:
             headers = dict(r.headers)
             if 'Content-Type' not in headers or 'charset' not in headers['Content-Type']:
-                re_result = re.search(r'<meta.*?charset=([^"\']+)', r.text)
+                re_result = re.search(r'<meta.*?charset=[ \'"]*([^"\' />]+).*?>', r.text)
                 try:
                     charset = re_result.group(1)
                 except:
