@@ -49,28 +49,43 @@ class SessionElement(DrissionElement):
         return self._inner_ele.tag
 
     @property
-    def parent(self) -> Union[DrissionElement, None]:
-        """requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包"""
-        try:
-            return SessionElement(Element(element=self.inner_ele.element.xpath('..')[0], url=self.inner_ele.url))
-        except IndexError:
-            return None
+    def parent(self):
+        """父级元素"""
+        return self.parents()
 
     @property
-    def next(self) -> Union[DrissionElement, None]:
+    def next(self):
+        """下一个兄弟元素"""
+        return self.nexts()
+
+    @property
+    def prev(self):
+        """上一个兄弟元素"""
+        return self.prevs()
+
+    def parents(self, num: int = 1):
         """requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包"""
         try:
             return SessionElement(
-                Element(element=self.inner_ele.element.xpath('./following-sibling::*[1]')[0], url=self.inner_ele.url))
+                Element(element=self.inner_ele.element.xpath(f'..{"/.." * (num - 1)}')[0], url=self.inner_ele.url))
         except IndexError:
             return None
 
-    @property
-    def prev(self) -> Union[DrissionElement, None]:
+    def nexts(self, num: int = 1):
         """requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包"""
         try:
             return SessionElement(
-                Element(element=self.inner_ele.element.xpath('./preceding-sibling::*[1]')[0], url=self.inner_ele.url))
+                Element(element=self.inner_ele.element.xpath(f'./following-sibling::*[{num}]')[0],
+                        url=self.inner_ele.url))
+        except IndexError:
+            return None
+
+    def prevs(self, num: int = 1):
+        """requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包"""
+        try:
+            return SessionElement(
+                Element(element=self.inner_ele.element.xpath(f'./preceding-sibling::*[{num}]')[0],
+                        url=self.inner_ele.url))
         except IndexError:
             return None
 

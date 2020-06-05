@@ -71,19 +71,31 @@ class DriverElement(DrissionElement):
     @property
     def parent(self):
         """父级元素"""
-        loc = 'xpath', './..'
-        return self.ele(loc, timeout=1, show_errmsg=False)
+        return self.parents()
 
     @property
     def next(self):
         """下一个兄弟元素"""
-        loc = 'xpath', './following-sibling::*[1]'
-        return self.ele(loc, timeout=1, show_errmsg=False)
+        return self.nexts()
 
     @property
     def prev(self):
         """上一个兄弟元素"""
-        loc = 'xpath', './preceding-sibling::*[1]'
+        return self.prevs()
+
+    def parents(self, num: int = 1):
+        """N层父级元素"""
+        loc = 'xpath', f'.{"/.." * num}'
+        return self.ele(loc, timeout=1, show_errmsg=False)
+
+    def nexts(self, num: int = 1):
+        """下N个兄弟元素"""
+        loc = 'xpath', f'./following-sibling::*[{num}]'
+        return self.ele(loc, timeout=1, show_errmsg=False)
+
+    def prevs(self, num: int = 1):
+        """上N个兄弟元素"""
+        loc = 'xpath', f'./preceding-sibling::*[{num}]'
         return self.ele(loc, timeout=1, show_errmsg=False)
 
     def attr(self, attr: str) -> str:
