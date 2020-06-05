@@ -1001,6 +1001,24 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	返回上一个兄弟元素对象。
 
+### parents
+
+​	parents(num: int = 1) -> Union[DriverElement, None]
+
+​	返回第N层父级元素对象。
+
+### nexts
+
+​	nexts(num: int = 1) -> Union[DriverElement, None]
+
+​	返回下N个兄弟元素对象。
+
+### prevs
+
+​	prevs(num: int = 1) -> Union[DriverElement, None]
+
+​	返回前N个兄弟元素对象。
+
 ### size
 
 ​	以字典方式返回元素大小。
@@ -1209,6 +1227,24 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	返回上一个兄弟元素对象。
 
+### parents
+
+​	parents(num: int = 1) -> Union[DriverElement, None]
+
+​	返回第N层父级元素对象。
+
+### nexts
+
+​	nexts(num: int = 1) -> Union[DriverElement, None]
+
+​	返回下N个兄弟元素对象。
+
+### prevs
+
+​	prevs(num: int = 1) -> Union[DriverElement, None]
+
+​	返回前N个兄弟元素对象。
+
 ### ele
 
 ​	ele(loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]
@@ -1361,11 +1397,13 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 
 
-## 有用的方法
+## easy_set方法
+
+chrome的配置太难记，所以把常用的配置写成简单的方法，调用会修改ini文件相关内容。
 
 ### set_paths
 
-​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, check_version: bool = True) -> None
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None, check_version: bool = True) -> None
 
 ​	便捷的设置路径方法，把传入的路径保存到默认ini文件，并检查chrome和chromedriver版本是否匹配。
 
@@ -1376,17 +1414,91 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 - debugger_address - 调试浏览器地址，例：127.0.0.1:9222
 - download_path - 下载文件路径
 - global_tmp_path - 临时文件夹路径
+- user_data_path - 用户数据路径
+- cache_path - 缓存路径
 - check_version - 是否检查chromedriver和chrome是否匹配
+
+### set_value_argument
+
+​	set_value_argument(arg: str, value: str) -> None
+
+​	设置有值的属性。
+
+​	参数说明：
+
+- arg - 属性名
+- value - 属性值
+
+### set_argument
+
+​	set_argument(arg: str, on_off: bool) -> None
+
+​	设置没有值的属性。
+
+​	参数说明：
+
+- arg - 属性名
+- on_off - 开或关
 
 ### set_headless
 
 ​	set_headless(on_off: bool) -> None
 
-​	便捷的headless开关。
+​	开启或关闭headless模式。
 
 ​	参数说明：
 
 - on_off - 是否开启headless模式
+
+### set_no_imgs
+
+​	set_no_imgs(on_off: bool) -> None
+
+​	开启或关闭图片显示。
+
+​	参数说明：
+
+- on_off - 是否开启无图模式
+
+### set_no_js
+
+​	set_no_js(on_off: bool) -> None
+
+​	开启或关闭禁用JS模式。
+
+​	参数说明：
+
+- on_off - 是否开启禁用JS模式
+
+### set_mute
+
+​	set_mute(on_off: bool) -> None
+
+​	开启或关闭静音模式。
+
+​	参数说明：
+
+- on_off - 是否开启静音模式
+
+### set_user_agent
+
+​	set_user_agent(user_agent: str) -> None:
+
+​	设置user_agent。
+
+​	参数说明：
+
+- user_agent - user_agent值
+
+### set_proxy
+
+​	set_proxy(proxy: str) -> None
+
+​	设置代理。
+
+​	参数说明：
+
+- proxy - 代理值
 
 ### check_driver_version
 

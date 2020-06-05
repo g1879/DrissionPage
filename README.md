@@ -1005,6 +1005,24 @@ Parameter Description:
 
 ​	Returns the last sibling element object.
 
+### parents
+
+​	parents(num: int = 1) -> Union[DriverElement, None]
+
+​	Returns the Nth-level parent element object.
+
+### nexts
+
+​	nexts(num: int = 1) -> Union[DriverElement, None]
+
+​	Returns the next N sibling element objects.
+
+### prevs
+
+​	prevs(num: int = 1) -> Union[DriverElement, None]
+
+​	Return the first N sibling element objects.
+
 ### size
 
 ​	Returns the element size as a dictionary.
@@ -1213,6 +1231,24 @@ Parameter Description:
 
 ​	Returns the last sibling element object.
 
+### parents
+
+​	parents(num: int = 1) -> Union[DriverElement, None]
+
+​	Returns the Nth-level parent element object.
+
+### nexts
+
+​	nexts(num: int = 1) -> Union[DriverElement, None]
+
+​	Returns the next N sibling element objects.
+
+### prevs
+
+​	prevs(num: int = 1) -> Union[DriverElement, None]
+
+​	Return the first N sibling element objects.
+
 ### ele
 
 ​	ele(loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]
@@ -1365,40 +1401,116 @@ Parameter Description:
 
 
 
-## Useful methods
+- ## easy_set methods
 
-### set_paths
+  The configuration of chrome is too difficult to remember, so the commonly used configuration is written as a simple method, and the call will modify the relevant content of the ini file.
 
-​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, check_version: bool = True) -> None
+  ### set_paths
 
-​	Convenient way to set the path, save the incoming path to the default ini file, and check whether the chrome and chromedriver versions match.
+  ​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None, check_version: bool = True) -> None
 
-​	Parameter Description:
+  ​	Convenient way to set the path, save the incoming path to the default ini file, and check whether the chrome and chromedriver versions match.
 
-- driver_path - chromedriver.exe path
-- chrome_path - chrome.exe path
-- debugger_address - Debug browser address, for example: 127.0.0.1:9222
-- download_path - Download path
-- global_tmp_path - Temporary folder path
-- check_version - Whether to check whether chromedriver and chrome match
+  ​	Parameter Description:
 
-### set_headless
+  - driver_path - the path of chromedriver.exe
+  - chrome_path - the path of chrome.exe
+  - debugger_address - Debug browser address, eg. 127.0.0.1:9222
+  - download_path - File download path
+  - global_tmp_path - Temporary folder path
+  - user_data_path - User data path
+  - cache_path - Cache path
+  - check_version - Whether to check whether chromedriver and chrome match
 
-​	set_headless(on_off: bool) -> None
+  ### set_value_argument
 
-​	Convenient headless switch.
+  ​	set_value_argument(arg: str, value: str) -> None
 
-​	Parameter Description:
+  ​	Set valued attributes.
 
-- on_off - Whether to enable headless mode
+  ​	Parameter Description:
 
-### check_driver_version
+  - arg - Attribute name
+  - value - Attribute value
 
-​	check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool
+  ### set_argument
 
-​	Check if the chrome and chromedriver versions match.
+  ​	set_argument(arg: str, on_off: bool) -> None
 
-​	Parameter Description:
+  ​	Set an attribute with no value.
 
-- driver_path - chromedriver.exe path
-- chrome_path - chrome.exe path
+  ​	Parameter Description:
+
+  - arg - Attribute name
+  - on_off - On or off
+
+  ### set_headless
+
+  ​	set_headless(on_off: bool) -> None
+
+  ​	Turn headless mode on or off.
+
+  ​	Parameter Description:
+
+  - on_off - Whether to enable headless mode
+
+  ### set_no_imgs
+
+  ​	set_no_imgs(on_off: bool) -> None
+
+  ​	Turn the picture display on or off.
+
+  ​	Parameter Description:
+
+  - on_off - Whether to enable no-picture mode
+
+  ### set_no_js
+
+  ​	set_no_js(on_off: bool) -> None
+
+  ​	Turn JS mode on or off.
+
+  ​	Parameter Description:
+
+  - on_off - Whether to enable or disable JS mode
+
+  ### set_mute
+
+  ​	set_mute(on_off: bool) -> None
+
+  ​	Turn silent mode on or off.
+
+  ​	Parameter Description:
+
+  - on_off - Whether to turn on silent mode
+
+  ### set_user_agent
+
+  ​	set_user_agent(user_agent: str) -> None:
+
+  ​	Set user_agent.
+
+  ​	Parameter Description:
+
+  - user_agent - user_agent value
+
+  ### set_proxy
+
+  ​	set_proxy(proxy: str) -> None
+
+  ​	Set up the proxy.
+
+  ​	Parameter Description:
+
+  - proxy - Proxy value
+
+  ### check_driver_version
+
+  ​	check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool
+
+  ​	Check if the chrome and chromedriver versions match.
+
+  ​	Parameter Description:
+
+  - driver_path - the path of chromedriver.exe
+  - chrome_path - the path of chrome.exe
