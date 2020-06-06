@@ -4,6 +4,7 @@
 @Contact :   g1879@qq.com
 @File    :   common.py
 """
+import re
 from abc import abstractmethod
 from pathlib import Path
 from typing import Union
@@ -66,7 +67,12 @@ def get_loc_from_str(loc: str) -> tuple:
     by = loc_item[0]
     loc_by = 'xpath'
     if by == 'tag' and len(loc_item) == 2:
-        loc_str = f'//{loc_item[1]}'
+        if '@' not in loc_item[1]:
+            loc_str = f'//{loc_item[1]}'
+        else:
+            r = re.search(r'(.*?)@([^=]*)=?(.*)', loc_item[1])
+            loc_str = f'//{r.group(1)}[@{r.group(2)}{"{}"}]'
+            loc_str = loc_str.format(f'="{r.group(3)}"') if r.group(3) else loc_str.format('')
     elif by.startswith('@') and len(loc_item) == 2:
         loc_str = f'//*[{by}="{loc_item[1]}"]'
     elif by.startswith('@') and len(loc_item) == 1:

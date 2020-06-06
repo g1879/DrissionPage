@@ -87,9 +87,16 @@ class DriverOptions(Options):
         om.save(path)
 
     def remove_argument(self, value: str) -> None:
-        """移除一个设置"""
-        if value in self._arguments:
-            self._arguments.remove(value)
+        """移除一个设置
+        :param value: 设置项名，有值的设置项传入设置名称即可
+        :return: None
+        """
+        del_list = []
+        for argument in self._arguments:
+            if argument.startswith(value):
+                del_list.append(argument)
+        for del_arg in del_list:
+            self._arguments.remove(del_arg)
 
     def remove_experimental_option(self, key: str) -> None:
         """移除一个实验设置，传入key值删除"""

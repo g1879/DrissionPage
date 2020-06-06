@@ -4,6 +4,8 @@
 @Contact :   g1879@qq.com
 @File    :   driver_page.py
 """
+from typing import Union
+
 from selenium import webdriver
 
 from DrissionPage.config import OptionsManager, DriverOptions
@@ -43,40 +45,24 @@ def set_paths(driver_path: str = None,
         om.set_item('chrome_options', 'experimental_options', experimental_options)
     om.save()
     if user_data_path is not None:
-        set_value_argument('--user-data-dir', user_data_path)
+        set_argument('--user-data-dir', user_data_path)
     if cache_path is not None:
-        set_value_argument('--disk-cache-dir', cache_path)
+        set_argument('--disk-cache-dir', cache_path)
     if check_version:
         check_driver_version(driver_path, chrome_path)
 
 
-def set_value_argument(arg: str, value: str) -> None:
-    """设置有值的属性"""
+def set_argument(arg: str, value: Union[bool, str]) -> None:
+    """设置属性
+    :param arg: 属性名
+    :param value: 属性值，有值的属性传入值，没有的传入bool
+    :return:
+    """
     do = DriverOptions()
-    pr_ok = False
-    for key, argument in enumerate(do.arguments):
-        print(argument)
-        if arg in argument:
-            do.remove_argument(do.arguments[key])
-            print(value)
-            if value:
-                do.add_argument(f'{arg}={value}')
-            pr_ok = True
-            break
-    if not pr_ok:
-        do.add_argument(f'{arg}={value}')
-        print(do.arguments)
-    do.save()
-
-
-def set_argument(arg: str, on_off: bool) -> None:
-    """设置没有值的属性"""
-    do = DriverOptions()
-    if on_off:
-        if arg not in do.arguments:
-            do.add_argument(arg)
-    else:
-        do.remove_argument(arg)
+    do.remove_argument(arg)
+    if value:
+        arg_str = arg if isinstance(value, bool) else f'{arg}={value}'
+        do.add_argument(arg_str)
     do.save()
 
 
@@ -102,12 +88,12 @@ def set_mute(on_off: bool = True) -> None:
 
 def set_user_agent(user_agent: str) -> None:
     """设置user agent"""
-    set_value_argument('user-agent', user_agent)
+    set_argument('user-agent', user_agent)
 
 
 def set_proxy(proxy: str) -> None:
     """设置代理"""
-    set_value_argument('--proxy-server', proxy)
+    set_argument('--proxy-server', proxy)
 
 
 def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool:

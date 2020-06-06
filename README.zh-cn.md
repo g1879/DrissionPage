@@ -27,6 +27,7 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 - 人性化的页面元素操作方法，减轻页面分析工作量和编码量。  
 - 把配置信息保存到文件，方便调用。
 - 对某些常用功能（如点击）作了优化，更符合实际使用需要。  
+- 简易的配置方法，摆脱繁琐的浏览器配置。
 
 # 理念
 
@@ -40,25 +41,16 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 
 以下代码实现一模一样的功能，对比两者的代码量：
 
-1、查找所有name为ele_name的元素
+1. 查找所有文本包含some text的元素
 
 ```python
 # selenium:
-element = WebDriverWait(driver).until(ec.presence_of_all_elements_located((By.XPATH, '//*[@name="ele_name"]')))
+element = WebDriverWait(driver).until(ec.presence_of_all_elements_located((By.XPATH, '//*[contains(text(), "some text")]')))
 # DrissionPage:
-element = page.eles('@name:ele_name')
+element = page.eles('some text')
 ```
 
-2、查找第一个文本包含some text的元素
-
-```python
-# selenium:
-element = WebDriverWait(driver, timeout = 2).until(ec.presence_of_element_located((By.XPATH, '//*[contains(text(), "some text")]')))
-# DrissionPage:
-element = page.ele('some text', timeout = 2)
-```
-
-3、跳转到第一个标签页
+2. 跳转到第一个标签页
 
 ```python
 # selenium
@@ -67,7 +59,7 @@ driver.switch_to.window(driver.window_handles[0])
 page.to_tab(0)
 ```
 
-4、拖拽一个元素
+3. 拖拽一个元素
 
 ```python
 # selenium
@@ -76,7 +68,7 @@ ActionChains(driver).drag_and_drop(ele1, ele2).perform()
 ele1.drag_to(ele2)
 ```
 
-5、滚动窗口到底部（保持水平滚动条不变）
+4. 滚动窗口到底部（保持水平滚动条不变）
 
 ```python
 # selenium
@@ -84,6 +76,18 @@ driver.execute_script("window.scrollTo(document.documentElement.scrollLeft,docum
 # DrissionPage
 page.scroll_to('bottom')
 ```
+
+5. 设置headless模式
+
+```python
+# selenium
+options = webdriver.ChromeOptions()
+options.add_argument("--headless")
+# DrissionPage
+set_headless()
+```
+
+
 
 # 背景
 
@@ -104,8 +108,7 @@ page.scroll_to('bottom')
 例：用selenium登录网站，然后切换到requests读取网页。
 
 ```python
-drission = Drission()  # 创建驱动器对象
-page = MixPage(drission)  # 创建页面对象，默认driver模式
+page = MixPage()  # 创建页面对象，默认driver模式
 page.get('https://gitee.com/profile')  # 访问个人中心页面（未登录，重定向到登录页面）
 
 page.ele('@id:user_login').input('your_user_name')  # 使用selenium输入账号密码登录
@@ -165,12 +168,10 @@ from DrissionPage import *
 
 ## 初始化
 
-使用selenium前，必须配置chrome.exe和chromedriver.exe的路径，并确保它们版本匹配。
-
+使用selenium前，必须配置chrome.exe和chromedriver.exe的路径，并确保它们版本匹配。  
 如果你只使用session模式，可跳过本节。
 
 配置路径有三种方法：
-
 - 将两个路径写入系统变量。
 - 使用时手动传入路径。
 - 将路径写入本库的ini文件（推荐）。
@@ -179,7 +180,7 @@ from DrissionPage import *
 
 ```python
 from DrissionPage.easy_set import set_paths
-driver_path = 'C:\\chrome\\chromedriver.exe'  # 你的chromedriver.exe路径，可选
+driver_path = 'D:\\chrome\\chromedriver.exe'  # 你的chromedriver.exe路径，可选
 chrome_path = 'D:\\chrome\\chrome.exe'  # 你的chrome.exe路径，可选
 set_paths(driver_path, chrome_path)
 ```
@@ -205,6 +206,8 @@ chromedriver下载网址：https://chromedriver.chromium.org/downloads
 debugger_address  # 调试浏览器地址，如：127.0.0.1:9222
 download_path  # 下载文件路径
 global_tmp_path  # 临时文件夹路径
+user_data_path # 用户数据路径
+cache_path # 缓存路径
 ```
 
 Tips：
@@ -217,7 +220,8 @@ Tips：
 
 ## 创建驱动器对象Drission
 
-Drission对象用于管理driver和session对象。可直接读取ini文件配置信息创建，也可以在初始化时传入配置信息。
+Drission对象用于管理driver和session对象。在多个页面协同工作时，Drission对象用于传递驱动器，使多个页面类可控制同一个浏览器或Session对象。  
+可直接读取ini文件配置信息创建，也可以在初始化时传入配置信息。
 
 ```python
 # 由默认ini文件创建
@@ -236,7 +240,7 @@ from DrissionPage.config import DriverOptions
 driver_options = DriverOptions()  # 创建driver配置对象
 driver_options.binary_location = 'D:\\chrome\\chrome.exe'  # chrome.exe路径
 session_options = {'headers': {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
-driver_path = 'C:\\chrome\\chromedriver.exe'  # driver_path路径
+driver_path = 'D:\\chrome\\chromedriver.exe'  # driver_path路径
 
 drission = Drission(driver_options, session_options, driver_path)  # 传入配置
 ```
@@ -245,11 +249,18 @@ drission = Drission(driver_options, session_options, driver_path)  # 传入配�
 
 ## 使用页面对象MixPage
 
-MixPage页面对象封装了常用的网页操作，并实现driver和session模式之间的切换。
+MixPage页面对象封装了常用的网页操作，并实现driver和session模式之间的切换。  
+MixPage须接收一个Drission对象并使用其中的driver或session，如没有传入，MixPage会自己创建一个Drission（使用默认ini文件的配置）。
+
+Tips: 多页面对象协同工作时，记得手动创建Drission对象并传递给页面对象使用。否则页面对象会各自创建自己的Drission对象，使信息无法传递。
 
 ```python
-page = MixPage(drission)  # 默认driver模式
-page = MixPage(drission, mode='s', timeout=10)  # session模式，元素等待时间5秒（默认10秒）
+# 创建MixPage对象的方法
+page = MixPage()  # 自动创建Drission对象，driver模式，建议只在单页面对象情况下使用
+page = MixPage('s')  # 以session模式快速创建，自动创建Drission对象
+
+page = MixPage(drission)  # 以传入Drission对象创建
+page = MixPage(drission, mode='s', timeout=5)  # session模式，等待时间5秒（默认10秒）
 
 # 访问URL
 page.get(url, **kwargs)
@@ -282,15 +293,15 @@ Tips：调用只属于driver模式的方法，会自动切换到driver模式。
 # 根据属性查找
 page.ele('@id:ele_id', timeout = 2)  # 查找id为ele_id的元素，设置等待时间2秒
 page.eles('@class:class_name')  # 查找所有class为class_name的元素   
+page.eles('@class')  # 查找所有拥有class属性的元素
 
 # 根据tag name查找
 page.ele('tag:li')  # 查找第一个li元素  
 page.eles('tag:li')  # 查找所有li元素  
 
-# 根据位置查找
-page.ele('@id:ele_id').parent  # 父元素  
-page.ele('@id:ele_id').next  # 下一个兄弟元素  
-page.ele('@id:ele_id').prev  # 上一个兄弟元素  
+# 根据tag name及属性查找
+page.ele('tag:div@class=div_class')  # 查找class为div_class的div元素
+page.eles('tag:div@class')  # 查找所有拥有class属性的div元素
 
 # 根据文本内容查找
 page.ele('search text')  # 查找包含传入文本的元素  
@@ -310,6 +321,11 @@ page.ele(loc2)
 element = page.ele('@id:ele_id')
 element.ele('@class:class_name')  # 在element下级查找第一个class为ele_class的元素
 element.eles('tag:li')  # 在ele_id下级查找所有li元素
+
+# 根据位置查找
+element.parent  # 父元素  
+element.next  # 下一个兄弟元素  
+element.prev  # 上一个兄弟元素  
 
 # 串连查找
 page.ele('@id:ele_id').ele('tag:div').next.ele('some text').eles('tag:a')
@@ -378,7 +394,11 @@ arguments = [
             ; 不使用沙盒
             '--no-sandbox',
             ; 谷歌文档提到需要加上这个属性来规避bug
-            '--disable-gpu'
+            '--disable-gpu',
+            ; 忽略警告
+            'ignore-certificate-errors',
+            ; 不显示信息栏
+            '--disable-infobars'
             ]
 ; 插件
 extensions = []
@@ -390,11 +410,11 @@ experimental_options = {
                        ; 无弹窗
                        'profile.default_content_setting_values': {'notifications': 2},
                        ; 禁用PDF插件
-                       'plugins.plugins_list': [{"enabled": False, "name": "Chrome PDF Viewer"}],
-                       ; 设置为开发者模式，防反爬虫（无用）
-                       'excludeSwitches': ["ignore-certificate-errors", "enable-automation"],
+                       'plugins.plugins_list': [{"enabled": False, "name": "Chrome PDF Viewer"}]
+                       },
+                       ; 设置为开发者模式，防反爬虫
+                       'excludeSwitches': ["enable-automation"],
                        'useAutomationExtension': False
-                       }
                        }
 
 [session_options]
@@ -452,6 +472,22 @@ save()  # 保存配置到ini文件
 save('D:\\settings.ini')  # 保存到其它路径
 ```
 
+
+
+## easy_set方法
+
+​	chrome的配置太难记，所以把常用的配置写成简单的方法，调用会修改ini文件相关内容。
+
+```python
+set_headless(True)  # 开启headless模式
+set_no_imgs(True)  # 开启无图模式
+set_no_js(True)  # 禁用JS
+set_mute(True)  # 开启静音模式
+set_user_agent('Mozilla/5.0 (Macintosh; Int......')  # 设置user agent
+set_proxy('127.0.0.1:8888')  # 设置代理
+set_paths(paths)  # 见 [初始化] 一节
+set_argument(arg, value)  # 设置属性，若属性无值（如'zh_CN.UTF-8'），value为bool表示开关；否则value为str，当value为''或False，删除该属性项
+```
 
 # PO模式
 
@@ -637,7 +673,7 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ## MixPage类
 
-class **MixPage**(drission: Drission, mode='d', timeout: float = 10)
+class **MixPage**(drission: Union[Drission, str] = None, mode:str = 'd', timeout: float = 10)
 
 MixPage封装了页面操作的常用功能，可在driver和session模式间无缝切换。切换的时候会自动同步cookies。  
 获取信息功能为两种模式共有，操作页面元素功能只有d模式有。调用某种模式独有的功能，会自动切换到该模式。  
@@ -645,9 +681,9 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 参数说明：
 
-- drission - Drission对象
+- drission - Drission对象，如没传入则创建一个。传入's'或'd'时快速配置相应模式
 - mode - 模式，可选'd'或's'，默认为'd'
-- timeout - 查找元素超时时间（每次查找元素时还可单独设置）
+- timeout - 超时时间，driver模式查找元素时间及session模式连接时间
 
 ### url  
 
@@ -1418,27 +1454,16 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 - cache_path - 缓存路径
 - check_version - 是否检查chromedriver和chrome是否匹配
 
-### set_value_argument
-
-​	set_value_argument(arg: str, value: str) -> None
-
-​	设置有值的属性。
-
-​	参数说明：
-
-- arg - 属性名
-- value - 属性值
-
 ### set_argument
 
-​	set_argument(arg: str, on_off: bool) -> None
+​	set_argument(arg: str, value: Union[bool, str]) -> None
 
-​	设置没有值的属性。
+​	设置属性。若属性无值（如'zh_CN.UTF-8'），value传入bool表示开关；否则value传入str，当value为''或False，删除该属性项。
 
 ​	参数说明：
 
 - arg - 属性名
-- on_off - 开或关
+- value - 属性值，有值的属性传入值，没有的传入bool
 
 ### set_headless
 

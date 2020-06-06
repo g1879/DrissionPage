@@ -23,10 +23,10 @@ from .session_element import SessionElement, execute_session_find
 class SessionPage(object):
     """SessionPage封装了页面操作的常用功能，使用requests_html来获取、解析网页。"""
 
-    def __init__(self, session: HTMLSession):
+    def __init__(self, session: HTMLSession, timeout: float = 10):
         """初始化函数"""
         self._session = session
-        # self._locs = locs
+        self.timeout = timeout
         self._url = None
         self._url_available = None
         self._response = None
@@ -195,17 +195,21 @@ class SessionPage(object):
             raise ValueError("mode must be 'get' or 'post'.")
 
         # 设置referer和host值
-        if self._url:
-            if 'headers' in set(x.lower() for x in kwargs):
-                keys = set(x.lower() for x in kwargs['headers'])
-                if 'referer' not in keys:
-                    kwargs['headers']['Referer'] = self._url
-                if 'host' not in keys:
-                    kwargs['headers']['Host'] = urlparse(url).hostname
-            else:
-                kwargs['headers'] = self.session.headers
+        kwargs_set = set(x.lower() for x in kwargs)
+        if 'headers' in kwargs_set:
+            header_set = set(x.lower() for x in kwargs['headers'])
+            if self._url and 'referer' not in header_set:
                 kwargs['headers']['Referer'] = self._url
+            if 'host' not in header_set:
                 kwargs['headers']['Host'] = urlparse(url).hostname
+        else:
+            kwargs['headers'] = self.session.headers
+            kwargs['headers']['Host'] = urlparse(url).hostname
+            if self._url:
+                kwargs['headers']['Referer'] = self._url
+
+        if 'timeout' not in kwargs_set:
+            kwargs['timeout'] = self.timeout
 
         try:
             r = None
