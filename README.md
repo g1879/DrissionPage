@@ -292,15 +292,16 @@ Tips：Calling a method that belongs only to the driver mode will automatically 
 
 ## Find elements
 
-There are many ways to find page elements (eles function will return a list of all the element objects that meet the requirements).  
+ele() returns the first eligible element, eles() returns a list of all eligible elements.  
+You can use these two functions under the page object or element object to find the subordinate elements.  
 
 Note: The element search timeout is 10 seconds by default, you can also set it as required.
 
 ```python
 # Find by attribute
 page.ele('@id:ele_id', timeout = 2)  # Find the element with id ele_id and set the waiting time to 2 seconds
-page.eles('@class:class_name')  # Find all elements with class class_name   
-page.eles('@class')  # Find all elements with class attribute
+page.eles('@class')  # Find all elements with ele_class
+page.eles('@class:class_name')  # Find all elements with class equal to ele_class   
 
 # Search by tag name
 page.ele('tag:li')  # Find the first li element  
@@ -308,11 +309,15 @@ page.eles('tag:li')  # Find all li elements
 
 # Search by tag name and attributes
 page.ele('tag:div@class=div_class')  # Find the first div element whose class is div_class
-page.eles('tag:div@class')  # Find all div elements with class attribute
+page.ele('tag:div@class:ele_class') # Find the div element with ele_class in class
+page.ele('tag:div@class=ele_class') # Find div elements with class equal to ele_class
+page.ele('tag:div@text():search_text') # Find the div element whose text contains search_text
+page.ele('tag:div@text()=search_text') # Find div elements with text equal to search_text
 
 # Find by text
 page.ele('search text')  # Find elements containing incoming text  
-page.eles('text:search text')  # If the text starts with @, tag :, css :, xpath :, text :, add text: in front to avoid conflicts.  
+page.eles('text:search text')  # If the text starts with @, tag :, css :, xpath :, text :, add text: in front to avoid conflicts  
+page.eles('text=search text')  # Elements with text equal to search_text 
 
 # Find by xpath or css selector
 page.eles('xpath://div[@class="ele_class"]')  

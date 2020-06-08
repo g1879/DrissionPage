@@ -285,15 +285,19 @@ Tips：调用只属于driver模式的方法，会自动切换到driver模式。
 
 ## 查找元素
 
-可使用多种方法查找页面元素（eles函数会返回所有符合要求的元素对象列表）。  
+ele()返回第一个符合条件的元素，eles()返回所有符合条件的元素列表。  
+你可在页面对象或元素对象下使用这两个函数，以查找下级元素。  
+
+page.eles()和element.eles()查找返回符合条件的所有元素列表。  
 
 注：元素查找超时默认为10秒，你也可以按需要设置。
 
 ```python
 # 根据属性查找
-page.ele('@id:ele_id', timeout = 2)  # 查找id为ele_id的元素，设置等待时间2秒
-page.eles('@class:class_name')  # 查找所有class为class_name的元素   
+page.ele('@id:ele_id', timeout = 2)  # 查找id为ele_id的元素，设置等待时间2秒  
 page.eles('@class')  # 查找所有拥有class属性的元素
+page.eles('@class:class_name')  # 查找所有class含有ele_class的元素 
+page.eles('@class=class_name')  # 查找所有class等于ele_class的元素 
 
 # 根据tag name查找
 page.ele('tag:li')  # 查找第一个li元素  
@@ -301,11 +305,15 @@ page.eles('tag:li')  # 查找所有li元素
 
 # 根据tag name及属性查找
 page.ele('tag:div@class=div_class')  # 查找class为div_class的div元素
-page.eles('tag:div@class')  # 查找所有拥有class属性的div元素
+page.ele('tag:div@class:ele_class') # 查找class含有ele_class的div元素
+page.ele('tag:div@class=ele_class') # 查找class等于ele_class的div元素
+page.ele('tag:div@text():search_text') # 查找文本含有search_text的div元素
+page.ele('tag:div@text()=search_text') # 查找文本等于search_text的div元素
 
 # 根据文本内容查找
 page.ele('search text')  # 查找包含传入文本的元素  
 page.eles('text:search text')  # 如文本以@、tag:、css:、xpath:、text:开头，则在前面加上text:避免冲突  
+page.eles('text=search text')  # 文本等于search_text的元素
 
 # 根据xpath或css selector查找
 page.eles('xpath://div[@class="ele_class"]')  
