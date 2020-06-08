@@ -63,34 +63,72 @@ class DrissionElement(object):
 
 
 def get_loc_from_str(loc: str) -> tuple:
-    loc_item = loc.split(':', 1)
-    by = loc_item[0]
+    """处理元素查找语句
+    查找方式：属性、tag name及属性、文本、xpath、css selector
+    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串
+    例：
+    @class:ele_class - class含有ele_class的元素
+    @class=ele_class - class等于ele_class的元素
+    @class - 带class属性的元素
+    tag:div - div元素
+    tag:div@class:ele_class - class含有ele_class的div元素
+    tag:div@class=ele_class - class等于ele_class的div元素
+    tag:div@text():search_text - 文本含有search_text的div元素
+    tag:div@text()=search_text - 文本等于search_text的div元素
+    text:search_text - 文本含有search_text的元素
+    text=search_text - 文本等于search_text的元素
+    xpath://div[@class="ele_class"]
+    css:div.ele_class
+    """
     loc_by = 'xpath'
-    if by == 'tag' and len(loc_item) == 2:
-        if '@' not in loc_item[1]:
-            loc_str = f'//{loc_item[1]}'
+    if loc.startswith('@'):
+        r = re.split(r'([:=])', loc[1:], maxsplit=1)
+        if len(r) == 3:
+            mode = 'exact' if r[1] == '=' else 'fuzzy'
+            loc_str = _make_xpath_str('*', f'@{r[0]}', r[2], mode)
         else:
-            r = re.search(r'(.*?)@([^=]*)=?(.*)', loc_item[1])
-            loc_str = f'//{r.group(1)}[@{r.group(2)}{"{}"}]'
-            loc_str = loc_str.format(f'="{r.group(3)}"') if r.group(3) else loc_str.format('')
-    elif by.startswith('@') and len(loc_item) == 2:
-        loc_str = f'//*[{by}="{loc_item[1]}"]'
-    elif by.startswith('@') and len(loc_item) == 1:
-        loc_str = f'//*[{by}]'
-    elif by == 'text' and len(loc_item) == 2:
-        loc_str = _make_xpath_search_str(loc_item[1])
-    elif by == 'xpath' and len(loc_item) == 2:
-        loc_str = loc_item[1]
-    elif by == 'css' and len(loc_item) == 2:
+            loc_str = f'//*[@{loc[2:]}]'
+    elif loc.startswith(('tag=', 'tag:')):
+        if '@' not in loc[4:]:
+            loc_str = f'//{loc[4:]}'
+        else:
+            at_lst = loc[4:].split('@', maxsplit=1)
+            r = re.split(r'([:=])', at_lst[1], maxsplit=1)
+            if len(r) == 3:
+                mode = 'exact' if r[1] == '=' else 'fuzzy'
+                arg_str = r[0] if r[0] == 'text()' else f'@{r[0]}'
+                loc_str = _make_xpath_str(at_lst[0], arg_str, r[2], mode)
+            else:
+                loc_str = f'//{at_lst[0]}[@{r[0]}]'
+    elif loc.startswith(('text=', 'text:')):
+        if len(loc) > 5:
+            mode = 'exact' if loc[4] == '=' else 'fuzzy'
+            loc_str = _make_xpath_str('*', 'text()', loc[5:], mode)
+        else:
+            loc_str = '//*[not(text())]'
+    elif loc.startswith(('xpath=', 'xpath:')):
+        loc_str = loc[6:]
+    elif loc.startswith(('css=', 'css:')):
         loc_by = 'css selector'
-        loc_str = loc_item[1]
+        loc_str = loc[4:]
     else:
-        loc_str = _make_xpath_search_str(by)
+        if loc:
+            loc_str = _make_xpath_str('*', 'text()', loc, 'fuzzy')
+        else:
+            loc_str = '//*[not(text())]'
     return loc_by, loc_str
 
 
-def _make_xpath_search_str(search_str: str):
-    # 将"转义，不知何故不能直接用\"
+def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy'):
+    """生成xpath语句"""
+    if mode == 'exact':
+        return f'//{tag}[{arg}={_make_search_str(val)}]'
+    else:
+        return f"//{tag}[contains({arg},{_make_search_str(val)})]"
+
+
+def _make_search_str(search_str: str):
+    """将"转义，不知何故不能直接用\""""
     parts = search_str.split('"')
     parts_num = len(parts)
     search_str = 'concat('
@@ -98,7 +136,7 @@ def _make_xpath_search_str(search_str: str):
         search_str += f'"{i}"'
         search_str += ',' + '\'"\',' if key < parts_num - 1 else ''
     search_str += ',"")'
-    return f"//*[contains(text(),{search_str})]"
+    return search_str
 
 
 def translate_loc_to_xpath(loc):
