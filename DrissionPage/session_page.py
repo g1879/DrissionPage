@@ -18,6 +18,7 @@ from requests_html import HTMLSession, HTMLResponse
 from .common import get_loc_from_str, translate_loc_to_xpath, avoid_duplicate_name
 from .config import OptionsManager
 from .session_element import SessionElement, execute_session_find
+from html import unescape
 
 
 class SessionPage(object):
@@ -62,6 +63,7 @@ class SessionPage(object):
     @property
     def html(self) -> str:
         """获取元素innerHTML，如未指定元素则获取所有源代码"""
+        # return unescape(self.response.html.raw_html.replace(b'\x08', b'').decode()).replace('\xa0', ' ')
         return self.response.html.html
 
     def ele(self, loc_or_ele: Union[tuple, str, SessionElement], mode: str = None, show_errmsg: bool = False) \
@@ -229,6 +231,7 @@ class SessionPage(object):
                     charset = 'utf-8'
             else:
                 charset = headers['Content-Type'].split('=')[1]
+            r._content = r.content.replace(b'\x08', b'\\b')  # 避免存在退格符导致乱码或解析出错
             r.encoding = charset
             return_value = r
         return return_value
