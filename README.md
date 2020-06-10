@@ -747,14 +747,13 @@ Parameter Description:
 
 ### get
 
-​	get(url: str, params: dict = None, go_anyway=False, **kwargs) -> Union[bool, None]
+​	get(url: str, go_anyway=False, **kwargs) -> Union[bool, None]
 
 ​	Jump to a url, sync cookies before jumping, and return whether the target url is available after jumping.
 
 ​	Parameter Description:
 
 - url - Target url
-- params - url parameters
 - go_anyway - Whether to force a jump. If the target url is the same as the current url, the default is not to jump.
 - kwargs - Used to access parameters when in session mode.
 
@@ -965,7 +964,7 @@ Parameter Description:
 
 ### screenshot
 
-​	screenshot(path: str = None, filename: str = None) -> str
+​	screenshot(path: str, filename: str = None) -> str
 
 ​	Take a screenshot of the web page and return the path of the screenshot file.
 
@@ -1192,7 +1191,7 @@ Parameter Description:
 
 ### screenshot
 
-​	screenshot(path: str = None, filename: str = None) -> str
+​	screenshot(path: str, filename: str = None) -> str
 
 ​	Take a screenshot of the web page and return the path of the screenshot file.
 

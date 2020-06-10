@@ -742,14 +742,13 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### get
 
-​	get(url: str, params: dict = None, go_anyway=False, **kwargs) -> Union[bool, None]
+​	get(url: str, go_anyway=False, **kwargs) -> Union[bool, None]
 
 ​	跳转到一个url，跳转前先同步cookies，跳转后返回目标url是否可用。
 
 ​	参数说明：
 
 - url - 目标url
-- params - url参数
 - go_anyway - 是否强制跳转。若目标url和当前url一致，默认不跳转。
 - kwargs - 用于session模式时访问参数。
 
@@ -960,7 +959,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### screenshot
 
-​	screenshot(path: str = None, filename: str = None) -> str
+​	screenshot(path: str, filename: str = None) -> str
 
 ​	网页截图，返回截图文件路径。
 
@@ -1187,7 +1186,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### screenshot
 
-​	screenshot(path: str = None, filename: str = None) -> str
+​	screenshot(path: str, filename: str = None) -> str
 
 ​	网页截图，返回截图文件路径。
 

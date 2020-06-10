@@ -10,15 +10,13 @@ from pathlib import Path
 from random import random
 from time import time
 from typing import Union, List
-from urllib import parse
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 from requests_html import HTMLSession, HTMLResponse
 
 from .common import get_loc_from_str, translate_loc_to_xpath, avoid_duplicate_name
 from .config import OptionsManager
 from .session_element import SessionElement, execute_session_find
-from html import unescape
 
 
 class SessionPage(object):
@@ -87,9 +85,9 @@ class SessionPage(object):
         """查找符合条件的所有元素"""
         return self.ele(loc, mode='all', show_errmsg=True)
 
-    def get(self, url: str, params: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]:
+    def get(self, url: str, go_anyway: bool = False, **kwargs) -> Union[bool, None]:
         """用get方式跳转到url，调用_make_response()函数生成response对象"""
-        to_url = f'{url}?{parse.urlencode(params)}' if params else url
+        to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self.url == to_url):
             return
         self._url = url
@@ -99,10 +97,10 @@ class SessionPage(object):
         self._url_available = True if self._response and self._response.ok else False
         return self._url_available
 
-    def post(self, url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) \
+    def post(self, url: str, data: dict = None, go_anyway: bool = False, **kwargs) \
             -> Union[bool, None]:
         """用post方式跳转到url，调用_make_response()函数生成response对象"""
-        to_url = f'{url}?{parse.urlencode(params)}' if params else url
+        to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self._url == to_url):
             return
         self._url = url

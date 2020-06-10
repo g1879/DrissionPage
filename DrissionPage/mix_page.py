@@ -5,7 +5,6 @@
 @File    :   mix_page.py
 """
 from typing import Union, List
-from urllib import parse
 
 from requests import Response
 from requests_html import HTMLSession
@@ -179,21 +178,21 @@ class MixPage(Null, SessionPage, DriverPage):
 
     # ----------------以下为共用函数-----------------------
 
-    def get(self, url: str, params: dict = None, go_anyway=False, **kwargs) -> Union[bool, None]:
+    def get(self, url: str, go_anyway=False, **kwargs) -> Union[bool, None]:
         """跳转到一个url，跳转前先同步cookies，跳转后判断目标url是否可用"""
-        to_url = f'{url}?{parse.urlencode(params)}' if params else url
-        if not url or (not go_anyway and self.url == to_url):
-            return
+        # to_url = quote(url, safe='/:&?=%;#@')
+        # if not url or (not go_anyway and self.url == to_url):
+        #     return
         if self._mode == 'd':
-            super(SessionPage, self).get(url=to_url, go_anyway=go_anyway)
+            if super(SessionPage, self).get(url=url, go_anyway=go_anyway) is None:
+                return
             if self.session_url == self.url:
                 self._url_available = True if self._response and self._response.ok else False
             else:
                 self._url_available = self.check_page()
             return self._url_available
         elif self._mode == 's':
-            super().get(url=to_url, go_anyway=go_anyway, **kwargs)
-            return self._url_available
+            return None if super().get(url=url, go_anyway=go_anyway, **kwargs) is None else self._url_available
 
     def ele(self, loc_or_ele: Union[tuple, str, DriverElement, SessionElement], mode: str = None, timeout: float = None,
             show_errmsg: bool = False) -> Union[DriverElement, SessionElement]:

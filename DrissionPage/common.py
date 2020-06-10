@@ -5,6 +5,7 @@
 @File    :   common.py
 """
 import re
+import shutil
 from abc import abstractmethod
 from pathlib import Path
 from typing import Union
@@ -181,3 +182,19 @@ def avoid_duplicate_name(folder_path: str, file_name: str) -> str:
             file_name = f'{base_name} (1){ext_name}'
         file_Path = Path(folder_path).joinpath(file_name)
     return file_name
+
+
+def clean_folder(folder_path: str, ignore: list = None):
+    """清空一个文件夹，除了ignore里的文件和文件夹
+    :param folder_path: 要清空的文件夹路径
+    :param ignore: 忽略列表
+    :return: None
+    """
+    ignore = [] if not ignore else ignore
+    p = Path(folder_path)
+    for f in p.iterdir():
+        if f.name not in ignore:
+            if f.is_file():
+                f.unlink()
+            elif f.is_dir():
+                shutil.rmtree(f, True)

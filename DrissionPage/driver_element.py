@@ -15,8 +15,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
-from .common import DrissionElement, get_loc_from_str, translate_loc_to_xpath
-from .config import OptionsManager
+from .common import DrissionElement, get_loc_from_str, translate_loc_to_xpath, avoid_duplicate_name
 
 
 class DriverElement(DrissionElement):
@@ -201,12 +200,10 @@ class DriverElement(DrissionElement):
         """元素坐标"""
         return self.inner_ele.location
 
-    def screenshot(self, path: str = None, filename: str = None) -> str:
+    def screenshot(self, path: str, filename: str = None) -> str:
         """元素截图"""
         name = filename or self.tag
-        path = path or OptionsManager().get_value('paths', 'global_tmp_path')
-        if not path:
-            raise IOError('No path specified.')
+        name = avoid_duplicate_name(path, f'{name}.png')
         Path(path).mkdir(parents=True, exist_ok=True)
         # 等待元素加载完成
         if self.tag == 'img':
@@ -214,7 +211,7 @@ class DriverElement(DrissionElement):
                  '&& arguments[0].naturalWidth > 0'
             while not self.run_script(js):
                 pass
-        img_path = f'{path}\\{name}.png'
+        img_path = f'{path}\\{name}'
         self.inner_ele.screenshot(img_path)
         return img_path
 
