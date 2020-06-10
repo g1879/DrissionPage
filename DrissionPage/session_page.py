@@ -229,7 +229,8 @@ class SessionPage(object):
                     charset = 'utf-8'
             else:
                 charset = headers['Content-Type'].split('=')[1]
-            r._content = r.content.replace(b'\x08', b'\\b')  # 避免存在退格符导致乱码或解析出错
+            # 避免存在退格符导致乱码或解析出错
+            r._content = r.content if 'stream' in kwargs and kwargs['stream'] else r.content.replace(b'\x08', b'\\b')
             r.encoding = charset
             return_value = r
         return return_value
