@@ -157,7 +157,7 @@ class MixPage(Null, SessionPage, DriverPage):
             -> Union[bool, None]:
         """post前先转换模式，但不跳转"""
         self.change_mode('s', go=False)
-        return super().post(url, params, data, go_anyway, **kwargs)
+        return super().post(url, data, go_anyway, **kwargs)
 
     # ----------------重写DriverPage的函数-----------------------
 
@@ -180,9 +180,6 @@ class MixPage(Null, SessionPage, DriverPage):
 
     def get(self, url: str, go_anyway=False, **kwargs) -> Union[bool, None]:
         """跳转到一个url，跳转前先同步cookies，跳转后判断目标url是否可用"""
-        # to_url = quote(url, safe='/:&?=%;#@')
-        # if not url or (not go_anyway and self.url == to_url):
-        #     return
         if self._mode == 'd':
             if super(SessionPage, self).get(url=url, go_anyway=go_anyway) is None:
                 return

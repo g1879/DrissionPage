@@ -816,14 +816,13 @@ Parameter Description:
 
 ### post
 
-​	post(url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
+​	post(url: str, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
 
 ​	Jump by post, and switch to session mode automatically when calling.
 
 ​	Parameter Description:
 
 - url - Target url
-- parame - url parameter
 - data - Submitted data
 - go_anyway - Whether to force a jump. If the target url is the same as the current url, the default is not to jump.
 - kwargs - Access parameters such as headers
@@ -1124,9 +1123,9 @@ Parameter Description:
 
 ### click
 
-​	click(by_js=False) -> bool
+​	click(by_js=None) -> bool
 
-​	Click on the element. If it is unsuccessful, click on js. You can specify click on js.
+​	Click on the element. If it is unsuccessful, click on js. You can specify click on js or not.
 
 ​	Parameter Description:
 

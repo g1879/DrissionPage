@@ -811,14 +811,13 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### post
 
-​	post(url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
+​	post(url: str, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
 
 ​	以post方式跳转，调用时自动切换到session模式。
 
 ​	参数说明：
 
 - url - 目标url
-- parame - url参数
 - data - 提交的数据
 - go_anyway - 是否强制跳转。若目标url和当前url一致，默认不跳转。
 - kwargs - headers等访问参数
@@ -1119,9 +1118,9 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### click
 
-​	click(by_js=False) -> bool
+​	click(by_js=None) -> bool
 
-​	点击元素，如不成功则用js方式点击，可指定用js方式点击。
+​	点击元素，如不成功则用js方式点击，可指定是否用js方式点击。
 
 ​	参数说明：
 

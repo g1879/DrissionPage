@@ -129,7 +129,7 @@ class DriverElement(DrissionElement):
         return self.ele(loc_or_str, mode='all', show_errmsg=show_errmsg, timeout=timeout)
 
     # -----------------以下为driver独占-------------------
-    def click(self, by_js=False) -> bool:
+    def click(self, by_js=None) -> bool:
         """点击"""
         if not by_js:
             for _ in range(10):
@@ -137,15 +137,11 @@ class DriverElement(DrissionElement):
                     self.inner_ele.click()
                     return True
                 except:
-                    # print(e)
                     sleep(0.2)
         # 若点击失败，用js方式点击
-        # print('Click by JS.')
-        try:
+        if by_js is not False:
             self.run_script('arguments[0].click()')
             return True
-        except:
-            raise
 
     def input(self, value, clear: bool = True) -> bool:
         """输入文本"""

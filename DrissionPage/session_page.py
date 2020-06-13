@@ -90,7 +90,7 @@ class SessionPage(object):
         to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self.url == to_url):
             return
-        self._url = url
+        self._url = to_url
         self._response = self._make_response(to_url, **kwargs)
         if self._response:
             self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
@@ -103,7 +103,7 @@ class SessionPage(object):
         to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self._url == to_url):
             return
-        self._url = url
+        self._url = to_url
         self._response = self._make_response(to_url, mode='post', data=data, **kwargs)
         if self._response:
             self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
@@ -193,6 +193,7 @@ class SessionPage(object):
         """
         if mode not in ['get', 'post']:
             raise ValueError("mode must be 'get' or 'post'.")
+        url = quote(url, safe='/:&?=%;#@')
 
         # 设置referer和host值
         kwargs_set = set(x.lower() for x in kwargs)
