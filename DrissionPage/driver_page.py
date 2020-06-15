@@ -147,7 +147,7 @@ class DriverPage(object):
                 self.driver.switch_to.default_content()
             elif loc_or_ele == 'parent':
                 self.driver.switch_to.parent_frame()
-            elif ':' not in loc_or_ele:
+            elif ':' not in loc_or_ele and '=' not in loc_or_ele:
                 # 传入id或name
                 self.driver.switch_to.frame(loc_or_ele)
             else:
