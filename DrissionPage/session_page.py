@@ -29,6 +29,7 @@ class SessionPage(object):
         self._url = None
         self._url_available = None
         self._response = None
+        self._proxies = None
 
     @property
     def session(self) -> HTMLSession:
@@ -52,6 +53,14 @@ class SessionPage(object):
     def cookies(self) -> dict:
         """当前session的cookies"""
         return self.session.cookies.get_dict()
+
+    @property
+    def proxies(self) -> dict:
+        return self._proxies
+
+    @proxies.setter
+    def proxies(self, value: dict):
+        self._proxies = value
 
     @property
     def title(self) -> str:
@@ -97,8 +106,7 @@ class SessionPage(object):
         self._url_available = True if self._response and self._response.ok else False
         return self._url_available
 
-    def post(self, url: str, data: dict = None, go_anyway: bool = False, **kwargs) \
-            -> Union[bool, None]:
+    def post(self, url: str, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]:
         """用post方式跳转到url，调用_make_response()函数生成response对象"""
         to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self._url == to_url):
@@ -208,6 +216,9 @@ class SessionPage(object):
             kwargs['headers']['Host'] = urlparse(url).hostname
             if self._url:
                 kwargs['headers']['Referer'] = self._url
+
+        if 'proxies' not in kwargs_set and self._proxies:
+            kwargs['proxies'] = self.proxies
 
         if 'timeout' not in kwargs_set:
             kwargs['timeout'] = self.timeout
