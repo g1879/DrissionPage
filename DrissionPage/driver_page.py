@@ -5,7 +5,6 @@
 @File    :   driver_page.py
 """
 from glob import glob
-# from time import sleep
 from typing import Union, List, Any
 from urllib.parse import quote
 
@@ -13,8 +12,7 @@ from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from .common import get_loc_from_str, avoid_duplicate_name  # , clean_folder
-# from .config import OptionsManager
+from .common import get_loc_from_str, avoid_duplicate_name
 from .driver_element import DriverElement, execute_driver_find
 
 
@@ -35,10 +33,10 @@ class DriverPage(object):
     @property
     def url(self) -> Union[str, None]:
         """当前网页url"""
-        if not self._driver or not self._driver.current_url.startswith('http'):
+        if not self._driver or not self.driver.current_url.startswith('http'):
             return None
         else:
-            return self._driver.current_url
+            return self.driver.current_url
 
     @property
     def html(self) -> str:
@@ -58,7 +56,7 @@ class DriverPage(object):
     @property
     def title(self) -> str:
         """获取网页title"""
-        return self._driver.title
+        return self.driver.title
 
     def get(self, url: str, go_anyway: bool = False) -> Union[None, bool]:
         """跳转到url"""
@@ -113,6 +111,12 @@ class DriverPage(object):
         handle_list = self.driver.window_handles
         return handle_list.index(handle)
 
+    def create_tab(self):
+        """新建并定位到一个标签页,该标签页在最后面"""
+        self.to_tab(-1)
+        self.run_script('window.open("");')
+        self.to_tab(-1)
+
     def close_current_tab(self) -> None:
         """关闭当前标签页"""
         self.driver.close()
@@ -164,37 +168,11 @@ class DriverPage(object):
 
     def screenshot(self, path: str, filename: str = None) -> str:
         """获取网页截图"""
-        # tmp_path = OptionsManager().get_value('paths', 'global_tmp_path')
-        # clean_folder(tmp_path)
         name = filename or self.title
         name = avoid_duplicate_name(path, f'{name}.png')
         img_path = f'{path}\\{name}'
-
         self.driver.save_screenshot(img_path)
         # TODO: 实现全页截图
-        # self.set_window_size()
-        # self.scroll_to('top')
-        # window_height = self.driver.get_window_size()['height']  # 窗口高度
-        #
-        # page_height = self.driver.execute_script('return document.documentElement.scrollHeight')  # 页面高度
-        #
-        # if page_height <= window_height:
-        #     self.driver.save_screenshot(img_path)
-        # else:
-        #     from PIL import Image
-        #     import numpy as np
-        #     self.driver.save_screenshot(f'{tmp_path}\\{name}.png')
-        #     n = page_height // window_height  # 需要滚动的次数
-        #     base_mat = np.atleast_2d(Image.open(f'{tmp_path}\\{name}.png'))  # 打开截图并转为二维矩阵
-        #
-        #     for i in range(n):
-        #         self.driver.execute_script(f'document.documentElement.scrollTop={window_height * (i + 1)};')
-        #         sleep(.5)
-        #         self.driver.save_screenshot(f'{tmp_path}\\{name}_{i}.png')  # 保存截图
-        #         mat = np.atleast_2d(Image.open(f'{tmp_path}\\{name}_{i}.png'))  # 打开截图并转为二维矩阵
-        #         base_mat = np.append(base_mat, mat, axis=0)  # 拼接图片的二维矩阵
-        #     Image.fromarray(base_mat).save(img_path)
-        # clean_folder(tmp_path)
         return name
 
     def scroll_to_see(self, loc_or_ele: Union[str, tuple, WebElement, DriverElement]) -> None:

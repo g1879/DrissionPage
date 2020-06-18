@@ -22,18 +22,20 @@ class Drission(object):
     """Drission类整合了WebDriver对象和HTLSession对象，可按要求创建、关闭及同步cookies"""
 
     def __init__(self, driver_options: Union[dict, Options] = None, session_options: dict = None,
-                 driver_path: str = None, ini_path: str = None):
+                 driver_path: str = None, ini_path: str = None, proxy: dict = None):
         """初始化配置信息，但不生成session和driver实例
         :param driver_options: chrome设置，Options类或设置字典
         :param session_options: session设置
         :param driver_path: chromedriver路径，如为空，则为'chromedriver'
         :param ini_path: ini文件路径'
+        :param proxy: 代理设置
         """
         self._session = None
         self._driver = None
         om = OptionsManager(ini_path)
         self._session_options = session_options or om.get_option('session_options')
         self._driver_options = _chrome_options_to_dict(driver_options) or om.get_option('chrome_options')
+        self._proxy = proxy
 
         if driver_path:
             self._driver_path = driver_path
@@ -43,7 +45,7 @@ class Drission(object):
             self._driver_path = 'chromedriver'
 
     @property
-    def session(self):
+    def session(self) -> HTMLSession:
         """获取HTMLSession对象"""
         if self._session is None:
             self._session = HTMLSession()
@@ -52,17 +54,21 @@ class Drission(object):
             for i in attrs:
                 if i in self._session_options:
                     exec(f'self._session.{i} = self._session_options["{i}"]')
+            if self._proxy:
+                self._session.proxies = self._proxy
 
         return self._session
 
     @property
-    def driver(self):
+    def driver(self) -> WebDriver:
         """获取WebDriver对象，按传入配置信息初始化"""
         if self._driver is None:
             if isinstance(self._driver_options, dict):
                 options = _dict_to_chrome_options(self._driver_options)
             else:
                 raise KeyError('Driver options invalid')
+            if self._proxy:
+                options.add_argument(f'--proxy-server={self._proxy["http"]}')
 
             self._driver = webdriver.Chrome(self._driver_path, options=options)
 
@@ -88,6 +94,25 @@ class Drission(object):
     @session_options.setter
     def session_options(self, value: dict):
         self._session_options = value
+
+    @property
+    def proxy(self) -> Union[None, dict]:
+        return self._proxy
+
+    @proxy.setter
+    def proxy(self, proxies: dict = None):
+        self._proxy = proxies
+        if self._session:
+            self._session.proxies = proxies
+        if self._driver:
+            cookies = self._driver.get_cookies()
+            url = self._driver.current_url
+            self._driver.quit()
+            self._driver = None
+            self._driver = self.driver
+            self._driver.get(url)
+            for cookie in cookies:
+                self._ensure_add_cookie(cookie)
 
     def cookies_to_session(self, copy_user_agent: bool = False, driver: WebDriver = None, session: Session = None) \
             -> None:
@@ -126,6 +151,8 @@ class Drission(object):
             browser_domain = ''
         if cookie_domain not in browser_domain:
             driver.get(f'http://{cookie_domain.lstrip("http://")}')
+        if 'expiry' in cookie:
+            cookie['expiry'] = int(cookie['expiry'])
 
         driver.add_cookie(cookie)
 

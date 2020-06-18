@@ -29,7 +29,6 @@ class SessionPage(object):
         self._url = None
         self._url_available = None
         self._response = None
-        self._proxies = None
 
     @property
     def session(self) -> HTMLSession:
@@ -55,14 +54,6 @@ class SessionPage(object):
         return self.session.cookies.get_dict()
 
     @property
-    def proxies(self) -> dict:
-        return self._proxies
-
-    @proxies.setter
-    def proxies(self, value: dict):
-        self._proxies = value
-
-    @property
     def title(self) -> str:
         """获取网页title"""
         return self.ele(('css selector', 'title')).text
@@ -70,7 +61,6 @@ class SessionPage(object):
     @property
     def html(self) -> str:
         """获取元素innerHTML，如未指定元素则获取所有源代码"""
-        # return unescape(self.response.html.raw_html.replace(b'\x08', b'').decode()).replace('\xa0', ' ')
         return self.response.html.html
 
     def ele(self, loc_or_ele: Union[tuple, str, SessionElement], mode: str = None, show_errmsg: bool = False) \
@@ -216,9 +206,6 @@ class SessionPage(object):
             kwargs['headers']['Host'] = urlparse(url).hostname
             if self._url:
                 kwargs['headers']['Referer'] = self._url
-
-        if 'proxies' not in kwargs_set and self._proxies:
-            kwargs['proxies'] = self.proxies
 
         if 'timeout' not in kwargs_set:
             kwargs['timeout'] = self.timeout

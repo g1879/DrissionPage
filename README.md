@@ -602,7 +602,7 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ## Drission class
 
-​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path = None)
+​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path = None, proxy: dict = None)
 
 ​	Used to manage driver and session objects.
 
@@ -628,6 +628,10 @@ print(page.ele('@id:su').text)  # Output:百度一下
 ### session_options
 
 ​	Return session configuration in dictionary format.
+
+### proxy
+
+​	Return proxy configuration in dictionary format.
 
 ### cookies_to_session
 
@@ -816,13 +820,14 @@ Parameter Description:
 
 ### post
 
-​	post(url: str, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
+​	post(url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
 
 ​	Jump by post, and switch to session mode automatically when calling.
 
 ​	Parameter Description:
 
 - url - Target url
+- parame - url parameter
 - data - Submitted data
 - go_anyway - Whether to force a jump. If the target url is the same as the current url, the default is not to jump.
 - kwargs - Access parameters such as headers

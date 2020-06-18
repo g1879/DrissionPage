@@ -597,7 +597,7 @@ print(page.ele('@id:su').text)  # 输出：百度一下
 
 ## Drission类
 
-class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path: str = None)
+class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path: str = None, proxy: dict = None)
 
 用于管理driver和session对象。
 
@@ -623,6 +623,10 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 ### session_options
 
 ​	以字典格式返回或设置session配置。
+
+### proxy
+
+​	以字典格式返回代理配置。
 
 ### cookies_to_session
 
@@ -811,13 +815,14 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### post
 
-​	post(url: str, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
+​	post(url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
 
 ​	以post方式跳转，调用时自动切换到session模式。
 
 ​	参数说明：
 
 - url - 目标url
+- parame - url参数
 - data - 提交的数据
 - go_anyway - 是否强制跳转。若目标url和当前url一致，默认不跳转。
 - kwargs - headers等访问参数
