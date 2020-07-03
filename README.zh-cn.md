@@ -1230,6 +1230,12 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 - ele_or_loc - 另一个元素或相对当前位置
 
+### hover
+
+​	hover()
+
+​	在元素上悬停鼠标
+
 
 
 ## SessionElement类

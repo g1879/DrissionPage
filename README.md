@@ -1,5 +1,3 @@
-# 中文README
-***
 - 中文README：[点击这里](https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md)
 - 示例：[点击这里](https://gitee.com/g1879/DrissionPage-demos)
 
@@ -1234,6 +1232,12 @@ Parameter Description:
 ​	Parameter Description:
 
 - ele_or_loc - Another element or relative current position
+
+### hover
+
+​	hover()
+
+​	Hover over the element.
 
 
 
