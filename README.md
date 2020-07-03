@@ -1023,6 +1023,10 @@ Parameter Description:
 
 ​	The wrapped WebElement object.
 
+### driver
+
+​	WebDriver object of the element.
+
 ### attrs
 
 ​	Return all attributes and values of the elements in a dictionary.

@@ -76,7 +76,7 @@ class Drission(object):
             self._driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
                 "source": """
                 Object.defineProperty(navigator, 'webdriver', {
-                  get: () => undefined
+                  get: () => Chrome
                 })
               """
             })

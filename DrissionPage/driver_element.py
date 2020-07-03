@@ -31,6 +31,10 @@ class DriverElement(DrissionElement):
         return f'<DriverElement {self.tag} {" ".join(attrs)}>'
 
     @property
+    def driver(self) -> WebDriver:
+        return self._driver
+
+    @property
     def attrs(self) -> dict:
         """返回元素所有属性及值"""
         js = '''

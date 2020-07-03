@@ -1020,6 +1020,10 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	被包装的WebElement对象。
 
+### driver
+
+​	操作元素的WebDriver对象。
+
 ### attrs
 
 ​	以字典方式返回元素所有属性及值。
