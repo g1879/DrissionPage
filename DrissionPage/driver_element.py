@@ -142,6 +142,7 @@ class DriverElement(DrissionElement):
         if by_js is not False:
             self.run_script('arguments[0].click()')
             return True
+        return False
 
     def input(self, value, clear: bool = True) -> bool:
         """输入文本"""
@@ -250,6 +251,11 @@ class DriverElement(DrissionElement):
         if loc1 == loc2:
             return False
         return True
+
+    def hover(self):
+        """鼠标悬停"""
+        from selenium.webdriver import ActionChains
+        ActionChains(self._driver).move_to_element(self.inner_ele).perform()
 
 
 def execute_driver_find(page_or_ele: Union[WebElement, WebDriver], loc: tuple, mode: str = 'single',
