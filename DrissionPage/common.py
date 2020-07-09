@@ -82,16 +82,16 @@ def get_loc_from_str(loc: str) -> tuple:
     css:div.ele_class
     """
     loc_by = 'xpath'
-    if loc.startswith('@'):
+    if loc.startswith('@'):  # 根据属性查找
         r = re.split(r'([:=])', loc[1:], maxsplit=1)
         if len(r) == 3:
             mode = 'exact' if r[1] == '=' else 'fuzzy'
             loc_str = _make_xpath_str('*', f'@{r[0]}', r[2], mode)
         else:
-            loc_str = f'//*[@{loc[2:]}]'
-    elif loc.startswith(('tag=', 'tag:')):
+            loc_str = f'//*[@{loc[1:]}]'
+    elif loc.startswith(('tag=', 'tag:')):  # 根据tag name查找
         if '@' not in loc[4:]:
-            loc_str = f'//{loc[4:]}'
+            loc_str = f'//*[name()="{loc[4:]}"]'
         else:
             at_lst = loc[4:].split('@', maxsplit=1)
             r = re.split(r'([:=])', at_lst[1], maxsplit=1)
@@ -100,16 +100,16 @@ def get_loc_from_str(loc: str) -> tuple:
                 arg_str = r[0] if r[0] == 'text()' else f'@{r[0]}'
                 loc_str = _make_xpath_str(at_lst[0], arg_str, r[2], mode)
             else:
-                loc_str = f'//{at_lst[0]}[@{r[0]}]'
-    elif loc.startswith(('text=', 'text:')):
+                loc_str = f'//*[name()="{at_lst[0]}" and @{r[0]}]'
+    elif loc.startswith(('text=', 'text:')):  # 根据文本查找
         if len(loc) > 5:
             mode = 'exact' if loc[4] == '=' else 'fuzzy'
             loc_str = _make_xpath_str('*', 'text()', loc[5:], mode)
         else:
             loc_str = '//*[not(text())]'
-    elif loc.startswith(('xpath=', 'xpath:')):
+    elif loc.startswith(('xpath=', 'xpath:')):  # 用xpath查找
         loc_str = loc[6:]
-    elif loc.startswith(('css=', 'css:')):
+    elif loc.startswith(('css=', 'css:')):  # 用css selector查找
         loc_by = 'css selector'
         loc_str = loc[4:]
     else:
@@ -122,10 +122,11 @@ def get_loc_from_str(loc: str) -> tuple:
 
 def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy'):
     """生成xpath语句"""
+    tag_name = '' if tag == '*' else f'name()="{tag}" and '
     if mode == 'exact':
-        return f'//{tag}[{arg}={_make_search_str(val)}]'
+        return f'//*[{tag_name}{arg}={_make_search_str(val)}]'
     else:
-        return f"//{tag}[contains({arg},{_make_search_str(val)})]"
+        return f"//*[{tag_name}contains({arg},{_make_search_str(val)})]"
 
 
 def _make_search_str(search_str: str):
