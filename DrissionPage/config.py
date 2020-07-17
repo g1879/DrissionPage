@@ -45,7 +45,7 @@ class OptionsManager(object):
         for j in items:
             try:
                 option[j[0]] = eval(self._conf.get(section, j[0]).replace('\\', '\\\\'))
-            except SyntaxError:
+            except:
                 option[j[0]] = self._conf.get(section, j[0])
         return option
 
