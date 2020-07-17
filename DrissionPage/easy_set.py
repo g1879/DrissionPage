@@ -31,29 +31,33 @@ def set_paths(driver_path: str = None,
     :return: None
     """
     om = OptionsManager()
+
+    def format_path(path: str) -> str:
+        return path.replace('/', '\\')
+
     if driver_path is not None:
-        om.set_item('paths', 'chromedriver_path', driver_path)
+        om.set_item('paths', 'chromedriver_path', format_path(driver_path))
     if chrome_path is not None:
-        om.set_item('chrome_options', 'binary_location', chrome_path)
+        om.set_item('chrome_options', 'binary_location', format_path(chrome_path))
     if debugger_address is not None:
-        om.set_item('chrome_options', 'debugger_address', debugger_address)
+        om.set_item('chrome_options', 'debugger_address', format_path(debugger_address))
     if tmp_path is not None:
-        om.set_item('paths', 'global_tmp_path', tmp_path)
+        om.set_item('paths', 'global_tmp_path', format_path(tmp_path))
     if download_path is not None:
         experimental_options = om.get_value('chrome_options', 'experimental_options')
-        experimental_options['prefs']['download.default_directory'] = download_path
+        experimental_options['prefs']['download.default_directory'] = format_path(download_path)
         om.set_item('chrome_options', 'experimental_options', experimental_options)
     om.save()
     if user_data_path is not None:
-        set_argument('--user-data-dir', user_data_path)
+        set_argument('--user-data-dir', format_path(user_data_path))
     if cache_path is not None:
-        set_argument('--disk-cache-dir', cache_path)
+        set_argument('--disk-cache-dir', format_path(cache_path))
     if check_version:
-        check_driver_version(driver_path, chrome_path)
+        check_driver_version(format_path(driver_path), format_path(chrome_path))
 
 
 def set_argument(arg: str, value: Union[bool, str]) -> None:
-    """设置属性
+    """设置浏览器配置argument属性
     :param arg: 属性名
     :param value: 属性值，有值的属性传入值，没有的传入bool
     :return:
