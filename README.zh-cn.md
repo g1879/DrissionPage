@@ -3,9 +3,9 @@
 ***
 
 DrissionPage，即driver和session的合体，是个基于python的Web自动化操作集成工具。  
-它整合了selenium和requests_html，实现了它们之间的无缝切换。  
+它实现了selenium和requests之间的无缝切换。  
 因此可以兼顾selenium的便利性和requests的高效率。  
-它封装了页面元素常用的方法，很适合自动化操作PO模式的扩展。  
+它用POM模式封装了页面元素常用的方法，很适合自动化操作功能扩展。  
 更棒的是，它的使用方式非常简洁和人性化，代码量少，对新手友好。  
 
 **项目地址：**
@@ -22,10 +22,9 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 ***
 
 - 允许在selenium和requests间无缝切换，共享session。  
-- 两种模式提供统一的操作方法，使用体验一致。  
-- 以页面为单位封装常用方法，便于PO模式扩展。  
+- 使用POM模式封装常用方法，便于扩展。
+- 两种模式提供统一的操作方法，使用体验一致。    
 - 人性化的页面元素操作方法，减轻页面分析工作量和编码量。  
-- 把配置信息保存到文件，方便调用。
 - 对某些常用功能（如点击）作了优化，更符合实际使用需要。  
 - 简易的配置方法，摆脱繁琐的浏览器配置。
 
@@ -38,6 +37,7 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 - DrissionPage以简洁的代码为第一追求，对冗长的语句做了精简，并完全保留了其功能。
 - DrissionPage封装了许多常用功能，使用更便捷。
 - DrissionPage的核心是个页面类，可直接派生子类页面，适应各种场景须要。
+- 简易的浏览器配置方法，摆脱繁琐的设置。
 
 以下代码实现一模一样的功能，对比两者的代码量：
 
@@ -371,6 +371,45 @@ element.location  # 元素位置
 
 
 
+## Chrome快捷设置
+
+chrome的配置很繁琐，为简化使用，本库提供了常用配置的设置方法。
+
+### DriverOptions对象
+
+DriverOptions对象继承自selenium.webdriver.chrome.options的Options对象，在其基础上增加了以下方法：
+
+```python
+remove_argument(value)  # 删除某argument值
+remove_experimental_option(key)  # 删除某experimental_option设置
+remove_all_extensions()  # 删除全部插件
+save()  # 保存配置到默认ini文件
+save('D:\\settings.ini')  # 保存到其它路径
+set_argument(arg, value)  # 设置argument属性
+set_headless(on_off)  # 设置是否使用无界面模式
+set_no_imgs(on_off)  # 设置是否加载图片
+set_no_js(on_off)  # 设置是否禁用js
+set_mute(on_off)  # 设置是否静音
+set_user_agent(user_agent)  # 设置user agent
+set_proxy(proxy)  # 设置代理地址
+set_paths(driver_path, chrome_path, debugger_address, download_path, user_data_path, cache_path)  # 设置浏览器相关的路径
+```
+
+### 使用方法
+
+```python
+do = DriverOptions(read_file=False)  # 创建chrome配置对象，不从ini文件读取
+do.set_headless(False)  # 显示浏览器界面
+do.set_no_imgs(True)  # 不加载图片
+do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe')  # 设置路径
+drission = Drission(driver_options=do)  # 用配置对象创建Drission对象
+page = MixPage(drission)  # 用Drission对象创建MixPage对象
+
+do.save()  # 保存配置到默认ini文件
+```
+
+
+
 ## 保存配置
 
 因chrome和headers配置繁多，故设置一个ini文件专门用于保存常用配置，你可使用OptionsManager对象获取和保存配置，用DriverOptions对象修改chrome配置。你也可以保存多个ini文件，按不同项目须要调用。
@@ -434,26 +473,6 @@ headers = {
           }
 ```
 
-### 使用示例
-
-```python
-from DrissionPage import *
-from DrissionPage.configs import *
-
-driver_options = DriverOptions()  # 从默认ini文件读取配置
-driver_options = DriverOptions('D:\\settings.ini')  # 从传入的ini文件读取配置
-driver_options.add_argument('--headless')  # 添加配置
-driver_options.remove_experimental_options('prefs')  # 移除配置
-driver_options.save()  # 保存配置
-driver_options.save('D:\\settings.ini')  # 保存到其它路径
-
-options_manager = OptionsManager()  # 创建OptionsManager对象
-driver_path = options_manager.get_value('paths', 'chromedriver_path')  # 读取路径信息
-drission = Drission(driver_options, driver_path)  # 使用配置创建Drission对象
-
-drission = Drission(ini_path = 'D:\\settings.ini')  # 使用其它ini文件创建对象
-```
-
 ### OptionsManager对象
 
 OptionsManager对象用于读取、设置和保存配置。
@@ -466,25 +485,27 @@ save()  # 保存配置到默认ini文件
 save('D:\\settings.ini')  # 保存到其它路径
 ```
 
-**注意**：保存时若不传入路径，会保存到模块目录下的ini文件，即使读取的不是默认ini文件也一样。
-
-### DriverOptions对象
-
-DriverOptions对象继承自selenium.webdriver.chrome.options的Options对象，在其基础上增加了以下方法：
+### 使用示例
 
 ```python
-remove_argument(value)  # 删除某argument值
-remove_experimental_option(key)  # 删除某experimental_option设置
-remove_all_extensions()  # 删除全部插件
-save()  # 保存配置到ini文件
-save('D:\\settings.ini')  # 保存到其它路径
+from DrissionPage.configs import *
+
+options_manager = OptionsManager()  # 从默认ini文件创建OptionsManager对象
+options_manager = OptionsManager('D:\\settings.ini')  # 从其它ini文件创建OptionsManager对象
+driver_path = options_manager.get_value('paths', 'chromedriver_path')  # 读取路径信息
+options_manager.save()  # 保存到默认ini文件
+options_manager.save('D:\\settings.ini')  # 保存到其它路径
+
+drission = Drission(ini_path = 'D:\\settings.ini')  # 使用其它ini文件创建对象
 ```
+
+**注意**：保存时若不传入路径，会保存到模块目录下的ini文件，即使读取的不是默认ini文件也一样。
 
 
 
 ## easy_set方法
 
-​	chrome的配置太难记，所以把常用的配置写成简单的方法，调用会修改ini文件相关内容。
+​	调用easy_set方法会修改默认ini文件相关内容。
 
 ```python
 set_headless(True)  # 开启headless模式
@@ -497,7 +518,7 @@ set_paths(paths)  # 见 [初始化] 一节
 set_argument(arg, value)  # 设置属性，若属性无值（如'zh_CN.UTF-8'），value为bool表示开关；否则value为str，当value为''或False，删除该属性项
 ```
 
-# PO模式
+# POM模式
 
 ***
 

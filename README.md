@@ -4,11 +4,11 @@
 # Introduction
 ***
 
-DrissionPage, the combination of driver and session, is a Python-based Web automation operation integration tool.  
-It integrates selenium and requests_html to achieve seamless switching between them.  
-Therefore, the convenience of selenium and the high efficiency of requests can be considered.  
-It encapsulates commonly used methods of page elements and is very suitable for the expansion of the PO mode of automated operation.  
-Even better, it is very concise and user-friendly, with little code and friendly to novices.  
+DrissionPage, the combination of driver and session, is a python-based Web automation operation integration tool.
+It realizes the seamless switching between selenium and requests.
+Therefore, the convenience of selenium and the high efficiency of requests can be balanced.
+It uses POM mode to encapsulate common methods of page elements, which is very suitable for automatic operation function expansion.
+What's even better is that its usage is very concise and user-friendly, with a small amount of code and friendly to novices.  
 
 **Project address：**
 
@@ -24,10 +24,9 @@ Even better, it is very concise and user-friendly, with little code and friendly
 ***
 
 - Allows seamless switching between selenium and requests, sharing session.
+- Use POM mode to encapsulate common methods for easy expansion.
 - The two modes provide a unified operation method with consistent user experience.
-- Common methods are encapsulated in units of pages to facilitate PO mode expansion.
 - Humanized operation method of page elements to reduce the workload of page analysis and coding.
-- Save configuration information to file for easy recall.
 - Some common functions (such as click) have been optimized to better meet the actual needs.
 - Easy configuration method to get rid of the cumbersome browser configuration.
 
@@ -40,6 +39,7 @@ Even better, it is very concise and user-friendly, with little code and friendly
 - DrissionPage takes concise code as the first pursuit, streamlines long statements and completely retains its functions.
 - DrissionPage encapsulates many commonly used functions and is more convenient to use.
 - The core of DrissionPage is a page class, which can directly derive subclass pages to adapt to various scenarios.
+- Simple browser configuration method, get rid of tedious settings.
 
 The following code implements exactly the same function, comparing the code amounts of the two:
 
@@ -373,6 +373,45 @@ element.location  # Returns the element position
 
 
 
+## Chrome shortcut settings
+
+The configuration of chrome is very cumbersome. In order to simplify the use, this library provides setting methods for common configurations.
+
+### DriverOptions Object
+
+The DriverOptions object inherits from the Options object of selenium.webdriver.chrome.options, and the following methods are added to it:
+
+```python
+remove_argument(value)  # Delete an argument value
+remove_experimental_option(key)  # Delete an experimental_option setting
+remove_all_extensions()  # Delete all plugins
+save()  # Save the configuration to the default ini file
+save('D:\\settings.ini')  # Save to other path
+set_argument(arg, value)  # Set argument attribute
+set_headless(on_off)  # Set whether to use interfaceless mode
+set_no_imgs(on_off)  # Set whether to load pictures
+set_no_js(on_off)  # Set whether to disable js
+set_mute(on_off)  # Set whether to mute
+set_user_agent(user_agent)  # Set user agent
+set_proxy(proxy)  # Set proxy address
+set_paths(driver_path, chrome_path, debugger_address, download_path, user_data_path, cache_path)  # Set browser-related paths
+```
+
+### Instructions
+
+```python
+do = DriverOptions(read_file=False)  # Create chrome configuration object, not read from ini file
+do.set_headless(False)  # Show browser interface
+do.set_no_imgs(True)  # Don't load pictures
+do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe')  # Set paths
+drission = Drission(driver_options=do)  # Create Drission object with configuration object
+page = MixPage(drission)  # Create a MixPage object with a Drission object
+
+do.save()  # Save the configuration to the default ini file
+```
+
+
+
 ## Save configuration
 
 Because chrome and headers have many configurations, an ini file is set up to save commonly used configurations. You can use the OptionsManager object to get and save the configuration, and use the DriverOptions object to modify the chrome configuration. You can also save multiple ini files and call them according to different projects.
@@ -436,26 +475,6 @@ headers = {
           }
 ```
 
-### Usage example
-
-```python
-from DrissionPage import *
-from DrissionPage.configs import *
-
-driver_options = DriverOptions()  # Read configuration from default ini file
-driver_options = DriverOptions('D:\\settings.ini')  # Read configuration from incoming ini file
-driver_options.add_argument('--headless')  # Add configuration
-driver_options.remove_experimental_options('prefs')  # Remove configuration
-driver_options.save()  # Save configuration
-driver_options.save('D:\\settings.ini')  # Save to other path
-
-options_manager = OptionsManager()  # Create OptionsManager object
-driver_path = options_manager.get_value('paths', 'chromedriver_path')  # Read path information
-drission = Drission(driver_options, driver_path)  # Create a Drission object using configuration
-
-drission = Drission(ini_path = 'D:\\settings.ini')  # Use other ini files to create objects
-```
-
 ### OptionsManager object
 
 The OptionsManager object is used to read, set, and save configurations.
@@ -468,25 +487,27 @@ save()  # Save configuration to default ini file
 save('D:\\settings.ini')  # Save to other path
 ```
 
-** Note **: If you do not pass in the path when saving, it will be saved to the ini file in the module directory, even if you are not reading the default ini file.
-
-### DriverOptions object
-
-The DriverOptions object inherits from the Options object of selenium.webdriver.chrome.options, and adds the following methods to it:
+### Usage example
 
 ```python
-remove_argument(value)  # Delete an argument value
-remove_experimental_option(key)  # Delete a experimental_option setting
-remove_all_extensions()  # Remove all plugins
-save()  # Save configuration to ini file
-save('D:\\settings.ini')  # Save to other path
+from DrissionPage.configs import *
+
+options_manager = OptionsManager()  # Create OptionsManager object from default ini file
+options_manager = OptionsManager('D:\\settings.ini')  # Create OptionsManager object from other ini files
+driver_path = options_manager.get_value('paths', 'chromedriver_path')  # Read path information
+options_manager.save()  # Save to the default ini file
+options_manager.save('D:\\settings.ini')  # Save to other path
+
+drission = Drission(ini_path = 'D:\\settings.ini')  # Use other ini files to create objects
 ```
+
+**Note** : If you do not pass in the path when saving, it will be saved to the ini file in the module directory, even if you are not reading the default ini file.
 
 
 
 ## easy_set methods
 
-​	Chrome's configuration is hard to remember, so write the common configuration as a simple method that will modify the ini file.
+​	Calling the easy_set method will modify the content of the default ini file.
 
 ```python
 set_headless(True)  # Set headless mode
@@ -499,9 +520,7 @@ set_paths(paths)  # See the Initialization section
 set_argument(arg, on_off)  # Set the property. If the property has no value (e.g. 'zh_CN.utf-8'), the value is bool representing the switch. If value is "" or False, delete the attribute entry
 ```
 
-
-
-# PO mode
+# POM mode
 
 ***
 
