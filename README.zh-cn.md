@@ -597,7 +597,7 @@ print(page.ele('@id:su').text)  # 输出：百度一下
 
 ## Drission类
 
-class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path: str = None, proxy: dict = None)
+class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, ini_path: str = None, proxy: dict = None)
 
 用于管理driver和session对象。
 
@@ -605,7 +605,6 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 - driver_options - chrome配置参数，可接收Options对象或字典
 - session_options - session配置参数，接收字典
-- driver_path - chromedriver.exe路径，如不设置，须在系统设置系统变量
 - ini_path - ini文件路径，默认为DrissionPage文件夹下的ini文件
 
 ### session
@@ -1416,6 +1415,10 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 - read_file - 布尔型，指定创建时是否从ini文件读取配置信息
 
+### driver_path
+
+​	chromedriver.exe的路径。
+
 ### remove_argument
 
 ​	remove_argument(value: str) -> None
@@ -1442,7 +1445,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	移除所有插件，因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设。
 
-### save()
+### save
 
 ​	save(path: str = None) -> None
 
@@ -1451,6 +1454,92 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 ​	参数说明：
 
 - path - ini文件的路径，默认保存到模块文件夹下的
+
+### set_argument
+
+​	set_argument(arg: str, value: Union[bool, str]) -> None
+
+​	设置chrome属性，无值的属性可设置开关，有值的属性可设置属性的值。
+
+​	参数说明：
+
+- arg - 属性名
+- value - 属性值，有值的属性传入值，没有的传入bool
+
+### set_headless
+
+​	set_headless(on_off: bool = True) -> None
+
+​	打开或关闭无界面模式。
+
+​	参数说明：
+
+​	on_off - 打开或关闭，bool
+
+### set_no_imgs
+
+​	set_no_imgs(on_off: bool = True) -> None
+
+​	是否加载图片。
+
+​	参数说明：
+
+​	on_off - 打开或关闭，bool
+
+### set_no_js
+
+​	set_no_js(on_off: bool = True) -> None
+
+​	是否禁用js。
+
+​	参数说明：
+
+​	on_off - 打开或关闭，bool
+
+### set_mute
+
+​	set_mute(on_off: bool = True) -> None
+
+​	是否静音。
+
+​	参数说明：
+
+​	on_off - 打开或关闭，bool
+
+### set_user_agent
+
+​	set_user_agent(user_agent: str) -> None
+
+​	设置浏览器user agent。
+
+​	参数说明：
+
+- user_agent - user agent字符串
+
+### set_proxy
+
+​	set_proxy(proxy: str) -> None
+
+​	设置代理。
+
+​	参数说明：
+
+- proxy - 代理地址
+
+### set_paths
+
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> None
+
+​	设置浏览器相关的路径。
+
+​	参数说明：
+
+- driver_path - chromedriver.exe的路径
+- chrome_path - chrome.exe的路径
+- debugger_address - 调试浏览器地址，例：127.0.0.1:9222
+- download_path - 下载文件路径
+- user_data_path - 用户数据路径
+- cache_path - 缓存路径
 
 
 

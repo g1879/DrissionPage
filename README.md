@@ -600,7 +600,7 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ## Drission class
 
-​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, driver_path: str = None, ini_path = None, proxy: dict = None)
+​	class **Drission**(driver_options: Union[dict, Options] = None, session_options: dict = None, ini_path = None, proxy: dict = None)
 
 ​	Used to manage driver and session objects.
 
@@ -608,7 +608,6 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 - driver_options - Chrome configuration parameters, can receive Options object or dictionary
 - session_options - session configuration parameters, receive dictionary
-- driver_path - chromedriver.exe path, if not set, system variables must be set in the system
 - ini_path - ini file path, the default is the ini file in the DrissionPage folder
 
 ### session
@@ -1419,6 +1418,10 @@ Parameter Description:
 
 - read_file - Boolean, specifies whether to read configuration information from the ini file when creating
 
+### driver_path
+
+​	Path of chromedriver.exe.
+
 ### remove_argument
 
 ​	remove_argument(value: str) -> None
@@ -1445,7 +1448,7 @@ Parameter Description:
 
 ​	Remove all plug-ins, because the plug-in is stored in the entire file, it is difficult to remove one of them, so if you need to set, remove all and reset.
 
-### save()
+### save
 
 ​	save(path: str = None) -> None
 
@@ -1454,6 +1457,92 @@ Parameter Description:
 ​	Parameter Description:
 
 - path - The path of the ini file, which is saved to the module folder by default
+
+### set_argument
+
+​	set_argument(arg: str, value: Union[bool, str]) -> None
+
+​	 Set the chrome attribute, the attribute with no value can be set to switch, the attribute with the value can set the value of the attribute.
+
+​	Parameter description:
+
+- arg - attribute name
+- value - the attribute value, the attribute with value is passed in the value, the attribute without value is passed in bool
+
+### set_headless
+
+​	set_headless(on_off: bool = True) -> None
+
+​	Turn on or off the interfaceless mode.
+
+​	Parameter Description:
+
+​	on_off - open or close, bool
+
+### set_no_imgs
+
+​	set_no_imgs(on_off: bool = True) -> None
+
+​	Whether to load pictures.
+
+​	Parameter Description:
+
+​	on_off - open or close, bool
+
+### set_no_js
+
+​	set_no_js(on_off: bool = True) -> None
+
+​	Whether to disable js.
+
+​	Parameter Description:
+
+​	on_off - open or close, bool
+
+### set_mute
+
+​	set_mute(on_off: bool = True) -> None
+
+​	Whether to mute.
+
+​	Parameter Description:
+
+​	on_off - open or close, bool
+
+### set_user_agent
+
+​	set_user_agent(user_agent: str) -> None
+
+​	Set the browser user agent.
+
+​	Parameter Description:
+
+- user_agent - user agent string
+
+### set_proxy
+
+​	set_proxy(proxy: str) -> None
+
+​	Set up a proxy.
+
+​	Parameter Description:
+
+- proxy - proxy address
+
+### set_paths
+
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> None
+
+​	Set browser-related paths.
+
+​	Parameter Description:
+
+- driver_path - path of chromedriver.exe
+- chrome_path - path of chrome.exe
+- debugger_address - debug browser address, for example: 127.0.0.1:9222
+- download_path - download file path
+- user_data_path - user data path
+- cache_path - cache path
 
 
 
