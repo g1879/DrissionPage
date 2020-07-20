@@ -66,14 +66,21 @@ class DriverOptions(Options):
     def __init__(self, read_file=True):
         """初始化，默认从文件读取设置"""
         super().__init__()
+        self._driver_path = None
         if read_file:
             options_dict = OptionsManager().get_option('chrome_options')
+            paths_dict = OptionsManager().get_option('paths')
             self._binary_location = options_dict['binary_location'] if 'binary_location' in options_dict else ''
             self._arguments = options_dict['arguments'] if 'arguments' in options_dict else []
             self._extensions = options_dict['extensions'] if 'extensions' in options_dict else []
             self._experimental_options = options_dict[
                 'experimental_options'] if 'experimental_options' in options_dict else {}
             self._debugger_address = options_dict['debugger_address'] if 'debugger_address' in options_dict else None
+            self._driver_path = paths_dict['chromedriver_path'] if 'chromedriver_path' in paths_dict else None
+
+    @property
+    def driver_path(self):
+        return self._driver_path
 
     def save(self, path: str = None) -> None:
         """保存设置到文件
@@ -83,7 +90,10 @@ class DriverOptions(Options):
         om = OptionsManager()
         options = _chrome_options_to_dict(self)
         for i in options:
-            om.set_item('chrome_options', i, options[i])
+            if i == 'driver_path':
+                om.set_item('paths', 'chromedriver_path', options[i])
+            else:
+                om.set_item('chrome_options', i, options[i])
         om.save(path)
 
     def remove_argument(self, value: str) -> None:
@@ -107,6 +117,74 @@ class DriverOptions(Options):
         """移除所有插件
         因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设"""
         self._extensions = []
+
+    def set_argument(self, arg: str, value: Union[bool, str]) -> None:
+        """设置浏览器配置argument属性
+        :param arg: 属性名
+        :param value: 属性值，有值的属性传入值，没有的传入bool
+        :return: None
+        """
+        self.remove_argument(arg)
+        if value:
+            arg_str = arg if isinstance(value, bool) else f'{arg}={value}'
+            self.add_argument(arg_str)
+
+    def set_headless(self, on_off: bool = True) -> None:
+        """设置headless"""
+        self.set_argument('--headless', on_off)
+
+    def set_no_imgs(self, on_off: bool = True) -> None:
+        """设置是否加载图片"""
+        self.set_argument('--blink-settings=imagesEnabled=false', on_off)
+
+    def set_no_js(self, on_off: bool = True) -> None:
+        """设置禁用js"""
+        self.set_argument('--disable-javascript', on_off)
+
+    def set_mute(self, on_off: bool = True) -> None:
+        """设置静音"""
+        self.set_argument('--mute-audio', on_off)
+
+    def set_user_agent(self, user_agent: str) -> None:
+        """设置user agent"""
+        self.set_argument('user-agent', user_agent)
+
+    def set_proxy(self, proxy: str) -> None:
+        """设置代理"""
+        self.set_argument('--proxy-server', proxy)
+
+    def set_paths(self,
+                  driver_path: str = None,
+                  chrome_path: str = None,
+                  debugger_address: str = None,
+                  download_path: str = None,
+                  user_data_path: str = None,
+                  cache_path: str = None) -> None:
+        """简易设置路径函数
+        :param driver_path: chromedriver.exe路径
+        :param chrome_path: chrome.exe路径
+        :param debugger_address: 调试浏览器地址，例：127.0.0.1:9222
+        :param download_path: 下载文件路径
+        :param user_data_path: 用户数据路径
+        :param cache_path: 缓存路径
+        :return: None
+        """
+
+        def format_path(path: str) -> str:
+            return path.replace('/', '\\')
+
+        if driver_path is not None:
+            self._driver_path = format_path(driver_path)
+        if chrome_path is not None:
+            self.binary_location = format_path(chrome_path)
+        if debugger_address is not None:
+            self.debugger_address = debugger_address
+        if download_path is not None:
+            self.experimental_options['prefs']['download.default_directory'] = format_path(download_path)
+        if user_data_path is not None:
+            self.set_argument('--user-data-dir', format_path(user_data_path))
+        if cache_path is not None:
+            self.set_argument('--disk-cache-dir', format_path(cache_path))
 
 
 def _dict_to_chrome_options(options: dict) -> Options:
@@ -147,7 +225,7 @@ def _dict_to_chrome_options(options: dict) -> Options:
     return chrome_options
 
 
-def _chrome_options_to_dict(options: Union[dict, Options, None]) -> Union[dict, None]:
+def _chrome_options_to_dict(options: Union[dict, DriverOptions, None]) -> Union[dict, None]:
     if options is None or isinstance(options, dict):
         return options
 
@@ -158,5 +236,9 @@ def _chrome_options_to_dict(options: Union[dict, Options, None]) -> Union[dict, 
     re_dict['arguments'] = options.arguments
     re_dict['extensions'] = options.extensions
     re_dict['experimental_options'] = options.experimental_options
+    try:
+        re_dict['driver_path'] = options.driver_path
+    except:
+        re_dict['driver_path'] = None
     # re_dict['capabilities'] = options.capabilities
     return re_dict

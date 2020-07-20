@@ -21,12 +21,15 @@ from .config import _dict_to_chrome_options, OptionsManager, _chrome_options_to_
 class Drission(object):
     """Drission类整合了WebDriver对象和HTLSession对象，可按要求创建、关闭及同步cookies"""
 
-    def __init__(self, driver_options: Union[dict, Options] = None, session_options: dict = None,
-                 driver_path: str = None, ini_path: str = None, proxy: dict = None):
+    def __init__(self,
+                 driver_options: Union[dict, Options] = None,
+                 session_options: dict = None,
+                 # driver_path: str = None,
+                 ini_path: str = None,
+                 proxy: dict = None):
         """初始化配置信息，但不生成session和driver实例
         :param driver_options: chrome设置，Options类或设置字典
         :param session_options: session设置
-        :param driver_path: chromedriver路径，如为空，则为'chromedriver'
         :param ini_path: ini文件路径'
         :param proxy: 代理设置
         """
@@ -37,8 +40,8 @@ class Drission(object):
         self._driver_options = _chrome_options_to_dict(driver_options) or om.get_option('chrome_options')
         self._proxy = proxy
 
-        if driver_path:
-            self._driver_path = driver_path
+        if 'driver_path' in self._driver_options and self._driver_options['driver_path']:
+            self._driver_path = self._driver_options['driver_path']
         elif 'chromedriver_path' in om.get_option('paths') and om.get_option('paths')['chromedriver_path']:
             self._driver_path = om.get_option('paths')['chromedriver_path']
         else:
@@ -67,6 +70,7 @@ class Drission(object):
                 options = _dict_to_chrome_options(self._driver_options)
             else:
                 raise KeyError('Driver options invalid')
+
             if self._proxy:
                 options.add_argument(f'--proxy-server={self._proxy["http"]}')
 
