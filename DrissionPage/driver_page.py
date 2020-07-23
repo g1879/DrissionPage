@@ -4,6 +4,7 @@
 @Contact :   g1879@qq.com
 @File    :   driver_page.py
 """
+import time
 from glob import glob
 from typing import Union, List, Any
 from urllib.parse import quote
@@ -68,8 +69,11 @@ class DriverPage(object):
         self._url_available = self.check_page()
         return self._url_available
 
-    def ele(self, loc_or_ele: Union[tuple, str, DriverElement], mode: str = None,
-            timeout: float = None, show_errmsg: bool = False) -> Union[DriverElement, List[DriverElement], None]:
+    def ele(self,
+            loc_or_ele: Union[tuple, str, DriverElement],
+            mode: str = None,
+            timeout: float = None,
+            show_errmsg: bool = False) -> Union[DriverElement, List[DriverElement], None]:
         """根据loc获取元素或列表，可用用字符串控制获取方式，可选'id','class','name','tagName'
         例：ele.find('id:ele_id')
         :param loc_or_ele: 页面元素地址
@@ -91,6 +95,60 @@ class DriverPage(object):
         return self.ele(loc, mode='all', timeout=timeout, show_errmsg=show_errmsg)
 
     # ----------------以下为独有函数-----------------------
+    def wait_ele(self,
+                 loc_or_ele: Union[str, tuple, DriverElement, WebElement],
+                 mode: str,
+                 timeout: float = None) -> bool:
+        """等待元素从dom删除、显示、隐藏
+        :param loc_or_ele: 元素、获取元素的字符串或元素的loc
+        :param mode: 等待方式，可选：'del', 'display', 'hidden'
+        :param timeout: 超时时间
+        :return: 等待是否成功
+        """
+        if mode.lower() not in ['del', 'display', 'hidden']:
+            raise ValueError('mode can only be "del", "display", "hidden"')
+
+        from selenium.webdriver.support.wait import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as ec
+
+        timeout = timeout or self.timeout
+        is_ele = False
+        if isinstance(loc_or_ele, DriverElement):
+            loc_or_ele = loc_or_ele.inner_ele
+            is_ele = True
+        elif isinstance(loc_or_ele, WebElement):
+            is_ele = True
+        elif isinstance(loc_or_ele, str):
+            loc_or_ele = get_loc_from_str(loc_or_ele)
+        elif isinstance(loc_or_ele, tuple):
+            pass
+        else:
+            raise TypeError('The type of loc_or_ele can only be str, tuple, DriverElement, WebElement')
+
+        if is_ele:  # 当传入参数是元素对象时
+            end_time = time.time() + timeout
+            while time.time() < end_time:
+                if mode == 'del':
+                    try:
+                        loc_or_ele.is_enabled()
+                    except:
+                        return True
+                elif mode == 'display' and loc_or_ele.is_displayed():
+                    return True
+                elif mode == 'hidden' and not loc_or_ele.is_displayed():
+                    return True
+            return False
+        else:  # 当传入参数是控制字符串或元组时
+            try:
+                if mode == 'del':
+                    WebDriverWait(self.driver, timeout).until_not(ec.presence_of_element_located(loc_or_ele))
+                elif mode == 'display':
+                    WebDriverWait(self.driver, timeout).until(ec.visibility_of_element_located(loc_or_ele))
+                elif mode == 'hidden':
+                    WebDriverWait(self.driver, timeout).until_not(ec.visibility_of_element_located(loc_or_ele))
+                return True
+            except:
+                return False
 
     def check_page(self) -> Union[bool, None]:
         """检查页面是否符合预期
@@ -146,16 +204,13 @@ class DriverPage(object):
             # 根据序号跳转
             self.driver.switch_to.frame(loc_or_ele)
         elif isinstance(loc_or_ele, str):
-            if loc_or_ele == 'main':
-                # 跳转到最上级
+            if loc_or_ele == 'main':  # 跳转到最上级
                 self.driver.switch_to.default_content()
-            elif loc_or_ele == 'parent':
+            elif loc_or_ele == 'parent':  # 跳转到上一层
                 self.driver.switch_to.parent_frame()
-            elif ':' not in loc_or_ele and '=' not in loc_or_ele:
-                # 传入id或name
+            elif ':' not in loc_or_ele and '=' not in loc_or_ele:  # 传入id或name
                 self.driver.switch_to.frame(loc_or_ele)
-            else:
-                # 传入控制字符串
+            else:  # 传入控制字符串
                 ele = self.ele(loc_or_ele)
                 self.driver.switch_to.frame(ele.inner_ele)
         elif isinstance(loc_or_ele, WebElement):
