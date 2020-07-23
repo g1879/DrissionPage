@@ -63,8 +63,10 @@ class SessionPage(object):
         """获取元素innerHTML，如未指定元素则获取所有源代码"""
         return self.response.html.html
 
-    def ele(self, loc_or_ele: Union[tuple, str, SessionElement], mode: str = None, show_errmsg: bool = False) \
-            -> Union[SessionElement, List[SessionElement], None]:
+    def ele(self,
+            loc_or_ele: Union[tuple, str, SessionElement],
+            mode: str = None,
+            show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]:
         """查找一个元素
         :param loc_or_ele: 页面元素地址
         :param mode: 以某种方式查找元素，可选'single','all'
@@ -108,7 +110,11 @@ class SessionPage(object):
         self._url_available = True if self._response and self._response.status_code == 200 else False
         return self._url_available
 
-    def download(self, file_url: str, goal_path: str = None, rename: str = None, show_msg: bool = False,
+    def download(self,
+                 file_url: str,
+                 goal_path: str = None,
+                 rename: str = None,
+                 show_msg: bool = False,
                  **kwargs) -> tuple:
         """下载一个文件
         生成的response不写入self._response，是临时的

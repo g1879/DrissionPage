@@ -109,7 +109,11 @@ class DriverElement(DrissionElement):
             # return self.attrs[attr]
             return self.inner_ele.get_attribute(attr)
 
-    def ele(self, loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False, timeout: float = None):
+    def ele(self,
+            loc_or_str: Union[tuple, str],
+            mode: str = None,
+            show_errmsg: bool = False,
+            timeout: float = None):
         """根据loc获取元素或列表，可用用字符串控制获取方式，可选'id','class','name','tagName'
         例：ele.find('id:ele_id')
         """
@@ -128,7 +132,10 @@ class DriverElement(DrissionElement):
         timeout = timeout or self.timeout
         return execute_driver_find(self.inner_ele, loc_or_str, mode, show_errmsg, timeout)
 
-    def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False, timeout: float = None):
+    def eles(self,
+             loc_or_str: Union[tuple, str],
+             show_errmsg: bool = False,
+             timeout: float = None):
         """根据loc获取子元素列表"""
         return self.ele(loc_or_str, mode='all', show_errmsg=show_errmsg, timeout=timeout)
 
@@ -262,8 +269,11 @@ class DriverElement(DrissionElement):
         ActionChains(self._driver).move_to_element(self.inner_ele).perform()
 
 
-def execute_driver_find(page_or_ele: Union[WebElement, WebDriver], loc: tuple, mode: str = 'single',
-                        show_errmsg: bool = False, timeout: float = 10) -> Union[DriverElement, List[DriverElement]]:
+def execute_driver_find(page_or_ele: Union[WebElement, WebDriver],
+                        loc: tuple,
+                        mode: str = 'single',
+                        show_errmsg: bool = False,
+                        timeout: float = 10) -> Union[DriverElement, List[DriverElement]]:
     """执行driver模式元素的查找
     页面查找元素及元素查找下级元素皆使用此方法
     :param page_or_ele: driver模式页面或元素

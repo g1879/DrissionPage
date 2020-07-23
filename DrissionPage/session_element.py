@@ -147,8 +147,10 @@ class SessionElement(DrissionElement):
             return ''
 
 
-def execute_session_find(page_or_ele: BaseParser, loc: tuple, mode: str = 'single', show_errmsg: bool = False) \
-        -> Union[SessionElement, List[SessionElement]]:
+def execute_session_find(page_or_ele: BaseParser,
+                         loc: tuple,
+                         mode: str = 'single',
+                         show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement]]:
     """执行session模式元素的查找
     页面查找元素及元素查找下级元素皆使用此方法
     :param page_or_ele: session模式页面或元素
