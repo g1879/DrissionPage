@@ -240,24 +240,59 @@ class DriverElement(DrissionElement):
         except:
             raise
 
-    def drag_to(self, ele_or_loc: Union[tuple, WebElement, DrissionElement]) -> bool:
+    def drag(self, x: int, y: int, speed: int = 40, shake: bool = True) -> bool:
+        """拖拽当前元素到相对位置
+        :param x: x变化值
+        :param y: y变化值
+        :param speed: 速度
+        :param shake: 是否随机抖动
+        :return: 是否推拽成功
+        """
+        x += self.location['x'] + self.size['width'] // 2
+        y += self.location['y'] + self.size['height'] // 2
+        return self.drag_to((x, y), speed, shake)
+
+    def drag_to(self,
+                ele_or_loc: Union[tuple, WebElement, DrissionElement],
+                speed: int = 40,
+                shake: bool = True) -> bool:
         """拖拽当前元素，目标为另一个元素或坐标元组
-        :param ele_or_loc: 另一个元素或相对当前位置
+        :param ele_or_loc: 另一个元素或坐标元组，坐标为元素中点的坐标
+        :param speed: 拖动的速度，默认为None即瞬间到达
+        :param shake: 是否随机抖动
         :return: 是否拖拽成功
         """
-        from selenium.webdriver import ActionChains
-        loc1 = self.location
-        actions = ActionChains(self._driver)
-
-        if isinstance(ele_or_loc, DriverElement):
-            actions.drag_and_drop(self.inner_ele, ele_or_loc.inner_ele)
-        elif isinstance(ele_or_loc, WebElement):
-            actions.drag_and_drop(self.inner_ele, ele_or_loc)
+        # x, y：目标坐标点
+        if isinstance(ele_or_loc, DriverElement) or isinstance(ele_or_loc, WebElement):
+            target_x = ele_or_loc.location['x'] + ele_or_loc.size['width'] // 2
+            target_y = ele_or_loc.location['y'] + ele_or_loc.size['height'] // 2
         elif isinstance(ele_or_loc, tuple):
-            actions.drag_and_drop_by_offset(self.inner_ele, ele_or_loc[0], ele_or_loc[1])
+            target_x, target_y = ele_or_loc
         else:
-            raise KeyError('Need WebElement object or coordinate information.')
-        actions.perform()
+            raise KeyError('Need DriverElement, WebElement object or coordinate information.')
+
+        current_x = self.location['x'] + self.size['width'] // 2
+        current_y = self.location['y'] + self.size['height'] // 2
+        width = target_x - current_x
+        height = target_y - current_y
+        num = 0 if not speed else int(((abs(width) ** 2 + abs(height) ** 2) ** .5) // speed)
+        points = [(int(current_x + i * (width / num)), int(current_y + i * (height / num))) for i in range(1, num)]
+        points.append((target_x, target_y))
+
+        from selenium.webdriver import ActionChains
+        from random import randint
+        actions = ActionChains(self.driver)
+        loc1 = self.location
+        for x, y in points:
+            if shake:
+                x += randint(-3, 4)
+                y += randint(-3, 4)
+            dx = x - current_x
+            dy = y - current_y
+            actions.drag_and_drop_by_offset(self.inner_ele, dx, dy)
+            current_x, current_y = x, y
+
+        actions.release().perform()
         loc2 = self.location
         if loc1 == loc2:
             return False
