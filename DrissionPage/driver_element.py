@@ -276,27 +276,24 @@ class DriverElement(DrissionElement):
         width = target_x - current_x
         height = target_y - current_y
         num = 0 if not speed else int(((abs(width) ** 2 + abs(height) ** 2) ** .5) // speed)
+        # 将要经过的点存入列表
         points = [(int(current_x + i * (width / num)), int(current_y + i * (height / num))) for i in range(1, num)]
         points.append((target_x, target_y))
 
         from selenium.webdriver import ActionChains
         from random import randint
         actions = ActionChains(self.driver)
+        actions.click_and_hold(self.inner_ele)
         loc1 = self.location
-        for x, y in points:
+        for x, y in points:  # 逐个访问要经过的点
             if shake:
                 x += randint(-3, 4)
                 y += randint(-3, 4)
-            dx = x - current_x
-            dy = y - current_y
-            actions.drag_and_drop_by_offset(self.inner_ele, dx, dy)
+            actions.move_by_offset(x - current_x, y - current_y)
             current_x, current_y = x, y
-
         actions.release().perform()
-        loc2 = self.location
-        if loc1 == loc2:
-            return False
-        return True
+
+        return False if self.location == loc1 else True
 
     def hover(self):
         """鼠标悬停"""
