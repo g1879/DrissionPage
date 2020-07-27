@@ -1244,15 +1244,30 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 - attr - 参数名
 - value - 参数值
 
+### drag
+
+​	drag(x: int, y: int, speed: int = 40, shake: bool = True) -> bool
+
+​	拖拽当前元素一段距离，返回是否拖拽成功。
+
+​	参数说明：
+
+- x - 拖拽x方向距离
+- y - 拖拽y方向距离
+- speed - 拖拽速度
+- shake - 是否随机抖动
+
 ### drag_to
 
-​	drag_to( ele_or_loc: Union[tuple, WebElement, DrissionElement]) -> bool
+​	drag_to(ele_or_loc: Union[tuple, WebElement, DrissionElement], speed: int = 40, shake: bool = True) -> bool:
 
 ​	拖拽当前元素，目标为另一个元素或坐标元组，返回是否拖拽成功。
 
 ​	参数说明：
 
-- ele_or_loc - 另一个元素或相对当前位置
+- ele_or_loc - 另一个元素或相对当前位置，坐标为元素中点坐标。
+- speed - 拖拽速度
+- shake - 是否随机抖动
 
 ### hover
 

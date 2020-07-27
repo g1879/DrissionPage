@@ -1245,15 +1245,30 @@ Parameter Description:
 - attr - parameter name
 - value - Parameter value
 
+### drag
+
+​	drag(x: int, y: int, speed: int = 40, shake: bool = True) -> bool
+
+​	Drag the current element a certain distance, and return whether the drag is successful.
+
+​	Parameter Description:
+
+- x - Drag distance in x direction
+- y - Drag distance in y direction
+- speed - Drag speed
+- shake - Random jitter
+
 ### drag_to
 
-​	drag_to( ele_or_loc: Union[tuple, WebElement, DrissionElement]) -> bool
+​	drag_to(ele_or_loc: Union[tuple, WebElement, DrissionElement], speed: int = 40, shake: bool = True) -> bool:
 
 ​	Drag the current element, the target is another element or coordinate tuple, and return whether the drag is successful.
 
 ​	Parameter Description:
 
-- ele_or_loc - Another element or relative current position
+- ele_or_loc - Another element or relative current position. The coordinates are the coordinates of the midpoint of the element.
+- speed - Drag speed
+- shake - Random jitter
 
 ### hover
 
