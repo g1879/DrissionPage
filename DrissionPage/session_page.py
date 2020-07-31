@@ -106,7 +106,10 @@ class SessionPage(object):
         self._url = to_url
         self._response = self._make_response(to_url, mode='post', data=data, **kwargs)
         if self._response:
-            self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
+            try:
+                self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
+            except:
+                pass
         self._url_available = True if self._response and self._response.status_code == 200 else False
         return self._url_available
 
@@ -114,14 +117,16 @@ class SessionPage(object):
                  file_url: str,
                  goal_path: str = None,
                  rename: str = None,
+                 file_exists: str = 'rename',
                  show_msg: bool = False,
                  **kwargs) -> tuple:
         """下载一个文件
         生成的response不写入self._response，是临时的
         :param file_url: 文件url
         :param goal_path: 存放路径url
-        :param rename: 重命名
+        :param rename: 重命名文件，不改变扩展名
         :param kwargs: 连接参数
+        :param file_exists: 若存在同名文件，可选择'rename', 'overwrite', 'skip'方式处理
         :param show_msg: 是否显示下载信息
         :return: 元组，bool和状态信息（成功时信息为文件名）
         """
@@ -146,12 +151,30 @@ class SessionPage(object):
             file_name = os.path.basename(file_url).split("?")[0]
         else:
             file_name = f'untitled_{time()}_{random.randint(0, 100)}'
-        file_full_name = rename or file_name
-        # 避免和现有文件重名
-        file_full_name = avoid_duplicate_name(goal_path, file_full_name)
+
+        if rename:  # 重命名文件，不改变扩展名
+            ext_name = file_name.split('.')[-1]
+            if rename.lower().endswith(f'.{ext_name}'.lower()) or ext_name == file_name:
+                full_name = rename
+            else:
+                full_name = f'{rename}.{ext_name}'
+        else:
+            full_name = file_name
+
+        full_path = Path(f'{goal_path}\\{full_name}')
+        if full_path.exists():
+            if file_exists == 'skip':
+                return False, 'A file with the same name already exists.'
+            elif file_exists == 'overwrite':
+                pass
+            elif file_exists == 'rename':
+                full_name = avoid_duplicate_name(goal_path, full_name)
+                full_path = Path(f'{goal_path}\\{full_name}')
+            else:
+                raise ValueError("file_exists can only be selected in'skip', 'overwrite', 'rename'")
         # 打印要下载的文件
         if show_msg:
-            print_txt = file_full_name if file_name == file_full_name else f'{file_name} -> {file_full_name}'
+            print_txt = full_name if file_name == full_name else f'{file_name} -> {full_name}'
             print(print_txt)
             print(f'Downloading to: {goal_path}')
         # -------------------开始下载-------------------
@@ -160,7 +183,6 @@ class SessionPage(object):
         # 已下载文件大小和下载状态
         downloaded_size, download_status = 0, False
         # 完整的存放路径
-        full_path = Path(f'{goal_path}\\{file_full_name}')
         try:
             with open(str(full_path), 'wb') as tmpFile:
                 for chunk in r.iter_content(chunk_size=1024):
@@ -183,8 +205,8 @@ class SessionPage(object):
             r.close()
         # -------------------显示并返回值-------------------
         if show_msg:
-            print(info, '\n')
-        info = file_full_name if download_status else info
+            print(info)
+        info = full_name if download_status else info
         return download_status, info
 
     def _make_response(self, url: str, mode: str = 'get', data: dict = None, **kwargs) -> Union[HTMLResponse, bool]:
