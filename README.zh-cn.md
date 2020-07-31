@@ -41,7 +41,7 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 
 以下代码实现一模一样的功能，对比两者的代码量：
 
-1. 查找所有文本包含some text的元素
+1. 用显性等待方式查找所有文本包含some text的元素
 
 ```python
 # selenium:
@@ -849,7 +849,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### download
 
-​	download(file_url: str, goal_path: str = None, rename: str = None, show_msg: bool = False, **kwargs) -> tuple
+​	download(file_url: str, goal_path: str = None, rename: str = None, file_exists: str = 'rename', show_msg: bool = False, **kwargs) -> tuple
 
 ​	下载一个文件，返回是否成功和下载信息字符串。改方法会自动避免和目标路径现有文件重名。
 
@@ -857,7 +857,8 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 - file_url - 文件URL
 - goal_path - 存放路径，默认为ini文件中指定的临时文件夹
-- rename - 重命名文件名，默认不重命名
+- rename - 重命名文件，不改变扩展名
+- file_exists - 若存在同名文件，可选择'rename', 'overwrite', 'skip'方式处理
 - show_msg - 是否显示下载信息
 - kwargs - 用于requests的连接参数
 
