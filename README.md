@@ -404,6 +404,8 @@ do = DriverOptions(read_file=False)  # Create chrome configuration object, not r
 do.set_headless(False)  # Show browser interface
 do.set_no_imgs(True)  # Don't load pictures
 do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe')  # Set paths
+do.set_headless(False).set_no_imgs(True)  # Support chain operation
+
 drission = Drission(driver_options=do)  # Create Drission object with configuration object
 page = MixPage(drission)  # Create a MixPage object with a Drission object
 
@@ -1421,7 +1423,7 @@ Parameter Description:
 
 ### set_item
 
-​	set_item(section: str, item: str, value: str) -> None
+​	set_item(section: str, item: str, value: str) -> OptionsManager
 
 ​	Set configuration values.
 
@@ -1433,7 +1435,7 @@ Parameter Description:
 
 ### save
 
-​	save(path: str = None) -> None
+​	save(path: str = None) -> OptionsManager
 
 ​	Save the settings to a file.
 
@@ -1457,9 +1459,13 @@ Parameter Description:
 
 ​	Path of chromedriver.exe.
 
+### chrome_path
+
+​	Path of chrome.exe.
+
 ### remove_argument
 
-​	remove_argument(value: str) -> None
+​	remove_argument(value: str) -> DriverOptions
 
 ​	Remove a setting.
 
@@ -1469,7 +1475,7 @@ Parameter Description:
 
 ### remove_experimental_option
 
-​	remove_experimental_option(key: str) -> None
+​	remove_experimental_option(key: str) -> DriverOptions
 
 ​	Remove an experiment setting and delete the incoming key value.
 
@@ -1479,13 +1485,13 @@ Parameter Description:
 
 ### remove_argument
 
-​	remove_argument() -> None
+​	remove_argument() -> DriverOptions
 
 ​	Remove all plug-ins, because the plug-in is stored in the entire file, it is difficult to remove one of them, so if you need to set, remove all and reset.
 
 ### save
 
-​	save(path: str = None) -> None
+​	save(path: str = None) -> DriverOptions
 
 ​	Save the settings to a file.
 
@@ -1495,7 +1501,7 @@ Parameter Description:
 
 ### set_argument
 
-​	set_argument(arg: str, value: Union[bool, str]) -> None
+​	set_argument(arg: str, value: Union[bool, str]) -> DriverOptions
 
 ​	 Set the chrome attribute, the attribute with no value can be set to switch, the attribute with the value can set the value of the attribute.
 
@@ -1506,7 +1512,7 @@ Parameter Description:
 
 ### set_headless
 
-​	set_headless(on_off: bool = True) -> None
+​	set_headless(on_off: bool = True) -> DriverOptions
 
 ​	Turn on or off the interfaceless mode.
 
@@ -1516,7 +1522,7 @@ Parameter Description:
 
 ### set_no_imgs
 
-​	set_no_imgs(on_off: bool = True) -> None
+​	set_no_imgs(on_off: bool = True) -> DriverOptions
 
 ​	Whether to load pictures.
 
@@ -1526,7 +1532,7 @@ Parameter Description:
 
 ### set_no_js
 
-​	set_no_js(on_off: bool = True) -> None
+​	set_no_js(on_off: bool = True) -> DriverOptions
 
 ​	Whether to disable js.
 
@@ -1536,7 +1542,7 @@ Parameter Description:
 
 ### set_mute
 
-​	set_mute(on_off: bool = True) -> None
+​	set_mute(on_off: bool = True) -> DriverOptions
 
 ​	Whether to mute.
 
@@ -1546,7 +1552,7 @@ Parameter Description:
 
 ### set_user_agent
 
-​	set_user_agent(user_agent: str) -> None
+​	set_user_agent(user_agent: str) -> DriverOptions
 
 ​	Set the browser user agent.
 
@@ -1556,7 +1562,7 @@ Parameter Description:
 
 ### set_proxy
 
-​	set_proxy(proxy: str) -> None
+​	set_proxy(proxy: str) -> DriverOptions
 
 ​	Set up a proxy.
 
@@ -1566,7 +1572,7 @@ Parameter Description:
 
 ### set_paths
 
-​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> None
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> DriverOptions
 
 ​	Set browser-related paths.
 

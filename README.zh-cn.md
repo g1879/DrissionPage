@@ -402,6 +402,8 @@ do = DriverOptions(read_file=False)  # 创建chrome配置对象，不从ini文�
 do.set_headless(False)  # 显示浏览器界面
 do.set_no_imgs(True)  # 不加载图片
 do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe')  # 设置路径
+do.set_headless(False).set_no_imgs(True)  # 支持链式操作
+
 drission = Drission(driver_options=do)  # 用配置对象创建Drission对象
 page = MixPage(drission)  # 用Drission对象创建MixPage对象
 
@@ -1420,7 +1422,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_item
 
-​	set_item(section: str, item: str, value: str) -> None
+​	set_item(section: str, item: str, value: str) -> OptionsManager
 
 ​	设置配置值。
 
@@ -1432,7 +1434,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### save
 
-​	save(path: str = None) -> None
+​	save(path: str = None) -> OptionsManager
 
 ​	保存设置到文件。
 
@@ -1456,9 +1458,13 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	chromedriver.exe的路径。
 
+### chrome_path
+
+​	chrome.exe的路径
+
 ### remove_argument
 
-​	remove_argument(value: str) -> None
+​	remove_argument(value: str) -> DriverOptions
 
 ​	移除一个设置。
 
@@ -1468,7 +1474,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### remove_experimental_option
 
-​	remove_experimental_option(key: str) -> None
+​	remove_experimental_option(key: str) -> DriverOptions
 
 ​	移除一个实验设置，传入key值删除。
 
@@ -1478,13 +1484,13 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### remove_argument
 
-​	remove_argument() -> None
+​	remove_argument() -> DriverOptions
 
 ​	移除所有插件，因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设。
 
 ### save
 
-​	save(path: str = None) -> None
+​	save(path: str = None) -> DriverOptions
 
 ​	保存设置到文件。
 
@@ -1494,7 +1500,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_argument
 
-​	set_argument(arg: str, value: Union[bool, str]) -> None
+​	set_argument(arg: str, value: Union[bool, str]) -> DriverOptions
 
 ​	设置chrome属性，无值的属性可设置开关，有值的属性可设置属性的值。
 
@@ -1505,7 +1511,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_headless
 
-​	set_headless(on_off: bool = True) -> None
+​	set_headless(on_off: bool = True) -> DriverOptions
 
 ​	打开或关闭无界面模式。
 
@@ -1515,7 +1521,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_no_imgs
 
-​	set_no_imgs(on_off: bool = True) -> None
+​	set_no_imgs(on_off: bool = True) -> DriverOptions
 
 ​	是否加载图片。
 
@@ -1525,7 +1531,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_no_js
 
-​	set_no_js(on_off: bool = True) -> None
+​	set_no_js(on_off: bool = True) -> DriverOptions
 
 ​	是否禁用js。
 
@@ -1535,7 +1541,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_mute
 
-​	set_mute(on_off: bool = True) -> None
+​	set_mute(on_off: bool = True) -> DriverOptions
 
 ​	是否静音。
 
@@ -1545,7 +1551,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_user_agent
 
-​	set_user_agent(user_agent: str) -> None
+​	set_user_agent(user_agent: str) -> DriverOptions
 
 ​	设置浏览器user agent。
 
@@ -1555,7 +1561,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_proxy
 
-​	set_proxy(proxy: str) -> None
+​	set_proxy(proxy: str) -> DriverOptions
 
 ​	设置代理。
 
@@ -1565,7 +1571,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### set_paths
 
-​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> None
+​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> DriverOptions
 
 ​	设置浏览器相关的路径。
 
