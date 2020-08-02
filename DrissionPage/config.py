@@ -49,17 +49,19 @@ class OptionsManager(object):
                 option[j[0]] = self._conf.get(section, j[0])
         return option
 
-    def set_item(self, section: str, item: str, value: Any) -> None:
+    def set_item(self, section: str, item: str, value: Any):
         """设置配置值"""
         self._conf.set(section, item, str(value))
+        return self
 
-    def save(self, path: str = None) -> None:
+    def save(self, path: str = None):
         """保存配置文件
         :param path: ini文件的路径，默认保存到模块文件夹下的
         :return: None
         """
         path = path or Path(__file__).parent / 'configs.ini'
         self._conf.write(open(path, 'w', encoding='utf-8'))
+        return self
 
 
 class DriverOptions(Options):
@@ -79,10 +81,14 @@ class DriverOptions(Options):
             self._driver_path = paths_dict['chromedriver_path'] if 'chromedriver_path' in paths_dict else None
 
     @property
-    def driver_path(self):
+    def driver_path(self) -> str:
         return self._driver_path
 
-    def save(self, path: str = None) -> None:
+    @property
+    def chrome_path(self) -> str:
+        return self.binary_location
+
+    def save(self, path: str = None):
         """保存设置到文件
         :param path: ini文件的路径，默认保存到模块文件夹下的
         :return: None
@@ -95,8 +101,9 @@ class DriverOptions(Options):
             else:
                 om.set_item('chrome_options', i, options[i])
         om.save(path)
+        return self
 
-    def remove_argument(self, value: str) -> None:
+    def remove_argument(self, value: str):
         """移除一个设置
         :param value: 设置项名，有值的设置项传入设置名称即可
         :return: None
@@ -107,18 +114,21 @@ class DriverOptions(Options):
                 del_list.append(argument)
         for del_arg in del_list:
             self._arguments.remove(del_arg)
+        return self
 
-    def remove_experimental_option(self, key: str) -> None:
+    def remove_experimental_option(self, key: str):
         """移除一个实验设置，传入key值删除"""
         if key in self._experimental_options:
             self._experimental_options.pop(key)
+        return self
 
-    def remove_all_extensions(self) -> None:
+    def remove_all_extensions(self):
         """移除所有插件
         因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设"""
         self._extensions = []
+        return self
 
-    def set_argument(self, arg: str, value: Union[bool, str]) -> None:
+    def set_argument(self, arg: str, value: Union[bool, str]):
         """设置浏览器配置argument属性
         :param arg: 属性名
         :param value: 属性值，有值的属性传入值，没有的传入bool
@@ -128,30 +138,31 @@ class DriverOptions(Options):
         if value:
             arg_str = arg if isinstance(value, bool) else f'{arg}={value}'
             self.add_argument(arg_str)
+        return self
 
-    def set_headless(self, on_off: bool = True) -> None:
+    def set_headless(self, on_off: bool = True):
         """设置headless"""
-        self.set_argument('--headless', on_off)
+        return self.set_argument('--headless', on_off)
 
-    def set_no_imgs(self, on_off: bool = True) -> None:
+    def set_no_imgs(self, on_off: bool = True):
         """设置是否加载图片"""
-        self.set_argument('--blink-settings=imagesEnabled=false', on_off)
+        return self.set_argument('--blink-settings=imagesEnabled=false', on_off)
 
-    def set_no_js(self, on_off: bool = True) -> None:
+    def set_no_js(self, on_off: bool = True):
         """设置禁用js"""
-        self.set_argument('--disable-javascript', on_off)
+        return self.set_argument('--disable-javascript', on_off)
 
-    def set_mute(self, on_off: bool = True) -> None:
+    def set_mute(self, on_off: bool = True):
         """设置静音"""
-        self.set_argument('--mute-audio', on_off)
+        return self.set_argument('--mute-audio', on_off)
 
-    def set_user_agent(self, user_agent: str) -> None:
+    def set_user_agent(self, user_agent: str):
         """设置user agent"""
-        self.set_argument('user-agent', user_agent)
+        return self.set_argument('user-agent', user_agent)
 
-    def set_proxy(self, proxy: str) -> None:
+    def set_proxy(self, proxy: str):
         """设置代理"""
-        self.set_argument('--proxy-server', proxy)
+        return self.set_argument('--proxy-server', proxy)
 
     def set_paths(self,
                   driver_path: str = None,
@@ -159,7 +170,7 @@ class DriverOptions(Options):
                   debugger_address: str = None,
                   download_path: str = None,
                   user_data_path: str = None,
-                  cache_path: str = None) -> None:
+                  cache_path: str = None):
         """简易设置路径函数
         :param driver_path: chromedriver.exe路径
         :param chrome_path: chrome.exe路径
@@ -185,6 +196,7 @@ class DriverOptions(Options):
             self.set_argument('--user-data-dir', format_path(user_data_path))
         if cache_path is not None:
             self.set_argument('--disk-cache-dir', format_path(cache_path))
+        return self
 
 
 def _dict_to_chrome_options(options: dict) -> Options:
