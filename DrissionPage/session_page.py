@@ -7,7 +7,7 @@
 import os
 import re
 from pathlib import Path
-from random import random
+from random import randint
 from time import time
 from typing import Union, List
 from urllib.parse import urlparse, quote
@@ -128,7 +128,7 @@ class SessionPage(object):
         :param kwargs: 连接参数
         :param file_exists: 若存在同名文件，可选择'rename', 'overwrite', 'skip'方式处理
         :param show_msg: 是否显示下载信息
-        :return: 元组，bool和状态信息（成功时信息为文件名）
+        :return: 元组，bool和状态信息（成功时信息为文件路径）
         """
         goal_path = goal_path or OptionsManager().get_value('paths', 'global_tmp_path')
         if not goal_path:
@@ -150,7 +150,7 @@ class SessionPage(object):
         elif os.path.basename(file_url):
             file_name = os.path.basename(file_url).split("?")[0]
         else:
-            file_name = f'untitled_{time()}_{random.randint(0, 100)}'
+            file_name = f'untitled_{time()}_{randint(0, 100)}'
 
         if rename:  # 重命名文件，不改变扩展名
             ext_name = file_name.split('.')[-1]
@@ -161,7 +161,14 @@ class SessionPage(object):
         else:
             full_name = file_name
 
+        full_name = re.sub(r'[\\/*:|<>?"]', '', full_name).strip()
+        goal_Path = Path(goal_path)
+        goal_path = ''
+        for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
+            goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re.sub(r'[*:|<>?"]', '', i).strip()
+            goal_path += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
         full_path = Path(f'{goal_path}\\{full_name}')
+
         if full_path.exists():
             if file_exists == 'skip':
                 return False, 'A file with the same name already exists.'
@@ -171,7 +178,9 @@ class SessionPage(object):
                 full_name = avoid_duplicate_name(goal_path, full_name)
                 full_path = Path(f'{goal_path}\\{full_name}')
             else:
-                raise ValueError("file_exists can only be selected in'skip', 'overwrite', 'rename'")
+                raise ValueError("file_exists can only be selected in 'skip', 'overwrite', 'rename'")
+        Path(goal_path).mkdir(parents=True, exist_ok=True)
+
         # 打印要下载的文件
         if show_msg:
             print_txt = full_name if file_name == full_name else f'{file_name} -> {full_name}'
@@ -206,13 +215,13 @@ class SessionPage(object):
         # -------------------显示并返回值-------------------
         if show_msg:
             print(info)
-        info = full_name if download_status else info
+        info = f'{goal_path}\\{full_name}' if download_status else info
         return download_status, info
 
     def _make_response(self, url: str, mode: str = 'get', data: dict = None, **kwargs) -> Union[HTMLResponse, bool]:
         """生成response对象。接收mode参数，以决定用什么方式。
         :param url: 要访问的网址
-        :param mode: 'get','post'中选择
+        :param mode: 'get', 'post'中选择
         :param data: 提交的数据
         :param kwargs: 其它参数
         :return: Response对象
