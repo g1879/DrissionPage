@@ -152,7 +152,9 @@ class SessionPage(object):
         else:
             file_name = f'untitled_{time()}_{randint(0, 100)}'
 
+        file_name = re.sub(r'[\\/*:|<>?"]', '', file_name).strip()
         if rename:  # 重命名文件，不改变扩展名
+            rename = re.sub(r'[\\/*:|<>?"]', '', rename).strip()
             ext_name = file_name.split('.')[-1]
             if rename.lower().endswith(f'.{ext_name}'.lower()) or ext_name == file_name:
                 full_name = rename
@@ -161,7 +163,6 @@ class SessionPage(object):
         else:
             full_name = file_name
 
-        full_name = re.sub(r'[\\/*:|<>?"]', '', full_name).strip()
         goal_Path = Path(goal_path)
         goal_path = ''
         for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
