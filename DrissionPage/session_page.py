@@ -92,7 +92,7 @@ class SessionPage(object):
         if not url or (not go_anyway and self.url == to_url):
             return
         self._url = to_url
-        self._response = self._make_response(to_url, **kwargs)
+        self._response = self._make_response(to_url, **kwargs)[0]
         if self._response:
             self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
         self._url_available = True if self._response and self._response.ok else False
@@ -104,7 +104,7 @@ class SessionPage(object):
         if not url or (not go_anyway and self._url == to_url):
             return
         self._url = to_url
-        self._response = self._make_response(to_url, mode='post', data=data, **kwargs)
+        self._response = self._make_response(to_url, mode='post', data=data, **kwargs)[0]
         if self._response:
             try:
                 self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
@@ -138,11 +138,11 @@ class SessionPage(object):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 20
 
-        r = self._make_response(file_url, mode='get', **kwargs)
+        r, info = self._make_response(file_url, mode='get', **kwargs)
         if not r:
             if show_msg:
-                print('Invalid link')
-            return False, 'Invalid link'
+                print(info)
+            return False, info
         # -------------------获取文件名-------------------
         # header里有文件名，则使用它，否则在url里截取，但不能保证url包含文件名
         if 'Content-disposition' in r.headers:
@@ -178,33 +178,29 @@ class SessionPage(object):
                 full_name = avoid_duplicate_name(goal_path, full_name)
                 full_path = Path(f'{goal_path}\\{full_name}')
             else:
-                raise ValueError("file_exists can only be selected in 'skip', 'overwrite', 'rename'")
+                raise ValueError("Argument file_exists can only be 'skip', 'overwrite', 'rename'.")
+
         Path(goal_path).mkdir(parents=True, exist_ok=True)
 
-        # 打印要下载的文件
-        if show_msg:
-            print_txt = full_name if file_name == full_name else f'{file_name} -> {full_name}'
-            print(print_txt)
+        if show_msg:  # 打印要下载的文件
+            print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
             print(f'Downloading to: {goal_path}')
+
         # -------------------开始下载-------------------
         # 获取远程文件大小
         file_size = int(r.headers['Content-Length']) if 'Content-Length' in r.headers else None
-        # 已下载文件大小和下载状态
-        downloaded_size, download_status = 0, False
-        # 完整的存放路径
+        downloaded_size, download_status = 0, False  # 已下载文件大小和下载状态
         try:
             with open(str(full_path), 'wb') as tmpFile:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         tmpFile.write(chunk)
-                        # 如表头有返回文件大小，显示进度
-                        if show_msg and file_size:
+                        if show_msg and file_size:  # 如表头有返回文件大小，显示进度
                             downloaded_size += 1024
                             rate = downloaded_size / file_size if downloaded_size < file_size else 1
                             print('\r {:.0%} '.format(rate), end="")
         except Exception as e:
             download_status, info = False, f'Download failed.\n{e}'
-            raise
         else:
             download_status, info = (False, 'File size is 0.') if full_path.stat().st_size == 0 else (True, 'Success.')
         finally:
@@ -218,16 +214,16 @@ class SessionPage(object):
         info = f'{goal_path}\\{full_name}' if download_status else info
         return download_status, info
 
-    def _make_response(self, url: str, mode: str = 'get', data: dict = None, **kwargs) -> Union[HTMLResponse, bool]:
+    def _make_response(self, url: str, mode: str = 'get', data: dict = None, **kwargs) -> tuple:
         """生成response对象。接收mode参数，以决定用什么方式。
         :param url: 要访问的网址
-        :param mode: 'get', 'post'中选择
+        :param mode: 'get', 'post' 中选择
         :param data: 提交的数据
         :param kwargs: 其它参数
         :return: Response对象
         """
         if mode not in ['get', 'post']:
-            raise ValueError("mode must be 'get' or 'post'.")
+            raise ValueError("Argument mode can only be 'get' or 'post'.")
         url = quote(url, safe='/:&?=%;#@')
 
         # 设置referer和host值
@@ -253,8 +249,8 @@ class SessionPage(object):
                 r = self.session.get(url, **kwargs)
             elif mode == 'post':
                 r = self.session.post(url, data=data, **kwargs)
-        except:
-            return_value = False
+        except Exception as e:
+            return None, e
         else:
             headers = dict(r.headers)
             if 'Content-Type' not in headers or 'charset' not in headers['Content-Type']:
@@ -268,5 +264,4 @@ class SessionPage(object):
             # 避免存在退格符导致乱码或解析出错
             r._content = r.content if 'stream' in kwargs and kwargs['stream'] else r.content.replace(b'\x08', b'\\b')
             r.encoding = charset
-            return_value = r
-        return return_value
+            return r, 'Success'
