@@ -53,7 +53,7 @@ class MixPage(Null, SessionPage, DriverPage):
         elif mode == 'd':
             self._driver = True
         else:
-            raise KeyError("mode must be 'd' or 's'.")
+            raise ValueError("Argument mode can only be 'd' or 's'.")
 
     @property
     def url(self) -> str:
@@ -163,9 +163,9 @@ class MixPage(Null, SessionPage, DriverPage):
             path = download_path or self._drission.driver_options['experimental_options']['prefs'][
                 'download.default_directory']
             if not path:
-                raise KeyError
-        except KeyError:
-            raise KeyError('Download path not found.')
+                raise
+        except:
+            raise IOError('Download path not found.')
 
         return super().chrome_downloading(path)
 

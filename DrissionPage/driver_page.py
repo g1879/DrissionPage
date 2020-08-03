@@ -106,7 +106,7 @@ class DriverPage(object):
         :return: 等待是否成功
         """
         if mode.lower() not in ['del', 'display', 'hidden']:
-            raise ValueError('mode can only be "del", "display", "hidden"')
+            raise ValueError('Argument mode can only be "del", "display", "hidden"')
 
         from selenium.webdriver.support.wait import WebDriverWait
         from selenium.webdriver.support import expected_conditions as ec
@@ -259,8 +259,8 @@ class DriverPage(object):
         elif mode == 'right':
             self.driver.execute_script(f"window.scrollBy({pixel},0);")
         else:
-            raise KeyError(
-                "mode must be selected among 'top','bottom','rightmost','leftmost','up','down','left','right'.")
+            raise ValueError(
+                "Argument mode can only be 'top', 'bottom', 'rightmost', 'leftmost', 'up', 'down', 'left', 'right'.")
 
     def refresh(self) -> None:
         """刷新页面"""
@@ -276,7 +276,7 @@ class DriverPage(object):
             self.driver.maximize_window()
         else:
             if x <= 0 or y <= 0:
-                raise KeyError('x and y must greater than 0.')
+                raise ValueError('Arguments x and y must greater than 0.')
             new_x = x or self.driver.get_window_size()['width']
             new_y = y or self.driver.get_window_size()['height']
             self.driver.set_window_size(new_x, new_y)

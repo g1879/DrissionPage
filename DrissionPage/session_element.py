@@ -99,7 +99,7 @@ class SessionElement(DrissionElement):
         elif isinstance(loc_or_str, tuple) and len(loc_or_str) == 2:
             loc_or_str = translate_loc_to_xpath(loc_or_str)
         else:
-            raise ValueError('loc_or_str must be tuple or str.')
+            raise TypeError('Type of loc_or_str can only be tuple or str.')
 
         loc_str = None
         if loc_or_str[0] == 'xpath':
@@ -161,7 +161,7 @@ def execute_session_find(page_or_ele: BaseParser,
     """
     mode = mode or 'single'
     if mode not in ['single', 'all']:
-        raise ValueError("mode must be 'single' or 'all'.")
+        raise ValueError("Argument mode can only be 'single' or 'all'.")
     loc_by, loc_str = loc
     msg = result = first = None
     try:
