@@ -53,13 +53,16 @@ class MixPage(Null, SessionPage, DriverPage):
         elif mode == 'd':
             self._driver = True
         else:
-            raise KeyError("mode must be 'd' or 's'.")
+            raise ValueError("Argument mode can only be 'd' or 's'.")
 
     @property
-    def url(self) -> str:
+    def url(self) -> Union[str, None]:
         """根据模式获取当前活动的url"""
         if self._mode == 'd':
-            return super(SessionPage, self).url
+            if not self._driver or not self._drission.driver.current_url.startswith('http'):
+                return None
+            else:
+                return self._drission.driver.current_url
         elif self._mode == 's':
             return self.session_url
 
@@ -85,19 +88,19 @@ class MixPage(Null, SessionPage, DriverPage):
             return
         self._mode = 's' if self._mode == 'd' else 'd'
         if self._mode == 'd':  # s转d
-            self._url = super(SessionPage, self).url
+            self._driver = True
+            self._url = None if not self._driver else self._drission.driver.current_url
             if self.session_url:
                 self.cookies_to_driver(self.session_url)
-            if go:
-                self.get(self.session_url)
+                if go:
+                    self.get(self.session_url)
         elif self._mode == 's':  # d转s
+            self._session = True
             self._url = self.session_url
-            if self._session is None:
-                self._session = True
             if self._driver:
                 self.cookies_to_session()
-            if go:
-                self.get(super(SessionPage, self).url)
+                if go and self._drission.driver.current_url.startswith('http'):
+                    self.get(self._drission.driver.current_url)
 
     @property
     def drission(self) -> Drission:
@@ -163,9 +166,9 @@ class MixPage(Null, SessionPage, DriverPage):
             path = download_path or self._drission.driver_options['experimental_options']['prefs'][
                 'download.default_directory']
             if not path:
-                raise KeyError
-        except KeyError:
-            raise KeyError('Download path not found.')
+                raise
+        except:
+            raise IOError('Download path not found.')
 
         return super().chrome_downloading(path)
 
@@ -197,7 +200,6 @@ class MixPage(Null, SessionPage, DriverPage):
             return super().ele(loc_or_ele, mode=mode, show_errmsg=show_errmsg)
         elif self._mode == 'd':
             timeout = timeout or self.timeout
-            # return super(SessionPage, self).ele(loc_or_ele, mode=mode, timeout=timeout, show_errmsg=show_errmsg)
             return DriverPage.ele(self, loc_or_ele, mode=mode, timeout=timeout, show_errmsg=show_errmsg)
 
     def eles(self, loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg: bool = False) \
