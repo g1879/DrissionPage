@@ -122,7 +122,7 @@ class DriverElement(DrissionElement):
         elif isinstance(loc_or_str, tuple) and len(loc_or_str) == 2:
             loc_or_str = translate_loc_to_xpath(loc_or_str)
         else:
-            raise ValueError('loc_or_str must be tuple or str.')
+            raise ValueError('Argument loc_or_str can only be tuple or str.')
 
         if loc_or_str[0] == 'xpath':
             # 确保查询语句最前面是.
@@ -162,8 +162,9 @@ class DriverElement(DrissionElement):
                 self.clear()
             self.inner_ele.send_keys(value)
             return True
-        except:
-            raise
+        except Exception as e:
+            print(e)
+            return False
 
     def run_script(self, script: str) -> Any:
         """运行js"""
@@ -237,8 +238,9 @@ class DriverElement(DrissionElement):
         try:
             self.run_script(f"arguments[0].{attr} = '{value}';")
             return True
-        except:
-            raise
+        except Exception as e:
+            print(e)
+            return False
 
     def drag(self, x: int, y: int, speed: int = 40, shake: bool = True) -> bool:
         """拖拽当前元素到相对位置
@@ -269,7 +271,7 @@ class DriverElement(DrissionElement):
         elif isinstance(ele_or_loc, tuple):
             target_x, target_y = ele_or_loc
         else:
-            raise KeyError('Need DriverElement, WebElement object or coordinate information.')
+            raise TypeError('Need DriverElement, WebElement object or coordinate information.')
 
         current_x = self.location['x'] + self.size['width'] // 2
         current_y = self.location['y'] + self.size['height'] // 2
@@ -317,7 +319,7 @@ def execute_driver_find(page_or_ele: Union[WebElement, WebDriver],
     """
     mode = mode or 'single'
     if mode not in ['single', 'all']:
-        raise ValueError("mode must be 'single' or 'all'.")
+        raise ValueError("Argument mode can only be 'single' or 'all'.")
     msg = result = None
     try:
         wait = WebDriverWait(page_or_ele, timeout=timeout)

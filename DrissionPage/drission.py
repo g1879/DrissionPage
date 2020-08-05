@@ -69,7 +69,7 @@ class Drission(object):
             if isinstance(self._driver_options, dict):
                 options = _dict_to_chrome_options(self._driver_options)
             else:
-                raise KeyError('Driver options invalid')
+                raise TypeError('Driver options invalid')
 
             if self._proxy:
                 options.add_argument(f'--proxy-server={self._proxy["http"]}')
