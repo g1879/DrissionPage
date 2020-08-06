@@ -243,7 +243,7 @@ class SessionPage(object):
             kwargs['headers'] = self.session.headers
             kwargs['headers']['Host'] = urlparse(url).hostname
             if self.url:
-                kwargs['headers']['Referer'] = self._url
+                kwargs['headers']['Referer'] = self.url
 
         if 'timeout' not in kwargs_set:
             kwargs['timeout'] = self.timeout
