@@ -67,7 +67,9 @@ class SessionPage(object):
             loc_or_ele: Union[tuple, str, SessionElement],
             mode: str = None,
             show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]:
-        """查找一个元素
+        """根据loc获取元素或列表，可用字符串控制获取方式，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'
+        如没有控制关键字，会按字符串文本搜索
+        例：page.ele('@id:ele_id')，page.ele('首页')
         :param loc_or_ele: 页面元素地址
         :param mode: 以某种方式查找元素，可选'single','all'
         :param show_errmsg: 是否显示错误信息
@@ -168,6 +170,10 @@ class SessionPage(object):
         for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
             goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re.sub(r'[*:|<>?"]', '', i).strip()
             goal_path += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
+
+        goal_Path = Path(goal_path)
+        goal_Path.mkdir(parents=True, exist_ok=True)
+        goal_path = goal_Path.absolute()
         full_path = Path(f'{goal_path}\\{full_name}')
 
         if full_path.exists():
@@ -180,8 +186,6 @@ class SessionPage(object):
                 full_path = Path(f'{goal_path}\\{full_name}')
             else:
                 raise ValueError("Argument file_exists can only be 'skip', 'overwrite', 'rename'.")
-
-        Path(goal_path).mkdir(parents=True, exist_ok=True)
 
         if show_msg:  # 打印要下载的文件
             print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
@@ -231,14 +235,14 @@ class SessionPage(object):
         kwargs_set = set(x.lower() for x in kwargs)
         if 'headers' in kwargs_set:
             header_set = set(x.lower() for x in kwargs['headers'])
-            if self._url and 'referer' not in header_set:
-                kwargs['headers']['Referer'] = self._url
+            if self.url and 'referer' not in header_set:
+                kwargs['headers']['Referer'] = self.url
             if 'host' not in header_set:
                 kwargs['headers']['Host'] = urlparse(url).hostname
         else:
             kwargs['headers'] = self.session.headers
             kwargs['headers']['Host'] = urlparse(url).hostname
-            if self._url:
+            if self.url:
                 kwargs['headers']['Referer'] = self._url
 
         if 'timeout' not in kwargs_set:
