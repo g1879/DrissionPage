@@ -114,8 +114,9 @@ class DriverElement(DrissionElement):
             mode: str = None,
             show_errmsg: bool = False,
             timeout: float = None):
-        """根据loc获取元素或列表，可用用字符串控制获取方式，可选'id','class','name','tagName'
-        例：ele.find('id:ele_id')
+        """根据loc获取元素或列表，可用字符串控制获取方式，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'
+        如没有控制关键字，会按字符串文本搜索
+        例：ele.ele('@id:ele_id')，ele.ele('首页')
         """
         if isinstance(loc_or_str, str):
             loc_or_str = get_loc_from_str(loc_or_str)
