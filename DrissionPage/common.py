@@ -67,19 +67,19 @@ def get_loc_from_str(loc: str) -> tuple:
     """处理元素查找语句
     查找方式：属性、tag name及属性、文本、xpath、css selector
     =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串
-    例：
-    @class:ele_class - class含有ele_class的元素
-    @class=ele_class - class等于ele_class的元素
-    @class - 带class属性的元素
-    tag:div - div元素
-    tag:div@class:ele_class - class含有ele_class的div元素
-    tag:div@class=ele_class - class等于ele_class的div元素
-    tag:div@text():search_text - 文本含有search_text的div元素
-    tag:div@text()=search_text - 文本等于search_text的div元素
-    text:search_text - 文本含有search_text的元素
-    text=search_text - 文本等于search_text的元素
-    xpath://div[@class="ele_class"]
-    css:div.ele_class
+    示例：
+        @class:ele_class - class含有ele_class的元素
+        @class=ele_class - class等于ele_class的元素
+        @class - 带class属性的元素
+        tag:div - div元素
+        tag:div@class:ele_class - class含有ele_class的div元素
+        tag:div@class=ele_class - class等于ele_class的div元素
+        tag:div@text():search_text - 文本含有search_text的div元素
+        tag:div@text()=search_text - 文本等于search_text的div元素
+        text:search_text - 文本含有search_text的元素
+        text=search_text - 文本等于search_text的元素
+        xpath://div[@class="ele_class"]
+        css:div.ele_class
     """
     loc_by = 'xpath'
     if loc.startswith('@'):  # 根据属性查找

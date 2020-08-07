@@ -12,7 +12,7 @@ from time import time
 from typing import Union, List
 from urllib.parse import urlparse, quote
 
-from requests_html import HTMLSession, HTMLResponse
+from requests_html import HTMLSession, HTMLResponse, Element
 
 from .common import get_loc_from_str, translate_loc_to_xpath, avoid_duplicate_name
 from .config import OptionsManager
@@ -32,64 +32,118 @@ class SessionPage(object):
 
     @property
     def session(self) -> HTMLSession:
+        """返回session对象"""
         return self._session
 
     @property
     def response(self) -> HTMLResponse:
+        """返回访问url得到的response对象"""
         return self._response
 
     @property
     def url(self) -> str:
-        """当前访问url"""
+        """返回当前访问url"""
         return self._url
 
     @property
     def url_available(self) -> bool:
-        """url有效性"""
+        """返回当前访问的url有效性"""
         return self._url_available
 
     @property
     def cookies(self) -> dict:
-        """当前session的cookies"""
+        """返回session的cookies"""
         return self.session.cookies.get_dict()
 
     @property
     def title(self) -> str:
-        """获取网页title"""
+        """返回网页title"""
         return self.ele(('css selector', 'title')).text
 
     @property
     def html(self) -> str:
-        """获取元素innerHTML，如未指定元素则获取所有源代码"""
+        """返回页面html文本"""
         return self.response.html.html
 
     def ele(self,
-            loc_or_ele: Union[tuple, str, SessionElement],
+            loc_or_ele: Union[tuple, str, SessionElement, Element],
             mode: str = None,
             show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]:
-        """根据loc获取元素或列表，可用字符串控制获取方式，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'
-        如没有控制关键字，会按字符串文本搜索
-        例：page.ele('@id:ele_id')，page.ele('首页')
-        :param loc_or_ele: 页面元素地址
-        :param mode: 以某种方式查找元素，可选'single','all'
-        :param show_errmsg: 是否显示错误信息
-        :return: 页面元素对象或列表
+        """返回页面中符合条件的元素，默认返回第一个                                                          \n
+        示例：                                                                                           \n
+        - 接收到元素对象时：                                                                              \n
+            返回SessionElement对象                                                                        \n
+        - 用loc元组查找：                                                                                 \n
+            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                       \n
+        - 用查询字符串查找：                                                                               \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector                                        \n
+            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                          \n
+            page.ele('@class:ele_class')                 - 返回第一个class含有ele_class的元素              \n
+            page.ele('@name=ele_name')                   - 返回第一个name等于ele_name的元素                \n
+            page.ele('@placeholder')                     - 返回第一个带placeholder属性的元素               \n
+            page.ele('tag:p')                            - 返回第一个<p>元素                              \n
+            page.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div元素           \n
+            page.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div元素           \n
+            page.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div元素             \n
+            page.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div元素             \n
+            page.ele('text:some_text')                   - 返回第一个文本含有some_text的元素                \n
+            page.ele('some_text')                        - 返回第一个文本含有some_text的元素（等价于上一行）  \n
+            page.ele('text=some_text')                   - 返回第一个文本等于some_text的元素                \n
+            page.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素                        \n
+            page.ele('css:div.ele_class')                - 返回第一个符合css selector的元素                 \n
+        :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
+        :param mode: 'single' 或 'all‘，对应查找一个或全部
+        :param show_errmsg: 出现异常时是否打印信息
+        :return: SessionElement对象
         """
-        if isinstance(loc_or_ele, SessionElement):
-            return loc_or_ele
-        elif isinstance(loc_or_ele, str):
+        if isinstance(loc_or_ele, str):
             loc = get_loc_from_str(loc_or_ele)
-        else:
+        elif isinstance(loc_or_ele, tuple) and len(loc_or_ele) == 2:
             loc = translate_loc_to_xpath(loc_or_ele)
-
+        elif isinstance(loc_or_ele, SessionElement):
+            return loc_or_ele
+        elif isinstance(loc_or_ele, Element):
+            return SessionElement(loc_or_ele)
+        else:
+            raise ValueError('Argument loc_or_str can only be tuple, str, SessionElement, Element.')
         return execute_session_find(self.response.html, loc, mode, show_errmsg)
 
-    def eles(self, loc: Union[tuple, str], show_errmsg: bool = False) -> List[SessionElement]:
-        """查找符合条件的所有元素"""
-        return self.ele(loc, mode='all', show_errmsg=True)
+    def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False) -> List[SessionElement]:
+        """返回页面中所有符合条件的元素                                                                    \n
+        示例：                                                                                          \n
+        - 用loc元组查找：                                                                                \n
+            page.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的元素                     \n
+        - 用查询字符串查找：                                                                              \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
+            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                         \n
+            page.eles('@class:ele_class')                 - 返回所有class含有ele_class的元素              \n
+            page.eles('@name=ele_name')                   - 返回所有name等于ele_name的元素                \n
+            page.eles('@placeholder')                     - 返回所有带placeholder属性的元素               \n
+            page.eles('tag:p')                            - 返回所有<p>元素                              \n
+            page.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div元素           \n
+            page.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div元素           \n
+            page.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div元素             \n
+            page.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div元素             \n
+            page.eles('text:some_text')                   - 返回所有文本含有some_text的元素                \n
+            page.eles('some_text')                        - 返回所有文本含有some_text的元素（等价于上一行）  \n
+            page.eles('text=some_text')                   - 返回所有文本等于some_text的元素                \n
+            page.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的元素                        \n
+            page.eles('css:div.ele_class')                - 返回所有符合css selector的元素                 \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param show_errmsg: 出现异常时是否打印信息
+        :return: SessionElement对象组成的列表
+        """
+        if not isinstance(loc_or_str, tuple) or not isinstance(loc_or_str, str):
+            raise TypeError('Type of loc_or_str can only be tuple or str.')
+        return self.ele(loc_or_str, mode='all', show_errmsg=True)
 
     def get(self, url: str, go_anyway: bool = False, **kwargs) -> Union[bool, None]:
-        """用get方式跳转到url，调用_make_response()函数生成response对象"""
+        """用get方式跳转到url                                 \n
+        :param url: 目标url
+        :param go_anyway: 若目标url与当前url一致，是否强制跳转
+        :param kwargs: 连接参数
+        :return: url是否可用
+        """
         to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self.url == to_url):
             return
@@ -100,8 +154,14 @@ class SessionPage(object):
         self._url_available = True if self._response and self._response.ok else False
         return self._url_available
 
-    def post(self, url: str, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]:
-        """用post方式跳转到url，调用_make_response()函数生成response对象"""
+    def post(self, url: str, data: dict = None, go_anyway: bool = True, **kwargs) -> Union[bool, None]:
+        """用post方式跳转到url                                 \n
+        :param url: 目标url
+        :param data: 提交的数据
+        :param go_anyway: 若目标url与当前url一致，是否强制跳转
+        :param kwargs: 连接参数
+        :return: url是否可用
+        """
         to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self._url == to_url):
             return
@@ -122,16 +182,16 @@ class SessionPage(object):
                  file_exists: str = 'rename',
                  show_msg: bool = False,
                  **kwargs) -> tuple:
-        """下载一个文件
-        生成的response不写入self._response，是临时的
+        """下载一个文件                                                                   \n
         :param file_url: 文件url
-        :param goal_path: 存放路径url
-        :param rename: 重命名文件，不改变扩展名
-        :param kwargs: 连接参数
-        :param file_exists: 若存在同名文件，可选择'rename', 'overwrite', 'skip'方式处理
+        :param goal_path: 存放路径
+        :param rename: 重命名文件，可不写扩展名
+        :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
         :param show_msg: 是否显示下载信息
-        :return: 元组，bool和状态信息（成功时信息为文件路径）
+        :param kwargs: 连接参数
+        :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
         """
+        # 生成的response不写入self._response，是临时的
         goal_path = goal_path or OptionsManager().get_value('paths', 'global_tmp_path')
         if not goal_path:
             raise IOError('No path specified.')
@@ -220,10 +280,10 @@ class SessionPage(object):
         return download_status, info
 
     def _make_response(self, url: str, mode: str = 'get', data: dict = None, **kwargs) -> tuple:
-        """生成response对象。接收mode参数，以决定用什么方式。
-        :param url: 要访问的网址
+        """生成response对象                     \n
+        :param url: 目标url
         :param mode: 'get', 'post' 中选择
-        :param data: 提交的数据
+        :param data: post方式要提交的数据
         :param kwargs: 其它参数
         :return: Response对象
         """

@@ -33,38 +33,42 @@ class SessionElement(DrissionElement):
 
     @property
     def text(self) -> str:
-        """元素内文本"""
+        """返回元素内所有文本"""
         return unescape(self._inner_ele.text).replace('\xa0', ' ')
 
     @property
     def html(self) -> str:
-        """元素innerHTML"""
+        """返回元素innerHTML文本"""
         html = unescape(self._inner_ele.html).replace('\xa0', ' ')
         r = re.match(r'<.*?>(.*)</.*?>', html, flags=re.DOTALL)
         return None if not r else r.group(1)
 
     @property
     def tag(self) -> str:
-        """获取标签名"""
+        """返回元素类型"""
         return self._inner_ele.tag
 
     @property
     def parent(self):
-        """父级元素"""
+        """返回父级元素"""
         return self.parents()
 
     @property
     def next(self):
-        """下一个兄弟元素"""
+        """返回后一个兄弟元素"""
         return self.nexts()
 
     @property
     def prev(self):
-        """上一个兄弟元素"""
+        """返回前一个兄弟元素"""
         return self.prevs()
 
     def parents(self, num: int = 1):
-        """requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包"""
+        """返回上面第num级父元素                                                         \n
+        requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包  \n
+        :param num: 第几级父元素
+        :return: SessionElement对象
+        """
         try:
             return SessionElement(
                 Element(element=self.inner_ele.element.xpath(f'..{"/.." * (num - 1)}')[0], url=self.inner_ele.url))
@@ -72,7 +76,10 @@ class SessionElement(DrissionElement):
             return None
 
     def nexts(self, num: int = 1):
-        """requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包"""
+        """返回后面第num个兄弟元素      \n
+        :param num: 后面第几个兄弟元素
+        :return: SessionElement对象
+        """
         try:
             return SessionElement(
                 Element(element=self.inner_ele.element.xpath(f'./following-sibling::*[{num}]')[0],
@@ -81,7 +88,10 @@ class SessionElement(DrissionElement):
             return None
 
     def prevs(self, num: int = 1):
-        """requests_html的Element打包了lxml的元素对象，从lxml元素对象读取上下级关系后再重新打包"""
+        """返回前面第num个兄弟元素        \n
+        :param num: 前面第几个兄弟元素
+        :return: SessionElement对象
+        """
         try:
             return SessionElement(
                 Element(element=self.inner_ele.element.xpath(f'./preceding-sibling::*[{num}]')[0],
@@ -90,9 +100,30 @@ class SessionElement(DrissionElement):
             return None
 
     def ele(self, loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False):
-        """根据loc获取元素或列表，可用字符串控制获取方式，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'
-        如没有控制关键字，会按字符串文本搜索
-        例：ele.ele('@id:ele_id')，ele.ele('首页')
+        """返回当前元素下级符合条件的子元素，默认返回第一个                                                 \n
+        示例：                                                                                           \n
+        - 用loc元组查找：                                                                                 \n
+            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                       \n
+        - 用查询字符串查找：                                                                               \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector                                        \n
+            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                          \n
+            ele.ele('@class:ele_class')                 - 返回第一个class含有ele_class的子元素              \n
+            ele.ele('@name=ele_name')                   - 返回第一个name等于ele_name的子元素                \n
+            ele.ele('@placeholder')                     - 返回第一个带placeholder属性的子元素               \n
+            ele.ele('tag:p')                            - 返回第一个<p>子元素                              \n
+            ele.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div子元素           \n
+            ele.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div子元素           \n
+            ele.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div子元素             \n
+            ele.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div子元素             \n
+            ele.ele('text:some_text')                   - 返回第一个文本含有some_text的子元素                \n
+            ele.ele('some_text')                        - 返回第一个文本含有some_text的子元素（等价于上一行）  \n
+            ele.ele('text=some_text')                   - 返回第一个文本等于some_text的子元素                \n
+            ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的子元素                        \n
+            ele.ele('css:div.ele_class')                - 返回第一个符合css selector的子元素                 \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param mode: 'single' 或 'all‘，对应查找一个或全部
+        :param show_errmsg: 出现异常时是否打印信息
+        :return: SessionElement对象
         """
         if isinstance(loc_or_str, str):
             loc_or_str = get_loc_from_str(loc_or_str)
@@ -111,11 +142,40 @@ class SessionElement(DrissionElement):
 
         return execute_session_find(self.inner_ele, loc_or_str, mode, show_errmsg)
 
-    def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False):
+    def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False) -> list:
+        """返回当前元素下级所有符合条件的子元素                                                           \n
+        示例：                                                                                          \n
+        - 用loc元组查找：                                                                                \n
+            ele.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                     \n
+        - 用查询字符串查找：                                                                              \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
+            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                         \n
+            ele.eles('@class:ele_class')                 - 返回所有class含有ele_class的子元素              \n
+            ele.eles('@name=ele_name')                   - 返回所有name等于ele_name的子元素                \n
+            ele.eles('@placeholder')                     - 返回所有带placeholder属性的子元素               \n
+            ele.eles('tag:p')                            - 返回所有<p>子元素                              \n
+            ele.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div子元素           \n
+            ele.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div子元素           \n
+            ele.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div子元素             \n
+            ele.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div子元素             \n
+            ele.eles('text:some_text')                   - 返回所有文本含有some_text的子元素                \n
+            ele.eles('some_text')                        - 返回所有文本含有some_text的子元素（等价于上一行）  \n
+            ele.eles('text=some_text')                   - 返回所有文本等于some_text的子元素                \n
+            ele.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的子元素                        \n
+            ele.eles('css:div.ele_class')                - 返回所有符合css selector的子元素                 \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param show_errmsg: 出现异常时是否打印信息
+        :return: SessionElement对象组成的列表
+        """
+        if not isinstance(loc_or_str, tuple) or not isinstance(loc_or_str, str):
+            raise TypeError('Type of loc_or_str can only be tuple or str.')
         return self.ele(loc_or_str, mode='all', show_errmsg=show_errmsg)
 
-    def attr(self, attr: str) -> str:
-        """获取属性值"""
+    def attr(self, attr: str) -> Union[str, None]:
+        """返回属性值                           \n
+        :param attr: 属性名
+        :return: 属性值文本，没有该属性返回None
+        """
         try:
             if attr == 'href':
                 # 如直接获取attr只能获取相对地址
@@ -144,19 +204,19 @@ class SessionElement(DrissionElement):
             else:
                 return self._inner_ele.attrs[attr]
         except:
-            return ''
+            return None
 
 
 def execute_session_find(page_or_ele: BaseParser,
                          loc: tuple,
                          mode: str = 'single',
                          show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement]]:
-    """执行session模式元素的查找
-    页面查找元素及元素查找下级元素皆使用此方法
-    :param page_or_ele: session模式页面或元素
-    :param loc: 元素定位语句
-    :param mode: 'single'或'all'
-    :param show_errmsg: 是否显示错误信息
+    """执行session模式元素的查找                           \n
+    页面查找元素及元素查找下级元素皆使用此方法                \n
+    :param page_or_ele: request_html的页面或元素对象
+    :param loc: 元素定位元组
+    :param mode: 'single' 或 'all'，对应获取第一个或全部
+    :param show_errmsg: 出现异常时是否显示错误信息
     :return: 返回SessionElement元素或列表
     """
     mode = mode or 'single'
