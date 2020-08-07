@@ -97,16 +97,16 @@ class SessionPage(object):
         :return: SessionElement对象
         """
         if isinstance(loc_or_ele, str):
-            loc = get_loc_from_str(loc_or_ele)
+            loc_or_ele = get_loc_from_str(loc_or_ele)
         elif isinstance(loc_or_ele, tuple) and len(loc_or_ele) == 2:
-            loc = translate_loc_to_xpath(loc_or_ele)
+            loc_or_ele = translate_loc_to_xpath(loc_or_ele)
         elif isinstance(loc_or_ele, SessionElement):
             return loc_or_ele
         elif isinstance(loc_or_ele, Element):
             return SessionElement(loc_or_ele)
         else:
             raise ValueError('Argument loc_or_str can only be tuple, str, SessionElement, Element.')
-        return execute_session_find(self.response.html, loc, mode, show_errmsg)
+        return execute_session_find(self.response.html, loc_or_ele, mode, show_errmsg)
 
     def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False) -> List[SessionElement]:
         """返回页面中所有符合条件的元素                                                                    \n

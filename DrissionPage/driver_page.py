@@ -110,7 +110,7 @@ class DriverPage(object):
         if isinstance(loc_or_ele, str):
             loc_or_ele = get_loc_from_str(loc_or_ele)
         elif isinstance(loc_or_ele, tuple) and len(loc_or_ele) == 2:
-            loc_or_ele = translate_loc_to_xpath(loc_or_ele)
+            pass
         elif isinstance(loc_or_ele, DriverElement):
             return loc_or_ele
         elif isinstance(loc_or_ele, WebElement):

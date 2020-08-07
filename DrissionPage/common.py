@@ -120,7 +120,7 @@ def get_loc_from_str(loc: str) -> tuple:
     return loc_by, loc_str
 
 
-def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy'):
+def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy') -> str:
     """生成xpath语句"""
     tag_name = '' if tag == '*' else f'name()="{tag}" and '
     if mode == 'exact':
@@ -129,7 +129,7 @@ def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy'):
         return f"//*[{tag_name}contains({arg},{_make_search_str(val)})]"
 
 
-def _make_search_str(search_str: str):
+def _make_search_str(search_str: str) -> str:
     """将"转义，不知何故不能直接用\""""
     parts = search_str.split('"')
     parts_num = len(parts)
@@ -141,7 +141,7 @@ def _make_search_str(search_str: str):
     return search_str
 
 
-def translate_loc_to_xpath(loc):
+def translate_loc_to_xpath(loc) -> tuple:
     """把By类型转为xpath或css selector"""
     loc_by = 'xpath'
     loc_str = None
@@ -185,7 +185,7 @@ def avoid_duplicate_name(folder_path: str, file_name: str) -> str:
     return file_name
 
 
-def clean_folder(folder_path: str, ignore: list = None):
+def clean_folder(folder_path: str, ignore: list = None) -> None:
     """清空一个文件夹，除了ignore里的文件和文件夹
     :param folder_path: 要清空的文件夹路径
     :param ignore: 忽略列表

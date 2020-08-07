@@ -155,7 +155,7 @@ class DriverElement(DrissionElement):
         if isinstance(loc_or_str, str):
             loc_or_str = get_loc_from_str(loc_or_str)
         elif isinstance(loc_or_str, tuple) and len(loc_or_str) == 2:
-            loc_or_str = translate_loc_to_xpath(loc_or_str)
+            pass
         else:
             raise ValueError('Argument loc_or_str can only be tuple or str.')
 
