@@ -155,6 +155,17 @@ class MixPage(Null, SessionPage, DriverPage):
         self.change_mode('s', go=False)
         return super().post(url, data, go_anyway, **kwargs)
 
+    def download(self,
+                 file_url: str,
+                 goal_path: str = None,
+                 rename: str = None,
+                 file_exists: str = 'rename',
+                 show_msg: bool = False,
+                 **kwargs) -> tuple:
+        if self.mode == 'd':
+            self.cookies_to_session()
+        return super().download(file_url, goal_path, rename, file_exists, show_msg, **kwargs)
+
     # ----------------重写DriverPage的函数-----------------------
 
     def chrome_downloading(self, download_path: str = None) -> list:

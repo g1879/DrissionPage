@@ -74,8 +74,9 @@ class DriverPage(object):
             mode: str = None,
             timeout: float = None,
             show_errmsg: bool = False) -> Union[DriverElement, List[DriverElement], None]:
-        """根据loc获取元素或列表，可用用字符串控制获取方式，可选'id','class','name','tagName'
-        例：ele.find('id:ele_id')
+        """根据loc获取元素或列表，可用字符串控制获取方式，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'
+        如没有控制关键字，会按字符串文本搜索
+        例：page.ele('@id:ele_id')，page.ele('首页')
         :param loc_or_ele: 页面元素地址
         :param mode: 以某种方式查找元素，可选'single' , 'all', 'visible'
         :param timeout: 是否显示错误信息

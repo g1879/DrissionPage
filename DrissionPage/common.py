@@ -171,7 +171,7 @@ def avoid_duplicate_name(folder_path: str, file_name: str) -> str:
     :param file_name: 要检查的文件名
     :return: 可用的文件名
     """
-    file_Path = Path(folder_path).joinpath(file_name)
+    file_Path = Path(folder_path).absolute().joinpath(file_name)
     while file_Path.exists():
         ext_name = file_Path.suffix
         base_name = file_Path.stem
