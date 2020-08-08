@@ -15,6 +15,8 @@ from selenium.webdriver.remote.webelement import WebElement
 
 
 class DrissionElement(object):
+    """SessionElement和DriverElement的基类"""
+
     def __init__(self, ele: Union[Element, WebElement]):
         self._inner_ele = ele
 
@@ -64,22 +66,22 @@ class DrissionElement(object):
 
 
 def get_loc_from_str(loc: str) -> tuple:
-    """处理元素查找语句
-    查找方式：属性、tag name及属性、文本、xpath、css selector
-    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串
-    示例：
-        @class:ele_class - class含有ele_class的元素
-        @class=ele_class - class等于ele_class的元素
-        @class - 带class属性的元素
-        tag:div - div元素
-        tag:div@class:ele_class - class含有ele_class的div元素
-        tag:div@class=ele_class - class等于ele_class的div元素
-        tag:div@text():search_text - 文本含有search_text的div元素
-        tag:div@text()=search_text - 文本等于search_text的div元素
-        text:search_text - 文本含有search_text的元素
-        text=search_text - 文本等于search_text的元素
-        xpath://div[@class="ele_class"]
-        css:div.ele_class
+    """处理元素查找语句                                               \n
+    查找方式：属性、tag name及属性、文本、xpath、css selector           \n
+    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+    示例：                                                            \n
+        @class:ele_class - class含有ele_class的元素                    \n
+        @class=ele_class - class等于ele_class的元素                    \n
+        @class - 带class属性的元素                                     \n
+        tag:div - div元素                                              \n
+        tag:div@class:ele_class - class含有ele_class的div元素          \n
+        tag:div@class=ele_class - class等于ele_class的div元素           \n
+        tag:div@text():search_text - 文本含有search_text的div元素        \n
+        tag:div@text()=search_text - 文本等于search_text的div元素        \n
+        text:search_text - 文本含有search_text的元素                     \n
+        text=search_text - 文本等于search_text的元素                     \n
+        xpath://div[@class="ele_class"]                                 \n
+        css:div.ele_class                                               \n
     """
     loc_by = 'xpath'
     if loc.startswith('@'):  # 根据属性查找
@@ -165,13 +167,14 @@ def translate_loc_to_xpath(loc) -> tuple:
     return loc_by, loc_str
 
 
-def avoid_duplicate_name(folder_path: str, file_name: str) -> str:
-    """检查文件是否重名，并返回可以使用的文件名
+def get_available_file_name(folder_path: str, file_name: str) -> str:
+    """检查文件是否重名，并返回可以使用的文件名  \n
     :param folder_path: 文件夹路径
     :param file_name: 要检查的文件名
     :return: 可用的文件名
     """
-    file_Path = Path(folder_path).absolute().joinpath(file_name)
+    folder_path = Path(folder_path).absolute()
+    file_Path = folder_path.joinpath(file_name)
     while file_Path.exists():
         ext_name = file_Path.suffix
         base_name = file_Path.stem
@@ -181,12 +184,12 @@ def avoid_duplicate_name(folder_path: str, file_name: str) -> str:
             file_name = f'{base_name.replace(f"({num})", "", -1)}({num + 1}){ext_name}'
         else:
             file_name = f'{base_name} (1){ext_name}'
-        file_Path = Path(folder_path).joinpath(file_name)
+        file_Path = folder_path.joinpath(file_name)
     return file_name
 
 
 def clean_folder(folder_path: str, ignore: list = None) -> None:
-    """清空一个文件夹，除了ignore里的文件和文件夹
+    """清空一个文件夹，除了ignore里的文件和文件夹  \n
     :param folder_path: 要清空的文件夹路径
     :param ignore: 忽略列表
     :return: None

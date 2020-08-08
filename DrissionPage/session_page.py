@@ -14,7 +14,7 @@ from urllib.parse import urlparse, quote
 
 from requests_html import HTMLSession, HTMLResponse, Element
 
-from .common import get_loc_from_str, translate_loc_to_xpath, avoid_duplicate_name
+from .common import get_loc_from_str, translate_loc_to_xpath, get_available_file_name
 from .config import OptionsManager
 from .session_element import SessionElement, execute_session_find
 
@@ -242,7 +242,7 @@ class SessionPage(object):
             elif file_exists == 'overwrite':
                 pass
             elif file_exists == 'rename':
-                full_name = avoid_duplicate_name(goal_path, full_name)
+                full_name = get_available_file_name(goal_path, full_name)
                 full_path = Path(f'{goal_path}\\{full_name}')
             else:
                 raise ValueError("Argument file_exists can only be 'skip', 'overwrite', 'rename'.")

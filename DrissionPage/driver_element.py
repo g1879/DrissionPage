@@ -14,7 +14,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
-from .common import DrissionElement, get_loc_from_str, translate_loc_to_xpath, avoid_duplicate_name
+from .common import DrissionElement, get_loc_from_str, translate_loc_to_xpath, get_available_file_name
 
 
 class DriverElement(DrissionElement):
@@ -290,7 +290,7 @@ class DriverElement(DrissionElement):
         name = filename or self.tag
         path = Path(path).absolute()
         path.mkdir(parents=True, exist_ok=True)
-        name = avoid_duplicate_name(str(path), f'{name}.png')
+        name = get_available_file_name(str(path), f'{name}.png')
         # 等待元素加载完成
         if self.tag == 'img':
             js = 'return arguments[0].complete && typeof arguments[0].naturalWidth != "undefined" ' \

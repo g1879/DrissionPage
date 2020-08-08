@@ -14,7 +14,7 @@ from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from .common import get_loc_from_str, avoid_duplicate_name, translate_loc_to_xpath
+from .common import get_loc_from_str, get_available_file_name, translate_loc_to_xpath
 from .driver_element import DriverElement, execute_driver_find
 
 
@@ -296,7 +296,7 @@ class DriverPage(object):
         name = filename or self.title
         path = Path(path).absolute()
         path.mkdir(parents=True, exist_ok=True)
-        name = avoid_duplicate_name(str(path), f'{name}.png')
+        name = get_available_file_name(str(path), f'{name}.png')
         img_path = f'{path}\\{name}'
         self.driver.save_screenshot(img_path)
         return img_path
