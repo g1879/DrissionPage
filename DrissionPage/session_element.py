@@ -167,7 +167,7 @@ class SessionElement(DrissionElement):
         :param show_errmsg: 出现异常时是否打印信息
         :return: SessionElement对象组成的列表
         """
-        if not isinstance(loc_or_str, tuple) or not isinstance(loc_or_str, str):
+        if not isinstance(loc_or_str, tuple) and not isinstance(loc_or_str, str):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
         return self.ele(loc_or_str, mode='all', show_errmsg=show_errmsg)
 
