@@ -24,7 +24,6 @@ class Drission(object):
     def __init__(self,
                  driver_options: Union[dict, Options] = None,
                  session_options: dict = None,
-                 # driver_path: str = None,
                  ini_path: str = None,
                  proxy: dict = None):
         """初始化配置信息，但不生成session和driver实例
@@ -35,17 +34,21 @@ class Drission(object):
         """
         self._session = None
         self._driver = None
-        om = OptionsManager(ini_path)
-        self._session_options = session_options or om.get_option('session_options')
-        self._driver_options = _chrome_options_to_dict(driver_options) or om.get_option('chrome_options')
+        self._driver_path = 'chromedriver'
         self._proxy = proxy
-
-        if 'driver_path' in self._driver_options and self._driver_options['driver_path']:
-            self._driver_path = self._driver_options['driver_path']
-        elif 'chromedriver_path' in om.get_option('paths') and om.get_option('paths')['chromedriver_path']:
-            self._driver_path = om.get_option('paths')['chromedriver_path']
+        if session_options is None:
+            self._session_options = OptionsManager(ini_path).get_option('session_options')
         else:
-            self._driver_path = 'chromedriver'
+            self._session_options = session_options
+        if driver_options is None:
+            om = OptionsManager(ini_path)
+            self._driver_options = om.get_option('chrome_options')
+            if 'chromedriver_path' in om.get_option('paths') and om.get_option('paths')['chromedriver_path']:
+                self._driver_path = om.get_option('paths')['chromedriver_path']
+        else:
+            self._driver_options = _chrome_options_to_dict(driver_options)
+            if 'driver_path' in self._driver_options and self._driver_options['driver_path']:
+                self._driver_path = self._driver_options['driver_path']
 
     @property
     def session(self) -> HTMLSession:
