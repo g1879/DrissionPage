@@ -14,7 +14,7 @@ from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from .common import get_loc_from_str, avoid_duplicate_name, translate_loc_to_xpath
+from .common import get_loc_from_str, get_available_file_name
 from .driver_element import DriverElement, execute_driver_find
 
 
@@ -147,7 +147,7 @@ class DriverPage(object):
         :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象组成的列表
         """
-        if not isinstance(loc_or_str, tuple) or not isinstance(loc_or_str, str):
+        if not isinstance(loc_or_str, tuple) and not isinstance(loc_or_str, str):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
         return self.ele(loc_or_str, mode='all', timeout=timeout, show_errmsg=show_errmsg)
 
@@ -296,7 +296,7 @@ class DriverPage(object):
         name = filename or self.title
         path = Path(path).absolute()
         path.mkdir(parents=True, exist_ok=True)
-        name = avoid_duplicate_name(str(path), f'{name}.png')
+        name = get_available_file_name(str(path), f'{name}.png')
         img_path = f'{path}\\{name}'
         self.driver.save_screenshot(img_path)
         return img_path
