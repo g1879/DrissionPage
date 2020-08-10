@@ -135,7 +135,7 @@ class SessionElement(DrissionElement):
         loc_str = None
         if loc_or_str[0] == 'xpath':
             # Element的html是包含自己的，要如下处理，使其只检索下级的
-            loc_str = f'./{self.tag}{loc_or_str[1].lstrip(".")}'
+            loc_str = loc_or_str[1] if loc_or_str[1].startswith('.') else f'.{loc_or_str[1]}'
         elif loc_or_str[0] == 'css selector':
             loc_str = f':root>{self.tag}{loc_or_str[1]}'
         loc_or_str = loc_or_str[0], loc_str
@@ -223,28 +223,27 @@ def execute_session_find(page_or_ele: BaseParser,
     if mode not in ['single', 'all']:
         raise ValueError("Argument mode can only be 'single' or 'all'.")
     loc_by, loc_str = loc
-    msg = result = first = None
+    result = None
     try:
-        if mode == 'single':
-            msg = 'Element not found.'
-            first = True
-        elif mode == 'all':
-            msg = 'Elements not found.'
-            first = False
-
+        ele = None
         if loc_by == 'xpath':
-            ele = page_or_ele.xpath(loc_str, first=first)
+            if 'PyQuery' in str(type(page_or_ele.element)):  # 从页面查找
+                ele = page_or_ele.xpath(loc_str)
+            elif 'HtmlElement' in str(type(page_or_ele.element)):  # 从元素查找
+                elements = page_or_ele.element.xpath(loc_str)
+                ele = [Element(element=e, url=page_or_ele.url) for e in elements]
         else:
-            ele = page_or_ele.find(loc_str, first=first)
+            ele = page_or_ele.find(loc_str)
 
         if mode == 'single':
-            result = SessionElement(ele) if ele else None
+            result = SessionElement(ele[0]) if ele else None
         elif mode == 'all':
             result = [SessionElement(e) for e in ele]
 
         return result
     except:
+        # raise
         if show_errmsg:
-            print(msg, loc)
+            print('Element(s) not found.', loc)
             raise
         return [] if mode == 'all' else None
