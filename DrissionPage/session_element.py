@@ -69,35 +69,21 @@ class SessionElement(DrissionElement):
         :param num: 第几级父元素
         :return: SessionElement对象
         """
-        try:
-            return SessionElement(
-                Element(element=self.inner_ele.element.xpath(f'..{"/.." * (num - 1)}')[0], url=self.inner_ele.url))
-        except IndexError:
-            return None
+        return self.ele(f'xpath:..{"/.." * (num - 1)}')
 
     def nexts(self, num: int = 1):
         """返回后面第num个兄弟元素      \n
         :param num: 后面第几个兄弟元素
         :return: SessionElement对象
         """
-        try:
-            return SessionElement(
-                Element(element=self.inner_ele.element.xpath(f'./following-sibling::*[{num}]')[0],
-                        url=self.inner_ele.url))
-        except IndexError:
-            return None
+        return self.ele(f'xpath:./following-sibling::*[{num}]')
 
     def prevs(self, num: int = 1):
         """返回前面第num个兄弟元素        \n
         :param num: 前面第几个兄弟元素
         :return: SessionElement对象
         """
-        try:
-            return SessionElement(
-                Element(element=self.inner_ele.element.xpath(f'./preceding-sibling::*[{num}]')[0],
-                        url=self.inner_ele.url))
-        except IndexError:
-            return None
+        return self.ele(f'xpath:./preceding-sibling::*[{num}]')
 
     def ele(self, loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False):
         """返回当前元素下级符合条件的子元素，默认返回第一个                                                 \n
@@ -135,7 +121,7 @@ class SessionElement(DrissionElement):
         loc_str = None
         if loc_or_str[0] == 'xpath':
             # Element的html是包含自己的，要如下处理，使其只检索下级的
-            loc_str = f'./{self.tag}{loc_or_str[1].lstrip(".")}'
+            loc_str = loc_or_str[1] if loc_or_str[1].startswith('.') else f'.{loc_or_str[1]}'
         elif loc_or_str[0] == 'css selector':
             loc_str = f':root>{self.tag}{loc_or_str[1]}'
         loc_or_str = loc_or_str[0], loc_str
@@ -167,7 +153,7 @@ class SessionElement(DrissionElement):
         :param show_errmsg: 出现异常时是否打印信息
         :return: SessionElement对象组成的列表
         """
-        if not isinstance(loc_or_str, tuple) or not isinstance(loc_or_str, str):
+        if not isinstance(loc_or_str, tuple) and not isinstance(loc_or_str, str):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
         return self.ele(loc_or_str, mode='all', show_errmsg=show_errmsg)
 
@@ -223,28 +209,23 @@ def execute_session_find(page_or_ele: BaseParser,
     if mode not in ['single', 'all']:
         raise ValueError("Argument mode can only be 'single' or 'all'.")
     loc_by, loc_str = loc
-    msg = result = first = None
     try:
-        if mode == 'single':
-            msg = 'Element not found.'
-            first = True
-        elif mode == 'all':
-            msg = 'Elements not found.'
-            first = False
-
+        ele = None
         if loc_by == 'xpath':
-            ele = page_or_ele.xpath(loc_str, first=first)
+            if 'PyQuery' in str(type(page_or_ele.element)):  # 从页面查找
+                ele = page_or_ele.xpath(loc_str)
+            elif 'HtmlElement' in str(type(page_or_ele.element)):  # 从元素查找
+                elements = page_or_ele.element.xpath(loc_str)
+                ele = [Element(element=e, url=page_or_ele.url) for e in elements]
         else:
-            ele = page_or_ele.find(loc_str, first=first)
+            ele = page_or_ele.find(loc_str)
 
         if mode == 'single':
-            result = SessionElement(ele) if ele else None
+            return SessionElement(ele[0]) if ele else None
         elif mode == 'all':
-            result = [SessionElement(e) for e in ele]
-
-        return result
+            return [SessionElement(e) for e in ele]
     except:
         if show_errmsg:
-            print(msg, loc)
+            print('Element(s) not found.', loc)
             raise
         return [] if mode == 'all' else None
