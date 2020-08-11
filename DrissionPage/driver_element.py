@@ -92,7 +92,7 @@ class DriverElement(DrissionElement):
         :return: DriverElement对象
         """
         loc = 'xpath', f'.{"/.." * num}'
-        return self.ele(loc, timeout=1, show_errmsg=False)
+        return self.ele(loc, timeout=0.01, show_errmsg=False)
 
     def nexts(self, num: int = 1):
         """返回后面第num个兄弟元素      \n
@@ -100,7 +100,7 @@ class DriverElement(DrissionElement):
         :return: DriverElement对象
         """
         loc = 'xpath', f'./following-sibling::*[{num}]'
-        return self.ele(loc, timeout=1, show_errmsg=False)
+        return self.ele(loc, timeout=0.1, show_errmsg=False)
 
     def prevs(self, num: int = 1):
         """返回前面第num个兄弟元素        \n
@@ -108,7 +108,7 @@ class DriverElement(DrissionElement):
         :return: DriverElement对象
         """
         loc = 'xpath', f'./preceding-sibling::*[{num}]'
-        return self.ele(loc, timeout=1, show_errmsg=False)
+        return self.ele(loc, timeout=0.01, show_errmsg=False)
 
     def attr(self, attr: str) -> str:
         """获取属性值            \n
