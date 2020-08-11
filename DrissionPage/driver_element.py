@@ -72,6 +72,58 @@ class DriverElement(DrissionElement):
         return self._inner_ele.tag_name
 
     @property
+    def css_path(self) -> str:
+        js = '''
+        function e(el) {
+            if (!(el instanceof Element)) return;
+            var path = '';
+            while (el.nodeType === Node.ELEMENT_NODE) {
+                if (el.id) {
+                    return '#' + el.id + path;
+                } else {
+                    var sib = el, nth = 0;
+                    while (sib) {
+                        if(sib.nodeType === Node.ELEMENT_NODE){nth += 1;}
+                        sib = sib.previousSibling;
+                    }
+                    path = '>' + ":nth-child(" + nth + ")" + path;
+                }
+                el = el.parentNode;
+            }
+            return path.substr(1);
+        }
+        return e(arguments[0]);
+        '''
+        return self.run_script(js)
+
+    @property
+    def xpath(self) -> str:
+        js = '''
+        function e(el) {
+            if (!(el instanceof Element)) return;
+            var path = '';
+            while (el.nodeType === Node.ELEMENT_NODE) {
+                var tag = el.nodeName.toLowerCase();
+                if (el.id) {
+                    return '//' + tag + '[@id="' + el.id + '"]'  + path;
+                } else {
+                    var sib = el, nth = 0;
+                    while (sib) {
+                        if(sib.nodeType === Node.ELEMENT_NODE && sib.nodeName.toLowerCase()==tag){nth += 1;}
+                        sib = sib.previousSibling;
+                    }
+                    if(nth>1){path = '/' + tag + '[' + nth + ']' + path;}
+                    else{path = '/' + tag + path;}
+                }
+                el = el.parentNode;
+            }
+            return path;
+        }
+        return e(arguments[0]);
+        '''
+        return self.run_script(js)
+
+    @property
     def parent(self):
         """返回父级元素"""
         return self.parents()
@@ -165,7 +217,7 @@ class DriverElement(DrissionElement):
             loc_or_str = loc_or_str[0], loc_str
         else:
             if loc_or_str[1].lstrip().startswith('>'):
-                raise ValueError('WebElement does not support getting direct child elements.')
+                loc_or_str = loc_or_str[0], f'{self.css_path}{loc_or_str[1]}'
 
         timeout = timeout or self.timeout
         return execute_driver_find(self.inner_ele, loc_or_str, mode, show_errmsg, timeout)
@@ -174,7 +226,7 @@ class DriverElement(DrissionElement):
              loc_or_str: Union[tuple, str],
              timeout: float = None,
              show_errmsg: bool = False) -> list:
-        """返回当前元素下级所有符合条件的子元素                                                           \n
+        """返回当前元素下级所有符合条件的子元素                                                             \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n
             ele.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                     \n

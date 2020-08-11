@@ -49,6 +49,34 @@ class SessionElement(DrissionElement):
         return self._inner_ele.tag
 
     @property
+    def css_path(self) -> str:
+        """返回css path路径"""
+        return self._get_ele_path('css')
+
+    @property
+    def xpath(self) -> str:
+        """返回xpath路径"""
+        return self._get_ele_path('xpath')
+
+    def _get_ele_path(self, mode):
+        """获取css路径或xpath路径"""
+        path_str = ''
+        ele = self
+        while ele:
+            ele_id = ele.attr('id')
+            if ele_id:
+                return f'#{ele_id}{path_str}' if mode == 'css' else f'//{ele.tag}[@id="{ele_id}"]{path_str}'
+            else:
+                if mode == 'css':
+                    brothers = len(ele.eles(f'xpath:./preceding-sibling::*'))
+                    path_str = f'>:nth-child({brothers + 1}){path_str}'
+                else:
+                    brothers = len(ele.eles(f'xpath:./preceding-sibling::{ele.tag}'))
+                    path_str = f'/{ele.tag}[{brothers + 1}]{path_str}' if brothers > 0 else f'/{ele.tag}{path_str}'
+                ele = ele.parent
+        return path_str[1:] if mode == 'css' else path_str
+
+    @property
     def parent(self):
         """返回父级元素"""
         return self.parents()
