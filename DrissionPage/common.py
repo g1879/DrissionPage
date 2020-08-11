@@ -19,6 +19,7 @@ class DrissionElement(object):
 
     def __init__(self, ele: Union[Element, WebElement]):
         self._inner_ele = ele
+        self._xpath = None
 
     @property
     def inner_ele(self) -> Union[WebElement, Element]:
@@ -52,12 +53,34 @@ class DrissionElement(object):
     def prev(self):
         return
 
+    @property
+    def xpath(self):
+        self._xpath = self._xpath or self._get_xpath()
+        return self._xpath
+
+    def _get_xpath(self):
+        """获取当前元素xpath字符串"""
+        xpath_str = ''
+        ele = self
+        while ele:
+            ele_id = ele.attr('id')
+            if ele_id:
+                return f'//{ele.tag}[@id="{ele_id}"]{xpath_str}'
+            else:
+                if 'SessionElement' in str(type(self)):
+                    brothers = len(ele.eles(f'xpath:./preceding-sibling::{ele.tag}'))
+                else:
+                    brothers = len(ele.eles(f'xpath:./preceding-sibling::{ele.tag}', timeout=0.001))
+                xpath_str = f'/{ele.tag}[{brothers + 1}]{xpath_str}' if brothers > 0 else f'/{ele.tag}{xpath_str}'
+                ele = ele.parent
+        return xpath_str
+
     @abstractmethod
-    def ele(self, loc: tuple, mode: str = None, show_errmsg: bool = True):
+    def ele(self, loc: Union[tuple, str], mode: str = None, show_errmsg: bool = True):
         pass
 
     @abstractmethod
-    def eles(self, loc: tuple, show_errmsg: bool = True):
+    def eles(self, loc: Union[tuple, str], show_errmsg: bool = True):
         pass
 
     @abstractmethod

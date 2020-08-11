@@ -1064,6 +1064,10 @@ Parameter Description:
 
 ​	Returns the element label name text.
 
+### xpath
+
+​	Return the xpath path of the element.
+
 ### parent
 
 ​	Returns the parent element object.
@@ -1310,6 +1314,10 @@ Parameter Description:
 ### tag
 
 ​	Returns the element label name text.
+
+### xpath
+
+​	Return the xpath path of the element.
 
 ### parent
 
