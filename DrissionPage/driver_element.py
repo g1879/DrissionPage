@@ -163,6 +163,9 @@ class DriverElement(DrissionElement):
             # 确保查询语句最前面是.
             loc_str = f'.{loc_or_str[1]}' if not loc_or_str[1].startswith('.') else loc_or_str[1]
             loc_or_str = loc_or_str[0], loc_str
+        else:
+            if loc_or_str[1].lstrip().startswith('>'):
+                raise ValueError('WebElement does not support getting direct child elements.')
 
         timeout = timeout or self.timeout
         return execute_driver_find(self.inner_ele, loc_or_str, mode, show_errmsg, timeout)
@@ -405,19 +408,15 @@ def execute_driver_find(page_or_ele: Union[WebElement, WebDriver],
     mode = mode or 'single'
     if mode not in ['single', 'all']:
         raise ValueError("Argument mode can only be 'single' or 'all'.")
-    msg = result = None
     try:
         wait = WebDriverWait(page_or_ele, timeout=timeout)
         if mode == 'single':
-            msg = 'Element not found.'
-            result = DriverElement(wait.until(ec.presence_of_element_located(loc)))
+            return DriverElement(wait.until(ec.presence_of_element_located(loc)))
         elif mode == 'all':
-            msg = 'Elements not found.'
             eles = wait.until(ec.presence_of_all_elements_located(loc))
-            result = [DriverElement(ele) for ele in eles]
-        return result
+            return [DriverElement(ele) for ele in eles]
     except:
         if show_errmsg:
-            print(msg, loc)
+            print('Element(s) not found.', loc)
             raise
         return [] if mode == 'all' else None

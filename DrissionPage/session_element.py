@@ -123,7 +123,8 @@ class SessionElement(DrissionElement):
             # Element的html是包含自己的，要如下处理，使其只检索下级的
             loc_str = loc_or_str[1] if loc_or_str[1].startswith('.') else f'.{loc_or_str[1]}'
         elif loc_or_str[0] == 'css selector':
-            loc_str = f':root>{self.tag}{loc_or_str[1]}'
+            loc_str = loc_or_str[1] if loc_or_str[1][0] in '>, ' else f' {loc_or_str[1]}'
+            loc_str = f':root>{self.tag}{loc_str}'
         loc_or_str = loc_or_str[0], loc_str
 
         return execute_session_find(self.inner_ele, loc_or_str, mode, show_errmsg)
@@ -217,7 +218,7 @@ def execute_session_find(page_or_ele: BaseParser,
             elif 'HtmlElement' in str(type(page_or_ele.element)):  # 从元素查找
                 elements = page_or_ele.element.xpath(loc_str)
                 ele = [Element(element=e, url=page_or_ele.url) for e in elements]
-        else:
+        else:  # 用css selector获取
             ele = page_or_ele.find(loc_str)
 
         if mode == 'single':
