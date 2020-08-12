@@ -157,7 +157,7 @@ class SessionElement(DrissionElement):
 
         return execute_session_find(self.inner_ele, loc_or_str, mode, show_errmsg)
 
-    def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False) -> list:
+    def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False):
         """返回当前元素下级所有符合条件的子元素                                                           \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n

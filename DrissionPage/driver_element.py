@@ -225,7 +225,7 @@ class DriverElement(DrissionElement):
     def eles(self,
              loc_or_str: Union[tuple, str],
              timeout: float = None,
-             show_errmsg: bool = False) -> list:
+             show_errmsg: bool = False):
         """返回当前元素下级所有符合条件的子元素                                                             \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n
