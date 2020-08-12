@@ -4,9 +4,9 @@
 @Contact :   g1879@qq.com
 @File    :   driver_page.py
 """
-import time
 from glob import glob
 from pathlib import Path
+from time import time
 from typing import Union, List, Any
 from urllib.parse import quote
 
@@ -79,15 +79,15 @@ class DriverPage(object):
             mode: str = None,
             timeout: float = None,
             show_errmsg: bool = False) -> Union[DriverElement, List[DriverElement], None]:
-        """返回页面中符合条件的元素，默认返回第一个                                                          \n
+        """返回页面中符合条件的元素，默认返回第一个                                                         \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
             返回DriverElement对象                                                                        \n
-        - 用loc元组查找：                                                                                 \n
-            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                       \n
-        - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector                                        \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                          \n
+        - 用loc元组查找：                                                                                \n
+            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                      \n
+        - 用查询字符串查找：                                                                              \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
+            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                       \n
             page.ele('@class:ele_class')                 - 返回第一个class含有ele_class的元素              \n
             page.ele('@name=ele_name')                   - 返回第一个name等于ele_name的元素                \n
             page.ele('@placeholder')                     - 返回第一个带placeholder属性的元素               \n
@@ -122,19 +122,19 @@ class DriverPage(object):
         return execute_driver_find(self.driver, loc_or_ele, mode, show_errmsg, timeout)
 
     def eles(self, loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg=False) -> List[DriverElement]:
-        """返回页面中所有符合条件的元素                                                                   \n
-        示例：                                                                                          \n
-        - 用loc元组查找：                                                                                \n
-            page.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的元素                     \n
-        - 用查询字符串查找：                                                                              \n
+        """返回页面中所有符合条件的元素                                                                     \n
+        示例：                                                                                            \n
+        - 用loc元组查找：                                                                                 \n
+            page.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的元素                       \n
+        - 用查询字符串查找：                                                                               \n
             查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                         \n
-            page.eles('@class:ele_class')                 - 返回所有class含有ele_class的元素              \n
-            page.eles('@name=ele_name')                   - 返回所有name等于ele_name的元素                \n
-            page.eles('@placeholder')                     - 返回所有带placeholder属性的元素               \n
-            page.eles('tag:p')                            - 返回所有<p>元素                              \n
-            page.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div元素           \n
-            page.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div元素           \n
+            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                       \n
+            page.eles('@class:ele_class')                 - 返回所有class含有ele_class的元素               \n
+            page.eles('@name=ele_name')                   - 返回所有name等于ele_name的元素                 \n
+            page.eles('@placeholder')                     - 返回所有带placeholder属性的元素                \n
+            page.eles('tag:p')                            - 返回所有<p>元素                               \n
+            page.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div元素            \n
+            page.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div元素            \n
             page.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div元素             \n
             page.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div元素             \n
             page.eles('text:some_text')                   - 返回所有文本含有some_text的元素                \n
@@ -183,8 +183,8 @@ class DriverPage(object):
             raise TypeError('The type of loc_or_ele can only be str, tuple, DriverElement, WebElement')
 
         if is_ele:  # 当传入参数是元素对象时
-            end_time = time.time() + timeout
-            while time.time() < end_time:
+            end_time = time() + timeout
+            while time() < end_time:
                 if mode == 'del':
                     try:
                         loc_or_ele.is_enabled()
@@ -222,7 +222,10 @@ class DriverPage(object):
 
     def get_tabs_sum(self) -> int:
         """返回标签页数量"""
-        return len(self.driver.window_handles)
+        try:
+            return len(self.driver.window_handles)
+        except:
+            return 0
 
     def get_tab_num(self) -> int:
         """返回当前标签页序号"""
@@ -230,23 +233,28 @@ class DriverPage(object):
         handle_list = self.driver.window_handles
         return handle_list.index(handle)
 
-    def create_tab(self):
-        """新建并定位到一个标签页,该标签页在最后面"""
+    def create_tab(self, url: str = '') -> None:
+        """新建并定位到一个标签页,该标签页在最后面
+        :param url: 新标签页跳转到的网址
+        :return: None
+        """
         self.to_tab(-1)
-        self.run_script('window.open("");')
+        self.run_script(f'window.open("{url}");')
         self.to_tab(-1)
 
     def close_current_tab(self) -> None:
         """关闭当前标签页"""
         self.driver.close()
+        if self.get_tabs_sum():
+            self.to_tab(0)
 
     def close_other_tabs(self, index: int = None) -> None:
-        """关闭序号以外标签页，没有传入序号代表保留当前页  \n
-        :param index: 要保留的标签页序号，从0开始算
+        """关闭序号以外标签页，没有传入序号代表保留当前页            \n
+        :param index: 要保留的标签页序号，第一个为0，最后为-1
         :return: None
         """
         tabs = self.driver.window_handles  # 获得所有标签页权柄
-        page_handle = tabs[index] if index >= 0 else self.driver.current_window_handle
+        page_handle = tabs[index]
         for i in tabs:  # 遍历所有标签页，关闭非保留的
             if i != page_handle:
                 self.driver.switch_to.window(i)
@@ -254,17 +262,26 @@ class DriverPage(object):
         self.driver.switch_to.window(page_handle)  # 把权柄定位回保留的页面
 
     def to_tab(self, index: int = 0) -> None:
-        """跳转到第几个标签页                 \n
-        :param index: 标签页序号，从0开始算
+        """跳转到第几个标签页                              \n
+        :param index: 标签页序号，第一个为0，最后为-1
         :return: None
         """
         tabs = self.driver.window_handles  # 获得所有标签页权柄
         self.driver.switch_to.window(tabs[index])
 
     def to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None:
-        """跳转到iframe                                                                                           \n
-        :param loc_or_ele: 可接收iframe序号(0开始)、id或name、控制字符串、loc元组、WebElement对象、DriverElement对象，
-                            传入'main'跳到最高层，传入'parent'跳到上一层
+        """跳转到iframe                                                                          \n
+        可接收iframe序号(0开始)、id或name、查询字符串、loc元组、WebElement对象、DriverElement对象，  \n
+        传入'main'跳到最高层，传入'parent'跳到上一层                                               \n
+        示例：                                                                                   \n
+            to_iframe('tag:iframe')    - 通过传入iframe的查询字符串定位                            \n
+            to_iframe('iframe_id')     - 通过iframe的id属性定位                                   \n
+            to_iframe('iframe_name')   - 通过iframe的name属性定位                                 \n
+            to_iframe(iframe_element)  - 通过传入元素对象定位                                      \n
+            to_iframe(0)               - 通过iframe的序号定位                                     \n
+            to_iframe('main')          - 跳到最高层                                               \n
+            to_iframe('parent')        - 跳到上一层                                               \n
+        :param loc_or_ele: iframe的定位信息
         :return: None
         """
         if isinstance(loc_or_ele, int):  # 根据序号跳转
