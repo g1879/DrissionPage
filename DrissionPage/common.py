@@ -4,10 +4,10 @@
 @Contact :   g1879@qq.com
 @File    :   common.py
 """
-import re
-import shutil
 from abc import abstractmethod
 from pathlib import Path
+from re import split as re_SPLIT
+from shutil import rmtree
 from typing import Union
 
 from requests_html import Element
@@ -93,7 +93,7 @@ def get_loc_from_str(loc: str) -> tuple:
     """
     loc_by = 'xpath'
     if loc.startswith('@'):  # 根据属性查找
-        r = re.split(r'([:=])', loc[1:], maxsplit=1)
+        r = re_SPLIT(r'([:=])', loc[1:], maxsplit=1)
         if len(r) == 3:
             mode = 'exact' if r[1] == '=' else 'fuzzy'
             loc_str = _make_xpath_str('*', f'@{r[0]}', r[2], mode)
@@ -104,7 +104,7 @@ def get_loc_from_str(loc: str) -> tuple:
             loc_str = f'//*[name()="{loc[4:]}"]'
         else:
             at_lst = loc[4:].split('@', maxsplit=1)
-            r = re.split(r'([:=])', at_lst[1], maxsplit=1)
+            r = re_SPLIT(r'([:=])', at_lst[1], maxsplit=1)
             if len(r) == 3:
                 mode = 'exact' if r[1] == '=' else 'fuzzy'
                 arg_str = r[0] if r[0] == 'text()' else f'@{r[0]}'
@@ -223,4 +223,4 @@ def clean_folder(folder_path: str, ignore: list = None) -> None:
             if f.is_file():
                 f.unlink()
             elif f.is_dir():
-                shutil.rmtree(f, True)
+                rmtree(f, True)

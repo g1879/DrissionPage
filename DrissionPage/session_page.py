@@ -4,10 +4,11 @@
 @Contact :   g1879@qq.com
 @File    :   session_page.py
 """
-import os
-import re
+from os import path as os_PATH
 from pathlib import Path
 from random import randint
+from re import search as re_SEARCH
+from re import sub as re_SUB
 from time import time
 from typing import Union, List
 from urllib.parse import urlparse, quote
@@ -209,14 +210,14 @@ class SessionPage(object):
         # header里有文件名，则使用它，否则在url里截取，但不能保证url包含文件名
         if 'Content-disposition' in r.headers:
             file_name = r.headers['Content-disposition'].split('"')[1].encode('ISO-8859-1').decode('utf-8')
-        elif os.path.basename(file_url):
-            file_name = os.path.basename(file_url).split("?")[0]
+        elif os_PATH.basename(file_url):
+            file_name = os_PATH.basename(file_url).split("?")[0]
         else:
             file_name = f'untitled_{time()}_{randint(0, 100)}'
 
-        file_name = re.sub(r'[\\/*:|<>?"]', '', file_name).strip()
+        file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()
         if rename:  # 重命名文件，不改变扩展名
-            rename = re.sub(r'[\\/*:|<>?"]', '', rename).strip()
+            rename = re_SUB(r'[\\/*:|<>?"]', '', rename).strip()
             ext_name = file_name.split('.')[-1]
             if rename.lower().endswith(f'.{ext_name}'.lower()) or ext_name == file_name:
                 full_name = rename
@@ -228,7 +229,7 @@ class SessionPage(object):
         goal_Path = Path(goal_path)
         goal_path = ''
         for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
-            goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re.sub(r'[*:|<>?"]', '', i).strip()
+            goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re_SUB(r'[*:|<>?"]', '', i).strip()
             goal_path += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
 
         goal_Path = Path(goal_path)
@@ -319,7 +320,7 @@ class SessionPage(object):
         else:
             headers = dict(r.headers)
             if 'Content-Type' not in headers or 'charset' not in headers['Content-Type']:
-                re_result = re.search(r'<meta.*?charset=[ \'"]*([^"\' />]+).*?>', r.text)
+                re_result = re_SEARCH(r'<meta.*?charset=[ \'"]*([^"\' />]+).*?>', r.text)
                 try:
                     charset = re_result.group(1)
                 except:

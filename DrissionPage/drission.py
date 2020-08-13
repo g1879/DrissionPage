@@ -7,13 +7,13 @@
 from typing import Union
 from urllib.parse import urlparse
 
-import tldextract
 from requests import Session
 from requests_html import HTMLSession
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
+from tldextract import extract
 
 from .config import _dict_to_chrome_options, OptionsManager, _chrome_options_to_dict
 
@@ -101,8 +101,11 @@ class Drission(object):
         return self._session_options
 
     @session_options.setter
-    def session_options(self, value: dict):
-        """设置session配置"""
+    def session_options(self, value: dict) -> None:
+        """设置session配置
+        :param value: session配置字典
+        :return: None
+        """
         self._session_options = value
 
     @property
@@ -111,8 +114,11 @@ class Drission(object):
         return self._proxy
 
     @proxy.setter
-    def proxy(self, proxies: dict = None):
-        """设置代理信息"""
+    def proxy(self, proxies: dict = None) -> None:
+        """设置代理信息                \n
+        :param proxies: 代理信息字典
+        :return: None
+        """
         self._proxy = proxies
         if self._session:
             self._session.proxies = proxies
@@ -176,7 +182,7 @@ class Drission(object):
 
         cookie_domain = cookie['domain'] if cookie['domain'][0] != '.' else cookie['domain'][1:]
         try:
-            browser_domain = tldextract.extract(driver.current_url).fqdn
+            browser_domain = extract(driver.current_url).fqdn
         except AttributeError:
             browser_domain = ''
         if cookie_domain not in browser_domain:
@@ -188,7 +194,7 @@ class Drission(object):
 
         # 如果添加失败，尝试更宽的域名
         if not self._is_cookie_in_driver(cookie, driver):
-            cookie['domain'] = tldextract.extract(cookie['domain']).registered_domain
+            cookie['domain'] = extract(cookie['domain']).registered_domain
             driver.add_cookie(cookie)
             if not self._is_cookie_in_driver(cookie):
                 raise WebDriverException(f"Couldn't add the following cookie to the webdriver\n{cookie}\n")
