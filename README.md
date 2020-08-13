@@ -651,7 +651,7 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ​	Return proxy configuration in dictionary format.
 
-### cookies_to_session
+### cookies_to_session()
 
 ​	cookies_to_session(copy_user_agent: bool = False, driver: WebDriver = None, session: Session = None) -> None
 
@@ -659,11 +659,11 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ​	Parameter Description:
 
-- copy_user_agent - Whether to copy user_agent to session
-- driver - WebDriver object, copy cookies
-- session - Session object, receiving cookies
+- copy_user_agent  - Whether to copy user_agent to session
+- driver                     - WebDriver object, copy cookies
+- session                  - Session object, receiving cookies
 
-### cookies_to_driver
+### cookies_to_driver()
 
 ​	cookies_to_driver(url: str, driver: WebDriver = None, session: Session = None) -> None
 
@@ -671,11 +671,11 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ​	Parameter Description:
 
-- url - cookies domain
-- driver - WebDriver object, receiving cookies
-- session - Session object, copy cookies
+- url          - cookies domain
+- driver     - WebDriver object, receiving cookies
+- session  - Session object, copy cookies
 
-### user_agent_to_session
+### user_agent_to_session()
 
 ​	user_agent_to_session(driver: WebDriver = None, session: Session = None) -> None
 
@@ -683,22 +683,22 @@ print(page.ele('@id:su').text)  # Output:百度一下
 
 ​	Parameter Description:
 
-- driver - WebDriver object, copy user agent
-- session - Session object, receiving user agent
+- driver     - WebDriver object, copy user agent
+- session  - Session object, receiving user agent
 
-### close_driver
+### close_driver()
 
 ​	close_driver() -> None
 
 ​	Close the browser and set the driver to None.
 
-### close_session
+### close_session()
 
 ​	close_session() -> None
 
 ​	Close the session and set it to None.
 
-### close
+### close()
 
 ​	close() -> None
 
@@ -716,9 +716,9 @@ It inherits from DriverPage and SessionPage classes. These functions are impleme
 
 Parameter Description:
 
-- drission - Drission objects, if not transmitted will create one. Quickly configure the corresponding mode when passing in's' or'd'
-- mode - Mode, optional 'd' or 's', default is 'd'
-- timeout - Timeout time, driver mode search element time and session mode connection time
+- drission  - Drission objects, if not transmitted will create one. Quickly configure the corresponding mode when passing in's' or'd'
+- mode      - Mode, optional 'd' or 's', default is 'd'
+- timeout   - Timeout time, driver mode search element time and session mode connection time
 
 ### url  
 
@@ -756,7 +756,7 @@ Parameter Description:
 
 ​	Return to the page title text.
 
-### change_mode
+### change_mode()
 
 ​	change_mode(mode: str = None, go: bool = True) -> None
 
@@ -764,10 +764,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- mode - Specify the target mode, 'd' or 's'.
-- go - Whether to jump to the current url after switching modes
+- mode  - Specify the target mode, 'd' or 's'.
+- go       - Whether to jump to the current url after switching modes
 
-### get
+### get()
 
 ​	get(url: str, go_anyway=False, **kwargs) -> Union[bool, None]
 
@@ -775,11 +775,11 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- url - Target url
-- go_anyway - Whether to force a jump. If the target url is the same as the current url, the default is not to jump.
-- kwargs - Used to access parameters when in session mode.
+- url                - Target url
+- go_anyway  - Whether to force a jump. If the target url is the same as the current url, the default is not to jump.
+- kwargs         - Used to access parameters when in session mode.
 
-### ele
+### ele()
 
 ​	ele(loc_or_ele: Union[tuple, str, DriverElement, SessionElement], mode: str = None, timeout: float = None, show_errmsg: bool = False) -> Union[DriverElement, SessionElement]
 
@@ -789,22 +789,40 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_str - Query condition parameters, if an element object is passed in, return directly
-- mode - Find one or more, pass in 'single' or 'all'
-- timeout - Search element timeout time, valid in driver mode
-- show_errmsg - Whether to throw and display when an exception occurs
+- loc_or_str        - Query condition parameters, if an element object is passed in, return directly
+- mode               - Find one or more, pass in 'single' or 'all'
+- timeout            - Search element timeout time, valid in driver mode
+- show_errmsg  - Whether to throw and display when an exception occurs
 
 ​	Examples:
 
-- page.ele('@id:ele_id') - Find elements by attributes
-- page.ele('tag:div') - Find elements by tag name
-- page.ele('text:some text') - Find elements by text
-- page.ele('some text') - Find elements by text
-- page.ele('css:>div') - Find elements by css selector
-- page.ele('xpath://div') - Find elements by xpath
-- page.ele((By.ID, 'ele_id')) - Find elements by loc
+- When the element object is received: Return the element object object
 
-### eles
+- Find with loc tuple:
+
+  - ele.ele((By.CLASS_NAME, 'ele_class')) - Return the first element whose class is ele_class in children
+
+- Find with query string：
+
+  Attributes, tag name and attributes, text, xpath, css selector.
+
+  Among them, @ means attribute, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
+
+  - page.ele('@class:ele_class')                      - Return the first class element containing ele_class
+  - page.ele('@name=ele_name')                    - Return the first element whose name is equal to ele_name
+  - page.ele('@placeholder')                            - Return the first element with placeholder attribute
+  - page.ele('tag:p')                                          - Return the first <p> element
+  - page.ele('tag:div@class:ele_class')            - Return the first class div element with ele_class
+  - page.ele('tag:div@class=ele_class')           - Return the first div element whose class is equal to ele_class
+  - page.ele('tag:div@text():some_text')           - Returns the first div element whose text contains some_text
+  - page.ele('tag:div@text()=some_text')          - Returns the first div element whose text is equal to some_text
+  - page.ele('text:some_text')                            - Returns the first element whose text contains some_text
+  - page.ele('some_text')                                   - Return the first text element containing some_text (equivalent to the previous line)
+  - page.ele('text=some_text')                           - Returns the first element whose text is equal to some_text
+  - page.ele('xpath://div[@class="ele_class"]')  - Return the first element that matches the xpath
+  - page.ele('css:div.ele_class')                         - Return the first element that matches the css selector
+
+### eles()
 
 ​	eles(loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg: bool = False) -> List[DriverElement]
 
@@ -812,11 +830,11 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_str - Query condition parameters
-- timeout - Search element timeout time, valid in driver mode
-- show_errmsg - Whether to throw and display when an exception occurs
+- loc_or_str        - Query condition parameters
+- timeout            - Search element timeout time, valid in driver mode
+- show_errmsg  - Whether to throw and display when an exception occurs
 
-### cookies_to_session
+### cookies_to_session()
 
 ​	cookies_to_session(copy_user_agent: bool = False) -> None
 
@@ -824,9 +842,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- copy_user_agent - Whether to also copy user agent
+- copy_user_agent  - Whether to also copy user agent
 
-### cookies_to_driver
+### cookies_to_driver()
 
 ​	cookies_to_driver(url=None) -> None
 
@@ -834,9 +852,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- url - cookie domain or url
+- url  - cookie domain or url
 
-### post
+### post()
 
 ​	post(url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
 
@@ -845,12 +863,12 @@ Parameter Description:
 ​	Parameter Description:
 
 - url - Target url
-- parame - url parameter
-- data - Submitted data
-- go_anyway - Whether to force a jump. If the target url is the same as the current url, the default is not to jump.
-- kwargs - Access parameters such as headers
+- parame        - url parameter
+- data             - Submitted data
+- go_anyway  - Whether to force a jump. If the target url is the same as the current url, the default is not to jump.
+- kwargs         - Access parameters such as headers
 
-### download
+### download()
 
 ​	download(file_url: str, goal_path: str = None, rename: str = None, file_exists: str = 'rename', show_msg: bool = False, **kwargs) -> tuple
 
@@ -859,25 +877,41 @@ Parameter Description:
 ​	Parameter Description:
 
 - file_url - File URL
-- goal_path - Storage path, the default is the temporary folder specified in the ini file
-- rename - Rename the file without changing the extension
-- file_exists - If there is a file with the same name, you can choose 'rename', 'overwrite', 'skip' to process
-- show_msg - Show download massage or not.
-- kwargs - Connection parameters for requests
+- goal_path  - Storage path, the default is the temporary folder specified in the ini file
+- rename      - Rename the file without changing the extension
+- file_exists   - If there is a file with the same name, you can choose 'rename', 'overwrite', 'skip' to process
+- show_msg  - Show download massage or not.
+- kwargs        - Connection parameters for requests
 
 
 
-The following methods only take effect in driver mode, and will automatically switch to driver mode when called
+The following methods and attributes only take effect in driver mode, and will automatically switch to driver mode when called
 
 ***
 
-### check_page
+### tabs_count
+
+​	Returns the number of tab pages.
+
+### tab_handles
+
+​	Returns the handle list of all tabs.
+
+### current_tab_num
+
+​	Returns the serial number of the current tab page.
+
+### current_tab_handle
+
+​	Returns the handle of the current tab page.
+
+### check_page()
 
 ​	check_page() -> bool
 
 ​	After the subclass is derived, it is used to check whether the domain name meets expectations, and the function is implemented by the subclass.
 
-### run_script
+### run_script()
 
 ​	run_script(script: str) -> Any
 
@@ -885,47 +919,45 @@ The following methods only take effect in driver mode, and will automatically sw
 
 ​	Parameter Description:
 
-- script - JavaScript code text
+- script  - JavaScript code text
 
-### get_tabs_sum
+### create_tab()
 
-​	get_tabs_sum() -> int
+​	create_tab(url: str = '') -> None
 
-​	Returns the number of browser tabs.
+​	Create and locate a tab page, which is at the end.
 
-### get_tab_num
+​	Parameter Description:
 
-​	get_tab_num() -> int
+- url - URL to jump in the new tab page
 
-​	Returns the serial number of the current tab.
-
-### close_current_tab
+### close_current_tab()
 
 ​	close_current_tab() -> None
 
 ​	Close the current tab.
 
-### close_other_tabs
+### close_other_tabs()
 
-​	close_other_tabs(tab_index: int = None) -> None
+​	close_other_tabs(num_or_handle: Union[int, str, None] = None) -> None
 
-​	Close the tab page except the serial number.
+​	Close tab pages other than the incoming tab page, and keep the current page by default.
 
 ​	Parameter Description:
 
-- index - The serial number of the reserved tab, start from 0
+- num_or_handle  - The serial number or handle of the tab to keep, the first serial number is 0, and the last is -1
 
-### to_tab
+### to_tab()
 
-​	to_tab(index: int = 0) -> None
+​	to_tab(num_or_handle: Union[int, str] = 0) -> None
 
-​	Jump to a tab page with a serial number.
+​	Jump to a tab page.
 
-Parameter Description:
+​	Parameter Description:
 
-- index - The serial number of the target tab, start from 0
+- num_or_handle  - The serial number or handle of the tab to keep, the first serial number is 0, and the last is -1
 
-### to_iframe
+### to_iframe()
 
 ​	to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None
 
@@ -936,12 +968,15 @@ Parameter Description:
 - loc_or_ele - To search for iframe element conditions, you can receive iframe serial number (starting at 0), id or name, control string, loc parameter, WebElement object, DriverElement object, pass 'main' to jump to the top level, pass 'parent' to jump to parent level.
 
 ​	Examples:
-- to_iframe('@id:iframe_id')
-- to_iframe(iframe_element)
-- to_iframe(0)
-- to_iframe('iframe_name')
+- to_iframe('tag:iframe')          - Positioning by the query string passed in the iframe
+- to_iframe('iframe_id')           - Positioning by the id attribute of the iframe
+- to_iframe('iframe_name')     - Positioning by the name attribute of the iframe
+- to_iframe(iframe_element)  - Positioning by passing in the element object
+- to_iframe(0)                         - Positioning by the serial number of the iframe
+- to_iframe('main')                  - Switch to the top level
+- to_iframe('parent')                - Switch to the previous level
 
-### scroll_to_see
+### scroll_to_see()
 
 ​	scroll_to_see(loc_or_ele: Union[str, tuple, WebElement, DriverElement]) -> None
 
@@ -949,9 +984,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_ele - The search condition of the iframe element is the same as the search condition of the ele () method.
+- loc_or_ele  - The search condition of the iframe element is the same as the search condition of the ele () method.
 
-### scroll_to
+### scroll_to()
 
 ​	scroll_to(mode: str = 'bottom', pixel: int = 300) -> None
 
@@ -962,19 +997,19 @@ Parameter Description:
 - mode - Scrolling direction, top, bottom, rightmost, leftmost, up, down, left, right
 - pixel - Scrolling pixels
 
-### refresh
+### refresh()
 
 ​	refresh() -> None
 
 ​	Refresh page.
 
-### back
+### back()
 
 ​	back() -> None
 
 ​	The page back.
 
-### set_window_size
+### set_window_size()
 
 ​	set_window_size(x: int = None, y: int = None) -> None
 
@@ -982,10 +1017,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- x - Target width
-- y - Target height
+- x  - Target width
+- y  - Target height
 
-### screenshot
+### screenshot()
 
 ​	screenshot(path: str, filename: str = None) -> str
 
@@ -993,10 +1028,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- path - Screenshot save path, default is the temporary folder specified in the ini file
-- filename - Screenshot file name, default is page title as file name
+- path        - Screenshot save path, default is the temporary folder specified in the ini file
+- filename  - Screenshot file name, default is page title as file name
 
-### process_alert
+### process_alert()
 
 ​	process_alert(mode: str = 'ok', text: str = None) -> Union[str, None]
 
@@ -1004,10 +1039,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- mode - 'ok' or 'cancel', if enter another value, the button will not be pressed but the text value will still be returned
-- text - Text can be entered when processing prompt box
+- mode  - 'ok' or 'cancel', if enter another value, the button will not be pressed but the text value will still be returned
+- text      - Text can be entered when processing prompt box
 
-### chrome_downloading
+### chrome_downloading()
 
 ​	chrome_downloading(download_path: str = None) -> list
 
@@ -1015,15 +1050,15 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- download_path - Download path, the default is the download path in chrome options configuration
+- download_path  - Download path, the default is the download path in chrome options configuration
 
-### close_driver
+### close_driver()
 
 ​	close_driver() -> None
 
 ​	Close the driver and browser, and switch to s mode.
 
-### close_session
+### close_session()
 
 ​	close_session() -> None
 
@@ -1080,23 +1115,35 @@ Parameter Description:
 
 ​	Returns the last sibling element object.
 
-### parents
+### parents()
 
 ​	parents(num: int = 1) -> Union[DriverElement, None]
 
 ​	Returns the Nth-level parent element object.
 
-### nexts
+​	Parameter Description:
+
+- num  - The parent element of the upper level
+
+### nexts()
 
 ​	nexts(num: int = 1) -> Union[DriverElement, None]
 
 ​	Returns the next N sibling element objects.
 
-### prevs
+​	Parameter Description:
+
+- num  - The next few sibling elements
+
+### prevs()
 
 ​	prevs(num: int = 1) -> Union[DriverElement, None]
 
 ​	Return the first N sibling element objects.
+
+​	Parameter Description:
+
+- num  - The first few sibling elements
 
 ### size
 
@@ -1106,7 +1153,7 @@ Parameter Description:
 
 ​	Put the element coordinates back in a dictionary.
 
-### ele
+### ele()
 
 ​	ele(loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False, timeout: float = None) -> Union[DriverElement, List[DriverElement], None]
 
@@ -1116,22 +1163,38 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_str - Query condition parameters
-- mode - Find one or more, pass in 'single' or 'all'
-- show_errmsg - Whether to throw and display when an exception occurs
-- timeout - Find Element Timeout
+- loc_or_str        - Query condition parameters
+- mode               - Find one or more, pass in 'single' or 'all'
+- show_errmsg  - Whether to throw and display when an exception occurs
+- timeout            - Find Element Timeout
 
 ​	Examples:：
 
-- element.ele('@id:ele_id') - Find elements by attributes
-- element.ele('tag:div') - Find elements by tag name
-- element.ele('text:some text') - Find elements by text
-- element.ele('some text') - Find elements by text
-- element.ele('css:>div') - Find elements by css selector
-- element.ele('xpath://div') - Find elements by xpath
-- element.ele((By.ID, 'ele_id')) - Find elements by loc
+- Find with loc tuple:
 
-### eles
+  - ele.ele((By.CLASS_NAME, 'ele_class')) - Return the first element whose class is ele_class in children
+
+- Find with query string：
+
+  Attributes, tag name and attributes, text, xpath, css selector.
+
+  Among them, @ means attribute, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
+
+  - page.ele('@class:ele_class')                      - Return the first class element containing ele_class
+  - page.ele('@name=ele_name')                    - Return the first element whose name is equal to ele_name
+  - page.ele('@placeholder')                            - Return the first element with placeholder attribute
+  - page.ele('tag:p')                                          - Return the first <p> element
+  - page.ele('tag:div@class:ele_class')            - Return the first class div element with ele_class
+  - page.ele('tag:div@class=ele_class')           - Return the first div element whose class is equal to ele_class
+  - page.ele('tag:div@text():some_text')           - Returns the first div element whose text contains some_text
+  - page.ele('tag:div@text()=some_text')          - Returns the first div element whose text is equal to some_text
+  - page.ele('text:some_text')                            - Returns the first element whose text contains some_text
+  - page.ele('some_text')                                   - Return the first text element containing some_text (equivalent to the previous line)
+  - page.ele('text=some_text')                           - Returns the first element whose text is equal to some_text
+  - page.ele('xpath://div[@class="ele_class"]')  - Return the first element that matches the xpath
+  - page.ele('css:div.ele_class')                         - Return the first element that matches the css selector
+
+### eles()
 
 ​	eles(loc_or_str: Union[tuple, str], show_errmsg: bool = False, timeout: float = None) ->  List[DriverElement]
 
@@ -1139,11 +1202,11 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_str - Query condition parameters
-- show_errmsg - Whether to throw and display when an exception occurs
-- timeout - Find Element Timeout
+- loc_or_str        - Query condition parameters
+- show_errmsg  - Whether to throw and display when an exception occurs
+- timeout            - Find Element Timeout
 
-### attr
+### attr()
 
 ​	attr(attr: str) -> str
 
@@ -1151,9 +1214,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- attr - Attribute name
+- attr  - Attribute name
 
-### click
+### click()
 
 ​	click(by_js=None) -> bool
 
@@ -1161,9 +1224,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- by_js - Whether to click with js
+- by_js  - Whether to click with js
 
-### input
+### input()
 
 ​	input(value, clear: bool = True) -> bool
 
@@ -1171,10 +1234,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- value - Text value
-- clear - Whether to clear the text box before entering
+- value  - Text value
+- clear   - Whether to clear the text box before entering
 
-### run_script
+### run_script()
 
 ​	run_script(script: str) -> Any
 
@@ -1184,43 +1247,43 @@ Parameter Description:
 
 - script - JavaScript text
 
-### submit
+### submit()
 
 ​	submit() -> None
 
 ​	Submit form.
 
-### clear
+### clear()
 
 ​	clear() -> None
 
 ​	Clear the text box.
 
-### is_selected
+### is_selected()
 
 ​	is_selected() -> bool
 
 ​	Whether the element is selected.
 
-### is_enabled
+### is_enabled()
 
 ​	is_enabled() -> bool
 
 ​	Whether the element is available on the page.
 
-### is_displayed
+### is_displayed()
 
 ​	is_displayed() -> bool
 
 ​	Whether the element is visible.
 
-### is_valid
+### is_valid()
 
 ​	is_valid() -> bool
 
 ​	Whether the element is valid. This method is used to determine the situation where the page jump element cannot be used
 
-### screenshot
+### screenshot()
 
 ​	screenshot(path: str, filename: str = None) -> str
 
@@ -1228,10 +1291,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- path - Screenshot save path, default is the temporary folder specified in the ini file
-- filename - Screenshot file name, default is page title as file name
+- path         - Screenshot save path, default is the temporary folder specified in the ini file
+- filename  - Screenshot file name, default is page title as file name
 
-### select
+### select()
 
 ​	select(text: str) -> bool
 
@@ -1239,9 +1302,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- text - Option text
+- text  - Option text
 
-### set_attr
+### set_attr()
 
 ​	set_attr(attr: str, value: str) -> bool
 
@@ -1249,10 +1312,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- attr - parameter name
-- value - Parameter value
+- attr     - parameter name
+- value  - Parameter value
 
-### drag
+### drag()
 
 ​	drag(x: int, y: int, speed: int = 40, shake: bool = True) -> bool
 
@@ -1260,12 +1323,12 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- x - Drag distance in x direction
-- y - Drag distance in y direction
-- speed - Drag speed
-- shake - Random jitter
+- x          - Drag distance in x direction
+- y          - Drag distance in y direction
+- speed  - Drag speed
+- shake  - Random jitter
 
-### drag_to
+### drag_to()
 
 ​	drag_to(ele_or_loc: Union[tuple, WebElement, DrissionElement], speed: int = 40, shake: bool = True) -> bool:
 
@@ -1274,10 +1337,10 @@ Parameter Description:
 ​	Parameter Description:
 
 - ele_or_loc - Another element or relative current position. The coordinates are the coordinates of the midpoint of the element.
-- speed - Drag speed
-- shake - Random jitter
+- speed  - Drag speed
+- shake  - Random jitter
 
-### hover
+### hover()
 
 ​	hover()
 
@@ -1293,7 +1356,7 @@ The element object of session mode wraps an Element object and encapsulates comm
 
 Parameter Description:
 
-- ele - Element object of requests_html library
+- ele  - Element object of requests_html library
 
 ### inner_ele
 
@@ -1331,25 +1394,37 @@ Parameter Description:
 
 ​	Returns the last sibling element object.
 
-### parents
+### parents()
 
-​	parents(num: int = 1) -> Union[DriverElement, None]
+​	parents(num: int = 1) -> Union[SessionElement, None]
 
 ​	Returns the Nth-level parent element object.
 
-### nexts
+​	Parameter Description:
 
-​	nexts(num: int = 1) -> Union[DriverElement, None]
+- num  - The parent element of the upper level
+
+### nexts()
+
+​	nexts(num: int = 1) -> Union[SessionElement, None]
 
 ​	Returns the next N sibling element objects.
 
-### prevs
+​	Parameter Description:
 
-​	prevs(num: int = 1) -> Union[DriverElement, None]
+- num  - The next few sibling elements
+
+### prevs()
+
+​	prevs(num: int = 1) -> Union[SessionElement, None]
 
 ​	Return the first N sibling element objects.
 
-### ele
+​	Parameter Description:
+
+- num  - The first few sibling elements
+
+### ele()
 
 ​	ele(loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]
 
@@ -1359,23 +1434,39 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_str - Query condition parameters
+- loc_or_str       - Query condition parameters
 
-- mode - Find one or more, pass in 'single' or 'all'
+- mode              - Find one or more, pass in 'single' or 'all'
 
-- show_errmsg - Whether to throw and display when an exception occurs
+- show_errmsg  - Whether to throw and display when an exception occurs
 
 ​	Examples:
 
-- element.ele('@id:ele_id') - Find elements by attributes
-- element.ele('tag:div') - Find elements by tag name
-- element.ele('text:some text') - Find elements by text
-- element.ele('some text') - Find elements by text
-- element.ele('css:>div') - Find elements by css selector
-- element.ele('xpath://div') - Find elements according to xpath
-- element.ele((By.ID, 'ele_id')) - Find elements according to loc
+- Find with loc tuple:
 
-### eles
+  - ele.ele((By.CLASS_NAME, 'ele_class')) - Return the first element whose class is ele_class in children
+
+- Find with query string：
+
+  Attributes, tag name and attributes, text, xpath, css selector.
+
+  Among them, @ means attribute, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
+
+  - page.ele('@class:ele_class')                      - Return the first class element containing ele_class
+  - page.ele('@name=ele_name')                    - Return the first element whose name is equal to ele_name
+  - page.ele('@placeholder')                            - Return the first element with placeholder attribute
+  - page.ele('tag:p')                                          - Return the first <p> element
+  - page.ele('tag:div@class:ele_class')            - Return the first class div element with ele_class
+  - page.ele('tag:div@class=ele_class')           - Return the first div element whose class is equal to ele_class
+  - page.ele('tag:div@text():some_text')           - Returns the first div element whose text contains some_text
+  - page.ele('tag:div@text()=some_text')          - Returns the first div element whose text is equal to some_text
+  - page.ele('text:some_text')                            - Returns the first element whose text contains some_text
+  - page.ele('some_text')                                   - Return the first text element containing some_text (equivalent to the previous line)
+  - page.ele('text=some_text')                           - Returns the first element whose text is equal to some_text
+  - page.ele('xpath://div[@class="ele_class"]')  - Return the first element that matches the xpath
+  - page.ele('css:div.ele_class')                         - Return the first element that matches the css selector
+
+### eles()
 
 ​	eles(loc_or_str: Union[tuple, str], show_errmsg: bool = False) ->  List[SessionElement]
 
@@ -1383,10 +1474,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- loc_or_str - Query condition parameters
-- show_errmsg - Whether to throw and display when an exception occurs
+- loc_or_str        - Query condition parameters
+- show_errmsg  - Whether to throw and display when an exception occurs
 
-### attr
+### attr()
 
 ​	attr(attr: str) -> str
 
@@ -1394,7 +1485,7 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- attr - Attribute name
+- attr  - Attribute name
 
 
 
@@ -1406,9 +1497,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- path - Ini file path, if not imported, the configs.ini file in the current folder is read by default
+- path  - Ini file path, if not imported, the configs.ini file in the current folder is read by default
 
-### get_value
+### get_value()
 
 ​	get_value(section: str, item: str) -> Any
 
@@ -1416,10 +1507,10 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- section - Paragraph name
-- item - Configuration item name
+- section  - Paragraph name
+- item       - Configuration item name
 
-### get_option
+### get_option()
 
 ​	get_option(section: str) -> dict
 
@@ -1427,9 +1518,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- section - Paragraph name
+- section  - Paragraph name
 
-### set_item
+### set_item()
 
 ​	set_item(section: str, item: str, value: str) -> OptionsManager
 
@@ -1437,11 +1528,11 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- section - Paragraph name
-- item - Configuration item name
-- value - Content of value
+- section  - Paragraph name
+- item       - Configuration item name
+- value     - Content of value
 
-### save
+### save()
 
 ​	save(path: str = None) -> OptionsManager
 
@@ -1449,7 +1540,7 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- path - The path of the ini file, which is saved to the module folder by default
+- path  - The path of the ini file, which is saved to the module folder by default
 
 
 
@@ -1471,7 +1562,7 @@ Parameter Description:
 
 ​	Path of chrome.exe.
 
-### remove_argument
+### remove_argument()
 
 ​	remove_argument(value: str) -> DriverOptions
 
@@ -1479,9 +1570,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- value - The attribute value to be removed
+- value  - The attribute value to be removed
 
-### remove_experimental_option
+### remove_experimental_option()
 
 ​	remove_experimental_option(key: str) -> DriverOptions
 
@@ -1489,15 +1580,15 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- key - The key value of the experiment to be removed
+- key  - The key value of the experiment to be removed
 
-### remove_argument
+### remove_argument()
 
 ​	remove_argument() -> DriverOptions
 
 ​	Remove all plug-ins, because the plug-in is stored in the entire file, it is difficult to remove one of them, so if you need to set, remove all and reset.
 
-### save
+### save()
 
 ​	save(path: str = None) -> DriverOptions
 
@@ -1505,9 +1596,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- path - The path of the ini file, which is saved to the module folder by default
+- path  - The path of the ini file, which is saved to the module folder by default
 
-### set_argument
+### set_argument()
 
 ​	set_argument(arg: str, value: Union[bool, str]) -> DriverOptions
 
@@ -1515,10 +1606,10 @@ Parameter Description:
 
 ​	Parameter description:
 
-- arg - attribute name
-- value - the attribute value, the attribute with value is passed in the value, the attribute without value is passed in bool
+- arg     - attribute name
+- value  - the attribute value, the attribute with value is passed in the value, the attribute without value is passed in bool
 
-### set_headless
+### set_headless()
 
 ​	set_headless(on_off: bool = True) -> DriverOptions
 
@@ -1526,9 +1617,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-​	on_off - open or close, bool
+​	on_off  - open or close, bool
 
-### set_no_imgs
+### set_no_imgs()
 
 ​	set_no_imgs(on_off: bool = True) -> DriverOptions
 
@@ -1536,9 +1627,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-​	on_off - open or close, bool
+​	on_off  - open or close, bool
 
-### set_no_js
+### set_no_js()
 
 ​	set_no_js(on_off: bool = True) -> DriverOptions
 
@@ -1546,9 +1637,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-​	on_off - open or close, bool
+​	on_off  - open or close, bool
 
-### set_mute
+### set_mute()
 
 ​	set_mute(on_off: bool = True) -> DriverOptions
 
@@ -1556,9 +1647,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-​	on_off - open or close, bool
+​	on_off  - open or close, bool
 
-### set_user_agent
+### set_user_agent()
 
 ​	set_user_agent(user_agent: str) -> DriverOptions
 
@@ -1566,9 +1657,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- user_agent - user agent string
+- user_agent  - user agent string
 
-### set_proxy
+### set_proxy()
 
 ​	set_proxy(proxy: str) -> DriverOptions
 
@@ -1576,9 +1667,9 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- proxy - proxy address
+- proxy  - proxy address
 
-### set_paths
+### set_paths()
 
 ​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> DriverOptions
 
@@ -1586,12 +1677,12 @@ Parameter Description:
 
 ​	Parameter Description:
 
-- driver_path - path of chromedriver.exe
-- chrome_path - path of chrome.exe
-- debugger_address - debug browser address, for example: 127.0.0.1:9222
-- download_path - download file path
-- user_data_path - user data path
-- cache_path - cache path
+- driver_path              - path of chromedriver.exe
+- chrome_path           - path of chrome.exe
+- debugger_address  - debug browser address, for example: 127.0.0.1:9222
+- download_path        - download file path
+- user_data_path       - user data path
+- cache_path             - cache path
 
 
 
@@ -1599,7 +1690,7 @@ Parameter Description:
 
   The configuration of chrome is too difficult to remember, so the commonly used configuration is written as a simple method, and the call will modify the relevant content of the ini file.
 
-  ### set_paths
+  ### set_paths()
 
   ​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None, check_version: bool = True) -> None
 
@@ -1607,16 +1698,16 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - driver_path - the path of chromedriver.exe
-  - chrome_path - the path of chrome.exe
-  - debugger_address - Debug browser address, eg. 127.0.0.1:9222
-  - download_path - File download path
-  - global_tmp_path - Temporary folder path
-  - user_data_path - User data path
-  - cache_path - Cache path
-  - check_version - Whether to check whether chromedriver and chrome match
+  - driver_path              - the path of chromedriver.exe
+  - chrome_path           - the path of chrome.exe
+  - debugger_address  - Debug browser address, eg. 127.0.0.1:9222
+  - download_path        - File download path
+  - global_tmp_path      - Temporary folder path
+  - user_data_path       - User data path
+  - cache_path              - Cache path
+  - check_version          - Whether to check whether chromedriver and chrome match
 
-  ### set_argument
+  ### set_argument()
 
   	set_argument(arg: str, value: Union[bool, str]) -> None
 
@@ -1624,10 +1715,10 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - arg - Attribute name
-  - value - Attribute value, pass in a value if it has a value, pass in a bool if it doesn't
+  - arg     - Attribute name
+  - value  - Attribute value, pass in a value if it has a value, pass in a bool if it doesn't
 
-  ### set_headless
+  ### set_headless()
 
   ​	set_headless(on_off: bool) -> None
 
@@ -1635,9 +1726,9 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - on_off - Whether to enable headless mode
+  - on_off  - Whether to enable headless mode
 
-  ### set_no_imgs
+  ### set_no_imgs()
 
   ​	set_no_imgs(on_off: bool) -> None
 
@@ -1645,9 +1736,9 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - on_off - Whether to enable no-picture mode
+  - on_off  - Whether to enable no-picture mode
 
-  ### set_no_js
+  ### set_no_js()
 
   ​	set_no_js(on_off: bool) -> None
 
@@ -1655,9 +1746,9 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - on_off - Whether to enable or disable JS mode
+  - on_off  - Whether to enable or disable JS mode
 
-  ### set_mute
+  ### set_mute()
 
   ​	set_mute(on_off: bool) -> None
 
@@ -1665,9 +1756,9 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - on_off - Whether to turn on silent mode
+  - on_off  - Whether to turn on silent mode
 
-  ### set_user_agent
+  ### set_user_agent()
 
   ​	set_user_agent(user_agent: str) -> None:
 
@@ -1675,9 +1766,9 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - user_agent - user_agent value
+  - user_agent  - user_agent value
 
-  ### set_proxy
+  ### set_proxy()
 
   ​	set_proxy(proxy: str) -> None
 
@@ -1685,9 +1776,9 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - proxy - Proxy value
+  - proxy  - Proxy value
 
-  ### check_driver_version
+  ### check_driver_version()
 
   ​	check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool
 
@@ -1695,5 +1786,5 @@ Parameter Description:
 
   ​	Parameter Description:
 
-  - driver_path - the path of chromedriver.exe
-  - chrome_path - the path of chrome.exe
+  - driver_path     - the path of chromedriver.exe
+  - chrome_path  - the path of chrome.exe

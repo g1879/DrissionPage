@@ -626,9 +626,9 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ​	参数说明：
 
-- driver_options - chrome配置参数，可接收Options对象或字典
-- session_options - session配置参数，接收字典
-- ini_path - ini文件路径，默认为DrissionPage文件夹下的ini文件
+- driver_options     - chrome配置参数，可接收Options对象或字典
+- session_options  - session配置参数，接收字典
+- ini_path               - ini文件路径，默认为DrissionPage文件夹下的ini文件
 
 ### session
 
@@ -636,7 +636,7 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ### driver
 
-​	获取WebDriver对象，调用时自动创建，按传入配置或ini文件配置初始化。
+​	返回WebDriver对象，调用时自动创建，按传入配置或ini文件配置初始化。
 
 ### driver_options
 
@@ -650,7 +650,7 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ​	以字典格式返回代理配置。
 
-### cookies_to_session
+### cookies_to_session()
 
 ​	cookies_to_session(copy_user_agent: bool = False, driver: WebDriver = None, session: Session = None) -> None
 
@@ -658,11 +658,11 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ​	参数说明：
 
-- copy_user_agent - 是否复制user_agent到session
-- driver - WebDriver对象，复制cookies
-- session - Session对象，接收cookies
+- copy_user_agent  - 是否复制user_agent到session
+- driver     - WebDriver对象，复制cookies
+- session  - Session对象，接收cookies
 
-### cookies_to_driver
+### cookies_to_driver()
 
 ​	cookies_to_driver(url: str, driver: WebDriver = None, session: Session = None) -> None
 
@@ -670,11 +670,11 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ​	参数说明：
 
-- url - cookies的域
-- driver - WebDriver对象，接收cookies
-- session - Session对象，复制cookies
+- url          - cookies的域
+- driver     - WebDriver对象，接收cookies
+- session  - Session对象，复制cookies
 
-### user_agent_to_session
+### user_agent_to_session()
 
 ​	user_agent_to_session(driver: WebDriver = None, session: Session = None) -> None
 
@@ -682,22 +682,22 @@ class **Drission**(driver_options: Union[dict, Options] = None, session_options:
 
 ​	参数说明：
 
-- driver - WebDriver对象，复制user agent
-- session - Session对象，接收user agent
+- driver     - WebDriver对象，复制user agent
+- session  - Session对象，接收user agent
 
-### close_driver
+### close_driver()
 
 ​	close_driver() -> None
 
 ​	关闭浏览器，driver置为None。
 
-### close_session
+### close_session()
 
 ​	close_session() -> None
 
 ​	关闭session并置为None。
 
-### close
+### close()
 
 ​	close() -> None
 
@@ -715,9 +715,9 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 参数说明：
 
-- drission - Drission对象，如没传入则创建一个。传入's'或'd'时快速配置相应模式
-- mode - 模式，可选'd'或's'，默认为'd'
-- timeout - 超时时间，driver模式查找元素时间及session模式连接时间
+- drission  - Drission对象，如没传入则创建一个。传入's'或'd'时快速配置相应模式
+- mode      - 模式，可选'd'或's'，默认为'd'
+- timeout    - 超时时间，driver模式查找元素时间及session模式连接时间
 
 ### url  
 
@@ -755,7 +755,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	返回页面title文本。
 
-### change_mode
+### change_mode()
 
 ​	change_mode(mode: str = None, go: bool = True) -> None
 
@@ -763,10 +763,10 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- mode - 指定目标模式，'d'或's'。
-- go - 切换模式后是否跳转到当前url
+- mode  - 指定目标模式，'d'或's'。
+- go       - 切换模式后是否跳转到当前url
 
-### get
+### get()
 
 ​	get(url: str, go_anyway=False, **kwargs) -> Union[bool, None]
 
@@ -774,36 +774,54 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- url - 目标url
-- go_anyway - 是否强制跳转。若目标url和当前url一致，默认不跳转。
-- kwargs - 用于session模式时访问参数。
+- url                - 目标url
+- go_anyway  - 是否强制跳转。若目标url和当前url一致，默认不跳转。
+- kwargs         - 用于session模式时访问参数。
 
-### ele
+### ele()
 
 ​	ele(loc_or_ele: Union[tuple, str, DriverElement, SessionElement], mode: str = None, timeout: float = None, show_errmsg: bool = False) -> Union[DriverElement, SessionElement]
 
-​	根据查询参数获取元素，返回元素或元素列表。  
+​	返回页面中符合条件的元素，默认返回第一个。  
 ​	如查询参数是字符串，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'方式。无控制方式时默认用text方式查找。  
 ​	如是loc，直接按照内容查询。
 
 ​	参数说明：
 
-- loc_or_str - 查询条件参数，如传入一个元素对象，则直接返回
-- mode - 查找一个或多个，传入'single'或'all'
-- timeout - 查找元素超时时间，driver模式下有效
-- show_errmsg - 出现异常时是否抛出及显示
+- loc_or_str        - 元素的定位信息，可以是元素对象，loc元组，或查询字符串
+- mode               - 'single' 或 'all‘，对应查找一个或全部
+- timeout            - 查找元素超时时间，driver模式下有效
+- show_errmsg  - 出现异常时是否抛出及显示
 
 ​	示例：
 
-- page.ele('@id:ele_id') - 按照属性查找元素
-- page.ele('tag:div') - 按照tag name查找元素
-- page.ele('text:some text') - 按照文本查找元素
-- page.ele('some text') - 按照文本查找元素
-- page.ele('css:>div') - 按照css selector查找元素
-- page.ele('xpath://div') - 按照xpath查找元素
-- page.ele((By.ID, 'ele_id')) - 按照loc方式查找元素
+- 接收到元素对象时：返回元素对象对象
 
-### eles
+- 用loc元组查找：
+
+  - ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素
+
+- 用查询字符串查找：
+
+  属性、tag name和属性、文本、xpath、css selector。
+
+  其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串。
+
+  - page.ele('@class:ele_class')                      - 返回第一个class含有ele_class的元素
+  - page.ele('@name=ele_name')                    - 返回第一个name等于ele_name的元素
+  - page.ele('@placeholder')                            - 返回第一个带placeholder属性的元素
+  - page.ele('tag:p')                                          - 返回第一个<p>元素
+  - page.ele('tag:div@class:ele_class')            - 返回第一个class含有ele_class的div元素
+  - page.ele('tag:div@class=ele_class')           - 返回第一个class等于ele_class的div元素
+  - page.ele('tag:div@text():some_text')           - 返回第一个文本含有some_text的div元素
+  - page.ele('tag:div@text()=some_text')          - 返回第一个文本等于some_text的div元素
+  - page.ele('text:some_text')                            - 返回第一个文本含有some_text的元素
+  - page.ele('some_text')                                   - 返回第一个文本含有some_text的元素（等价于上一行）
+  - page.ele('text=some_text')                           - 返回第一个文本等于some_text的元素
+  - page.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素
+  - page.ele('css:div.ele_class')                         - 返回第一个符合css selector的元素
+
+### eles()
 
 ​	eles(loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg: bool = False) -> List[DriverElement]
 
@@ -811,11 +829,11 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- loc_or_str - 查询条件参数
-- timeout - 查找元素超时时间，driver模式下有效
-- show_errmsg - 出现异常时是否抛出及显示
+- loc_or_str        - 查询条件参数
+- timeout            - 查找元素超时时间，driver模式下有效
+- show_errmsg  - 出现异常时是否抛出及显示
 
-### cookies_to_session
+### cookies_to_session()
 
 ​	cookies_to_session(copy_user_agent: bool = False) -> None
 
@@ -823,9 +841,9 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- copy_user_agent - 是否同时复制user agent
+- copy_user_agent  - 是否同时复制user agent
 
-### cookies_to_driver
+### cookies_to_driver()
 
 ​	cookies_to_driver(url=None) -> None
 
@@ -833,9 +851,9 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- url - cookies的域或url
+- url  - cookies的域或url
 
-### post
+### post()
 
 ​	post(url: str, params: dict = None, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]
 
@@ -844,12 +862,12 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 ​	参数说明：
 
 - url - 目标url
-- parame - url参数
-- data - 提交的数据
-- go_anyway - 是否强制跳转。若目标url和当前url一致，默认不跳转。
-- kwargs - headers等访问参数
+- parame        - url参数
+- data             - 提交的数据
+- go_anyway  - 是否强制跳转。若目标url和当前url一致，默认不跳转。
+- kwargs         - headers等访问参数
 
-### download
+### download()
 
 ​	download(file_url: str, goal_path: str = None, rename: str = None, file_exists: str = 'rename', show_msg: bool = False, **kwargs) -> tuple
 
@@ -858,25 +876,41 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 ​	参数说明：
 
 - file_url - 文件URL
-- goal_path - 存放路径，默认为ini文件中指定的临时文件夹
-- rename - 重命名文件，不改变扩展名
-- file_exists - 若存在同名文件，可选择'rename', 'overwrite', 'skip'方式处理
-- show_msg - 是否显示下载信息
-- kwargs - 用于requests的连接参数
+- goal_path   - 存放路径，默认为ini文件中指定的临时文件夹
+- rename       - 重命名文件，不改变扩展名
+- file_exists   - 若存在同名文件，可选择'rename', 'overwrite', 'skip'方式处理
+- show_msg  - 是否显示下载信息
+- kwargs        - 用于requests的连接参数
 
 
 
-以下方法只有driver模式下生效，调用时会自动切换到driver模式
+以下方法和属性只有driver模式下生效，调用时会自动切换到driver模式
 
 ***
 
-### check_page
+### tabs_count
+
+​	返回标签页数量。
+
+### tab_handles
+
+​	返回所有标签页handle列表。
+
+### current_tab_num
+
+​	返回当前标签页序号。
+
+### current_tab_handle
+
+​	返回当前标签页handle。
+
+### check_page()
 
 ​	check_page() -> bool
 
 ​	派生子类后用于检查域名是否符合预期，功能由子类实现。
 
-### run_script
+### run_script()
 
 ​	run_script(script: str) -> Any
 
@@ -886,45 +920,43 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 - script - JavaScript代码文本
 
-### get_tabs_sum
+### create_tab()
 
-​	get_tabs_sum() -> int
+​	create_tab(url: str = '') -> None
 
-​	返回浏览器标签页数量。
+​	新建并定位到一个标签页,该标签页在最后面。
 
-### get_tab_num
+​	参数说明：
 
-​	get_tab_num() -> int
+- url  - 新标签页跳转到的网址
 
-​	返回当前标签页序号。
-
-### close_current_tab
+### close_current_tab()
 
 ​	close_current_tab() -> None
 
 ​	关闭当前标签页。
 
-### close_other_tabs
+### close_other_tabs()
 
-​	close_other_tabs(tab_index: int = None) -> None
+​	close_other_tabs(num_or_handle: Union[int, str, None] = None) -> None
 
-​	关闭除序号外的标签页。
+​	关闭传入的标签页以外标签页，默认保留当前页。
 
 ​	参数说明：
 
-- index - 保留的标签页序号，从0开始计算
+- num_or_handle  - 要保留的标签页序号或handle，序号第一个为0，最后为-1
 
-### to_tab
+### to_tab()
 
-​	to_tab(index: int = 0) -> None
+​	to_tab(num_or_handle: Union[int, str] = 0) -> None
 
-​	跳转到某序号的标签页。
+​	跳转到标签页。
 
 参数说明：
 
-- index - 目标标签页序号，从0开始计算
+- num_or_handle  - 标签页序号或handle字符串，序号第一个为0，最后为-1
 
-### to_iframe
+### to_iframe()
 
 ​	to_iframe(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> None
 
@@ -932,15 +964,18 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- loc_or_ele - 查找iframe元素的条件，可接收iframe序号(0开始)、id或name、控制字符串、loc参数、WebElement对象、DriverElement对象，传入'main'跳到最高层，传入'parent'跳到上一层。
+- loc_or_ele - 查找iframe元素的条件，可接收iframe序号(0开始)、id或name、查询字符串、loc参数、WebElement对象、DriverElement对象，传入'main'跳到最高层，传入'parent'跳到上一层
 
 ​	示例：
-- to_iframe('@id:iframe_id')
-- to_iframe(iframe_element)
-- to_iframe(0)
-- to_iframe('iframe_name')
+- to_iframe('tag:iframe')          - 通过传入iframe的查询字符串定位
+- to_iframe('iframe_id')           - 通过iframe的id属性定位
+- to_iframe('iframe_name')     - 通过iframe的name属性定位
+- to_iframe(iframe_element)  - 通过传入元素对象定位
+- to_iframe(0)                         - 通过iframe的序号定位
+- to_iframe('main')                  - 跳到最高层
+- to_iframe('parent')                - 跳到上一层
 
-### scroll_to_see
+### scroll_to_see()
 
 ​	scroll_to_see(loc_or_ele: Union[str, tuple, WebElement, DriverElement]) -> None
 
@@ -948,9 +983,9 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- loc_or_ele - 查找iframe元素的条件，和ele()方法的查找条件一致。
+- loc_or_ele  - 查找iframe元素的条件，和ele()方法的查找条件一致。
 
-### scroll_to
+### scroll_to()
 
 ​	scroll_to(mode: str = 'bottom', pixel: int = 300) -> None
 
@@ -958,22 +993,22 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- mode - 滚动的方向，top、bottom、rightmost、leftmost、up、down、left、right
-- pixel - 滚动的像素
+- mode  - 滚动的方向，top、bottom、rightmost、leftmost、up、down、left、right
+- pixel    - 滚动的像素
 
-### refresh
+### refresh()
 
 ​	refresh() -> None
 
 ​	刷新页面。
 
-### back
+### back()
 
 ​	back() -> None
 
 ​	页面后退。
 
-### set_window_size
+### set_window_size()
 
 ​	set_window_size(x: int = None, y: int = None) -> None
 
@@ -981,10 +1016,10 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- x - 目标宽度
-- y - 目标高度
+- x  - 目标宽度
+- y  - 目标高度
 
-### screenshot
+### screenshot()
 
 ​	screenshot(path: str, filename: str = None) -> str
 
@@ -992,10 +1027,10 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- path - 截图保存路径，默认为ini文件中指定的临时文件夹
-- filename - 截图文件名，默认为页面title为文件名
+- path         - 截图保存路径，默认为ini文件中指定的临时文件夹
+- filename  - 截图文件名，默认为页面title为文件名
 
-### chrome_downloading
+### chrome_downloading()
 
 ​	chrome_downloading(download_path: str = None) -> list
 
@@ -1003,9 +1038,9 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- download_path - 下载路径，默认为chrome options配置中的下载路径
+- download_path  - 下载路径，默认为chrome options配置中的下载路径
 
-### process_alert
+### process_alert()
 
 ​	process_alert(mode: str = 'ok', text: str = None) -> Union[str, None]
 
@@ -1013,16 +1048,16 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ​	参数说明：
 
-- mode - 'ok' 或 'cancel'，若输入其它值，不会按按钮但依然返回文本值
-- text - 处理prompt提示框时可输入文本
+- mode  - 'ok' 或 'cancel'，若输入其它值，不会按按钮但依然返回文本值
+- text     - 处理prompt提示框时可输入文本
 
-### close_driver
+### close_driver()
 
 ​	close_driver() -> None
 
 ​	关闭driver及浏览器，切换到s模式。
 
-### close_session
+### close_session()
 
 ​	close_session() -> None
 
@@ -1079,23 +1114,35 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	返回上一个兄弟元素对象。
 
-### parents
+### parents()
 
 ​	parents(num: int = 1) -> Union[DriverElement, None]
 
 ​	返回第N层父级元素对象。
 
-### nexts
+​	参数说明：
+
+- 第几层父元素
+
+### nexts()
 
 ​	nexts(num: int = 1) -> Union[DriverElement, None]
 
-​	返回下N个兄弟元素对象。
+​	返回后面第N个兄弟元素对象。
 
-### prevs
+​	参数说明：
+
+- 后面第几个兄弟元素
+
+### prevs()
 
 ​	prevs(num: int = 1) -> Union[DriverElement, None]
 
-​	返回前N个兄弟元素对象。
+​	返回前面第N个兄弟元素对象。
+
+​	参数说明：
+
+- 前面第几个兄弟元素
 
 ### size
 
@@ -1105,7 +1152,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	以字典方式放回元素坐标。
 
-### ele
+### ele()
 
 ​	ele(loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False, timeout: float = None) -> Union[DriverElement, List[DriverElement], None]
 
@@ -1115,22 +1162,38 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- loc_or_str - 查询条件参数
-- mode - 查找一个或多个，传入'single'或'all'
-- show_errmsg - 出现异常时是否抛出及显示
-- timeout - 查找元素超时时间
+- loc_or_str         - 查询条件参数
+- mode               - 查找一个或多个，传入'single'或'all'
+- show_errmsg  - 出现异常时是否抛出及显示
+- timeout            - 查找元素超时时间
 
 ​	示例：
 
-- element.ele('@id:ele_id') - 按照属性查找元素
-- element.ele('tag:div') - 按照tag name查找元素
-- element.ele('text:some text') - 按照文本查找元素
-- element.ele('some text') - 按照文本查找元素
-- element.ele('css:>div') - 按照css selector查找元素
-- element.ele('xpath://div') - 按照xpath查找元素
-- element.ele((By.ID, 'ele_id')) - 按照loc方式查找元素
+- 用loc元组查找：
 
-### eles
+  - ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素
+
+- 用查询字符串查找：
+
+  属性、tag name和属性、文本、xpath、css selector。
+
+  其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串。
+
+  - ele.ele('@class:ele_class')                      - 返回第一个class含有ele_class的元素
+  - ele.ele('@name=ele_name')                    - 返回第一个name等于ele_name的元素
+  - ele.ele('@placeholder')                            - 返回第一个带placeholder属性的元素
+  - ele.ele('tag:p')                                          - 返回第一个<p>元素
+  - ele.ele('tag:div@class:ele_class')            - 返回第一个class含有ele_class的div元素
+  - ele.ele('tag:div@class=ele_class')           - 返回第一个class等于ele_class的div元素
+  - ele.ele('tag:div@text():some_text')           - 返回第一个文本含有some_text的div元素
+  - ele.ele('tag:div@text()=some_text')          - 返回第一个文本等于some_text的div元素
+  - ele.ele('text:some_text')                            - 返回第一个文本含有some_text的元素
+  - ele.ele('some_text')                                   - 返回第一个文本含有some_text的元素（等价于上一行）
+  - ele.ele('text=some_text')                           - 返回第一个文本等于some_text的元素
+  - ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素
+  - ele.ele('css:div.ele_class')                         - 返回第一个符合css selector的元素
+
+### eles()
 
 ​	eles(loc_or_str: Union[tuple, str], show_errmsg: bool = False, timeout: float = None) ->  List[DriverElement]
 
@@ -1138,11 +1201,11 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- loc_or_str - 查询条件参数
-- show_errmsg - 出现异常时是否抛出及显示
-- timeout - 查找元素超时时间
+- loc_or_str        - 查询条件参数
+- show_errmsg  - 出现异常时是否抛出及显示
+- timeout            - 查找元素超时时间
 
-### attr
+### attr()
 
 ​	attr(attr: str) -> str
 
@@ -1150,9 +1213,9 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- attr - 属性名称
+- attr  - 属性名称
 
-### click
+### click()
 
 ​	click(by_js=None) -> bool
 
@@ -1160,9 +1223,9 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- by_js - 是否用js方式点击
+- by_js  - 是否用js方式点击
 
-### input
+### input()
 
 ​	input(value, clear: bool = True) -> bool
 
@@ -1170,10 +1233,10 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- value - 文本值
-- clear - 输入前是否清除文本框
+- value  - 文本值
+- clear  - 输入前是否清除文本框
 
-### run_script
+### run_script()
 
 ​	run_script(script: str) -> Any
 
@@ -1181,45 +1244,45 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- script - JavaScript文本
+- script  - JavaScript文本
 
-### submit
+### submit()
 
 ​	submit() -> None
 
 ​	提交表单。
 
-### clear
+### clear()
 
 ​	clear() -> None
 
 ​	清空文本框。
 
-### is_selected
+### is_selected()
 
 ​	is_selected() -> bool
 
 ​	元素是否被选中。
 
-### is_enabled
+### is_enabled()
 
 ​	is_enabled() -> bool
 
 ​	元素在页面中是否可用。
 
-### is_displayed
+### is_displayed()
 
 ​	is_displayed() -> bool
 
 ​	元素是否可见。
 
-### is_valid
+### is_valid()
 
 ​	is_valid() -> bool
 
 ​	元素是否有效。该方法用于判断页面跳转元素不能用的情况
 
-### screenshot
+### screenshot()
 
 ​	screenshot(path: str, filename: str = None) -> str
 
@@ -1227,10 +1290,10 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- path - 截图保存路径，默认为ini文件中指定的临时文件夹
-- filename - 截图文件名，默认为页面title为文件名
+- path         - 截图保存路径，默认为ini文件中指定的临时文件夹
+- filename  - 截图文件名，默认为页面title为文件名
 
-### select
+### select()
 
 ​	select(text: str) -> bool
 
@@ -1238,9 +1301,9 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- text - 选项文本
+- text  - 选项文本
 
-### set_attr
+### set_attr()
 
 ​	set_attr(attr: str, value: str) -> bool
 
@@ -1248,10 +1311,10 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- attr - 参数名
-- value - 参数值
+- attr     - 参数名
+- value  - 参数值
 
-### drag
+### drag()
 
 ​	drag(x: int, y: int, speed: int = 40, shake: bool = True) -> bool
 
@@ -1259,12 +1322,12 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- x - 拖拽x方向距离
-- y - 拖拽y方向距离
-- speed - 拖拽速度
-- shake - 是否随机抖动
+- x          - 拖拽x方向距离
+- y          - 拖拽y方向距离
+- speed  - 拖拽速度
+- shake  - 是否随机抖动
 
-### drag_to
+### drag_to()
 
 ​	drag_to(ele_or_loc: Union[tuple, WebElement, DrissionElement], speed: int = 40, shake: bool = True) -> bool:
 
@@ -1272,11 +1335,11 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ​	参数说明：
 
-- ele_or_loc - 另一个元素或相对当前位置，坐标为元素中点坐标。
-- speed - 拖拽速度
-- shake - 是否随机抖动
+- ele_or_loc  - 另一个元素或相对当前位置，坐标为元素中点坐标。
+- speed         - 拖拽速度
+- shake         - 是否随机抖动
 
-### hover
+### hover()
 
 ​	hover()
 
@@ -1292,7 +1355,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 参数说明：
 
-- ele - requests_html库的Element对象
+- ele  - requests_html库的Element对象
 
 ### inner_ele
 
@@ -1330,25 +1393,37 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	返回上一个兄弟元素对象。
 
-### parents
+### parents()
 
-​	parents(num: int = 1) -> Union[DriverElement, None]
+​	parents(num: int = 1) -> Union[SessionElement, None]
 
 ​	返回第N层父级元素对象。
 
-### nexts
+​	参数说明：
 
-​	nexts(num: int = 1) -> Union[DriverElement, None]
+- num  - 第几层父元素
 
-​	返回下N个兄弟元素对象。
+### nexts()
 
-### prevs
+​	nexts(num: int = 1) -> Union[SessionElement, None]
 
-​	prevs(num: int = 1) -> Union[DriverElement, None]
+​	返回后N个兄弟元素对象。
+
+​	参数说明：
+
+- num  - 后面第几个兄弟元素
+
+### prevs()
+
+​	prevs(num: int = 1) -> Union[SessionElement, None]
 
 ​	返回前N个兄弟元素对象。
 
-### ele
+​	参数说明：
+
+- num  - 前面第几个兄弟元素
+
+### ele()
 
 ​	ele(loc_or_str: Union[tuple, str], mode: str = None, show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]
 
@@ -1358,23 +1433,39 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- loc_or_str - 查询条件参数
+- loc_or_str        - 查询条件参数
 
-- mode - 查找一个或多个，传入'single'或'all'
+- mode               - 查找一个或多个，传入'single'或'all'
 
-- show_errmsg - 出现异常时是否抛出及显示
+- show_errmsg  - 出现异常时是否抛出及显示
 
 ​	示例：
 
-- element.ele('@id:ele_id') - 按照属性查找元素
-- element.ele('tag:div') - 按照tag name查找元素
-- element.ele('text:some text') - 按照文本查找元素
-- element.ele('some text') - 按照文本查找元素
-- element.ele('css:>div') - 按照css selector查找元素
-- element.ele('xpath://div') - 按照xpath查找元素
-- element.ele((By.ID, 'ele_id')) - 按照loc方式查找元素
+- 用loc元组查找：
 
-### eles
+  - ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素
+
+- 用查询字符串查找：
+
+  属性、tag name和属性、文本、xpath、css selector。
+
+  其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串。
+
+  - ele.ele('@class:ele_class')                      - 返回第一个class含有ele_class的元素
+  - ele.ele('@name=ele_name')                    - 返回第一个name等于ele_name的元素
+  - ele.ele('@placeholder')                            - 返回第一个带placeholder属性的元素
+  - ele.ele('tag:p')                                          - 返回第一个<p>元素
+  - ele.ele('tag:div@class:ele_class')            - 返回第一个class含有ele_class的div元素
+  - ele.ele('tag:div@class=ele_class')           - 返回第一个class等于ele_class的div元素
+  - ele.ele('tag:div@text():some_text')           - 返回第一个文本含有some_text的div元素
+  - ele.ele('tag:div@text()=some_text')          - 返回第一个文本等于some_text的div元素
+  - ele.ele('text:some_text')                            - 返回第一个文本含有some_text的元素
+  - ele.ele('some_text')                                   - 返回第一个文本含有some_text的元素（等价于上一行）
+  - ele.ele('text=some_text')                           - 返回第一个文本等于some_text的元素
+  - ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素
+  - ele.ele('css:div.ele_class')                         - 返回第一个符合css selector的元素
+
+### eles()
 
 ​	eles(loc_or_str: Union[tuple, str], show_errmsg: bool = False) ->  List[SessionElement]
 
@@ -1382,10 +1473,10 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- loc_or_str - 查询条件参数
-- show_errmsg - 出现异常时是否抛出及显示
+- loc_or_str        - 查询条件参数
+- show_errmsg  - 出现异常时是否抛出及显示
 
-### attr
+### attr()
 
 ​	attr(attr: str) -> str
 
@@ -1393,7 +1484,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- attr - 属性名称
+- attr  - 属性名称
 
 
 
@@ -1405,9 +1496,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- path - ini文件路径，不传入则默认读取当前文件夹下的configs.ini文件
+- path  - ini文件路径，不传入则默认读取当前文件夹下的configs.ini文件
 
-### get_value
+### get_value()
 
 ​	get_value(section: str, item: str) -> Any
 
@@ -1415,10 +1506,10 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- section - 段落名称
-- item - 配置项名称
+- section  - 段落名称
+- item       - 配置项名称
 
-### get_option
+### get_option()
 
 ​	get_option(section: str) -> dict
 
@@ -1426,9 +1517,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- section - 段落名称
+- section  - 段落名称
 
-### set_item
+### set_item()
 
 ​	set_item(section: str, item: str, value: str) -> OptionsManager
 
@@ -1436,11 +1527,11 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- section - 段落名称
-- item - 配置项名称
-- value - 值内容
+- section  - 段落名称
+- item      - 配置项名称
+- value     - 值内容
 
-### save
+### save()
 
 ​	save(path: str = None) -> OptionsManager
 
@@ -1448,7 +1539,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- path - ini文件的路径，默认保存到模块文件夹下的
+- path  - ini文件的路径，默认保存到模块文件夹下的
 
 
 
@@ -1460,7 +1551,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- read_file - 布尔型，指定创建时是否从ini文件读取配置信息
+- read_file  - 布尔型，指定创建时是否从ini文件读取配置信息
 
 ### driver_path
 
@@ -1470,7 +1561,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	chrome.exe的路径
 
-### remove_argument
+### remove_argument()
 
 ​	remove_argument(value: str) -> DriverOptions
 
@@ -1478,9 +1569,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- value - 要移除的属性值
+- value  - 要移除的属性值
 
-### remove_experimental_option
+### remove_experimental_option()
 
 ​	remove_experimental_option(key: str) -> DriverOptions
 
@@ -1488,15 +1579,15 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- key - 要移除的实验设置key值
+- key  - 要移除的实验设置key值
 
-### remove_argument
+### remove_argument()
 
 ​	remove_argument() -> DriverOptions
 
 ​	移除所有插件，因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设。
 
-### save
+### save()
 
 ​	save(path: str = None) -> DriverOptions
 
@@ -1504,9 +1595,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- path - ini文件的路径，默认保存到模块文件夹下的
+- path  - ini文件的路径，默认保存到模块文件夹下的
 
-### set_argument
+### set_argument()
 
 ​	set_argument(arg: str, value: Union[bool, str]) -> DriverOptions
 
@@ -1514,10 +1605,10 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- arg - 属性名
-- value - 属性值，有值的属性传入值，没有的传入bool
+- arg     - 属性名
+- value  - 属性值，有值的属性传入值，没有的传入bool
 
-### set_headless
+### set_headless()
 
 ​	set_headless(on_off: bool = True) -> DriverOptions
 
@@ -1525,9 +1616,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-​	on_off - 打开或关闭，bool
+​	on_off  - 打开或关闭，bool
 
-### set_no_imgs
+### set_no_imgs()
 
 ​	set_no_imgs(on_off: bool = True) -> DriverOptions
 
@@ -1535,9 +1626,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-​	on_off - 打开或关闭，bool
+​	on_off  - 打开或关闭，bool
 
-### set_no_js
+### set_no_js()
 
 ​	set_no_js(on_off: bool = True) -> DriverOptions
 
@@ -1545,9 +1636,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-​	on_off - 打开或关闭，bool
+​	on_off  - 打开或关闭，bool
 
-### set_mute
+### set_mute()
 
 ​	set_mute(on_off: bool = True) -> DriverOptions
 
@@ -1555,9 +1646,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-​	on_off - 打开或关闭，bool
+​	on_off  - 打开或关闭，bool
 
-### set_user_agent
+### set_user_agent()
 
 ​	set_user_agent(user_agent: str) -> DriverOptions
 
@@ -1565,9 +1656,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- user_agent - user agent字符串
+- user_agent  - user agent字符串
 
-### set_proxy
+### set_proxy()
 
 ​	set_proxy(proxy: str) -> DriverOptions
 
@@ -1575,9 +1666,9 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- proxy - 代理地址
+- proxy  - 代理地址
 
-### set_paths
+### set_paths()
 
 ​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None) -> DriverOptions
 
@@ -1585,12 +1676,12 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ​	参数说明：
 
-- driver_path - chromedriver.exe的路径
-- chrome_path - chrome.exe的路径
-- debugger_address - 调试浏览器地址，例：127.0.0.1:9222
-- download_path - 下载文件路径
-- user_data_path - 用户数据路径
-- cache_path - 缓存路径
+- driver_path              - chromedriver.exe的路径
+- chrome_path           - chrome.exe的路径
+- debugger_address  - 调试浏览器地址，例：127.0.0.1:9222
+- download_path        - 下载文件路径
+- user_data_path        - 用户数据路径
+- cache_path              - 缓存路径
 
 
 
@@ -1598,7 +1689,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 chrome的配置太难记，所以把常用的配置写成简单的方法，调用会修改ini文件相关内容。
 
-### set_paths
+### set_paths()
 
 ​	set_paths(driver_path: str = None, chrome_path: str = None, debugger_address: str = None, global_tmp_path: str = None, download_path: str = None, user_data_path: str = None, cache_path: str = None, check_version: bool = True) -> None
 
@@ -1606,16 +1697,16 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- driver_path - chromedriver.exe路径
-- chrome_path - chrome.exe路径
-- debugger_address - 调试浏览器地址，例：127.0.0.1:9222
-- download_path - 下载文件路径
-- global_tmp_path - 临时文件夹路径
-- user_data_path - 用户数据路径
-- cache_path - 缓存路径
-- check_version - 是否检查chromedriver和chrome是否匹配
+- driver_path              - chromedriver.exe路径
+- chrome_path           - chrome.exe路径
+- debugger_address  - 调试浏览器地址，例：127.0.0.1:9222
+- download_path        - 下载文件路径
+- global_tmp_path      - 临时文件夹路径
+- user_data_path        - 用户数据路径
+- cache_path               - 缓存路径
+- check_version           - 是否检查chromedriver和chrome是否匹配
 
-### set_argument
+### set_argument()
 
 ​	set_argument(arg: str, value: Union[bool, str]) -> None
 
@@ -1623,10 +1714,10 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- arg - 属性名
-- value - 属性值，有值的属性传入值，没有的传入bool
+- arg     - 属性名
+- value  - 属性值，有值的属性传入值，没有的传入bool
 
-### set_headless
+### set_headless()
 
 ​	set_headless(on_off: bool) -> None
 
@@ -1634,9 +1725,9 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off - 是否开启headless模式
+- on_off  - 是否开启headless模式
 
-### set_no_imgs
+### set_no_imgs()
 
 ​	set_no_imgs(on_off: bool) -> None
 
@@ -1644,9 +1735,9 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off - 是否开启无图模式
+- on_off  - 是否开启无图模式
 
-### set_no_js
+### set_no_js()
 
 ​	set_no_js(on_off: bool) -> None
 
@@ -1654,9 +1745,9 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off - 是否开启禁用JS模式
+- on_off  - 是否开启禁用JS模式
 
-### set_mute
+### set_mute()
 
 ​	set_mute(on_off: bool) -> None
 
@@ -1664,9 +1755,9 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off - 是否开启静音模式
+- on_off  - 是否开启静音模式
 
-### set_user_agent
+### set_user_agent()
 
 ​	set_user_agent(user_agent: str) -> None:
 
@@ -1674,9 +1765,9 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- user_agent - user_agent值
+- user_agent  - user_agent值
 
-### set_proxy
+### set_proxy()
 
 ​	set_proxy(proxy: str) -> None
 
@@ -1684,9 +1775,9 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- proxy - 代理值
+- proxy  - 代理值
 
-### check_driver_version
+### check_driver_version()
 
 ​	check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool
 
@@ -1694,5 +1785,5 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- driver_path - chromedriver.exe路径
-- chrome_path - chrome.exe路径
+- driver_path     - chromedriver.exe路径
+- chrome_path  - chrome.exe路径
