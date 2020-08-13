@@ -38,8 +38,8 @@ class MixPage(Null, SessionPage, DriverPage):
         :param mode: 默认使用selenium的d模式
         """
         super().__init__()
-        if drission in ['s', 'd']:
-            mode = drission
+        if drission in ['s', 'd', 'S', 'D']:
+            mode = drission.lower()
             drission = None
         self._drission = drission or Drission()
         self._session = None
@@ -74,7 +74,7 @@ class MixPage(Null, SessionPage, DriverPage):
 
     @property
     def mode(self) -> str:
-        """返回当前模式                \n
+        """返回当前模式        \n
         :return: 's' 或 'd'
         """
         return self._mode
@@ -86,7 +86,7 @@ class MixPage(Null, SessionPage, DriverPage):
         :param mode: 模式字符串
         :param go: 是否跳转到原模式的url
         """
-        if mode == self._mode:
+        if mode is not None and mode.lower() == self._mode:
             return
         self._mode = 's' if self._mode == 'd' else 'd'
         if self._mode == 'd':  # s转d
