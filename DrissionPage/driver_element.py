@@ -181,7 +181,7 @@ class DriverElement(DrissionElement):
         """返回当前元素下级符合条件的子元素，默认返回第一个                                                 \n
         示例：                                                                                           \n
         - 用loc元组查找：                                                                                 \n
-            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                       \n
+            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素                       \n
         - 用查询字符串查找：                                                                               \n
             查找方式：属性、tag name和属性、文本、xpath、css selector                                        \n
             其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                          \n
@@ -251,7 +251,7 @@ class DriverElement(DrissionElement):
         :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象组成的列表
         """
-        if not isinstance(loc_or_str, tuple) and not isinstance(loc_or_str, str):
+        if not isinstance(loc_or_str, (tuple, str)):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
         return self.ele(loc_or_str, mode='all', show_errmsg=show_errmsg, timeout=timeout)
 
@@ -405,7 +405,7 @@ class DriverElement(DrissionElement):
         :return: 是否拖拽成功
         """
         # x, y：目标坐标点
-        if isinstance(ele_or_loc, DriverElement) or isinstance(ele_or_loc, WebElement):
+        if isinstance(ele_or_loc, (DriverElement, WebElement)):
             target_x = ele_or_loc.location['x'] + ele_or_loc.size['width'] // 2
             target_y = ele_or_loc.location['y'] + ele_or_loc.size['height'] // 2
         elif isinstance(ele_or_loc, tuple):

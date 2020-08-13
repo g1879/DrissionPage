@@ -19,7 +19,7 @@ def set_paths(driver_path: str = None,
               user_data_path: str = None,
               cache_path: str = None,
               check_version: bool = True) -> None:
-    """简易设置路径函数
+    """快捷的路径设置函数                                          \n
     :param driver_path: chromedriver.exe路径
     :param chrome_path: chrome.exe路径
     :param debugger_address: 调试浏览器地址，例：127.0.0.1:9222
@@ -57,10 +57,10 @@ def set_paths(driver_path: str = None,
 
 
 def set_argument(arg: str, value: Union[bool, str]) -> None:
-    """设置浏览器配置argument属性
+    """设置浏览器配置argument属性                            \n
     :param arg: 属性名
     :param value: 属性值，有值的属性传入值，没有的传入bool
-    :return:
+    :return: None
     """
     do = DriverOptions()
     do.remove_argument(arg)
@@ -71,37 +71,59 @@ def set_argument(arg: str, value: Union[bool, str]) -> None:
 
 
 def set_headless(on_off: bool = True) -> None:
-    """设置headless"""
+    """设置是否隐藏浏览器界面  \n
+    :param on_off: 开或关
+    :return: None
+    """
     set_argument('--headless', on_off)
 
 
 def set_no_imgs(on_off: bool = True) -> None:
-    """设置是否加载图片"""
+    """设置是否禁止加载图片   \n
+    :param on_off: 开或关
+    :return: None
+    """
     set_argument('--blink-settings=imagesEnabled=false', on_off)
 
 
 def set_no_js(on_off: bool = True) -> None:
-    """设置禁用js"""
+    """设置是否禁用js              \n
+    :param on_off: 开或关
+    :return: None
+    """
     set_argument('--disable-javascript', on_off)
 
 
 def set_mute(on_off: bool = True) -> None:
-    """设置静音"""
+    """设置是否静音                \n
+    :param on_off: 开或关
+    :return: None
+    """
     set_argument('--mute-audio', on_off)
 
 
 def set_user_agent(user_agent: str) -> None:
-    """设置user agent"""
+    """设置user agent                    \n
+    :param user_agent: user agent文本
+    :return: None
+    """
     set_argument('user-agent', user_agent)
 
 
 def set_proxy(proxy: str) -> None:
-    """设置代理"""
+    """设置代理                   \n
+    :param proxy: 代理网址和端口
+    :return: None
+    """
     set_argument('--proxy-server', proxy)
 
 
 def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bool:
-    """检查传入的chrome和chromedriver是否匹配"""
+    """检查传入的chrome和chromedriver是否匹配  \n
+    :param driver_path: chromedriver.exe路径
+    :param chrome_path: chrome.exe路径
+    :return: 是否匹配
+    """
     print('正在检测可用性...')
     om = OptionsManager()
     driver_path = driver_path or om.get_value('paths', 'chromedriver_path') or 'chromedriver'

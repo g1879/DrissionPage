@@ -26,7 +26,7 @@ class Drission(object):
                  session_options: dict = None,
                  ini_path: str = None,
                  proxy: dict = None):
-        """初始化配置信息，但不生成session和driver实例
+        """初始化配置信息，但不生成session和driver实例              \n
         :param driver_options: chrome设置，Options类或设置字典
         :param session_options: session设置
         :param ini_path: ini文件路径'
@@ -52,7 +52,7 @@ class Drission(object):
 
     @property
     def session(self) -> HTMLSession:
-        """获取HTMLSession对象"""
+        """返回HTMLSession对象，如为None则按配置信息创建"""
         if self._session is None:
             self._session = HTMLSession()
             attrs = ['headers', 'cookies', 'auth', 'proxies', 'hooks', 'params', 'verify',
@@ -67,7 +67,7 @@ class Drission(object):
 
     @property
     def driver(self) -> WebDriver:
-        """获取WebDriver对象，按传入配置信息初始化"""
+        """返回WebDriver对象，如为None则按配置信息创建"""
         if self._driver is None:
             if isinstance(self._driver_options, dict):
                 options = _dict_to_chrome_options(self._driver_options)
@@ -92,22 +92,27 @@ class Drission(object):
 
     @property
     def driver_options(self) -> dict:
+        """返回driver配置信息"""
         return self._driver_options
 
     @property
     def session_options(self) -> dict:
+        """返回session配置信息"""
         return self._session_options
 
     @session_options.setter
     def session_options(self, value: dict):
+        """设置session配置"""
         self._session_options = value
 
     @property
     def proxy(self) -> Union[None, dict]:
+        """返回代理信息"""
         return self._proxy
 
     @proxy.setter
     def proxy(self, proxies: dict = None):
+        """设置代理信息"""
         self._proxy = proxies
         if self._session:
             self._session.proxies = proxies
@@ -121,9 +126,15 @@ class Drission(object):
             for cookie in cookies:
                 self._ensure_add_cookie(cookie)
 
-    def cookies_to_session(self, copy_user_agent: bool = False, driver: WebDriver = None, session: Session = None) \
-            -> None:
-        """把driver的cookies复制到session"""
+    def cookies_to_session(self, copy_user_agent: bool = False,
+                           driver: WebDriver = None,
+                           session: Session = None) -> None:
+        """把driver对象的cookies复制到session对象  \n
+        :param copy_user_agent: 是否复制ua信息
+        :param driver: 来源driver对象
+        :param session: 目标session对象
+        :return: None
+        """
         driver = driver or self.driver
         session = session or self.session
         if copy_user_agent:
@@ -131,8 +142,15 @@ class Drission(object):
         for cookie in driver.get_cookies():
             session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
 
-    def cookies_to_driver(self, url: str, driver: WebDriver = None, session: Session = None) -> None:
-        """把session的cookies复制到driver"""
+    def cookies_to_driver(self, url: str,
+                          driver: WebDriver = None,
+                          session: Session = None) -> None:
+        """把session对象的cookies复制到driver对象  \n
+        :param url: 作用域
+        :param driver: 目标driver对象
+        :param session: 来源session对象
+        :return: None
+        """
         driver = driver or self.driver
         session = session or self.session
         domain = urlparse(url).netloc
@@ -146,7 +164,12 @@ class Drission(object):
             self._ensure_add_cookie(cookie_data, driver=driver)
 
     def _ensure_add_cookie(self, cookie, override_domain=None, driver=None) -> None:
-        """添加cookie到driver"""
+        """添加cookie到driver                  \n
+        :param cookie: 要添加的cookie
+        :param override_domain: 覆盖作用域
+        :param driver: 操作的driver对象
+        :return: None
+        """
         driver = driver or self.driver
         if override_domain:
             cookie['domain'] = override_domain
@@ -171,8 +194,12 @@ class Drission(object):
                 raise WebDriverException(f"Couldn't add the following cookie to the webdriver\n{cookie}\n")
 
     def _is_cookie_in_driver(self, cookie, driver=None) -> bool:
-        """检查cookie是否已经在driver里
-        只检查name、value、domain，检查domain时比较宽"""
+        """检查cookie是否已经在driver里                   \n
+        只检查name、value、domain，检查domain时比较宽      \n
+        :param cookie: 要检查的cookie
+        :param driver: 被检查的driver
+        :return: 返回布尔值
+        """
         driver = driver or self.driver
         for driver_cookie in driver.get_cookies():
             if (cookie['name'] == driver_cookie['name'] and
@@ -183,7 +210,11 @@ class Drission(object):
         return False
 
     def user_agent_to_session(self, driver: WebDriver = None, session: Session = None) -> None:
-        """把driver的user-agent复制到session"""
+        """把driver的user-agent复制到session  \n
+        :param driver: 来源driver对象
+        :param session: 目标session对象
+        :return: None
+        """
         driver = driver or self.driver
         session = session or self.session
         selenium_user_agent = driver.execute_script("return navigator.userAgent;")

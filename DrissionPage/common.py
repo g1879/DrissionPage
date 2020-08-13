@@ -131,16 +131,27 @@ def get_loc_from_str(loc: str) -> tuple:
 
 
 def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy') -> str:
-    """生成xpath语句"""
+    """生成xpath语句                                          \n
+    :param tag: 标签名
+    :param arg: 属性名
+    :param val: 属性值
+    :param mode: 'exact' 或 'fuzzy'，对应精确或模糊查找
+    :return: xpath字符串
+    """
     tag_name = '' if tag == '*' else f'name()="{tag}" and '
     if mode == 'exact':
         return f'//*[{tag_name}{arg}={_make_search_str(val)}]'
-    else:
+    elif mode == 'fuzzy':
         return f"//*[{tag_name}contains({arg},{_make_search_str(val)})]"
+    else:
+        raise ValueError("Argument mode can only be 'exact' or 'fuzzy'.")
 
 
 def _make_search_str(search_str: str) -> str:
-    """将"转义，不知何故不能直接用\""""
+    """将"转义，不知何故不能直接用\  \n
+    :param search_str: 查询字符串
+    :return: 把"转义后的字符串
+    """
     parts = search_str.split('"')
     parts_num = len(parts)
     search_str = 'concat('
@@ -151,8 +162,11 @@ def _make_search_str(search_str: str) -> str:
     return search_str
 
 
-def translate_loc_to_xpath(loc) -> tuple:
-    """把By类型转为xpath或css selector"""
+def translate_loc_to_xpath(loc: tuple) -> tuple:
+    """把By类型的loc元组转换为css selector或xpath类型的  \n
+    :param loc: By类型的loc元组
+    :return: css selector或xpath类型的loc元组
+    """
     loc_by = 'xpath'
     loc_str = None
     if loc[0] == 'xpath':
