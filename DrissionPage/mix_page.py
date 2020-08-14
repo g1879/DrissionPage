@@ -154,19 +154,30 @@ class MixPage(Null, SessionPage, DriverPage):
         u = url or self.session_url
         self._drission.cookies_to_driver(u)
 
+    def check_page(self) -> Union[bool, None]:
+        return
+        # if self.session_url == self.url:
+        #     return True if self._response and self._response.ok else False
+
     # ----------------重写SessionPage的函数-----------------------
 
-    def post(self, url: str, data: dict = None, go_anyway: bool = False, **kwargs) -> Union[bool, None]:
-        """用post方式跳转到url                                 \n
+    def post(self,
+             url: str,
+             data: dict = None,
+             go_anyway: bool = False,
+             show_errmsg: bool = False,
+             **kwargs) -> Union[bool, None]:
+        """用post方式跳转到url                                  \n
         post前先转换模式，但不跳转
         :param url: 目标url
         :param data: 提交的数据
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
+        :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 连接参数
         :return: url是否可用
         """
         self.change_mode('s', go=False)
-        return super().post(url, data, go_anyway, **kwargs)
+        return super().post(url, data, go_anyway, show_errmsg, **kwargs)
 
     def download(self,
                  file_url: str,
@@ -174,6 +185,7 @@ class MixPage(Null, SessionPage, DriverPage):
                  rename: str = None,
                  file_exists: str = 'rename',
                  show_msg: bool = False,
+                 show_errmsg: bool = False,
                  **kwargs) -> tuple:
         """下载一个文件                                                                      \n
         d模式下下载前先同步cookies                                                            \n
@@ -182,12 +194,13 @@ class MixPage(Null, SessionPage, DriverPage):
         :param rename: 重命名文件，可不写扩展名
         :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
         :param show_msg: 是否显示下载信息
+        :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 连接参数
         :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
         """
         if self.mode == 'd':
             self.cookies_to_session()
-        return super().download(file_url, goal_path, rename, file_exists, show_msg, **kwargs)
+        return super().download(file_url, goal_path, rename, file_exists, show_msg, show_errmsg, **kwargs)
 
     # ----------------重写DriverPage的函数-----------------------
 
@@ -207,24 +220,19 @@ class MixPage(Null, SessionPage, DriverPage):
 
     # ----------------以下为共用函数-----------------------
 
-    def get(self, url: str, go_anyway=False, **kwargs) -> Union[bool, None]:
+    def get(self, url: str, go_anyway=False, show_errmsg: bool = False, **kwargs) -> Union[bool, None]:
         """跳转到一个url                                         \n
         跳转前先同步cookies，跳转后判断目标url是否可用
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
+        :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 连接参数，s模式专用
         :return: url是否可用
         """
         if self._mode == 'd':
-            if super(SessionPage, self).get(url=url, go_anyway=go_anyway) is None:
-                return
-            if self.session_url == self.url:
-                self._url_available = True if self._response and self._response.ok else False
-            else:
-                self._url_available = self.check_page()
-            return self._url_available
+            return super(SessionPage, self).get(url, go_anyway, show_errmsg)
         elif self._mode == 's':
-            return None if super().get(url=url, go_anyway=go_anyway, **kwargs) is None else self._url_available
+            return super().get(url, go_anyway, show_errmsg, **kwargs)
 
     def ele(self,
             loc_or_ele: Union[tuple, str, DriverElement, SessionElement, Element, WebElement],

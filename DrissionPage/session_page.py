@@ -138,10 +138,15 @@ class SessionPage(object):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
         return self.ele(loc_or_str, mode='all', show_errmsg=True)
 
-    def get(self, url: str, go_anyway: bool = False, **kwargs) -> Union[bool, None]:
+    def get(self,
+            url: str,
+            go_anyway: bool = False,
+            show_errmsg: bool = False,
+            **kwargs) -> Union[bool, None]:
         """用get方式跳转到url                                 \n
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
+        :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 连接参数
         :return: url是否可用
         """
@@ -149,17 +154,34 @@ class SessionPage(object):
         if not url or (not go_anyway and self.url == to_url):
             return
         self._url = to_url
-        self._response = self._make_response(to_url, **kwargs)[0]
-        if self._response:
-            self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
-        self._url_available = True if self._response and self._response.ok else False
+        self._response = self._make_response(to_url, show_errmsg=show_errmsg, **kwargs)[0]
+        if not self._response:
+            self._url_available = False
+        else:
+            try:
+                self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
+            except:
+                pass
+
+            if self._response.ok:
+                self._url_available = True
+            else:
+                if show_errmsg:
+                    raise ConnectionError(f'Status code: {self._response.status_code}.')
+                self._url_available = False
         return self._url_available
 
-    def post(self, url: str, data: dict = None, go_anyway: bool = True, **kwargs) -> Union[bool, None]:
+    def post(self,
+             url: str,
+             data: dict = None,
+             go_anyway: bool = True,
+             show_errmsg: bool = False,
+             **kwargs) -> Union[bool, None]:
         """用post方式跳转到url                                 \n
         :param url: 目标url
         :param data: 提交的数据
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
+        :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 连接参数
         :return: url是否可用
         """
@@ -167,13 +189,21 @@ class SessionPage(object):
         if not url or (not go_anyway and self._url == to_url):
             return
         self._url = to_url
-        self._response = self._make_response(to_url, mode='post', data=data, **kwargs)[0]
-        if self._response:
+        self._response = self._make_response(to_url, mode='post', data=data, show_errmsg=show_errmsg, **kwargs)[0]
+        if not self._response:
+            self._url_available = False
+        else:
             try:
                 self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
             except:
                 pass
-        self._url_available = True if self._response and self._response.status_code == 200 else False
+
+            if self._response.ok:
+                self._url_available = True
+            else:
+                if show_errmsg:
+                    raise ConnectionError(f'Status code: {self._response.status_code}.')
+                self._url_available = False
         return self._url_available
 
     def download(self,
@@ -182,6 +212,7 @@ class SessionPage(object):
                  rename: str = None,
                  file_exists: str = 'rename',
                  show_msg: bool = False,
+                 show_errmsg: bool = False,
                  **kwargs) -> tuple:
         """下载一个文件                                                                   \n
         :param file_url: 文件url
@@ -189,6 +220,7 @@ class SessionPage(object):
         :param rename: 重命名文件，可不写扩展名
         :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
         :param show_msg: 是否显示下载信息
+        :param show_errmsg: 是否抛出和显示异常
         :param kwargs: 连接参数
         :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
         """
@@ -201,7 +233,7 @@ class SessionPage(object):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 20
 
-        r, info = self._make_response(file_url, mode='get', **kwargs)
+        r, info = self._make_response(file_url, mode='get', show_errmsg=show_errmsg, **kwargs)
         if not r:
             if show_msg:
                 print(info)
@@ -280,11 +312,17 @@ class SessionPage(object):
         info = f'{goal_path}\\{full_name}' if download_status else info
         return download_status, info
 
-    def _make_response(self, url: str, mode: str = 'get', data: dict = None, **kwargs) -> tuple:
+    def _make_response(self,
+                       url: str,
+                       mode: str = 'get',
+                       data: dict = None,
+                       show_errmsg: bool = False,
+                       **kwargs) -> tuple:
         """生成response对象                     \n
         :param url: 目标url
         :param mode: 'get', 'post' 中选择
         :param data: post方式要提交的数据
+        :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 其它参数
         :return: Response对象
         """
@@ -316,6 +354,8 @@ class SessionPage(object):
             elif mode == 'post':
                 r = self.session.post(url, data=data, **kwargs)
         except Exception as e:
+            if show_errmsg:
+                raise e
             return None, e
         else:
             headers = dict(r.headers)

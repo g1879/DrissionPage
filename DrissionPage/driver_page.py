@@ -60,10 +60,11 @@ class DriverPage(object):
         """返回网页title"""
         return self.driver.title
 
-    def get(self, url: str, go_anyway: bool = False) -> Union[None, bool]:
+    def get(self, url: str, go_anyway: bool = False, show_errmsg: bool = False) -> Union[None, bool]:
         """访问url                                            \n
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
+        :param show_errmsg: 是否显示和抛出异常
         :return: 目标url是否可用
         """
         to_url = quote(url, safe='/:&?=%;#@')
@@ -72,6 +73,8 @@ class DriverPage(object):
         self._url = to_url
         self.driver.get(to_url)
         self._url_available = self.check_page()
+        if self._url_available is False and show_errmsg:
+            raise ConnectionError('Connect error.')
         return self._url_available
 
     def ele(self,
