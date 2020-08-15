@@ -364,7 +364,7 @@ class SessionPage(object):
                 try:
                     charset = re_result.group(1)
                 except:
-                    charset = 'utf-8'
+                    charset = r.apparent_encoding
             else:
                 charset = headers['Content-Type'].split('=')[1]
             # 避免存在退格符导致乱码或解析出错
