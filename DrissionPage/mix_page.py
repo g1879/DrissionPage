@@ -154,10 +154,18 @@ class MixPage(Null, SessionPage, DriverPage):
         u = url or self.session_url
         self._drission.cookies_to_driver(u)
 
-    def check_page(self) -> Union[bool, None]:
-        return
-        # if self.session_url == self.url:
-        #     return True if self._response and self._response.ok else False
+    def check_page(self, by_requests: bool = False) -> Union[bool, None]:
+        """d模式时检查网页是否符合预期                \n
+        默认由response状态检查，可重载实现针对性检查   \n
+        :param by_requests: 是否用内置response检查
+        :return: bool或None，None代表不知道结果
+        """
+        if self.session_url and self.session_url == self.url:
+            return self._response.ok
+        if by_requests:
+            self.cookies_to_session()
+            r = self._make_response(self.url, **{'timeout': 3})[0]
+            return r.ok if r else False
 
     # ----------------重写SessionPage的函数-----------------------
 
@@ -167,7 +175,7 @@ class MixPage(Null, SessionPage, DriverPage):
              go_anyway: bool = False,
              show_errmsg: bool = False,
              **kwargs) -> Union[bool, None]:
-        """用post方式跳转到url                                  \n
+        """用post方式跳转到url                                 \n
         post前先转换模式，但不跳转
         :param url: 目标url
         :param data: 提交的数据

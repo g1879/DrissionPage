@@ -4,10 +4,10 @@
 # Introduction
 ***
 
-DrissionPage, the combination of driver and session, is a python-based Web automation operation integration tool.
-It realizes the seamless switching between selenium and requests.
-Therefore, the convenience of selenium and the high efficiency of requests can be balanced.
-It uses POM mode to encapsulate common methods of page elements, which is very suitable for automatic operation function expansion.
+DrissionPage, the combination of driver and session, is a python-based Web automation operation integration tool.  
+It realizes the seamless switching between selenium and requests.  
+Therefore, the convenience of selenium and the high efficiency of requests can be balanced.  
+It uses POM mode to encapsulate common methods of page elements, which is very suitable for automatic operation function expansion.  
 What's even better is that its usage is very concise and user-friendly, with a small amount of code and friendly to novices.  
 
 **Project address：**
@@ -177,9 +177,9 @@ If you only use session mode, you can skip this section.
 
 There are three ways to configure the path:
 
--Write two paths to system variables.
--Pass in the path manually when using it.
--Write the path to the ini file of this library (recommended).
+- Write two paths to system variables.
+- Pass in the path manually when using it.
+- Write the path to the ini file of this library (recommended).
 
 If you choose the third method, please run these lines of code before using the library for the first time, and record these two paths in the ini file.
 
@@ -217,9 +217,9 @@ cache_path # Cache path
 
 Tips：
 
--Different projects may require different versions of chrome and chromedriver. You can also save multiple ini files to use as needed.
--It is recommended to use the green version of chrome, and manually set the path to avoid browser upgrades that do not match the chromedriver version.
--It is recommended to set debugger_address when debugging a project, and use a manually opened browser to debug, saving time and effort.
+- Different projects may require different versions of chrome and chromedriver. You can also save multiple ini files to use as needed.
+- It is recommended to use the green version of chrome, and manually set the path to avoid browser upgrades that do not match the chromedriver version.
+- It is recommended to set debugger_address when debugging a project, and use a manually opened browser to debug, saving time and effort.
 
 
 
@@ -811,7 +811,7 @@ Parameter Description:
   - page.ele('@class:ele_class')                      - Return the first class element containing ele_class
   - page.ele('@name=ele_name')                    - Return the first element whose name is equal to ele_name
   - page.ele('@placeholder')                            - Return the first element with placeholder attribute
-  - page.ele('tag:p')                                          - Return the first <p> element
+  - page.ele('tag:p')                                          - Return the first p element
   - page.ele('tag:div@class:ele_class')            - Return the first class div element with ele_class
   - page.ele('tag:div@class=ele_class')           - Return the first div element whose class is equal to ele_class
   - page.ele('tag:div@text():some_text')           - Returns the first div element whose text contains some_text
@@ -907,9 +907,13 @@ The following methods and attributes only take effect in driver mode, and will a
 
 ### check_page()
 
-​	check_page() -> bool
+​	check_page(by_requests: bool = False) -> Union[bool, None]
 
-​	After the subclass is derived, it is used to check whether the domain name meets expectations, and the function is implemented by the subclass.
+​	In d mode, check whether the web page meets expectations. The response status is checked by default, and can be overloaded to achieve targeted checks.
+
+​	Parameter Description:
+
+- by_requests  - 强制使用内置response进行检查
 
 ### run_script()
 

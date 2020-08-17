@@ -906,9 +906,13 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### check_page()
 
-​	check_page() -> bool
+​	check_page(by_requests: bool = False) -> Union[bool, None]
 
-​	派生子类后用于检查域名是否符合预期，功能由子类实现。
+​	d模式时检查网页是否符合预期。默认由response状态检查，可重载实现针对性检查。
+
+​	参数说明：
+
+- by_requests  - 强制使用内置response进行检查
 
 ### run_script()
 
