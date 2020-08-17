@@ -324,7 +324,7 @@ class SessionPage(object):
         :param data: post方式要提交的数据
         :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 其它参数
-        :return: Response对象
+        :return: tuple，第一位为Response或None，第二位为出错信息或'Sussess'
         """
         if mode not in ['get', 'post']:
             raise ValueError("Argument mode can only be 'get' or 'post'.")
