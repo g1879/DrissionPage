@@ -155,7 +155,7 @@ class SessionPage(object):
             return
         self._url = to_url
         self._response = self._make_response(to_url, show_errmsg=show_errmsg, **kwargs)[0]
-        if not self._response:
+        if self._response is None:
             self._url_available = False
         else:
             try:
@@ -190,7 +190,7 @@ class SessionPage(object):
             return
         self._url = to_url
         self._response = self._make_response(to_url, mode='post', data=data, show_errmsg=show_errmsg, **kwargs)[0]
-        if not self._response:
+        if self._response is None:
             self._url_available = False
         else:
             try:
@@ -234,10 +234,14 @@ class SessionPage(object):
             kwargs['timeout'] = 20
 
         r, info = self._make_response(file_url, mode='get', show_errmsg=show_errmsg, **kwargs)
-        if not r:
+        if r is None:
             if show_msg:
                 print(info)
             return False, info
+        if not r.ok:
+            if show_errmsg:
+                raise ConnectionError(f'Status code: {r.status_code}.')
+            return False, f'Status code: {r.status_code}.'
         # -------------------获取文件名-------------------
         # header里有文件名，则使用它，否则在url里截取，但不能保证url包含文件名
         if 'Content-disposition' in r.headers:
@@ -298,9 +302,16 @@ class SessionPage(object):
                             rate = downloaded_size / file_size if downloaded_size < file_size else 1
                             print('\r {:.0%} '.format(rate), end="")
         except Exception as e:
+            if show_errmsg:
+                raise ConnectionError(e)
             download_status, info = False, f'Download failed.\n{e}'
         else:
-            download_status, info = (False, 'File size is 0.') if full_path.stat().st_size == 0 else (True, 'Success.')
+            if full_path.stat().st_size == 0:
+                if show_errmsg:
+                    raise ValueError('File size is 0.')
+                download_status, info = False, 'File size is 0.'
+            else:
+                download_status, info = True, 'Success.'
         finally:
             # 删除下载出错文件
             if not download_status and full_path.exists():
