@@ -13,7 +13,7 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 - https://github.com/g1879/DrissionPage
 - https://gitee.com/g1879/DrissionPage
 
-**示例地址：** [使用DrissionPage爬取常见网站](https://gitee.com/g1879/DrissionPage-demos)（完善中）
+**示例地址：** [使用DrissionPage爬取常见网站](https://gitee.com/g1879/DrissionPage-demos)
 
 **联系邮箱：** g1879@qq.com
 
@@ -916,13 +916,14 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### run_script()
 
-​	run_script(script: str) -> Any
+​	run_script(script: str, *args) -> Any
 
 ​	执行JavaScript代码。
 
 ​	参数说明：
 
-- script - JavaScript代码文本
+- script  - JavaScript代码文本
+- args  - 传入的参数
 
 ### create_tab()
 
@@ -1242,13 +1243,14 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### run_script()
 
-​	run_script(script: str) -> Any
+​	run_script(script: str, *args) -> Any
 
-​	在元素上运行JavaScript。
+​	执行js代码，传入自己为第一个参数。
 
 ​	参数说明：
 
 - script  - JavaScript文本
+- args  - 传入的参数
 
 ### submit()
 
@@ -1701,9 +1703,9 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- driver_path              - chromedriver.exe路径
-- chrome_path           - chrome.exe路径
-- debugger_address  - 调试浏览器地址，例：127.0.0.1:9222
+- driver_path　　　　　- chromedriver.exe路径
+- chrome_path　　　  - chrome.exe路径
+- debugger_address　- 调试浏览器地址，例：127.0.0.1:9222
 - download_path        - 下载文件路径
 - global_tmp_path      - 临时文件夹路径
 - user_data_path        - 用户数据路径
@@ -1718,8 +1720,8 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- arg     - 属性名
-- value  - 属性值，有值的属性传入值，没有的传入bool
+- arg　　- 属性名
+- value　- 属性值，有值的属性传入值，没有的传入bool
 
 ### set_headless()
 
@@ -1729,7 +1731,7 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off  - 是否开启headless模式
+- on_off　- 是否开启headless模式
 
 ### set_no_imgs()
 
@@ -1739,7 +1741,7 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off  - 是否开启无图模式
+- on_off　- 是否开启无图模式
 
 ### set_no_js()
 
@@ -1749,7 +1751,7 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off  - 是否开启禁用JS模式
+- on_off　- 是否开启禁用JS模式
 
 ### set_mute()
 
@@ -1759,7 +1761,7 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- on_off  - 是否开启静音模式
+- on_off　- 是否开启静音模式
 
 ### set_user_agent()
 
@@ -1769,7 +1771,7 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- user_agent  - user_agent值
+- user_agent　- user_agent值
 
 ### set_proxy()
 
@@ -1779,7 +1781,7 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- proxy  - 代理值
+- proxy　- 代理值
 
 ### check_driver_version()
 
@@ -1789,5 +1791,5 @@ chrome的配置太难记，所以把常用的配置写成简单的方法，调�
 
 ​	参数说明：
 
-- driver_path     - chromedriver.exe路径
-- chrome_path  - chrome.exe路径
+- driver_path　　- chromedriver.exe路径
+- chrome_path　- chrome.exe路径

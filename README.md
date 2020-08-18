@@ -917,13 +917,14 @@ The following methods and attributes only take effect in driver mode, and will a
 
 ### run_script()
 
-​	run_script(script: str) -> Any
+​	run_script(script: str, *args) -> Any
 
 ​	Execute JavaScript code.
 
 ​	Parameter Description:
 
 - script  - JavaScript code text
+- args  - arguments
 
 ### create_tab()
 
@@ -1243,13 +1244,14 @@ Parameter Description:
 
 ### run_script()
 
-​	run_script(script: str) -> Any
+​	run_script(script: str, *args) -> Any
 
-​	Run JavaScript on the element.
+​	Execute js code, pass self as the first parameter.
 
 ​	Parameter Description:
 
 - script - JavaScript text
+- args  - arguments
 
 ### submit()
 
