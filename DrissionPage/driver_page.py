@@ -216,12 +216,13 @@ class DriverPage(object):
         """
         return None
 
-    def run_script(self, script: str) -> Any:
-        """执行js                 \n
+    def run_script(self, script: str, *args) -> Any:
+        """执行js代码                 \n
         :param script: js文本
+        :param args: 传入的参数
         :return: js执行结果
         """
-        return self.driver.execute_script(script)
+        return self.driver.execute_script(script, *args)
 
     @property
     def tabs_count(self) -> int:

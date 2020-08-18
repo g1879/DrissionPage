@@ -290,12 +290,13 @@ class DriverElement(DrissionElement):
             print(e)
             return False
 
-    def run_script(self, script: str) -> Any:
-        """执行js                   \n
+    def run_script(self, script: str, *args) -> Any:
+        """执行js代码，传入自己为第一个参数  \n
         :param script: js文本
+        :param args: 传入的参数
         :return: js执行结果
         """
-        return self.inner_ele.parent.execute_script(script, self.inner_ele)
+        return self.inner_ele.parent.execute_script(script, self.inner_ele, *args)
 
     def submit(self) -> None:
         """提交表单"""
