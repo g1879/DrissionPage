@@ -99,8 +99,12 @@ class SessionPage(object):
         """
         if isinstance(loc_or_ele, str):
             loc_or_ele = get_loc_from_str(loc_or_ele)
+            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith('/'):
+                loc_or_ele = 'xpath', f'//{loc_or_ele[1]}'
         elif isinstance(loc_or_ele, tuple) and len(loc_or_ele) == 2:
             loc_or_ele = translate_loc_to_xpath(loc_or_ele)
+            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith('/'):
+                loc_or_ele = 'xpath', f'//{loc_or_ele[1]}'
         elif isinstance(loc_or_ele, SessionElement):
             return loc_or_ele
         elif isinstance(loc_or_ele, Element):

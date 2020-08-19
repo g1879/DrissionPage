@@ -148,9 +148,10 @@ class SessionElement(DrissionElement):
 
         loc_str = None
         if loc_or_str[0] == 'xpath':
-            # Element的html是包含自己的，要如下处理，使其只检索下级的
-            loc_str = loc_or_str[1] if loc_or_str[1].startswith('.') else f'.{loc_or_str[1]}'
+            loc_str = loc_or_str[1] if loc_or_str[1].startswith(('.', '/')) else f'.//{loc_or_str[1]}'
+            loc_str = loc_str if loc_str.startswith('.') else f'.{loc_str}'
         elif loc_or_str[0] == 'css selector':
+            # Element的html是包含自己的，要如下处理，使其只检索下级的
             loc_str = loc_or_str[1] if loc_or_str[1][0] in '>, ' else f' {loc_or_str[1]}'
             loc_str = f':root>{self.tag}{loc_str}'
         loc_or_str = loc_or_str[0], loc_str

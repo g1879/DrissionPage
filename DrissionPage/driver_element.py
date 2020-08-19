@@ -213,7 +213,8 @@ class DriverElement(DrissionElement):
 
         if loc_or_str[0] == 'xpath':
             # 确保查询语句最前面是.
-            loc_str = f'.{loc_or_str[1]}' if not loc_or_str[1].startswith('.') else loc_or_str[1]
+            loc_str = loc_or_str[1] if loc_or_str[1].startswith(('.', '/')) else f'.//{loc_or_str[1]}'
+            loc_str = loc_str if loc_str.startswith('.') else f'.{loc_str}'
             loc_or_str = loc_or_str[0], loc_str
         else:
             if loc_or_str[1].lstrip().startswith('>'):
