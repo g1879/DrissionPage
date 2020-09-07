@@ -6,7 +6,7 @@
 """
 from glob import glob
 from pathlib import Path
-from time import time
+from time import time, sleep
 from typing import Union, List, Any
 from urllib.parse import quote
 
@@ -60,21 +60,49 @@ class DriverPage(object):
         """返回网页title"""
         return self.driver.title
 
-    def get(self, url: str, go_anyway: bool = False, show_errmsg: bool = False) -> Union[None, bool]:
+    def _try_to_get(self,
+                    to_url: str,
+                    times: int = 0,
+                    interval: float = 1,
+                    show_errmsg: bool = False, ):
+        """尝试连接，重试若干次                            \n
+        :param to_url: 要访问的url
+        :param times: 重试次数
+        :param interval: 重试间隔（秒）
+        :param show_errmsg: 是否抛出异常
+        :return: 是否成功
+        """
+        self.driver.get(to_url)
+        is_ok = self.check_page()
+        while times and is_ok is False:
+            sleep(interval)
+            self.driver.get(to_url)
+            is_ok = self.check_page()
+            times -= 1
+        if is_ok is False and show_errmsg:
+            raise ConnectionError('Connect error.')
+        return is_ok
+
+    def get(self,
+            url: str,
+            go_anyway: bool = False,
+            show_errmsg: bool = False,
+            retry: int = 0,
+            interval: float = 1,
+            ) -> Union[None, bool]:
         """访问url                                            \n
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
+        :param retry: 重试次数
+        :param interval: 重试间隔（秒）
         :return: 目标url是否可用
         """
         to_url = quote(url, safe='/:&?=%;#@')
         if not url or (not go_anyway and self.url == to_url):
             return
         self._url = to_url
-        self.driver.get(to_url)
-        self._url_available = self.check_page()
-        if self._url_available is False and show_errmsg:
-            raise ConnectionError('Connect error.')
+        self._url_available = self._try_to_get(to_url, times=retry, interval=interval, show_errmsg=show_errmsg)
         return self._url_available
 
     def ele(self,

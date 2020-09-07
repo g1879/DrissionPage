@@ -11,6 +11,7 @@ from requests_html import HTMLSession, Element
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
+from .config import DriverOptions
 from .drission import Drission
 from .driver_element import DriverElement
 from .driver_page import DriverPage
@@ -32,16 +33,23 @@ class MixPage(Null, SessionPage, DriverPage):
     这些功能由DriverPage和SessionPage类实现。
     """
 
-    def __init__(self, drission: Union[Drission, str] = None, mode: str = 'd', timeout: float = 10):
-        """初始化函数                                                              \n
+    def __init__(self,
+                 drission: Union[Drission, str] = None,
+                 mode: str = 'd',
+                 timeout: float = 10,
+                 driver_options: Union[dict, DriverOptions] = None,
+                 session_options: dict = None):
+        """初始化函数                                                                         \n
         :param drission: 整合了driver和session的类，传入's'或'd'时快速配置相应模式
         :param mode: 默认使用selenium的d模式
+        :param driver_options: 浏览器设置，没有传入drission参数时会用这个设置新建Drission对象
+        :param session_options: requests设置，没有传入drission参数时会用这个设置新建Drission对象
         """
         super().__init__()
         if drission in ['s', 'd', 'S', 'D']:
             mode = drission.lower()
             drission = None
-        self._drission = drission or Drission()
+        self._drission = drission or Drission(driver_options, session_options)
         self._session = None
         self._driver = None
         self._url = None
@@ -227,20 +235,46 @@ class MixPage(Null, SessionPage, DriverPage):
         return super().chrome_downloading(path)
 
     # ----------------以下为共用函数-----------------------
+    def _try_to_get(self,
+                    to_url: str,
+                    times: int = 0,
+                    interval: float = 1,
+                    show_errmsg: bool = False,
+                    **kwargs):
+        """尝试连接，重试若干次                            \n
+        :param to_url: 要访问的url
+        :param times: 重试次数
+        :param interval: 重试间隔（秒）
+        :param show_errmsg: 是否抛出异常
+        :param kwargs: 连接参数
+        :return: s模式为HTMLResponse对象，d模式为bool
+        """
+        if self._mode == 'd':
+            return super(SessionPage, self)._try_to_get(to_url, times, interval, show_errmsg)
+        elif self._mode == 's':
+            return super()._try_to_get(to_url, times, interval, show_errmsg, **kwargs)
 
-    def get(self, url: str, go_anyway=False, show_errmsg: bool = False, **kwargs) -> Union[bool, None]:
+    def get(self,
+            url: str,
+            go_anyway=False,
+            show_errmsg: bool = False,
+            retry: int = 2,
+            interval: float = 1,
+            **kwargs) -> Union[bool, None]:
         """跳转到一个url                                         \n
         跳转前先同步cookies，跳转后判断目标url是否可用
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
+        :param retry: 重试次数
+        :param interval: 重试间隔（秒）
         :param kwargs: 连接参数，s模式专用
         :return: url是否可用
         """
         if self._mode == 'd':
-            return super(SessionPage, self).get(url, go_anyway, show_errmsg)
+            return super(SessionPage, self).get(url, go_anyway, show_errmsg, retry, interval)
         elif self._mode == 's':
-            return super().get(url, go_anyway, show_errmsg, **kwargs)
+            return super().get(url, go_anyway, show_errmsg, retry, interval, **kwargs)
 
     def ele(self,
             loc_or_ele: Union[tuple, str, DriverElement, SessionElement, Element, WebElement],

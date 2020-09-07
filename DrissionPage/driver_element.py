@@ -124,6 +124,15 @@ class DriverElement(DrissionElement):
         return self.run_script(js)
 
     @property
+    def shadow_root(self):
+        e = self.run_script('return arguments[0].shadowRoot')
+        if e:
+            from .shadow_root_element import ShadowRootElement
+            return ShadowRootElement(e, self)
+        else:
+            return None
+
+    @property
     def parent(self):
         """返回父级元素"""
         return self.parents()
@@ -199,7 +208,7 @@ class DriverElement(DrissionElement):
             ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的子元素                        \n
             ele.ele('css:div.ele_class')                - 返回第一个符合css selector的子元素                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param mode: 'single' 或 'all‘，对应查找一个或全部
+        :param mode: 'single' 或 'all'，对应查找一个或全部
         :param timeout: 查找元素超时时间
         :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象
