@@ -9,7 +9,7 @@ from pathlib import Path
 from random import randint
 from re import search as re_SEARCH
 from re import sub as re_SUB
-from time import time
+from time import time, sleep
 from typing import Union, List
 from urllib.parse import urlparse, quote
 
@@ -142,30 +142,60 @@ class SessionPage(object):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
         return self.ele(loc_or_str, mode='all', show_errmsg=True)
 
+    def _try_to_get(self,
+                    to_url: str,
+                    times: int = 0,
+                    interval: float = 1,
+                    show_errmsg: bool = False,
+                    **kwargs) -> HTMLResponse:
+        """尝试连接，重试若干次                            \n
+        :param to_url: 要访问的url
+        :param times: 重试次数
+        :param interval: 重试间隔（秒）
+        :param show_errmsg: 是否抛出异常
+        :param kwargs: 连接参数
+        :return: HTMLResponse对象
+        """
+        r = self._make_response(to_url, show_errmsg=show_errmsg, **kwargs)[0]
+        while times and (not r or r.content == b''):
+            if r is not None and r.status_code in (403, 404):
+                break
+            print('重试', to_url)
+            sleep(interval)
+            r = self._make_response(to_url, show_errmsg=show_errmsg, **kwargs)[0]
+            times -= 1
+        return r
+
     def get(self,
             url: str,
             go_anyway: bool = False,
             show_errmsg: bool = False,
+            retry: int = 0,
+            interval: float = 1,
             **kwargs) -> Union[bool, None]:
         """用get方式跳转到url                                 \n
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
+        :param retry: 重试次数
+        :param interval: 重试间隔（秒）
         :param kwargs: 连接参数
         :return: url是否可用
         """
-        to_url = quote(url, safe='/:&?=%;#@')
+        to_url = quote(url, safe='/:&?=%;#@+')
         if not url or (not go_anyway and self.url == to_url):
             return
         self._url = to_url
-        self._response = self._make_response(to_url, show_errmsg=show_errmsg, **kwargs)[0]
+        self._response = self._try_to_get(to_url, times=retry, interval=interval, show_errmsg=show_errmsg, **kwargs)
         if self._response is None:
             self._url_available = False
         else:
-            try:
-                self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
-            except:
-                pass
+            stream = tuple(x for x in kwargs if x.lower() == 'stream')
+            if (not stream or not kwargs[stream[0]]) and not self.session.stream:
+                try:
+                    self._response.html.encoding = self._response.encoding  # 修复requests_html丢失编码方式的bug
+                except:
+                    pass
 
             if self._response.ok:
                 self._url_available = True
@@ -247,31 +277,29 @@ class SessionPage(object):
                 raise ConnectionError(f'Status code: {r.status_code}.')
             return False, f'Status code: {r.status_code}.'
         # -------------------获取文件名-------------------
-        # header里有文件名，则使用它，否则在url里截取，但不能保证url包含文件名
-        if 'Content-disposition' in r.headers:
+        if 'Content-disposition' in r.headers:  # header里有文件名，则使用它
             file_name = r.headers['Content-disposition'].split('"')[1].encode('ISO-8859-1').decode('utf-8')
-        elif os_PATH.basename(file_url):
+        elif os_PATH.basename(file_url):  # 在url里获取文件名
             file_name = os_PATH.basename(file_url).split("?")[0]
-        else:
+        else:  # 找不到则用时间和随机数生成文件名
             file_name = f'untitled_{time()}_{randint(0, 100)}'
-
-        file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()
+        file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()  # 去除非法字符
+        # -------------------重命名文件名-------------------
         if rename:  # 重命名文件，不改变扩展名
             rename = re_SUB(r'[\\/*:|<>?"]', '', rename).strip()
             ext_name = file_name.split('.')[-1]
-            if rename.lower().endswith(f'.{ext_name}'.lower()) or ext_name == file_name:
+            if '.' in rename or ext_name == file_name:
                 full_name = rename
             else:
                 full_name = f'{rename}.{ext_name}'
         else:
             full_name = file_name
-
+        # -------------------生成路径-------------------
         goal_Path = Path(goal_path)
         goal_path = ''
         for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
             goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re_SUB(r'[*:|<>?"]', '', i).strip()
             goal_path += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
-
         goal_Path = Path(goal_path)
         goal_Path.mkdir(parents=True, exist_ok=True)
         goal_path = goal_Path.absolute()
@@ -287,8 +315,8 @@ class SessionPage(object):
                 full_path = Path(f'{goal_path}\\{full_name}')
             else:
                 raise ValueError("Argument file_exists can only be 'skip', 'overwrite', 'rename'.")
-
-        if show_msg:  # 打印要下载的文件
+        # -------------------打印要下载的文件-------------------
+        if show_msg:
             print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
             print(f'Downloading to: {goal_path}')
 
@@ -317,9 +345,8 @@ class SessionPage(object):
             else:
                 download_status, info = True, 'Success.'
         finally:
-            # 删除下载出错文件
             if not download_status and full_path.exists():
-                full_path.unlink()
+                full_path.unlink()  # 删除下载出错文件
             r.close()
         # -------------------显示并返回值-------------------
         if show_msg:
@@ -343,7 +370,7 @@ class SessionPage(object):
         """
         if mode not in ['get', 'post']:
             raise ValueError("Argument mode can only be 'get' or 'post'.")
-        url = quote(url, safe='/:&?=%;#@')
+        url = quote(url, safe='/:&?=%;#@+')
 
         # 设置referer和host值
         kwargs_set = set(x.lower() for x in kwargs)
@@ -374,15 +401,27 @@ class SessionPage(object):
             return None, e
         else:
             headers = dict(r.headers)
-            if 'Content-Type' not in headers or 'charset' not in headers['Content-Type']:
-                re_result = re_SEARCH(r'<meta.*?charset=[ \'"]*([^"\' />]+).*?>', r.text)
-                try:
-                    charset = re_result.group(1)
-                except:
-                    charset = r.apparent_encoding
+            content_type = tuple(x for x in headers if x.lower() == 'content-type')
+            stream = tuple(x for x in kwargs if x.lower() == 'stream')
+            charset = None
+            if not content_type or 'charset' not in headers[content_type[0]].lower():
+                if (not stream or not kwargs[stream[0]]) and not self.session.stream:
+                    # ========================
+                    re_result = None
+                    for chunk in r.iter_content(chunk_size=512):
+                        re_result = re_SEARCH(r'<meta.*?charset=[ \'"]*([^"\' />]+).*?>', chunk.decode())
+                        break
+                    # ========================
+                    # re_result = re_SEARCH(r'<meta.*?charset=[ \'"]*([^"\' />]+).*?>', r.text)
+                    try:
+                        charset = re_result.group(1)
+                    except:
+                        charset = r.apparent_encoding
             else:
-                charset = headers['Content-Type'].split('=')[1]
+                charset = headers[content_type[0]].split('=')[1]
             # 避免存在退格符导致乱码或解析出错
-            r._content = r.content if 'stream' in kwargs and kwargs['stream'] else r.content.replace(b'\x08', b'\\b')
-            r.encoding = charset
+            if (not stream or not kwargs[stream[0]]) and not self.session.stream:
+                r._content = r.content.replace(b'\x08', b'\\b')
+            if charset:
+                r.encoding = charset
             return r, 'Success'
