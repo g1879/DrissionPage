@@ -375,4 +375,5 @@ class MixPage(Null, SessionPage, DriverPage):
         """关闭session，切换到d模式"""
         self.change_mode('d')
         self._session = None
+        self._response = None
         self.drission.close_session()
