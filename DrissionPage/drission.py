@@ -22,33 +22,46 @@ class Drission(object):
     """Drission类整合了WebDriver对象和HTLSession对象，可按要求创建、关闭及同步cookies"""
 
     def __init__(self,
-                 driver_options: Union[dict, Options] = None,
-                 session_options: dict = None,
+                 driver_or_options: Union[WebDriver, dict, Options] = None,
+                 session_or_options: Union[Session, HTMLSession, dict] = None,
                  ini_path: str = None,
                  proxy: dict = None):
-        """初始化配置信息，但不生成session和driver实例              \n
-        :param driver_options: chrome设置，Options类或设置字典
-        :param session_options: session设置
-        :param ini_path: ini文件路径'
+        """初始化，可接收现成的WebDriver和Session对象，或接收它们的配置信息          \n
+        :param driver_or_options: driver对象或chrome设置，Options类或设置字典
+        :param session_or_options: session、HTMLSession对象或session设置
+        :param ini_path: ini文件路径
         :param proxy: 代理设置
         """
         self._session = None
         self._driver = None
         self._driver_path = 'chromedriver'
         self._proxy = proxy
-        if session_options is None:
-            self._session_options = OptionsManager(ini_path).get_option('session_options')
+        if isinstance(session_or_options, HTMLSession):
+            self._session = session_or_options
+        elif isinstance(session_or_options, Session):
+            self._session = HTMLSession()
+            for key in session_or_options.__dict__:  # session对象强制升级为子类HTMLSession对象
+                if key != 'hooks':
+                    self._session.__dict__[key] = session_or_options.__dict__[key]
+                else:
+                    self._session.hooks['response'].extend(session_or_options.hooks['response'])
         else:
-            self._session_options = session_options
-        if driver_options is None:
-            om = OptionsManager(ini_path)
-            self._driver_options = om.get_option('chrome_options')
-            if 'chromedriver_path' in om.get_option('paths') and om.get_option('paths')['chromedriver_path']:
-                self._driver_path = om.get_option('paths')['chromedriver_path']
+            if session_or_options is None:
+                self._session_options = OptionsManager(ini_path).get_option('session_options')
+            else:
+                self._session_options = session_or_options
+        if isinstance(driver_or_options, WebDriver):
+            self._driver = driver_or_options
         else:
-            self._driver_options = _chrome_options_to_dict(driver_options)
-            if 'driver_path' in self._driver_options and self._driver_options['driver_path']:
-                self._driver_path = self._driver_options['driver_path']
+            if driver_or_options is None:
+                om = OptionsManager(ini_path)
+                self._driver_options = om.get_option('chrome_options')
+                if 'chromedriver_path' in om.get_option('paths') and om.get_option('paths')['chromedriver_path']:
+                    self._driver_path = om.get_option('paths')['chromedriver_path']
+            else:
+                self._driver_options = _chrome_options_to_dict(driver_or_options)
+                if 'driver_path' in self._driver_options and self._driver_options['driver_path']:
+                    self._driver_path = self._driver_options['driver_path']
 
     @property
     def session(self) -> HTMLSession:

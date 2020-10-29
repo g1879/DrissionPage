@@ -61,6 +61,28 @@ class DriverElement(DrissionElement):
         """返回元素内所有文本"""
         return unescape(self.attr('innerText')).replace('\xa0', ' ')
 
+    def texts(self, text_node_only: bool = False) -> List[str]:
+        """返回元素内文本节点列表"""
+        s = '' if text_node_only else '''else if(childs[i].nodeType === Node.ELEMENT_NODE){
+                    texts.push(childs[i].innerText)
+                }'''
+        js = '''
+        function e(el) {
+            if (!(el instanceof Element)) return;
+            var texts = new Array();
+            var childs = el.childNodes;
+
+            for(var i = 0; i <childs.length ; i++) {
+                if(childs[i].nodeType === Node.TEXT_NODE){
+                    texts.push(childs[i].nodeValue)
+                }''' + s + '''
+            } 
+            return texts;
+        }
+        return e(arguments[0]);
+        '''
+        return self.run_script(js)
+
     @property
     def html(self) -> str:
         """返回元素innerHTML文本"""
@@ -73,6 +95,7 @@ class DriverElement(DrissionElement):
 
     @property
     def css_path(self) -> str:
+        """返回当前元素的css路径"""
         js = '''
         function e(el) {
             if (!(el instanceof Element)) return;
@@ -98,6 +121,7 @@ class DriverElement(DrissionElement):
 
     @property
     def xpath(self) -> str:
+        """返回当前元素的xpath路径"""
         js = '''
         function e(el) {
             if (!(el instanceof Element)) return;
@@ -125,12 +149,11 @@ class DriverElement(DrissionElement):
 
     @property
     def shadow_root(self):
+        """返回当前元素的shadow_root元素路径"""
         e = self.run_script('return arguments[0].shadowRoot')
         if e:
             from .shadow_root_element import ShadowRootElement
             return ShadowRootElement(e, self)
-        else:
-            return None
 
     @property
     def parent(self):

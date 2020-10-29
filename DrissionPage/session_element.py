@@ -36,6 +36,13 @@ class SessionElement(DrissionElement):
         """返回元素内所有文本"""
         return unescape(self._inner_ele.text).replace('\xa0', ' ')
 
+    def texts(self, text_node_only: bool = False) -> List[str]:
+        nodes = self.eles('xpath:./*/node()')
+        if text_node_only:
+            return [x for x in nodes if isinstance(x, str)]
+        else:
+            return [x if isinstance(x, str) else x.text for x in nodes]
+
     @property
     def html(self) -> str:
         """返回元素innerHTML文本"""
@@ -157,6 +164,7 @@ class SessionElement(DrissionElement):
         loc_or_str = loc_or_str[0], loc_str
 
         return execute_session_find(self.inner_ele, loc_or_str, mode, show_errmsg)
+        # return execute_session_find(self, loc_or_str, mode, show_errmsg)
 
     def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False):
         """返回当前元素下级所有符合条件的子元素                                                           \n
@@ -217,6 +225,10 @@ class SessionElement(DrissionElement):
                 return ' '.join(self._inner_ele.attrs['class'])
             elif attr == 'text':
                 return self.text
+            elif attr == 'outerHTML':
+                return self.inner_ele.html
+            elif attr == 'innerHTML':
+                return self.html
             else:
                 return self._inner_ele.attrs[attr]
         except:
@@ -224,6 +236,7 @@ class SessionElement(DrissionElement):
 
 
 def execute_session_find(page_or_ele: BaseParser,
+                         # def execute_session_find(page_or_ele,
                          loc: tuple,
                          mode: str = 'single',
                          show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement]]:
@@ -242,18 +255,24 @@ def execute_session_find(page_or_ele: BaseParser,
     try:
         ele = None
         if loc_by == 'xpath':
-            if 'PyQuery' in str(type(page_or_ele.element)):  # 从页面查找
+            if 'PyQuery' in str(type(page_or_ele.element)):
+                # 从页面查找。
                 ele = page_or_ele.xpath(loc_str)
-            elif 'HtmlElement' in str(type(page_or_ele.element)):  # 从元素查找
-                elements = page_or_ele.element.xpath(loc_str)
-                ele = [Element(element=e, url=page_or_ele.url) for e in elements]
+            elif 'HtmlElement' in str(type(page_or_ele.element)):
+                # 从元素查找。这样区分是为了能找到上级元素
+                try:
+                    elements = page_or_ele.element.xpath(loc_str)
+                    ele = [Element(element=e, url=page_or_ele.url) for e in elements]
+                except AttributeError:
+                    ele = page_or_ele.xpath(loc_str)
         else:  # 用css selector获取
             ele = page_or_ele.find(loc_str)
 
         if mode == 'single':
-            return SessionElement(ele[0]) if ele else None
+            ele = ele[0] if ele else None
+            return SessionElement(ele) if isinstance(ele, Element) else ele
         elif mode == 'all':
-            return [SessionElement(e) for e in ele]
+            return [SessionElement(e) if isinstance(e, Element) else e for e in ele]
     except:
         if show_errmsg:
             print('Element(s) not found.', loc)

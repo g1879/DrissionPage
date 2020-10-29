@@ -114,6 +114,7 @@ class SessionPage(object):
         else:
             raise ValueError('Argument loc_or_str can only be tuple, str, SessionElement, Element.')
         return execute_session_find(self.response.html, loc_or_ele, mode, show_errmsg)
+        # return execute_session_find(self, loc_or_ele, mode, show_errmsg)
 
     def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False) -> List[SessionElement]:
         """返回页面中所有符合条件的元素                                                                    \n
@@ -235,6 +236,7 @@ class SessionPage(object):
                  goal_path: str = None,
                  rename: str = None,
                  file_exists: str = 'rename',
+                 post_data: dict = None,
                  show_msg: bool = False,
                  show_errmsg: bool = False,
                  **kwargs) -> tuple:
@@ -257,7 +259,10 @@ class SessionPage(object):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 20
 
-        r, info = self._make_response(file_url, mode='get', show_errmsg=show_errmsg, **kwargs)
+        if not post_data:
+            r, info = self._make_response(file_url, mode='get', show_errmsg=show_errmsg, **kwargs)
+        else:
+            r, info = self._make_response(file_url, mode='post', data=post_data, show_errmsg=show_errmsg, **kwargs)
         if r is None:
             if show_msg:
                 print(info)
