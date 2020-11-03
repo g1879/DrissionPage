@@ -4,7 +4,7 @@
 @Contact :   g1879@qq.com
 @File    :   mix_page.py
 """
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from requests import Response
 from requests_html import HTMLSession, Element
@@ -200,6 +200,7 @@ class MixPage(Null, SessionPage, DriverPage):
                  goal_path: str = None,
                  rename: str = None,
                  file_exists: str = 'rename',
+                 post_data: dict = None,
                  show_msg: bool = False,
                  show_errmsg: bool = False,
                  **kwargs) -> tuple:
@@ -209,6 +210,7 @@ class MixPage(Null, SessionPage, DriverPage):
         :param goal_path: 存放路径
         :param rename: 重命名文件，可不写扩展名
         :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
+        :param post_data: post方式的数据
         :param show_msg: 是否显示下载信息
         :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 连接参数
@@ -216,7 +218,7 @@ class MixPage(Null, SessionPage, DriverPage):
         """
         if self.mode == 'd':
             self.cookies_to_session()
-        return super().download(file_url, goal_path, rename, file_exists, show_msg, show_errmsg, **kwargs)
+        return super().download(file_url, goal_path, rename, file_exists, post_data, show_msg, show_errmsg, **kwargs)
 
     # ----------------重写DriverPage的函数-----------------------
 
@@ -277,10 +279,10 @@ class MixPage(Null, SessionPage, DriverPage):
             return super().get(url, go_anyway, show_errmsg, retry, interval, **kwargs)
 
     def ele(self,
-            loc_or_ele: Union[tuple, str, DriverElement, SessionElement, Element, WebElement],
+            loc_or_ele: Union[Tuple[str, str], str, DriverElement, SessionElement, Element, WebElement],
             mode: str = None,
             timeout: float = None,
-            show_errmsg: bool = False) -> Union[DriverElement, SessionElement]:
+            show_errmsg: bool = False) -> Union[DriverElement, SessionElement, str]:
         """返回页面中符合条件的元素，默认返回第一个                                                          \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -316,9 +318,9 @@ class MixPage(Null, SessionPage, DriverPage):
             return super(SessionPage, self).ele(loc_or_ele, mode=mode, timeout=timeout, show_errmsg=show_errmsg)
 
     def eles(self,
-             loc_or_str: Union[tuple, str],
+             loc_or_str: Union[Tuple[str, str], str],
              timeout: float = None,
-             show_errmsg: bool = False) -> Union[List[DriverElement], List[SessionElement]]:
+             show_errmsg: bool = False) -> Union[List[DriverElement or str], List[SessionElement or str]]:
         """返回页面中所有符合条件的元素                                                                   \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n

@@ -11,7 +11,7 @@ from random import randint
 from re import search as re_SEARCH
 from re import sub as re_SUB
 from time import time, sleep
-from typing import Union, List
+from typing import Union, List, Tuple
 from urllib import parse
 from urllib.parse import urlparse, quote
 
@@ -69,9 +69,9 @@ class SessionPage(object):
         return self.response.html.html
 
     def ele(self,
-            loc_or_ele: Union[tuple, str, SessionElement, Element],
+            loc_or_ele: Union[Tuple[str, str], str, SessionElement, Element],
             mode: str = None,
-            show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement], None]:
+            show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement or str], str, None]:
         """返回页面中符合条件的元素，默认返回第一个                                                          \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -99,24 +99,30 @@ class SessionPage(object):
         :param show_errmsg: 出现异常时是否打印信息
         :return: SessionElement对象
         """
-        if isinstance(loc_or_ele, str):
-            loc_or_ele = get_loc_from_str(loc_or_ele)
-            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith('/'):
-                loc_or_ele = 'xpath', f'//{loc_or_ele[1]}'
-        elif isinstance(loc_or_ele, tuple) and len(loc_or_ele) == 2:
-            loc_or_ele = translate_loc_to_xpath(loc_or_ele)
-            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith('/'):
-                loc_or_ele = 'xpath', f'//{loc_or_ele[1]}'
+        if isinstance(loc_or_ele, (str, tuple)):
+            if isinstance(loc_or_ele, str):
+                loc_or_ele = get_loc_from_str(loc_or_ele)
+            else:
+                if len(loc_or_ele) != 2:
+                    raise ValueError("Len of loc_or_ele must be 2 when it's a tuple.")
+                loc_or_ele = translate_loc_to_xpath(loc_or_ele)
+            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
+                loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
+
         elif isinstance(loc_or_ele, SessionElement):
             return loc_or_ele
+
         elif isinstance(loc_or_ele, Element):
             return SessionElement(loc_or_ele)
+
         else:
             raise ValueError('Argument loc_or_str can only be tuple, str, SessionElement, Element.')
-        return execute_session_find(self.response.html, loc_or_ele, mode, show_errmsg)
-        # return execute_session_find(self, loc_or_ele, mode, show_errmsg)
 
-    def eles(self, loc_or_str: Union[tuple, str], show_errmsg: bool = False) -> List[SessionElement]:
+        return execute_session_find(self.response.html, loc_or_ele, mode, show_errmsg)
+
+    def eles(self,
+             loc_or_str: Union[Tuple[str, str], str],
+             show_errmsg: bool = False) -> List[SessionElement or str]:
         """返回页面中所有符合条件的元素                                                                    \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n
@@ -245,6 +251,7 @@ class SessionPage(object):
         :param goal_path: 存放路径
         :param rename: 重命名文件，可不写扩展名
         :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
+        :param post_data: post方式的数据
         :param show_msg: 是否显示下载信息
         :param show_errmsg: 是否抛出和显示异常
         :param kwargs: 连接参数

@@ -7,14 +7,14 @@
 from glob import glob
 from pathlib import Path
 from time import time, sleep
-from typing import Union, List, Any
+from typing import Union, List, Any, Tuple
 from urllib.parse import quote
 
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from .common import get_loc_from_str, get_available_file_name
+from .common import get_loc_from_str, get_available_file_name, translate_loc_to_xpath
 from .driver_element import DriverElement, execute_driver_find
 
 
@@ -106,10 +106,10 @@ class DriverPage(object):
         return self._url_available
 
     def ele(self,
-            loc_or_ele: Union[tuple, str, DriverElement, WebElement],
+            loc_or_ele: Union[Tuple[str, str], str, DriverElement, WebElement],
             mode: str = None,
             timeout: float = None,
-            show_errmsg: bool = False) -> Union[DriverElement, List[DriverElement], None]:
+            show_errmsg: bool = False) -> Union[DriverElement, List[DriverElement or str], str, None]:
         """返回页面中符合条件的元素，默认返回第一个                                                         \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -138,24 +138,32 @@ class DriverPage(object):
         :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象
         """
-        if isinstance(loc_or_ele, str):
-            loc_or_ele = get_loc_from_str(loc_or_ele)
-            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith('/'):
-                loc_or_ele = 'xpath', f'//{loc_or_ele[1]}'
-        elif isinstance(loc_or_ele, tuple) and len(loc_or_ele) == 2:
-            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith('/'):
-                loc_or_ele = 'xpath', f'//{loc_or_ele[1]}'
+        if isinstance(loc_or_ele, (str, tuple)):
+            if isinstance(loc_or_ele, str):
+                loc_or_ele = get_loc_from_str(loc_or_ele)
+            else:
+                if len(loc_or_ele) != 2:
+                    raise ValueError("Len of loc_or_ele must be 2 when it's a tuple.")
+                loc_or_ele = translate_loc_to_xpath(loc_or_ele)
+            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
+                loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
+
         elif isinstance(loc_or_ele, DriverElement):
             return loc_or_ele
+
         elif isinstance(loc_or_ele, WebElement):
             return DriverElement(loc_or_ele, self.timeout)
+
         else:
             raise ValueError('Argument loc_or_str can only be tuple, str, DriverElement, DriverElement.')
 
         timeout = timeout or self.timeout
         return execute_driver_find(self.driver, loc_or_ele, mode, show_errmsg, timeout)
 
-    def eles(self, loc_or_str: Union[tuple, str], timeout: float = None, show_errmsg=False) -> List[DriverElement]:
+    def eles(self,
+             loc_or_str: Union[Tuple[str, str], str],
+             timeout: float = None,
+             show_errmsg=False) -> List[DriverElement or str]:
         """返回页面中所有符合条件的元素                                                                     \n
         示例：                                                                                            \n
         - 用loc元组查找：                                                                                 \n
