@@ -108,8 +108,7 @@ class DriverPage(object):
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, DriverElement, WebElement],
             mode: str = None,
-            timeout: float = None,
-            show_errmsg: bool = False) -> Union[DriverElement, List[DriverElement or str], str, None]:
+            timeout: float = None) -> Union[DriverElement, List[DriverElement or str], str, None]:
         """返回页面中符合条件的元素，默认返回第一个                                                         \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -135,9 +134,9 @@ class DriverPage(object):
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param mode: 'single' 或 'all‘，对应查找一个或全部
         :param timeout: 查找元素超时时间
-        :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象
         """
+        # 接收到字符串或元组，获取定位loc元组
         if isinstance(loc_or_ele, (str, tuple)):
             if isinstance(loc_or_ele, str):
                 loc_or_ele = get_loc_from_str(loc_or_ele)
@@ -145,25 +144,28 @@ class DriverPage(object):
                 if len(loc_or_ele) != 2:
                     raise ValueError("Len of loc_or_ele must be 2 when it's a tuple.")
                 loc_or_ele = translate_loc_to_xpath(loc_or_ele)
+
             if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
                 loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
 
+        # 接收到DriverElement对象直接返回
         elif isinstance(loc_or_ele, DriverElement):
             return loc_or_ele
 
+        # 接收到WebElement对象打包成DriverElement对象返回
         elif isinstance(loc_or_ele, WebElement):
-            return DriverElement(loc_or_ele, self.timeout)
+            return DriverElement(loc_or_ele, self, self.timeout)
 
+        # 接收到的类型不正确，抛出异常
         else:
             raise ValueError('Argument loc_or_str can only be tuple, str, DriverElement, DriverElement.')
 
         timeout = timeout or self.timeout
-        return execute_driver_find(self.driver, loc_or_ele, mode, show_errmsg, timeout)
+        return execute_driver_find(self, loc_or_ele, mode, timeout)
 
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None,
-             show_errmsg=False) -> List[DriverElement or str]:
+             timeout: float = None) -> List[DriverElement or str]:
         """返回页面中所有符合条件的元素                                                                     \n
         示例：                                                                                            \n
         - 用loc元组查找：                                                                                 \n
@@ -186,12 +188,11 @@ class DriverPage(object):
             page.eles('css:div.ele_class')                - 返回所有符合css selector的元素                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间
-        :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象组成的列表
         """
         if not isinstance(loc_or_str, (tuple, str)):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
-        return self.ele(loc_or_str, mode='all', timeout=timeout, show_errmsg=show_errmsg)
+        return self.ele(loc_or_str, mode='all', timeout=timeout)
 
     # ----------------以下为独有函数-----------------------
     def wait_ele(self,

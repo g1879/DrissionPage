@@ -12,10 +12,9 @@ from re import search as re_SEARCH
 from re import sub as re_SUB
 from time import time, sleep
 from typing import Union, List, Tuple
-from urllib import parse
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse, quote, unquote
 
-from requests_html import HTMLSession, HTMLResponse, Element
+from requests import Session, Response
 
 from .common import get_loc_from_str, translate_loc_to_xpath, get_available_file_name
 from .config import OptionsManager
@@ -23,9 +22,9 @@ from .session_element import SessionElement, execute_session_find
 
 
 class SessionPage(object):
-    """SessionPage封装了页面操作的常用功能，使用requests_html来获取、解析网页。"""
+    """SessionPage封装了页面操作的常用功能，使用requests来获取、解析网页"""
 
-    def __init__(self, session: HTMLSession, timeout: float = 10):
+    def __init__(self, session: Session, timeout: float = 10):
         """初始化函数"""
         self._session = session
         self.timeout = timeout
@@ -34,12 +33,12 @@ class SessionPage(object):
         self._response = None
 
     @property
-    def session(self) -> HTMLSession:
+    def session(self) -> Session:
         """返回session对象"""
         return self._session
 
     @property
-    def response(self) -> HTMLResponse:
+    def response(self) -> Response:
         """返回访问url得到的response对象"""
         return self._response
 
@@ -66,12 +65,11 @@ class SessionPage(object):
     @property
     def html(self) -> str:
         """返回页面html文本"""
-        return self.response.html.html
+        return self.response.text
 
     def ele(self,
-            loc_or_ele: Union[Tuple[str, str], str, SessionElement, Element],
-            mode: str = None,
-            show_errmsg: bool = False) -> Union[SessionElement, List[SessionElement or str], str, None]:
+            loc_or_ele: Union[Tuple[str, str], str, SessionElement],
+            mode: str = None) -> Union[SessionElement, List[SessionElement or str], str, None]:
         """返回页面中符合条件的元素，默认返回第一个                                                          \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -96,7 +94,6 @@ class SessionPage(object):
             page.ele('css:div.ele_class')                - 返回第一个符合css selector的元素                 \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param mode: 'single' 或 'all‘，对应查找一个或全部
-        :param show_errmsg: 出现异常时是否打印信息
         :return: SessionElement对象
         """
         if isinstance(loc_or_ele, (str, tuple)):
@@ -112,17 +109,13 @@ class SessionPage(object):
         elif isinstance(loc_or_ele, SessionElement):
             return loc_or_ele
 
-        elif isinstance(loc_or_ele, Element):
-            return SessionElement(loc_or_ele)
-
         else:
             raise ValueError('Argument loc_or_str can only be tuple, str, SessionElement, Element.')
 
-        return execute_session_find(self.response.html, loc_or_ele, mode, show_errmsg)
+        return execute_session_find(self, loc_or_ele, mode)
 
     def eles(self,
-             loc_or_str: Union[Tuple[str, str], str],
-             show_errmsg: bool = False) -> List[SessionElement or str]:
+             loc_or_str: Union[Tuple[str, str], str]) -> List[SessionElement or str]:
         """返回页面中所有符合条件的元素                                                                    \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n
@@ -144,19 +137,18 @@ class SessionPage(object):
             page.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的元素                        \n
             page.eles('css:div.ele_class')                - 返回所有符合css selector的元素                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param show_errmsg: 出现异常时是否打印信息
         :return: SessionElement对象组成的列表
         """
         if not isinstance(loc_or_str, (tuple, str)):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
-        return self.ele(loc_or_str, mode='all', show_errmsg=True)
+        return self.ele(loc_or_str, mode='all')
 
     def _try_to_get(self,
                     to_url: str,
                     times: int = 0,
                     interval: float = 1,
                     show_errmsg: bool = False,
-                    **kwargs) -> HTMLResponse:
+                    **kwargs) -> Response:
         """尝试连接，重试若干次                            \n
         :param to_url: 要访问的url
         :param times: 重试次数
@@ -203,7 +195,7 @@ class SessionPage(object):
                 self._url_available = True
             else:
                 if show_errmsg:
-                    raise ConnectionError(f'Status code: {self._response.status_code}.')
+                    raise ConnectionError(f'{to_url}\nStatus code: {self._response.status_code}.')
                 self._url_available = False
         return self._url_available
 
@@ -270,10 +262,12 @@ class SessionPage(object):
             r, info = self._make_response(file_url, mode='get', show_errmsg=show_errmsg, **kwargs)
         else:
             r, info = self._make_response(file_url, mode='post', data=post_data, show_errmsg=show_errmsg, **kwargs)
+
         if r is None:
             if show_msg:
                 print(info)
             return False, info
+
         if not r.ok:
             if show_errmsg:
                 raise ConnectionError(f'Status code: {r.status_code}.')
@@ -282,19 +276,23 @@ class SessionPage(object):
         # -------------------获取文件名-------------------
         file_name = ''
         content_disposition = tuple(x for x in r.headers if x.lower() == 'content-disposition')
-        if content_disposition:  # header里有文件名，则使用它
+
+        # header里有文件名，则使用它
+        if content_disposition:
             file_name = r.headers[content_disposition[0]].encode('ISO-8859-1').decode('utf-8')
             file_name = re.search(r'filename *= *"?([^";]+)', file_name)
             if file_name:
                 file_name = file_name.group(1)
             if file_name[0] == file_name[-1] == "'":
                 file_name = file_name.strip("'")
+
         if not file_name and os_PATH.basename(file_url):  # 在url里获取文件名
             file_name = os_PATH.basename(file_url).split("?")[0]
+
         if not file_name:  # 找不到则用时间和随机数生成文件名
             file_name = f'untitled_{time()}_{randint(0, 100)}'
         file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()  # 去除非法字符
-        file_name = parse.unquote(file_name)
+        file_name = unquote(file_name)
 
         # -------------------重命名文件名-------------------
         if rename:  # 重命名文件，不改变扩展名
@@ -432,9 +430,10 @@ class SessionPage(object):
             else:
                 charset = headers[content_type[0]].split('=')[1]
 
-            if not_stream:  # 加载网页时修复编码
-                r._content = r.content.replace(b'\x08', b'\\b')  # 避免存在退格符导致乱码或解析出错
-                r.html.encoding = r.encoding  # 修复requests_html丢失编码方式的bug
-            if charset:
+            if charset:  # 指定网页编码
                 r.encoding = charset
+
+            if not_stream:  # 避免存在退格符导致乱码或解析出错
+                r._content = r.content.replace(b'\x08', b'\\b')
+
             return r, 'Success'

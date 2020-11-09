@@ -43,7 +43,7 @@ class ShadowRootElement(DrissionElement):
         :return: DriverElement对象
         """
         loc = 'xpath', f'.{"/.." * (num - 1)}'
-        return self.parent_ele.ele(loc, timeout=0.01, show_errmsg=False)
+        return self.parent_ele.ele(loc, timeout=0.1)
 
     @property
     def next(self):
@@ -56,13 +56,12 @@ class ShadowRootElement(DrissionElement):
         :return: DriverElement对象
         """
         loc = 'css selector', f':nth-child({num})'
-        return self.parent_ele.ele(loc)
+        return self.parent_ele.ele(loc, timeout=0.1)
 
     def ele(self,
             loc_or_str: Union[tuple, str],
             mode: str = 'single',
-            timeout: float = None,
-            show_errmsg: bool = False):
+            timeout: float = None):
         """返回当前元素下级符合条件的子元素，默认返回第一个                                                  \n
         示例：                                                                                           \n
         - 用loc元组查找：                                                                                 \n
@@ -85,7 +84,6 @@ class ShadowRootElement(DrissionElement):
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param mode: 'single' 或 'all'，对应查找一个或全部
         :param timeout: 查找元素超时时间
-        :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象
         """
         if isinstance(loc_or_str, str):
@@ -97,15 +95,15 @@ class ShadowRootElement(DrissionElement):
             raise ValueError('Argument loc_or_str can only be tuple or str.')
 
         timeout = timeout or self.timeout
+
         if loc_or_str[0] == 'css selector':
-            return execute_driver_find(self.inner_ele, loc_or_str, mode, show_errmsg, timeout)
+            return execute_driver_find(self.inner_ele, loc_or_str, mode, timeout)
         elif loc_or_str[0] == 'text':
             return self._find_eles_by_text(loc_or_str[1], loc_or_str[2], loc_or_str[3], mode)
 
     def eles(self,
              loc_or_str: Union[tuple, str],
-             timeout: float = None,
-             show_errmsg: bool = False):
+             timeout: float = None):
         """返回当前元素下级所有符合条件的子元素                                                            \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n
@@ -127,10 +125,9 @@ class ShadowRootElement(DrissionElement):
             ele.eles('css:div.ele_class')                - 返回所有符合css selector的子元素                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间
-        :param show_errmsg: 出现异常时是否打印信息
         :return: DriverElement对象组成的列表
         """
-        return self.ele(loc_or_str, mode='all', show_errmsg=show_errmsg, timeout=timeout)
+        return self.ele(loc_or_str, mode='all', timeout=timeout)
 
     def run_script(self, script: str, *args) -> Any:
         """执行js代码，传入自己为第一个参数  \n
@@ -160,41 +157,49 @@ class ShadowRootElement(DrissionElement):
         :param mode: 'single' 或 'all'，对应匹配一个或全部
         :return: 返回DriverElement对象或组成的列表
         """
-        eles = self.run_script('return arguments[0].querySelectorAll("*")')  # 获取所有元素
+        # 获取所有元素
+        eles = self.run_script('return arguments[0].querySelectorAll("*")')
         from .driver_element import DriverElement
         results = []
-        for ele in eles:  # 遍历所有元素，找到符合条件的
+
+        # 遍历所有元素，找到符合条件的
+        for ele in eles:
             if tag and tag != ele.tag_name:
                 continue
             txt = self.driver.execute_script(
                 'if(arguments[0].firstChild!=null){return arguments[0].firstChild.nodeValue}', ele)
             txt = txt or ''
-            if text == '' or match == 'exact':  # 匹配没有文本的元素或精确匹配
+
+            # 匹配没有文本的元素或精确匹配
+            if text == '' or match == 'exact':
                 if text == txt:
                     if mode == 'single':
                         return DriverElement(ele)
                     elif mode == 'all':
                         results.append(DriverElement(ele))
-            elif match == 'fuzzy':  # 模糊匹配
+
+            # 模糊匹配
+            elif match == 'fuzzy':
                 if text in txt:
                     if mode == 'single':
                         return DriverElement(ele)
                     elif mode == 'all':
                         results.append(DriverElement(ele))
+
         return None if mode == 'single' else results
 
 
 def get_css_from_str(loc: str) -> tuple:
     """处理元素查找语句                                                \n
-    查找方式：属性、tag name及属性、文本、css selector                  \n
-    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
-    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+    查找方式：属性、tag name及属性、文本、css selector                   \n
+    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串             \n
+    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串             \n
     示例：                                                            \n
         @class:ele_class - class含有ele_class的元素                    \n
         @class=ele_class - class等于ele_class的元素                    \n
         @class - 带class属性的元素                                     \n
         tag:div - div元素                                              \n
-        tag:div@class:ele_class - class含有ele_class的div元素          \n
+        tag:div@class:ele_class - class含有ele_class的div元素           \n
         tag:div@class=ele_class - class等于ele_class的div元素           \n
         tag:div@text():search_text - 文本含有search_text的div元素        \n
         tag:div@text()=search_text - 文本等于search_text的div元素        \n
@@ -203,14 +208,18 @@ def get_css_from_str(loc: str) -> tuple:
         css:div.ele_class                                               \n
     """
     loc_by = 'css selector'
-    if loc.startswith('@'):  # 根据属性查找
+
+    # 根据属性查找
+    if loc.startswith('@'):
         r = re_SPLIT(r'([:=])', loc[1:], maxsplit=1)
         if len(r) == 3:
             mode = '=' if r[1] == '=' else '*='
             loc_str = f'*[{r[0]}{mode}{r[2]}]'
         else:
             loc_str = f'*[{loc[1:]}]'
-    elif loc.startswith(('tag=', 'tag:')):  # 根据tag name查找
+
+    # 根据tag name查找
+    elif loc.startswith(('tag=', 'tag:')):
         if '@' not in loc[4:]:
             loc_str = f'{loc[4:]}'
         else:
@@ -224,13 +233,22 @@ def get_css_from_str(loc: str) -> tuple:
                 loc_str = f'{at_lst[0]}[{r[0]}{mode}"{r[2]}"]'
             else:
                 loc_str = f'{at_lst[0]}[{r[0]}]'
-    elif loc.startswith(('css=', 'css:')):  # 用css selector查找
+
+    # 用css selector查找
+    elif loc.startswith(('css=', 'css:')):
         loc_str = loc[4:]
-    elif loc.startswith(('xpath=', 'xpath:')):  # 用xpath查找
+
+    # 用xpath查找
+    elif loc.startswith(('xpath=', 'xpath:')):
         raise ValueError('不支持xpath')
-    elif loc.startswith(('text=', 'text:')):  # 根据文本查找
+
+    # 根据文本查找
+    elif loc.startswith(('text=', 'text:')):
         match = 'exact' if loc[4] == '=' else 'fuzzy'
         return 'text', loc[5:], '', match
-    else:  # 根据文本模糊查找
+
+    # 根据文本模糊查找
+    else:
         return 'text', loc, '', 'fuzzy'
+
     return loc_by, loc_str

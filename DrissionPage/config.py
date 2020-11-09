@@ -23,6 +23,7 @@ class OptionsManager(object):
         self.path = path or Path(__file__).parent / 'configs.ini'
         self._conf = ConfigParser()
         self._conf.read(self.path, encoding='utf-8')
+
         if 'global_tmp_path' not in self.get_option('paths') or not self.get_value('paths', 'global_tmp_path'):
             global_tmp_path = str((Path(__file__).parent / 'tmp').absolute())
             Path(global_tmp_path).mkdir(parents=True, exist_ok=True)
@@ -49,11 +50,13 @@ class OptionsManager(object):
         """
         items = self._conf.items(section)
         option = dict()
+
         for j in items:
             try:
                 option[j[0]] = eval(self._conf.get(section, j[0]).replace('\\', '\\\\'))
             except:
                 option[j[0]] = self._conf.get(section, j[0])
+
         return option
 
     def set_item(self, section: str, item: str, value: Any):
@@ -83,6 +86,7 @@ class DriverOptions(Options):
         """
         super().__init__()
         self._driver_path = None
+
         if read_file:
             options_dict = OptionsManager().get_option('chrome_options')
             paths_dict = OptionsManager().get_option('paths')
@@ -123,11 +127,14 @@ class DriverOptions(Options):
         :return: 当前对象
         """
         del_list = []
+
         for argument in self._arguments:
             if argument.startswith(value):
                 del_list.append(argument)
+
         for del_arg in del_list:
             self._arguments.remove(del_arg)
+
         return self
 
     def remove_experimental_option(self, key: str):
@@ -137,13 +144,14 @@ class DriverOptions(Options):
         """
         if key in self._experimental_options:
             self._experimental_options.pop(key)
+
         return self
 
     def remove_all_extensions(self):
-        """移除所有插件                                                   \n
-        因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设
+        """移除所有插件             \n
         :return: 当前对象
         """
+        # 因插件是以整个文件储存，难以移除其中一个，故如须设置则全部移除再重设
         self._extensions = []
         return self
 
@@ -154,9 +162,11 @@ class DriverOptions(Options):
         :return: 当前对象
         """
         self.remove_argument(arg)
+
         if value:
             arg_str = arg if isinstance(value, bool) else f'{arg}={value}'
             self.add_argument(arg_str)
+
         return self
 
     def set_headless(self, on_off: bool = True):
@@ -223,16 +233,22 @@ class DriverOptions(Options):
 
         if driver_path is not None:
             self._driver_path = format_path(driver_path)
+
         if chrome_path is not None:
             self.binary_location = format_path(chrome_path)
+
         if debugger_address is not None:
             self.debugger_address = debugger_address
+
         if download_path is not None:
             self.experimental_options['prefs']['download.default_directory'] = format_path(download_path)
+
         if user_data_path is not None:
             self.set_argument('--user-data-dir', format_path(user_data_path))
+
         if cache_path is not None:
             self.set_argument('--disk-cache-dir', format_path(cache_path))
+
         return self
 
 
@@ -242,32 +258,39 @@ def _dict_to_chrome_options(options: dict) -> Options:
     :return: 保存浏览器配置的ChromeOptions对象
     """
     chrome_options = webdriver.ChromeOptions()
+    # 已打开的浏览器路径
     if 'debugger_address' in options and options['debugger_address']:
-        # 控制已打开的浏览器
         chrome_options.debugger_address = options['debugger_address']
+
+    # 创建新的浏览器
     else:
+        # 浏览器的exe文件路径
         if 'binary_location' in options and options['binary_location']:
-            # 手动指定使用的浏览器位置
             chrome_options.binary_location = options['binary_location']
+
+        # 启动参数
         if 'arguments' in options:
-            # 启动参数
             if not isinstance(options['arguments'], list):
                 raise Exception(f'Arguments need list，not {type(options["arguments"])}.')
             for arg in options['arguments']:
                 chrome_options.add_argument(arg)
+
+        # 加载插件
         if 'extension_files' in options and options['extension_files']:
-            # 加载插件
             if not isinstance(options['extension_files'], list):
                 raise Exception(f'Extension files need list，not {type(options["extension_files"])}.')
             for arg in options['extension_files']:
                 chrome_options.add_extension(arg)
+
+        # 扩展设置
         if 'extensions' in options and options['extensions']:
             if not isinstance(options['extensions'], list):
                 raise Exception(f'Extensions need list，not {type(options["extensions"])}.')
             for arg in options['extensions']:
                 chrome_options.add_encoded_extension(arg)
+
+        # 实验性质的设置参数
         if 'experimental_options' in options and options['experimental_options']:
-            # 实验性质的设置参数
             if not isinstance(options['experimental_options'], dict):
                 raise Exception(f'Experimental options need dict，not {type(options["experimental_options"])}.')
             for i in options['experimental_options']:
@@ -292,6 +315,7 @@ def _chrome_options_to_dict(options: Union[dict, DriverOptions, None]) -> Union[
     re_dict['arguments'] = options.arguments
     re_dict['extensions'] = options.extensions
     re_dict['experimental_options'] = options.experimental_options
+
     try:
         re_dict['driver_path'] = options.driver_path
     except:

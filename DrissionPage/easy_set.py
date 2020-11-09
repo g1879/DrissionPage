@@ -38,21 +38,29 @@ def set_paths(driver_path: str = None,
 
     if driver_path is not None:
         om.set_item('paths', 'chromedriver_path', format_path(driver_path))
+
     if chrome_path is not None:
         om.set_item('chrome_options', 'binary_location', format_path(chrome_path))
+
     if debugger_address is not None:
         om.set_item('chrome_options', 'debugger_address', format_path(debugger_address))
+
     if tmp_path is not None:
         om.set_item('paths', 'global_tmp_path', format_path(tmp_path))
+
     if download_path is not None:
         experimental_options = om.get_value('chrome_options', 'experimental_options')
         experimental_options['prefs']['download.default_directory'] = format_path(download_path)
         om.set_item('chrome_options', 'experimental_options', experimental_options)
+
     om.save()
+
     if user_data_path is not None:
         set_argument('--user-data-dir', format_path(user_data_path))
+
     if cache_path is not None:
         set_argument('--disk-cache-dir', format_path(cache_path))
+
     if check_version:
         check_driver_version(format_path(driver_path), format_path(chrome_path))
 
@@ -65,9 +73,11 @@ def set_argument(arg: str, value: Union[bool, str]) -> None:
     """
     do = DriverOptions()
     do.remove_argument(arg)
+
     if value:
         arg_str = arg if isinstance(value, bool) else f'{arg}={value}'
         do.add_argument(arg_str)
+
     do.save()
 
 
@@ -131,8 +141,10 @@ def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bo
     chrome_path = chrome_path or om.get_value('chrome_options', 'binary_location')
     do = DriverOptions(read_file=False)
     do.add_argument('--headless')
+
     if chrome_path:
         do.binary_location = chrome_path
+
     try:
         driver = webdriver.Chrome(driver_path, options=do)
         driver.quit()
