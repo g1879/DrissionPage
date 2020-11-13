@@ -14,7 +14,7 @@ What's even better is that its usage is very concise and user- friendly, with a 
 
 **project address:**
 
-- giehub  - https://github.com/g1879/DrissionPage
+- github  - https://github.com/g1879/DrissionPage
 - gitee  - https://gitee.com/g1879/DrissionPage
 
 **Demo address:** [Use DrissionPage to crawl common websites and automation](https://gitee.com/g1879/DrissionPage-demos)
