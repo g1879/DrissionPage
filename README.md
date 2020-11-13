@@ -1,3 +1,6 @@
+- 中文说明：https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md
+- 示例：https://gitee.com/g1879/DrissionPage-demos
+
 # Introduction
 
 ***
@@ -11,10 +14,10 @@ What's even better is that its usage is very concise and user- friendly, with a 
 
 **project address:**
 
-- https://github.com/g1879/DrissionPage
-- https://gitee.com/g1879/DrissionPage
+- giehub  - https://github.com/g1879/DrissionPage
+- gitee  - https://gitee.com/g1879/DrissionPage
 
-**Sample address:** [Use DrissionPage to crawl common websites and automation](https://gitee.com/g1879/DrissionPage-demos)
+**Demo address:** [Use DrissionPage to crawl common websites and automation](https://gitee.com/g1879/DrissionPage-demos)
 
 **Contact Email: ** g1879@qq.com
 
