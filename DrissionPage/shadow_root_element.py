@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-from html import unescape
 from re import split as re_SPLIT
-from typing import Union, Any
+from typing import Union, Any, Tuple
 
 from selenium.webdriver.remote.webelement import WebElement
 
-from .common import DrissionElement
+from .common import DrissionElement, format_html
 from .driver_element import execute_driver_find
 
 
@@ -20,6 +19,19 @@ class ShadowRootElement(DrissionElement):
     def __repr__(self):
         return f'<ShadowRootElement in {self.parent_ele} >'
 
+    def __call__(self,
+                 loc_or_str: Union[Tuple[str, str], str],
+                 mode: str = 'single',
+                 timeout: float = None):
+        """实现查找元素的简化写法                                     \n
+        例：ele2 = ele1('@id=ele_id')                               \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param mode: 'single' 或 'all'，对应查找一个或全部
+        :param timeout: 超时时间
+        :return: DriverElement对象
+        """
+        return self.ele(loc_or_str, mode, timeout or self.timeout)
+
     @property
     def driver(self):
         """返回控制元素的WebDriver对象"""
@@ -31,7 +43,7 @@ class ShadowRootElement(DrissionElement):
 
     @property
     def html(self):
-        return unescape(self.inner_ele.get_attribute('innerHTML')).replace('\xa0', ' ')
+        return format_html(self.inner_ele.get_attribute('innerHTML'))
 
     @property
     def parent(self):
@@ -59,7 +71,7 @@ class ShadowRootElement(DrissionElement):
         return self.parent_ele.ele(loc, timeout=0.1)
 
     def ele(self,
-            loc_or_str: Union[tuple, str],
+            loc_or_str: Union[Tuple[str, str], str],
             mode: str = 'single',
             timeout: float = None):
         """返回当前元素下级符合条件的子元素，默认返回第一个                                                  \n
@@ -87,7 +99,7 @@ class ShadowRootElement(DrissionElement):
         :return: DriverElement对象
         """
         if isinstance(loc_or_str, str):
-            loc_or_str = get_css_from_str(loc_or_str)
+            loc_or_str = str_to_css_loc(loc_or_str)
         elif isinstance(loc_or_str, tuple) and len(loc_or_str) == 2:
             if loc_or_str[0] == 'xpath':
                 raise ValueError('不支持xpath')
@@ -102,7 +114,7 @@ class ShadowRootElement(DrissionElement):
             return self._find_eles_by_text(loc_or_str[1], loc_or_str[2], loc_or_str[3], mode)
 
     def eles(self,
-             loc_or_str: Union[tuple, str],
+             loc_or_str: Union[Tuple[str, str], str],
              timeout: float = None):
         """返回当前元素下级所有符合条件的子元素                                                            \n
         示例：                                                                                          \n
@@ -189,7 +201,7 @@ class ShadowRootElement(DrissionElement):
         return None if mode == 'single' else results
 
 
-def get_css_from_str(loc: str) -> tuple:
+def str_to_css_loc(loc: str) -> tuple:
     """处理元素查找语句                                                \n
     查找方式：属性、tag name及属性、文本、css selector                   \n
     =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串             \n
@@ -212,6 +224,7 @@ def get_css_from_str(loc: str) -> tuple:
     # 根据属性查找
     if loc.startswith('@'):
         r = re_SPLIT(r'([:=])', loc[1:], maxsplit=1)
+
         if len(r) == 3:
             mode = '=' if r[1] == '=' else '*='
             loc_str = f'*[{r[0]}{mode}{r[2]}]'
@@ -225,6 +238,7 @@ def get_css_from_str(loc: str) -> tuple:
         else:
             at_lst = loc[4:].split('@', maxsplit=1)
             r = re_SPLIT(r'([:=])', at_lst[1], maxsplit=1)
+
             if len(r) == 3:
                 if r[0] == 'text()':
                     match = 'exact' if r[1] == '=' else 'fuzzy'

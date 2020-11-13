@@ -152,8 +152,8 @@ def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bo
         return True
     except Exception as e:
         info = f'''
-出现异常：
-{e}chromedriver下载网址：https://chromedriver.chromium.org/downloads
-'''
+                出现异常：
+                {e}chromedriver下载网址：https://chromedriver.chromium.org/downloads
+                '''
         print(info)
         return False

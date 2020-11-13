@@ -14,7 +14,7 @@ from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from .common import get_loc_from_str, get_available_file_name, translate_loc_to_xpath
+from .common import str_to_loc, get_available_file_name, translate_loc, format_html
 from .driver_element import DriverElement, execute_driver_find
 
 
@@ -43,7 +43,7 @@ class DriverPage(object):
     @property
     def html(self) -> str:
         """返回页面html文本"""
-        return self.driver.find_element_by_xpath("//*").get_attribute("outerHTML")
+        return format_html(self.driver.find_element_by_xpath("//*").get_attribute("outerHTML"))
 
     @property
     def url_available(self) -> bool:
@@ -60,11 +60,11 @@ class DriverPage(object):
         """返回网页title"""
         return self.driver.title
 
-    def _try_to_get(self,
-                    to_url: str,
-                    times: int = 0,
-                    interval: float = 1,
-                    show_errmsg: bool = False, ):
+    def _try_to_connect(self,
+                        to_url: str,
+                        times: int = 0,
+                        interval: float = 1,
+                        show_errmsg: bool = False, ):
         """尝试连接，重试若干次                            \n
         :param to_url: 要访问的url
         :param times: 重试次数
@@ -102,7 +102,7 @@ class DriverPage(object):
         if not url or (not go_anyway and self.url == to_url):
             return
         self._url = to_url
-        self._url_available = self._try_to_get(to_url, times=retry, interval=interval, show_errmsg=show_errmsg)
+        self._url_available = self._try_to_connect(to_url, times=retry, interval=interval, show_errmsg=show_errmsg)
         return self._url_available
 
     def ele(self,
@@ -139,11 +139,11 @@ class DriverPage(object):
         # 接收到字符串或元组，获取定位loc元组
         if isinstance(loc_or_ele, (str, tuple)):
             if isinstance(loc_or_ele, str):
-                loc_or_ele = get_loc_from_str(loc_or_ele)
+                loc_or_ele = str_to_loc(loc_or_ele)
             else:
                 if len(loc_or_ele) != 2:
                     raise ValueError("Len of loc_or_ele must be 2 when it's a tuple.")
-                loc_or_ele = translate_loc_to_xpath(loc_or_ele)
+                loc_or_ele = translate_loc(loc_or_ele)
 
             if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
                 loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
@@ -219,7 +219,7 @@ class DriverPage(object):
         elif isinstance(loc_or_ele, WebElement):
             is_ele = True
         elif isinstance(loc_or_ele, str):
-            loc_or_ele = get_loc_from_str(loc_or_ele)
+            loc_or_ele = str_to_loc(loc_or_ele)
         elif isinstance(loc_or_ele, tuple):
             pass
         else:
@@ -302,7 +302,7 @@ class DriverPage(object):
         if self.tabs_count:
             self.to_tab(0)
 
-    def close_other_tabs(self, num_or_handle: Union[int, str, None] = None) -> None:
+    def close_other_tabs(self, num_or_handle: Union[int, str] = None) -> None:
         """关闭传入的标签页以外标签页，默认保留当前页                                \n
         :param num_or_handle: 要保留的标签页序号或handle，序号第一个为0，最后为-1
         :return: None

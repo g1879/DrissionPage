@@ -80,7 +80,11 @@ class OptionsManager(object):
 
 
 class DriverOptions(Options):
-    def __init__(self, read_file=True):
+    """chrome浏览器配置类，继承自selenium.webdriver.chrome.options的Options类，
+    增加了删除配置和保存到文件方法。
+    """
+
+    def __init__(self, read_file: bool = True):
         """初始化，默认从文件读取设置                      \n
         :param read_file: 是否从默认ini文件中读取配置信息
         """

@@ -256,13 +256,15 @@ class Drission(object):
 
     def close_driver(self) -> None:
         """关闭driver和浏览器"""
-        self._driver.quit()
-        self._driver = None
+        if self._driver:
+            self._driver.quit()
+            self._driver = None
 
     def close_session(self) -> None:
         """关闭session"""
-        self._session.close()
-        self._session = None
+        if self._session:
+            self._session.close()
+            self._session = None
 
     def close(self) -> None:
         """关闭session、driver和浏览器"""

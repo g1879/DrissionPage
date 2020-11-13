@@ -5,24 +5,25 @@
 @File    :   common.py
 """
 from abc import abstractmethod
+from html import unescape
 from pathlib import Path
 from re import split as re_SPLIT
 from shutil import rmtree
 from typing import Union
 
-from lxml.etree import _Element
+from lxml.html import HtmlElement
 from selenium.webdriver.remote.webelement import WebElement
 
 
 class DrissionElement(object):
     """SessionElement和DriverElement的基类"""
 
-    def __init__(self, ele: Union[WebElement, _Element], page=None):
+    def __init__(self, ele: Union[WebElement, HtmlElement], page=None):
         self._inner_ele = ele
         self.page = page
 
     @property
-    def inner_ele(self) -> Union[WebElement, _Element]:
+    def inner_ele(self) -> Union[WebElement, HtmlElement]:
         return self._inner_ele
 
     @property
@@ -74,7 +75,7 @@ class DrissionElement(object):
     #     pass
 
 
-def get_loc_from_str(loc: str) -> tuple:
+def str_to_loc(loc: str) -> tuple:
     """处理元素查找语句                                                \n
     查找方式：属性、tag name及属性、文本、xpath、css selector            \n
     =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串             \n
@@ -182,7 +183,11 @@ def _make_search_str(search_str: str) -> str:
     return search_str
 
 
-def translate_loc_to_xpath(loc: tuple) -> tuple:
+def format_html(text: str) -> str:
+    return unescape(text).replace('\xa0', ' ') if text else text
+
+
+def translate_loc(loc: tuple) -> tuple:
     """把By类型的loc元组转换为css selector或xpath类型的  \n
     :param loc: By类型的loc元组
     :return: css selector或xpath类型的loc元组
