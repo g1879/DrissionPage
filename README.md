@@ -14,7 +14,7 @@ What's even better is that its usage is very concise and user- friendly, with a 
 - https://github.com/g1879/DrissionPage
 - https://gitee.com/g1879/DrissionPage
 
-**Sample address:** [Use DrissionPage to crawl common websites and automation](https://gitee.com/g1879/DrissionPage- demos)
+**Sample address:** [Use DrissionPage to crawl common websites and automation](https://gitee.com/g1879/DrissionPage-demos)
 
 **Contact Email: ** g1879@qq.com
 
