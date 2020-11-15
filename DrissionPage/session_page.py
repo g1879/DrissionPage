@@ -433,26 +433,34 @@ class SessionPage(object):
             return None, e
 
         else:
+            # -------------获取编码开始----------------
             headers = dict(r.headers)
             content_type = tuple(x for x in headers if x.lower() == 'content-type')
             stream = tuple(x for x in kwargs if x.lower() == 'stream')
             not_stream = (not stream or not kwargs[stream[0]]) and not self.session.stream
             charset = None
+
+            # 若headers中没有编码信息，从页面meta标签提取，若失败，用apparent_encoding
             if not content_type or 'charset' not in headers[content_type[0]].lower():
+
+                # 表示是网页，非下载文件
                 if not_stream:
-                    re_result = re_SEARCH(r'<meta.*?charset=[ \'"]*([^"\' />]+).*?>',
-                                          r.iter_content(chunk_size=512).__next__().decode())
+                    re_result = re_SEARCH(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', r.content)
+
                     try:
-                        charset = re_result.group(1)
+                        charset = re_result.group(1).decode()
                     except:
                         charset = r.apparent_encoding
+
+            # 在headers中获取编码
             else:
                 charset = headers[content_type[0]].split('=')[1]
+            # -------------获取编码结束----------------
 
             if charset:  # 指定网页编码
                 r.encoding = charset
 
-            if not_stream:  # 避免存在退格符导致乱码或解析出错
-                r._content = r.content.replace(b'\x08', b'\\b')
+            # if not_stream:  # 避免存在退格符导致乱码或解析出错
+            #     r._content = r.content.replace(b'\x08', b'\\b')
 
             return r, 'Success'
