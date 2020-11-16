@@ -102,6 +102,7 @@ class SessionPage(object):
             else:
                 if len(loc_or_ele) != 2:
                     raise ValueError("Len of loc_or_ele must be 2 when it's a tuple.")
+
                 loc_or_ele = translate_loc(loc_or_ele)
 
             if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
@@ -142,6 +143,7 @@ class SessionPage(object):
         """
         if not isinstance(loc_or_str, (tuple, str)):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
+
         return self.ele(loc_or_str, mode='all')
 
     def _try_to_connect(self,
@@ -163,13 +165,17 @@ class SessionPage(object):
         :return: HTMLResponse对象
         """
         r = self._make_response(to_url, mode=mode, show_errmsg=show_errmsg, **kwargs)[0]
+
         while times and (not r or r.content == b''):
             if r is not None and r.status_code in (403, 404):
                 break
+
             print('重试', to_url)
             sleep(interval)
+
             r = self._make_response(to_url, mode=mode, show_errmsg=show_errmsg, **kwargs)[0]
             times -= 1
+
         return r
 
     def get(self,
@@ -198,12 +204,15 @@ class SessionPage(object):
 
         if self._response is None:
             self._url_available = False
+
         else:
             if self._response.ok:
                 self._url_available = True
+
             else:
                 if show_errmsg:
                     raise ConnectionError(f'{to_url}\nStatus code: {self._response.status_code}.')
+
                 self._url_available = False
 
         return self._url_available
@@ -236,9 +245,11 @@ class SessionPage(object):
 
         if self._response is None:
             self._url_available = False
+
         else:
             if self._response.ok:
                 self._url_available = True
+
             else:
                 if show_errmsg:
                     raise ConnectionError(f'Status code: {self._response.status_code}.')
@@ -268,10 +279,12 @@ class SessionPage(object):
         """
         # 生成的response不写入self._response，是临时的
         goal_path = goal_path or OptionsManager().get_value('paths', 'global_tmp_path')
+
         if not goal_path:
             raise IOError('No path specified.')
 
         kwargs['stream'] = True
+
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 20
 
@@ -283,64 +296,79 @@ class SessionPage(object):
         if r is None:
             if show_msg:
                 print(info)
+
             return False, info
 
         if not r.ok:
             if show_errmsg:
                 raise ConnectionError(f'Status code: {r.status_code}.')
+
             return False, f'Status code: {r.status_code}.'
 
         # -------------------获取文件名-------------------
         file_name = ''
-        content_disposition = tuple(x for x in r.headers if x.lower() == 'content-disposition')
+        content_disposition = r.headers.get('content-disposition')
 
-        # header里有文件名，则使用它
+        # 使用header里的文件名
         if content_disposition:
             file_name = r.headers[content_disposition[0]].encode('ISO-8859-1').decode('utf-8')
             file_name = re.search(r'filename *= *"?([^";]+)', file_name)
             if file_name:
                 file_name = file_name.group(1)
-            if file_name[0] == file_name[-1] == "'":
-                file_name = file_name.strip("'")
 
-        if not file_name and os_PATH.basename(file_url):  # 在url里获取文件名
+                if file_name[0] == file_name[-1] == "'":
+                    file_name = file_name[1:-1]
+
+        # 在url里获取文件名
+        if not file_name and os_PATH.basename(file_url):
             file_name = os_PATH.basename(file_url).split("?")[0]
 
-        if not file_name:  # 找不到则用时间和随机数生成文件名
+        # 找不到则用时间和随机数生成文件名
+        if not file_name:
             file_name = f'untitled_{time()}_{randint(0, 100)}'
-        file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()  # 去除非法字符
+
+        # 去除非法字符
+        file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()
         file_name = unquote(file_name)
 
-        # -------------------重命名文件名-------------------
-        if rename:  # 重命名文件，不改变扩展名
+        # -------------------重命名，不改变扩展名-------------------
+        if rename:
             rename = re_SUB(r'[\\/*:|<>?"]', '', rename).strip()
             ext_name = file_name.split('.')[-1]
+
             if '.' in rename or ext_name == file_name:
                 full_name = rename
             else:
                 full_name = f'{rename}.{ext_name}'
+
         else:
             full_name = file_name
 
         # -------------------生成路径-------------------
         goal_Path = Path(goal_path)
         goal_path = ''
+        skip = False
+
         for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
             goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re_SUB(r'[*:|<>?"]', '', i).strip()
             goal_path += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
+
         goal_Path = Path(goal_path)
         goal_Path.mkdir(parents=True, exist_ok=True)
         goal_path = goal_Path.absolute()
         full_path = Path(f'{goal_path}\\{full_name}')
 
         if full_path.exists():
-            if file_exists == 'skip':
-                return False, 'A file with the same name already exists.'
-            elif file_exists == 'overwrite':
-                pass
-            elif file_exists == 'rename':
+            if file_exists == 'rename':
                 full_name = get_available_file_name(goal_path, full_name)
                 full_path = Path(f'{goal_path}\\{full_name}')
+
+            elif file_exists == 'skip':
+                skip = True
+
+            elif file_exists == 'overwrite':
+                pass
+
             else:
                 raise ValueError("Argument file_exists can only be 'skip', 'overwrite', 'rename'.")
 
@@ -349,39 +377,59 @@ class SessionPage(object):
             print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
             print(f'Downloading to: {goal_path}')
 
+            if skip:
+                print('Skipped.')
+
         # -------------------开始下载-------------------
+        if skip:
+            return False, 'Skipped because a file with the same name already exists.'
+
         # 获取远程文件大小
-        content_length = tuple(x for x in r.headers if x.lower() == 'content-length')
-        file_size = int(r.headers[content_length]) if content_length else None
-        downloaded_size, download_status = 0, False  # 已下载文件大小和下载状态
+        content_length = r.headers.get('content-length')
+        file_size = int(content_length) if content_length else None
+
+        # 已下载文件大小和下载状态
+        downloaded_size, download_status = 0, False
+
         try:
             with open(str(full_path), 'wb') as tmpFile:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         tmpFile.write(chunk)
-                        if show_msg and file_size:  # 如表头有返回文件大小，显示进度
+
+                        # 如表头有返回文件大小，显示进度
+                        if show_msg and file_size:
                             downloaded_size += 1024
                             rate = downloaded_size / file_size if downloaded_size < file_size else 1
                             print('\r {:.0%} '.format(rate), end="")
+
         except Exception as e:
             if show_errmsg:
                 raise ConnectionError(e)
+
             download_status, info = False, f'Download failed.\n{e}'
+
         else:
             if full_path.stat().st_size == 0:
                 if show_errmsg:
                     raise ValueError('File size is 0.')
+
                 download_status, info = False, 'File size is 0.'
+
             else:
                 download_status, info = True, 'Success.'
+
         finally:
+            # 删除下载出错文件
             if not download_status and full_path.exists():
-                full_path.unlink()  # 删除下载出错文件
+                full_path.unlink()
+
             r.close()
 
         # -------------------显示并返回值-------------------
         if show_msg:
             print(info)
+
         info = f'{goal_path}\\{full_name}' if download_status else info
         return download_status, info
 
@@ -401,19 +449,25 @@ class SessionPage(object):
         """
         if mode not in ['get', 'post']:
             raise ValueError("Argument mode can only be 'get' or 'post'.")
+
         url = quote(url, safe='/:&?=%;#@+')
 
         # 设置referer和host值
         kwargs_set = set(x.lower() for x in kwargs)
+
         if 'headers' in kwargs_set:
             header_set = set(x.lower() for x in kwargs['headers'])
+
             if self.url and 'referer' not in header_set:
                 kwargs['headers']['Referer'] = self.url
+
             if 'host' not in header_set:
                 kwargs['headers']['Host'] = urlparse(url).hostname
+
         else:
             kwargs['headers'] = self.session.headers
             kwargs['headers']['Host'] = urlparse(url).hostname
+
             if self.url:
                 kwargs['headers']['Referer'] = self.url
 
@@ -422,6 +476,7 @@ class SessionPage(object):
 
         try:
             r = None
+
             if mode == 'get':
                 r = self.session.get(url, **kwargs)
             elif mode == 'post':
@@ -430,37 +485,25 @@ class SessionPage(object):
         except Exception as e:
             if show_errmsg:
                 raise e
+
             return None, e
 
         else:
-            # -------------获取编码开始----------------
-            headers = dict(r.headers)
-            content_type = tuple(x for x in headers if x.lower() == 'content-type')
-            stream = tuple(x for x in kwargs if x.lower() == 'stream')
-            not_stream = (not stream or not kwargs[stream[0]]) and not self.session.stream
-            charset = None
-
-            # 若headers中没有编码信息，从页面meta标签提取，若失败，用apparent_encoding
-            if not content_type or 'charset' not in headers[content_type[0]].lower():
-
-                # 表示是网页，非下载文件
-                if not_stream:
-                    re_result = re_SEARCH(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', r.content)
-
-                    try:
-                        charset = re_result.group(1).decode()
-                    except:
-                        charset = r.apparent_encoding
-
+            # ----------------获取并设置编码开始-----------------
             # 在headers中获取编码
-            else:
-                charset = headers[content_type[0]].split('=')[1]
-            # -------------获取编码结束----------------
+            try:
+                charset = r.headers.get('Content-type').split('=')[1]
 
-            if charset:  # 指定网页编码
-                r.encoding = charset
+            # 在headers中获取不到编码
+            except IndexError:
+                re_result = re_SEARCH(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', r.content)
 
-            # if not_stream:  # 避免存在退格符导致乱码或解析出错
-            #     r._content = r.content.replace(b'\x08', b'\\b')
+                if re_result:
+                    charset = re_result.group(1).decode()
+                else:
+                    charset = r.apparent_encoding
+
+            r.encoding = charset
+            # ----------------获取并设置编码结束-----------------
 
             return r, 'Success'

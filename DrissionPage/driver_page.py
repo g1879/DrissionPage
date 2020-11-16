@@ -192,6 +192,7 @@ class DriverPage(object):
         """
         if not isinstance(loc_or_str, (tuple, str)):
             raise TypeError('Type of loc_or_str can only be tuple or str.')
+
         return self.ele(loc_or_str, mode='all', timeout=timeout)
 
     # ----------------以下为独有函数-----------------------
@@ -213,40 +214,56 @@ class DriverPage(object):
 
         timeout = timeout or self.timeout
         is_ele = False
+
         if isinstance(loc_or_ele, DriverElement):
             loc_or_ele = loc_or_ele.inner_ele
             is_ele = True
+
         elif isinstance(loc_or_ele, WebElement):
             is_ele = True
+
         elif isinstance(loc_or_ele, str):
             loc_or_ele = str_to_loc(loc_or_ele)
+
         elif isinstance(loc_or_ele, tuple):
             pass
+
         else:
             raise TypeError('The type of loc_or_ele can only be str, tuple, DriverElement, WebElement')
 
-        if is_ele:  # 当传入参数是元素对象时
+        # 当传入参数是元素对象时
+        if is_ele:
             end_time = time() + timeout
+
             while time() < end_time:
                 if mode == 'del':
                     try:
                         loc_or_ele.is_enabled()
                     except:
                         return True
+
                 elif mode == 'display' and loc_or_ele.is_displayed():
                     return True
+
                 elif mode == 'hidden' and not loc_or_ele.is_displayed():
                     return True
+
             return False
-        else:  # 当传入参数是控制字符串或元组时
+
+        # 当传入参数是控制字符串或元组时
+        else:
             try:
                 if mode == 'del':
                     WebDriverWait(self.driver, timeout).until_not(ec.presence_of_element_located(loc_or_ele))
+
                 elif mode == 'display':
                     WebDriverWait(self.driver, timeout).until(ec.visibility_of_element_located(loc_or_ele))
+
                 elif mode == 'hidden':
                     WebDriverWait(self.driver, timeout).until_not(ec.visibility_of_element_located(loc_or_ele))
+
                 return True
+
             except:
                 return False
 
@@ -299,6 +316,7 @@ class DriverPage(object):
     def close_current_tab(self) -> None:
         """关闭当前标签页"""
         self.driver.close()
+
         if self.tabs_count:
             self.to_tab(0)
 
@@ -313,6 +331,7 @@ class DriverPage(object):
             tab = num_or_handle
 
         tabs = self.driver.window_handles
+
         if tab is None:
             page_handle = self.current_tab_handle
         elif isinstance(tab, int):
@@ -326,6 +345,7 @@ class DriverPage(object):
             if i != page_handle:
                 self.driver.switch_to.window(i)
                 self.driver.close()
+
         self.driver.switch_to.window(page_handle)  # 把权柄定位回保留的页面
 
     def to_tab(self, num_or_handle: Union[int, str] = 0) -> None:
@@ -337,6 +357,7 @@ class DriverPage(object):
             tab = int(num_or_handle)
         except (ValueError, TypeError):
             tab = num_or_handle
+
         tab = self.driver.window_handles[tab] if isinstance(tab, int) else tab
         self.driver.switch_to.window(tab)
 
@@ -355,22 +376,34 @@ class DriverPage(object):
         :param loc_or_ele: iframe的定位信息
         :return: None
         """
-        if isinstance(loc_or_ele, int):  # 根据序号跳转
+        # 根据序号跳转
+        if isinstance(loc_or_ele, int):
             self.driver.switch_to.frame(loc_or_ele)
+
         elif isinstance(loc_or_ele, str):
-            if loc_or_ele == 'main':  # 跳转到最上级
+            # 跳转到最上级
+            if loc_or_ele == 'main':
                 self.driver.switch_to.default_content()
-            elif loc_or_ele == 'parent':  # 跳转到上一层
+
+            # 跳转到上一层
+            elif loc_or_ele == 'parent':
                 self.driver.switch_to.parent_frame()
-            elif ':' not in loc_or_ele and '=' not in loc_or_ele:  # 传入id或name
+
+            # 传入id或name
+            elif ':' not in loc_or_ele and '=' not in loc_or_ele:
                 self.driver.switch_to.frame(loc_or_ele)
-            else:  # 传入控制字符串
+
+            # 传入控制字符串
+            else:
                 ele = self.ele(loc_or_ele)
                 self.driver.switch_to.frame(ele.inner_ele)
+
         elif isinstance(loc_or_ele, WebElement):
             self.driver.switch_to.frame(loc_or_ele)
+
         elif isinstance(loc_or_ele, DriverElement):
             self.driver.switch_to.frame(loc_or_ele.inner_ele)
+
         elif isinstance(loc_or_ele, tuple):
             ele = self.ele(loc_or_ele)
             self.driver.switch_to.frame(ele.inner_ele)
@@ -405,21 +438,29 @@ class DriverPage(object):
         """
         if mode == 'top':
             self.driver.execute_script("window.scrollTo(document.documentElement.scrollLeft,0);")
+
         elif mode == 'bottom':
             self.driver.execute_script(
                 "window.scrollTo(document.documentElement.scrollLeft,document.body.scrollHeight);")
+
         elif mode == 'rightmost':
             self.driver.execute_script("window.scrollTo(document.body.scrollWidth,document.documentElement.scrollTop);")
+
         elif mode == 'leftmost':
             self.driver.execute_script("window.scrollTo(0,document.documentElement.scrollTop);")
+
         elif mode == 'up':
             self.driver.execute_script(f"window.scrollBy(0,-{pixel});")
+
         elif mode == 'down':
             self.driver.execute_script(f"window.scrollBy(0,{pixel});")
+
         elif mode == 'left':
             self.driver.execute_script(f"window.scrollBy(-{pixel},0);")
+
         elif mode == 'right':
             self.driver.execute_script(f"window.scrollBy({pixel},0);")
+
         else:
             raise ValueError(
                 "Argument mode can only be 'top', 'bottom', 'rightmost', 'leftmost', 'up', 'down', 'left', 'right'.")
@@ -440,9 +481,11 @@ class DriverPage(object):
         """
         if not x and not y:
             self.driver.maximize_window()
+
         else:
             if x <= 0 or y <= 0:
                 raise ValueError('Arguments x and y must greater than 0.')
+
             new_x = x or self.driver.get_window_size()['width']
             new_y = y or self.driver.get_window_size()['height']
             self.driver.set_window_size(new_x, new_y)
@@ -464,11 +507,16 @@ class DriverPage(object):
             alert = self.driver.switch_to.alert
         except NoAlertPresentException:
             return None
+
         if text:
             alert.send_keys(text)
+
         text = alert.text
+
         if mode == 'cancel':
             alert.dismiss()
+
         elif mode == 'ok':
             alert.accept()
+
         return text

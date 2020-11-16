@@ -549,7 +549,7 @@ class DriverElement(DrissionElement):
 def execute_driver_find(page_or_ele,
                         loc: Tuple[str, str],
                         mode: str = 'single',
-                        timeout: float = 10) -> Union[DriverElement, List[DriverElement or str]]:
+                        timeout: float = 10) -> Union[DriverElement, List[DriverElement or str], str, None]:
     """执行driver模式元素的查找                               \n
     页面查找元素及元素查找下级元素皆使用此方法                   \n
     :param page_or_ele: DriverPage对象或DriverElement对象

@@ -37,7 +37,9 @@ class SessionElement(DrissionElement):
     @property
     def html(self) -> str:
         """返回元素outerHTML文本"""
-        return format_html(tostring(self._inner_ele, method="html").decode())
+        # tostring()会把跟紧元素的文本节点也带上，因此要去掉
+        html = format_html(tostring(self._inner_ele, method="html").decode())
+        return html[:html.rfind('>') + 1]
 
     @property
     def inner_html(self) -> str:
