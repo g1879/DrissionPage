@@ -54,7 +54,7 @@ requests 爬虫面对要登录的网站时，要分析数据包、JS 源码，�
 ***
 ## 结构图
 
-![](https://gitee.com/g1879/DrissionPage-demos/raw/master/pics/20201118164542.jpg)
+![](https://gitee.com/g1879/DrissionPage-demos/raw/master/pics/20201118170751.jpg)
 
 ## Drission类
 
