@@ -491,11 +491,14 @@ class SessionPage(object):
         else:
             # ----------------获取并设置编码开始-----------------
             # 在headers中获取编码
-            try:
-                charset = r.headers.get('Content-type').split('=')[1]
+            content_type = r.headers.get('content-type')
+            charset = re.search(r'charset[=: ]*(.*)?[;]', content_type)
 
-            # 在headers中获取不到编码
-            except IndexError:
+            if charset:
+                r.encoding = charset.group(1)
+
+            # 在headers中获取不到编码，且如果是网页
+            elif content_type.replace(' ', '').lower().startswith('text/html'):
                 re_result = re_SEARCH(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', r.content)
 
                 if re_result:
@@ -503,7 +506,7 @@ class SessionPage(object):
                 else:
                     charset = r.apparent_encoding
 
-            r.encoding = charset
+                r.encoding = charset
             # ----------------获取并设置编码结束-----------------
 
             return r, 'Success'
