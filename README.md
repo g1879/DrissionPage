@@ -1,6 +1,3 @@
-- 中文说明：https://github.com/g1879/DrissionPage/blob/master/README.zh-cn.md
-- 示例：https://gitee.com/g1879/DrissionPage-demos
-
 # Introduction
 
 ***
@@ -14,10 +11,10 @@ What's even better is that its usage is very concise and user- friendly, with a 
 
 **project address:**
 
-- github  - https://github.com/g1879/DrissionPage
-- gitee  - https://gitee.com/g1879/DrissionPage
+- https://github.com/g1879/DrissionPage
+- https://gitee.com/g1879/DrissionPage
 
-**Demo address:** [Use DrissionPage to crawl common websites and automation](https://gitee.com/g1879/DrissionPage-demos)
+**Sample address:** [Use DrissionPage to crawl common websites and automation](https://gitee.com/g1879/DrissionPage-demos)
 
 **Contact Email: ** g1879@qq.com
 
@@ -367,11 +364,14 @@ Drission objects are used to manage driver and session objects. When multiple pa
 The configuration information of the ini file can be directly read and created, or the configuration information can be passed in during initialization.
 
 ```python
-# Created from the default ini file
+# Create from the default ini file
 drission = Drission()
 
-# Created by other ini files
+# Create by other ini files
 drission = Drission(ini_path ='D:\\settings.ini')
+
+# Create without ini files
+drission = Drission(read_file = False)
 ```
 
 To manually pass in the configuration:
@@ -380,12 +380,18 @@ To manually pass in the configuration:
 # Create with the incoming configuration information (ignore the ini file)
 from DrissionPage.config import DriverOptions
 
-driver_options = DriverOptions()  # Create driver configuration object
-driver_options.binary_location ='D:\\chrome\\chrome.exe'  # chrome.exe path
-session_options = {'headers': {'User- Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
-driver_path ='D:\\chrome\\chromedriver.exe'  # driver_path path
+# Create a driver configuration object, read_file = False means not to read the ini file
+do = DriverOptions(read_file = False)
 
-drission = Drission(driver_options, session_options, driver_path)  # incoming configuration
+# Set the path, if it has been set in the system variable, it can be ignored
+do.set_paths(chrome_path ='D:\\chrome\\chrome.exe',
+              driver_path ='D:\\chrome\\chromedriver.exe')
+
+# Settings for s mode
+session_options = {'headers': {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
+
+# Incoming configuration, driver_options and session_options are optional, you need to use the corresponding mode to pass in
+drission = Drission(driver_options, session_options)
 ```
 
 
@@ -508,7 +514,13 @@ You can use these two functions under the page object or element object to find 
 
 page.eles() and element.eles() search and return a list of all elements that meet the conditions.
 
-Note: The default element search timeout is 10 seconds, you can also set it as needed.
+Description:
+
+- The element search timeout is 10 seconds by default, you can also set it as needed.
+
+- In the following search statement, the colon: indicates a fuzzy match, and the equal sign = indicates an exact match
+
+- There are five types of query strings: @attribute name, tag, text, xpath, and css
 
 ```python
 # Find by attribute
@@ -560,8 +572,8 @@ ele1 = element.shadow_root.ele('tag:div')
 page.ele('@id:ele_id').ele('tag:div').next.ele('some text').eles('tag:a')
 
 # Simplified writing
-ele1 = page('@id:ele_id')('@class:class_name')
-ele2 = ele1('tag:li')
+eles = page('@id:ele_id')('tag:div').next('some text').eles('tag:a')
+ele2 = ele1('tag:li').next('some text')
 ```
 
 

@@ -288,7 +288,7 @@ page.download(url, save_path)
 pip install DrissionPage
 ```
 只支持python3.6及以上版本，driver模式目前只支持chrome。  
-若要使用driver模式，须下载chrome和 **对应版本** 的chromedriver。[[chromedriver下载]](https://chromedriver.chromium.org/downloads)  
+若要使用driver模式，须下载chrome和 **对应版本** 的chromedriver。[[chromedriver下载]](http://npm.taobao.org/mirrors/chromedriver)  
 目前只在Windows环境下作了测试。
 
 # 使用方法
@@ -305,16 +305,16 @@ from DrissionPage import *
 
 ## 初始化
 
-如果你只使用session模式，可跳过本节。  
+如果你只使用 session 模式，可跳过本节。  
 
-使用selenium前，必须配置chrome.exe和chromedriver.exe的路径，并确保它们版本匹配。  
+使用selenium前，必须配置 chrome.exe 和 chromedriver.exe 的路径，并确保它们版本匹配。  
 
 配置路径有三种方法：
 - 将两个路径写入系统变量。
 - 使用时手动传入路径。
 - 将路径写入本库的ini文件（推荐）。
 
-若你选择第三种方式，请在第一次使用本库前，运行这几行代码，把这两个路径记录到ini文件中。
+若你选择第三种方式，请在第一次使用本库前，运行这几行代码，把这两个路径记录到 ini 文件中，以后程序会自动安装 ini 文件中的配置运行。
 
 ```python
 from DrissionPage.easy_set import set_paths
@@ -350,9 +350,9 @@ cache_path # 缓存路径
 
 Tips：
 
-- 不同项目可能须要不同版本的chrome和chromedriver，你还可保存多个ini文件，按须使用。
-- 推荐使用绿色版chrome，并手动设置路径，避免浏览器升级造成与chromedriver版本不匹配。
-- 调试项目时推荐设置debugger_address，使用手动打开的浏览器调试，省时省力。
+- 不同项目可能须要不同版本的 chrome 和 chromedriver，你还可保存多个ini文件，按须使用。
+- 推荐使用绿色版 chrome，并手动设置路径，避免浏览器升级造成与 chromedriver 版本不匹配。
+- 调试项目时推荐设置 debugger_address，使用手动打开的浏览器调试，省时省力。
 
 
 
@@ -360,8 +360,8 @@ Tips：
 
 创建的步骤不是必须，若想快速上手，可跳过本节。MixPage对象会自动创建该对象。
 
-Drission对象用于管理driver和session对象。在多个页面协同工作时，Drission对象用于传递驱动器，使多个页面类可控制同一个浏览器或Session对象。  
-可直接读取ini文件配置信息创建，也可以在初始化时传入配置信息。
+Drission对象用于管理 driver 和 session 对象。在多个页面协同工作时，Drission对象用于传递驱动器，使多个页面类可控制同一个浏览器或Session对象。  
+可直接读取 ini 文件配置信息创建，也可以在初始化时传入配置信息。
 
 ```python
 # 由默认ini文件创建
@@ -369,6 +369,9 @@ drission = Drission()
 
 # 由其它ini文件创建
 drission = Drission(ini_path = 'D:\\settings.ini')  
+
+# 不从ini文件创建
+drission = Drission(read_file = False)
 ```
 
 若要手动传入配置：
@@ -377,12 +380,18 @@ drission = Drission(ini_path = 'D:\\settings.ini')
 # 用传入的配置信息创建（忽略ini文件）
 from DrissionPage.config import DriverOptions
 
-driver_options = DriverOptions()  # 创建driver配置对象
-driver_options.binary_location = 'D:\\chrome\\chrome.exe'  # chrome.exe路径
-session_options = {'headers': {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
-driver_path = 'D:\\chrome\\chromedriver.exe'  # driver_path路径
+# 创建driver配置对象，read_file = False表示不读取ini文件
+do = DriverOptions(read_file = False)  
 
-drission = Drission(driver_options, session_options, driver_path)  # 传入配置
+# 设置路径，若已在系统变量设置，可忽略
+do.set_paths(chrome_path = 'D:\\chrome\\chrome.exe',
+             driver_path = 'D:\\chrome\\chromedriver.exe')  
+
+# 用于 s 模式的设置
+session_options = {'headers': {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
+
+# 传入配置，driver_options 和 session_options都是可选的，须要使用对应模式才须要传入
+drission = Drission(driver_options, session_options)  
 ```
 
 
@@ -408,7 +417,7 @@ page = MixPage(drission)
 page = MixPage(drission, mode='s', timeout=5)  # session模式，等待时间5秒（默认10秒）
 
 # 以传入配置信息创建
-page = MixPage(driver_options=DriverOption, session_options=SessionOption)  # 默认 d 模式
+page = MixPage(driver_options=do, session_options=so)  # 默认 d 模式
 ```
 
 
@@ -430,7 +439,7 @@ page.get(url, retry=5, interval=0.5)
 
 ### 切换模式
 
-在 s 和 d 模式之间切换，切换时会自动同步cookies和正在访问的url。
+在 s 和 d 模式之间切换，切换时会自动同步 cookies 和正在访问的 url。
 
 ```python
 page.change_mode(go=False)  # go为False表示不跳转url
@@ -500,15 +509,19 @@ page.process_alert(mode, text)  # 处理提示框
 
 ## 查找元素
 
-ele()返回第一个符合条件的元素，eles()返回所有符合条件的元素列表。  
+ele() 返回第一个符合条件的元素，eles()返回所有符合条件的元素列表。  
 你可在页面对象或元素对象下使用这两个函数，以查找下级元素。  
 
-page.eles()和element.eles()查找返回符合条件的所有元素列表。  
+page.eles() 和 element.eles() 查找返回符合条件的所有元素列表。  
 
-注：元素查找超时默认为10秒，你也可以按需要设置。
+说明：
+
+- 元素查找超时默认为10秒，你也可以按需要设置。
+- 下面的查找语句中，冒号 : 表示模糊匹配，等号 = 表示精确匹配
+- 查询字符串有 @属性名、tag、text、xpath、css五种
 
 ```python
-# 根据属性查找
+# 根据属性查找，@后面可跟任意属性
 page.ele('@id:ele_id', timeout = 2)  # 查找id为ele_id的元素，设置等待时间2秒  
 page.eles('@class')  # 查找所有拥有class属性的元素
 page.eles('@class:class_name')  # 查找所有class含有ele_class的元素 
@@ -557,8 +570,8 @@ ele1 = element.shadow_root.ele('tag:div')
 page.ele('@id:ele_id').ele('tag:div').next.ele('some text').eles('tag:a')
 
 # 简化写法
-ele1 = page('@id:ele_id')('@class:class_name')
-ele2 = ele1('tag:li')
+eles = page('@id:ele_id')('tag:div').next('some text').eles('tag:a')
+ele2 = ele1('tag:li').next('some text')
 ```
 
 
@@ -909,7 +922,7 @@ class ListPage(MixPage):
 
 ## DriverPage和SessionPage
 
-如果无须切换模式，可根据需要只使用DriverPage或SessionPage，用法和MixPage一致。  
+如果无须切换模式，可根据需要只使用 DriverPage 或 SessionPage，用法和MixPage一致。  
 
 ```python
 from DrissionPage.session_page import SessionPage
