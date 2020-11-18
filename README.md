@@ -52,8 +52,25 @@ Keep everything simple, try to provide simple and direct usage, and be more frie
 # Project structure
 
 ***
+## Structure diagram
 
-![](https://gitee.com/g1879/DrissionPage-demos/raw/master/pics/20201110161811.jpg)
+![](https://gitee.com/g1879/DrissionPage-demos/raw/master/pics/20201118164542.jpg)
+
+## Drission Class
+
+Manage the WebDriver object and Session object responsible for communicating with the web page, which is equivalent to the role of the driver.
+
+## MixPage Class
+
+MixPage encapsulates the common functions of page operation. It calls the driver managed in the Drission class to access and operate the page. Can switch between driver and session mode. The login status will be automatically synchronized when switching.
+
+## DriverElement class
+
+The page element class in driver mode can perform operations such as clicking on the element, inputting text, modifying attributes, running js, etc., and can also search for descendant elements at its lower level.
+
+## SessionElement Class
+
+The page element class in session mode can obtain element attribute values and search for descendant elements at its lower levels.
 
 # Simple demo
 

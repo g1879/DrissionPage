@@ -2,11 +2,11 @@
 
 ***
 
-DrissionPage，即driver和session的合体，是个基于python的Web自动化操作集成工具。  
-它实现了selenium和requests之间的无缝切换。  
-因此可以兼顾selenium的便利性和requests的高效率。  
-它集成了页面常用功能，两种模式系统一致的API，使用便捷。
-它用POM模式封装了页面元素常用的方法，很适合自动化操作功能扩展。  
+DrissionPage，即 driver 和 session 的合体，是个基于 python 的 Web 自动化操作集成工具。  
+它实现了 selenium 和 requests 之间的无缝切换。  
+因此可以兼顾 selenium 的便利性和 requests 的高效率。  
+它集成了页面常用功能，两种模式系统一致的 API，使用便捷。
+它用 POM 模式封装了页面元素常用的方法，很适合自动化操作功能扩展。  
 更棒的是，它的使用方式非常简洁和人性化，代码量少，对新手友好。  
 
 **项目地址：**
@@ -30,9 +30,9 @@ DrissionPage，即driver和session的合体，是个基于python的Web自动化�
 
 ## 背景
 
-requests爬虫面对要登录的网站时，要分析数据包、JS源码，构造复杂的请求，往往还要应付验证码、JS混淆、签名参数等反爬手段，门槛较高。若数据是由JS计算生成的，还须重现计算过程，体验不好，开发效率不高。  
-使用selenium，可以很大程度上绕过这些坑，但selenium效率不高。因此，这个库将selenium和requests合而为一，不同须要时切换相应模式，并提供一种人性化的使用方法，提高开发和运行效率。  
-除了合并两者，本库还以网页为单位封装了常用功能，简化了selenium的操作和语句，在用于网页自动化操作时，减少考虑细节，专注功能实现，使用更方便。  
+requests 爬虫面对要登录的网站时，要分析数据包、JS 源码，构造复杂的请求，往往还要应付验证码、JS 混淆、签名参数等反爬手段，门槛较高。若数据是由JS计算生成的，还须重现计算过程，体验不好，开发效率不高。  
+使用 selenium，可以很大程度上绕过这些坑，但 selenium 效率不高。因此，这个库将 selenium 和 requests 合而为一，不同须要时切换相应模式，并提供一种人性化的使用方法，提高开发和运行效率。  
+除了合并两者，本库还以网页为单位封装了常用功能，简化了 selenium 的操作和语句，在用于网页自动化操作时，减少考虑细节，专注功能实现，使用更方便。  
 一切从简，尽量提供简单直接的使用方法，对新手更友好。
 
 # 特性
@@ -40,20 +40,37 @@ requests爬虫面对要登录的网站时，要分析数据包、JS源码，构�
 ***
 
 - 以简洁的代码为第一追求。
-- 允许在selenium和requests间无缝切换，共享session。  
-- 两种模式提供一致的API，使用体验一致。
+- 允许在 selenium 和 requests 间无缝切换，共享 session。  
+- 两种模式提供一致的 API，使用体验一致。
 - 人性化的页面元素操作方式，减轻页面分析工作量和编码量。
 - 对常用功能作了整合和优化，更符合实际使用需要。
-- 兼容selenium代码，便于项目迁移。
-- 使用POM模式封装，便于扩展。
+- 兼容 selenium 代码，便于项目迁移。
+- 使用 POM 模式封装，便于扩展。
 - 统一的文件下载方法，弥补浏览器下载的不足。  
 - 简易的配置方法，摆脱繁琐的浏览器配置。
 
 # 项目结构
 
 ***
+## 结构图
 
-![](https://gitee.com/g1879/DrissionPage-demos/raw/master/pics/20201110161811.jpg)
+![](https://gitee.com/g1879/DrissionPage-demos/raw/master/pics/20201118164542.jpg)
+
+## Drission类
+
+管理负责与网页通讯的 WebDriver 对象和 Session 对象，相当于驱动器的角色。
+
+## MixPage类
+
+MixPage 封装了页面操作的常用功能，它调用 Drission 类中管理的驱动器，对页面进行访问、操作。可在 driver 和 session 模式间切换。切换的时候会自动同步登录状态。  
+
+## DriverElement类
+
+driver 模式下的页面元素类，可对元素进行点击、输入文本、修改属性、运行 js 等操作，也可在其下级搜索后代元素。 
+
+## SessionElement类
+
+session 模式下的页面元素类，可获取元素属性值，也可在其下级搜索后代元素。
 
 # 简单演示
 
@@ -63,7 +80,7 @@ requests爬虫面对要登录的网站时，要分析数据包、JS源码，构�
 
 以下代码实现一模一样的功能，对比两者的代码量：
 
-- 用显性等待方式查找所有文本包含some text的元素
+- 用显性等待方式查找所有文本包含 some text 的元素
 
 ```python
 # 使用selenium：
@@ -125,7 +142,7 @@ page.scroll_to('bottom')
 
 
 
-- 设置headless模式
+- 设置 headless 模式
 
 ```python
 # 使用selenium：
@@ -150,7 +167,7 @@ text = element.after
 
 
 
-- 获取shadow-root
+- 获取 shadow-root
 
 ```python
 # 使用selenium：
@@ -162,7 +179,7 @@ shadow_element = element.shadow_root
 
 
 
-- 用xpath获取属性或节点
+- 用 xpath 获取属性或节点
 
 ```python
 # 使用selenium：
@@ -198,7 +215,7 @@ page.get(url)
 title = page('tag:h1').text
 ```
 
-Tips: DrissionPage自带默认headers
+Tips: DrissionPage 自带默认 headers
 
 
 
@@ -222,7 +239,7 @@ page.download(url, save_path, 'img')  # 支持重命名，处理文件名冲突
 
 ## 模式切换
 
-用selenium登录网站，然后切换到requests读取网页。两者会共享登录信息。
+用 selenium 登录网站，然后切换到requests读取网页。两者会共享登录信息。
 
 ```python
 page = MixPage()  # 创建页面对象，默认driver模式
@@ -287,9 +304,9 @@ page.download(url, save_path)
 ```
 pip install DrissionPage
 ```
-只支持python3.6及以上版本，driver模式目前只支持chrome。  
-若要使用driver模式，须下载chrome和 **对应版本** 的chromedriver。[[chromedriver下载]](http://npm.taobao.org/mirrors/chromedriver)  
-目前只在Windows环境下作了测试。
+只支持 python3.6 及以上版本，driver 模式目前只支持 chrome。  
+若要使用 driver 模式，须下载 chrome 和 **对应版本** 的 chromedriver。[[chromedriver下载]](http://npm.taobao.org/mirrors/chromedriver)  
+目前只在 Windows 环境下作了测试。
 
 # 使用方法
 
@@ -350,7 +367,7 @@ cache_path # 缓存路径
 
 Tips：
 
-- 不同项目可能须要不同版本的 chrome 和 chromedriver，你还可保存多个ini文件，按须使用。
+- 不同项目可能须要不同版本的 chrome 和 chromedriver，你还可保存多个 ini 文件，按须使用。
 - 推荐使用绿色版 chrome，并手动设置路径，避免浏览器升级造成与 chromedriver 版本不匹配。
 - 调试项目时推荐设置 debugger_address，使用手动打开的浏览器调试，省时省力。
 
@@ -358,9 +375,9 @@ Tips：
 
 ## 创建驱动器对象Drission
 
-创建的步骤不是必须，若想快速上手，可跳过本节。MixPage对象会自动创建该对象。
+创建的步骤不是必须，若想快速上手，可跳过本节。MixPage 对象会自动创建该对象。
 
-Drission对象用于管理 driver 和 session 对象。在多个页面协同工作时，Drission对象用于传递驱动器，使多个页面类可控制同一个浏览器或Session对象。  
+Drission 对象用于管理 driver 和 session 对象。在多个页面协同工作时，Drission 对象用于传递驱动器，使多个页面类可控制同一个浏览器或 Session 对象。  
 可直接读取 ini 文件配置信息创建，也可以在初始化时传入配置信息。
 
 ```python
@@ -398,14 +415,14 @@ drission = Drission(driver_options, session_options)
 
 ## 使用页面对象MixPage
 
-MixPage页面对象封装了常用的网页操作，并实现driver和session模式之间的切换。  
-MixPage须接收一个Drission对象并使用其中的driver或session，如没有传入，MixPage会自己创建一个Drission（使用默认ini文件的配置）。
+MixPage 页面对象封装了常用的网页操作，并实现 driver 和 session 模式之间的切换。  
+MixPage 须接收一个 Drission 对象并使用其中的 driver 或 session，如没有传入，MixPage 会自己创建一个 Drission（使用默认ini文件的配置）。
 
-Tips: 多页面对象协同工作时，记得手动创建Drission对象并传递给页面对象使用。否则页面对象会各自创建自己的Drission对象，使信息无法传递。
+Tips: 多页面对象协同工作时，记得手动创建 Drission 对象并传递给页面对象使用。否则页面对象会各自创建自己的 Drission 对象，使信息无法传递。
 
 ### 创建对象
 
-创建对象方式有3种：简易、传入Drission对象、传入配置。可根据实际需要选择。
+创建对象方式有3种：简易、传入 Drission 对象、传入配置。可根据实际需要选择。
 
 ```python
 # 简易创建方式，以ini文件默认配置自动创建Drission对象
@@ -470,7 +487,7 @@ page.current_tab_handle  # 返回当前标签页handle
 
 ### 页面操作
 
-调用只属于 d 模式的方法，会自动切换到 d 模式。详细用法见APIs。
+调用只属于 d 模式的方法，会自动切换到 d 模式。详细用法见 APIs。
 
 ```python
 page.change_mode()  # 切换模式
@@ -509,7 +526,7 @@ page.process_alert(mode, text)  # 处理提示框
 
 ## 查找元素
 
-ele() 返回第一个符合条件的元素，eles()返回所有符合条件的元素列表。  
+ele() 返回第一个符合条件的元素，eles() 返回所有符合条件的元素列表。  
 你可在页面对象或元素对象下使用这两个函数，以查找下级元素。  
 
 page.eles() 和 element.eles() 查找返回符合条件的所有元素列表。  
@@ -635,7 +652,7 @@ element.hover()  # 在元素上悬停鼠标
 
 ## 与selenium代码对接
 
-DrissionPage代码可与selenium代码无缝拼接，既可直接使用selenium的WebDriver对象，也可到处自身的WebDriver给selenium代码使用。使已有项目的迁移非常方便。
+DrissionPage 代码可与 selenium 代码无缝拼接，既可直接使用 selenium 的 WebDriver 对象，也可到处自身的 WebDriver 给 selenium 代码使用。使已有项目的迁移非常方便。
 
 ### selenium转DrissionPage
 
@@ -663,10 +680,10 @@ print(driver.title)  # 打印结果：百度一下，你就知道
 
 ## 下载文件
 
-selenium缺乏对浏览器下载文件的有效管理，难以进行检测下载状态、重命名、失败管理。  
-使用requests下载文件能较好实现以上功能，但代码较为繁琐。  
-因此DrissionPage封装了download方法，整合了两者优点，可从selenium获取登录信息，用requests进行下载。  
-弥补了selenium的不足，使下载简洁高效。
+selenium 缺乏对浏览器下载文件的有效管理，难以进行检测下载状态、重命名、失败管理。  
+使用 requests 下载文件能较好实现以上功能，但代码较为繁琐。  
+因此 DrissionPage 封装了 download 方法，整合了两者优点，可从 selenium 获取登录信息，用 requests 进行下载。  
+弥补了 selenium 的不足，使下载简洁高效。
 
 ### 功能
 
@@ -674,7 +691,7 @@ selenium缺乏对浏览器下载文件的有效管理，难以进行检测下载
 - 重命名文件，可不填写扩展名，程序自动补充
 - 存在同名文件时，可选择重命名、覆盖、跳过等处理方式
 - 显示下载进度
-- 支持post方式
+- 支持 post 方式
 - 支持自定义连接参数
 
 ### 演示
@@ -692,11 +709,11 @@ page.download(url, save_path, 'img', 'rename', show_msg=True)
 
 ## Chrome快捷设置
 
-chrome的配置很繁琐，为简化使用，本库提供了常用配置的设置方法。
+chrome 的配置很繁琐，为简化使用，本库提供了常用配置的设置方法。
 
 ### DriverOptions对象
 
-DriverOptions对象继承自selenium.webdriver.chrome.options的Options对象，在其基础上增加了以下方法：
+DriverOptions 对象继承自 selenium.webdriver.chrome.options的Options 对象，在其基础上增加了以下方法：
 
 ```python
 remove_argument(value)  # 删除某argument值
@@ -735,13 +752,13 @@ do.save()  # 保存配置到默认ini文件
 
 ## 保存配置
 
-因chrome和headers配置繁多，故设置一个ini文件专门用于保存常用配置，你可使用OptionsManager对象获取和保存配置，用DriverOptions对象修改chrome配置。你也可以保存多个ini文件，按不同项目须要调用。
+因 chrome 和 headers 配置繁多，故设置一个 ini 文件专门用于保存常用配置，你可使用 OptionsManager 对象获取和保存配置，用 DriverOptions 对象修改 chrome 配置。你也可以保存多个 ini 文件，按不同项目须要调用。
 
 Tips：建议把常用配置文件保存到别的路径，以防本库升级时配置被重置。
 
 ### ini文件内容
 
-ini文件默认拥有三部分配置：paths、chrome_options、session_options，初始内容如下。
+ini 文件默认拥有三部分配置：paths、chrome_options、session_options，初始内容如下。
 
 ```ini
 [paths]
@@ -757,8 +774,6 @@ debugger_address =
 binary_location =
 ; 配置信息
 arguments = [
-            ; 隐藏浏览器窗口
-            '--headless',
             ; 静音
             '--mute-audio',
             ; 不使用沙盒
@@ -800,7 +815,7 @@ headers = {
 
 ### OptionsManager对象
 
-OptionsManager对象用于读取、设置和保存配置。
+OptionsManager 对象用于读取、设置和保存配置。
 
 ```python
 get_value(section, item) -> str  # 获取某个配置的值
@@ -826,30 +841,30 @@ options_manager.save('D:\\settings.ini')  # 保存到其它路径
 drission = Drission(ini_path = 'D:\\settings.ini')  # 使用其它ini文件创建对象
 ```
 
-**注意**：保存时若不传入路径，会保存到模块目录下的ini文件，即使读取的不是默认ini文件也一样。
+**注意**：保存时若不传入路径，会保存到模块目录下的ini文件，即使读取的不是默认 ini 文件也一样。
 
 
 
 ## easy_set方法
 
-调用easy_set方法会修改默认ini文件相关内容。
+调用 easy_set 方法会修改默认ini文件相关内容。
 
 ```python
-set_headless(True)  # 开启headless模式
+set_headless(True)  # 开启 headless 模式
 set_no_imgs(True)  # 开启无图模式
-set_no_js(True)  # 禁用JS
+set_no_js(True)  # 禁用 JS
 set_mute(True)  # 开启静音模式
-set_user_agent('Mozilla/5.0 (Macintosh; Int......')  # 设置user agent
+set_user_agent('Mozilla/5.0 (Macintosh; Int......')  # 设置 user agent
 set_proxy('127.0.0.1:8888')  # 设置代理
 set_paths(paths)  # 见 [初始化] 一节
-set_argument(arg, value)  # 设置属性，若属性无值（如'zh_CN.UTF-8'），value为bool表示开关；否则value为str，当value为''或False，删除该属性项
+set_argument(arg, value)  # 设置属性，若属性无值（如'zh_CN.UTF-8'），value 为 bool 表示开关；否则value为str，当 value为''或 False，删除该属性项
 ```
 
 # POM模式
 
 ***
 
-MixPage封装了常用的页面操作，可方便地用于扩展。  
+MixPage 封装了常用的页面操作，可方便地用于扩展。  
 
 例：扩展一个列表页面读取类
 
@@ -920,21 +935,21 @@ class ListPage(MixPage):
 
 ***
 
-## DriverPage和SessionPage
+## DriverPage 和 SessionPage
 
-如果无须切换模式，可根据需要只使用 DriverPage 或 SessionPage，用法和MixPage一致。  
+如果无须切换模式，可根据需要只使用 DriverPage 或 SessionPage，用法和 MixPage 一致。  
 
 ```python
 from DrissionPage.session_page import SessionPage
 from DrissionPage.drission import Drission
 
 session = Drission().session
-page = SessionPage(session)  # 传入Session对象
+page = SessionPage(session)  # 传入 Session 对象
 page.get('http://www.baidu.com')
 print(page.ele('@id:su').text)  # 输出：百度一下
 
 driver = Drission().driver
-page = DriverPage(driver)  # 传入Driver对象
+page = DriverPage(driver)  # 传入 Driver 对象
 page.get('http://www.baidu.com')
 print(page.ele('@id:su').text)  # 输出：百度一下
 ```
@@ -947,36 +962,36 @@ print(page.ele('@id:su').text)  # 输出：百度一下
 
 ### class Drission()
 
-Drission类用于管理WebDriver对象和Session对象，是驱动器的角色。
+Drission 类用于管理 WebDriver 对象和 Session 对象，是驱动器的角色。
 
 参数说明：
 
-- driver_or_options: [WebDriver, dict, Options]     - WebDriver对象或chrome配置参数。
-- session_or_options: [Session, dict]                    - Session对象配置参数
-- ini_path: str                                                        - ini文件路径，默认为DrissionPage文件夹下的ini文件
+- driver_or_options: [WebDriver, dict, Options]     - WebDriver 对象或 chrome 配置参数。
+- session_or_options: [Session, dict]                    - Session 对象配置参数
+- ini_path: str                                                        - ini 文件路径，默认为 DrissionPage 文件夹下的ini文件
 - proxy: dict                                                          - 代理设置
 
 
 
 ### session
 
-返回Session对象，自动按配置信息初始化。
+返回 Session 对象，自动按配置信息初始化。
 
-返回: Session  - 管理的Session对象
+返回: Session  - 管理的 Session 对象
 
 
 
 ### driver
 
-返回WebDriver对象，自动按配置信息初始化。
+返回 WebDriver 对象，自动按配置信息初始化。
 
-返回: WebDriver  - 管理的WebDriver对象
+返回: WebDriver  - 管理的 WebDriver 对象
 
 
 
 ### driver_options
 
-返回或设置driver配置。
+返回或设置 driver 配置。
 
 返回: dict
 
@@ -984,7 +999,7 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### session_options
 
-返回session配置。
+返回 session 配置。
 
 返回: dict
 
@@ -992,7 +1007,7 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### session_options()
 
-设置session配置。
+设置 session 配置。
 
 返回: None
 
@@ -1008,13 +1023,13 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### cookies_to_session()
 
-把driver对象的cookies复制到session对象。
+把 driver 对象的 cookies 复制到 session 对象。
 
 参数说明：
 
-- copy_user_agent: bool  - 是否复制user_agent到session
-- driver: WebDriver           - 复制cookies的WebDriver对象
-- session: Session            - 接收cookies的Session对象
+- copy_user_agent: bool  - 是否复制 user_agent 到 session
+- driver: WebDriver           - 复制 cookies 的 WebDriver 对象
+- session: Session            - 接收 cookies 的 Session 对象
 
 返回: None
 
@@ -1022,13 +1037,13 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### cookies_to_driver()
 
-把cookies从session复制到driver。
+把 cookies 从 session 复制到 driver。
 
 参数说明：
 
-- url: str                       - cookies的域
-- driver: WebDriver     - 接收cookies的WebDriver对象
-- session: Session      - 复制cookies的Session对象
+- url: str                       - cookies 的域
+- driver: WebDriver     - 接收 cookies 的 WebDriver对象
+- session: Session      - 复制 cookies 的 Session对象
 
 返回: None
 
@@ -1036,12 +1051,12 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### user_agent_to_session()
 
-把user agent从driver复制到session。
+把 user agent 从 driver 复制到 session。
 
 参数说明：
 
-- driver: WebDriver     - WebDriver对象，复制user agent
-- session: Session      - Session对象，接收user agent
+- driver: WebDriver     - WebDriver 对象，复制 user agent
+- session: Session      - Session 对象，接收 user agent
 
 返回: None
 
@@ -1049,7 +1064,7 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### close_driver()
 
-关闭浏览器，driver置为None。
+关闭浏览器，driver 置为 None。
 
 返回: None
 
@@ -1057,7 +1072,7 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### close_session() 
 
-关闭session并置为None。
+关闭 session 并置为 None。
 
 返回: None
 
@@ -1065,7 +1080,7 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### close()
 
-关闭driver和session。
+关闭 driver 和 session。
 
 返回: None
 
@@ -1075,21 +1090,21 @@ Drission类用于管理WebDriver对象和Session对象，是驱动器的角色�
 
 ### class MixPage()
 
-MixPage封装了页面操作的常用功能，可在driver和session模式间无缝切换。切换的时候会自动同步cookies。  
-获取信息功能为两种模式共有，操作页面元素功能只有d模式有。调用某种模式独有的功能，会自动切换到该模式。  
-它继承自DriverPage和SessionPage类，这些功能由这两个类实现，MixPage作为调度的角色存在。
+MixPage 封装了页面操作的常用功能，可在 driver 和 session 模式间无缝切换。切换的时候会自动同步 cookies。  
+获取信息功能为两种模式共有，操作页面元素功能只有 d 模式有。调用某种模式独有的功能，会自动切换到该模式。  
+它继承自 DriverPage 和 SessionPage 类，这些功能由这两个类实现，MixPage 作为调度的角色存在。
 
 参数说明：
 
-- drission: Drission  - Drission对象，如没传入则创建一个。传入 's' 或 'd' 时快速配置相应模式
+- drission: Drission  - Drission 对象，如没传入则创建一个。传入 's' 或 'd' 时快速配置相应模式
 - mode: str              - 模式，可选 'd' 或 's'，默认为'd'
-- timeout: float        - 超时时间，driver模式为查找元素时间，session模式为连接等待时间
+- timeout: float        - 超时时间，driver 模式为查找元素时间，session 模式为连接等待时间
 
 
 
 ### url  
 
-返回MixPage对象当前访问的url。
+返回 MixPage 对象当前访问的 url。
 
 返回: str
 
@@ -1105,7 +1120,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### drission
 
-返回当前使用的Dirssion对象。
+返回当前使用的 Dirssion 对象。
 
 返回: Drission
 
@@ -1113,7 +1128,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### driver
 
-返回driver对象，如没有则创建，调用时会切换到driver模式。
+返回driver对象，如没有则创建，调用时会切换到 driver 模式。
 
 返回: WebDriver
 
@@ -1121,7 +1136,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### session
 
-返回session对象，如没有则创建。
+返回 session 对象，如没有则创建。
 
 返回: Session
 
@@ -1129,7 +1144,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### response
 
-返回s模式获取到的Response对象，调用时会切换到s模式。
+返回s模式获取到的 Response 对象，调用时会切换到s模式。
 
 返回: Response
 
@@ -1137,7 +1152,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### cookies
 
-返回cookies，从当前模式获取。
+返回 cookies，从当前模式获取。
 
 返回: [dict, list]
 
@@ -1145,7 +1160,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### html
 
-返回页面html文本。
+返回页面 html 文本。
 
 返回: str
 
@@ -1153,7 +1168,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### title
 
-返回页面title。
+返回页面 title。
 
 返回: str
 
@@ -1161,7 +1176,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### url_available
 
-返回当前url有效性。
+返回当前 url 有效性。
 
 返回: bool
 
@@ -1169,12 +1184,12 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### change_mode()
 
-切换模式，'d' 或 's'。切换时会把当前模式的cookies复制到目标模式。
+切换模式，'d' 或 's'。切换时会把当前模式的 cookies 复制到目标模式。
 
 参数说明：
 
 - mode: str  - 指定目标模式，'d' 或 's'。
-- go: bool    - 切换模式后是否跳转到当前url
+- go: bool    - 切换模式后是否跳转到当前 url
 
 返回: None
 
@@ -1183,14 +1198,14 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 ### ele()
 
 返回页面中符合条件的元素，默认返回第一个。  
-​如查询参数是字符串，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'方式。无控制方式时默认用text方式查找。  
+​如查询参数是字符串，可选'@属性名:'、'tag:'、'text:'、'css:'、'xpath:'方式。无控制方式时默认用 text 方式查找。  
 ​如是loc，直接按照内容查询。
 
 参数说明：
 
-- loc_or_str: [Tuple[str, str], str, DriverElement, SessionElement, WebElement]  - 元素的定位信息，可以是元素对象，loc元组，或查询字符串
+- loc_or_str: [Tuple[str, str], str, DriverElement, SessionElement, WebElement]  - 元素的定位信息，可以是元素对象，loc 元组，或查询字符串
 - mode: str                  - 'single' 或 'all‘，对应查找一个或全部
-- timeout: float            - 查找元素超时时间，driver模式下有效
+- timeout: float            - 查找元素超时时间，driver 模式下有效
 
 示例：
 
@@ -1206,19 +1221,19 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
   其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串。
 
-  - page.ele('@class:ele_class')                      - 返回第一个class含有ele_class的元素
-  - page.ele('@name=ele_name')                    - 返回第一个name等于ele_name的元素
-  - page.ele('@placeholder')                            - 返回第一个带placeholder属性的元素
-  - page.ele('tag:p')                                          - 返回第一个p元素
-  - page.ele('tag:div@class:ele_class')            - 返回第一个class含有ele_class的div元素
-  - page.ele('tag:div@class=ele_class')           - 返回第一个class等于ele_class的div元素
-  - page.ele('tag:div@text():some_text')           - 返回第一个文本含有some_text的div元素
-  - page.ele('tag:div@text()=some_text')          - 返回第一个文本等于some_text的div元素
-  - page.ele('text:some_text')                            - 返回第一个文本含有some_text的元素
-  - page.ele('some_text')                                   - 返回第一个文本含有some_text的元素（等价于上一行）
-  - page.ele('text=some_text')                           - 返回第一个文本等于some_text的元素
-  - page.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素
-  - page.ele('css:div.ele_class')                         - 返回第一个符合css selector的元素
+  - page.ele('@class:ele_class')                      - 返回第一个 class 含有 ele_class 的元素
+  - page.ele('@name=ele_name')                    - 返回第一个 name 等于 ele_name 的元素
+  - page.ele('@placeholder')                            - 返回第一个带 placeholder 属性的元素
+  - page.ele('tag:p')                                          - 返回第一个 p 元素
+  - page.ele('tag:div@class:ele_class')            - 返回第一个 class 含有 ele_class 的 div 元素
+  - page.ele('tag:div@class=ele_class')           - 返回第一个 class 等于 ele_class 的 div 元素
+  - page.ele('tag:div@text():some_text')           - 返回第一个文本含有 some_text 的 div 元素
+  - page.ele('tag:div@text()=some_text')          - 返回第一个文本等于 some_text 的 div 元素
+  - page.ele('text:some_text')                            - 返回第一个文本含有 some_text 的元素
+  - page.ele('some_text')                                   - 返回第一个文本含有 some_text 的元素（等价于上一行）
+  - page.ele('text=some_text')                           - 返回第一个文本等于 some_text 的元素
+  - page.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合 xpath 的元素
+  - page.ele('css:div.ele_class')                         - 返回第一个符合 css selector 的元素
 
 返回: [DriverElement, SessionElement, str]  - 元素对象或属性、文本节点文本
 
@@ -1226,12 +1241,12 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### eles()
 
-根据查询参数获取符合条件的元素列表。查询参数使用方法和ele方法一致。
+根据查询参数获取符合条件的元素列表。查询参数使用方法和 ele 方法一致。
 
 参数说明：
 
 - loc_or_str: [Tuple[str, str], str]        - 查询条件参数
-- timeout: float                                  - 查找元素超时时间，driver模式下有效
+- timeout: float                                  - 查找元素超时时间，driver 模式下有效
 
 返回: [List[DriverElement or str], List[SessionElement or str]]  - 元素对象或属性、文本节点文本组成的列表
 
@@ -1239,11 +1254,11 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### cookies_to_session()
 
-从WebDriver对象复制cookies到Session对象。
+从 WebDriver 对象复制 cookies 到 Session 对象。
 
 参数说明：
 
-- copy_user_agent:bool  - 是否同时复制user agent
+- copy_user_agent:bool  - 是否同时复制 user agent
 
 返回: None
 
@@ -1251,11 +1266,11 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### cookies_to_driver()
 
-从Session对象复制cookies到WebDriver对象。
+从 Session 对象复制 cookies 到 WebDriver 对象。
 
 参数说明：
 
-- url:str  - cookies的域或url
+- url:str  - cookies 的域或 url
 
 返回: None
 
@@ -1263,34 +1278,34 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### get()
 
-跳转到一个url，跳转前先同步cookies，跳转后返回目标url是否可用。
+跳转到一个url，跳转前先同步 cookies，跳转后返回目标 url 是否可用。
 
 参数说明：
 
 - url: str                      - 目标url
-- go_anyway: bool     - 是否强制跳转。若目标url和当前url一致，默认不跳转。
+- go_anyway: bool     - 是否强制跳转。若目标 url 和当前 url 一致，默认不跳转。
 - show_errmsg: bool  - 是否显示和抛出异常
 - retry: int                    - 连接出错时重试次数
 - interval: float             -  重试间隔（秒）
-- **kwargs                   - 用于requests的连接参数
+- **kwargs                   - 用于 requests 的连接参数
 
-返回: [bool, None]  - url是否可用
+返回: [bool, None]  - url 是否可用
 
 
 
 ### post()
 
-以post方式跳转，调用时自动切换到session模式。
+以post方式跳转，调用时自动切换到 session 模式。
 
 参数说明：
 
-- url:str                        - 目标url
+- url:str                        - 目标 url
 - data: dict                  - 提交的数据
-- go_anyway: bool     - 是否强制跳转。若目标url和当前url一致，默认不跳转。
+- go_anyway: bool     - 是否强制跳转。若目标 url 和当前 url 一致，默认不跳转。
 - show_errmsg: bool  - 是否显示和抛出异常
 - retry: int                    - 连接出错时重试次数
 - interval: float             -  重试间隔（秒）
-- **kwargs                   - 用于requests的连接参数
+- **kwargs                   - 用于 requests 的连接参数
 
 返回: [bool, None]  - url是否可用
 
@@ -1302,20 +1317,20 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 参数说明：
 
-- file_url: str              - 文件url
-- goal_path: str         - 存放路径，默认为ini文件中指定的临时文件夹
+- file_url: str              - 文件 url
+- goal_path: str         - 存放路径，默认为 ini 文件中指定的临时文件夹
 - rename: str             - 重命名文件，不改变扩展名
 - file_exists: str         - 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
-- post_data: dict        - post方式时提交的数据
+- post_data: dict        - post 方式时提交的数据
 - show_msg: bool      - 是否显示下载信息
 - show_errmsg: bool  - 是否显示和抛出异常
-- **kwargs                  - 用于requests的连接参数
+- **kwargs                  - 用于 requests 的连接参数
 
 返回: Tuple[bool, str]  - 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
 
 
 
-以下方法和属性只有driver模式下生效，调用时会自动切换到driver模式
+以下方法和属性只有 driver 模式下生效，调用时会自动切换到 driver 模式
 
 ***
 
@@ -1329,7 +1344,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### tab_handles
 
-返回所有标签页handle列表。
+返回所有标签页 handle 列表。
 
 返回: list
 
@@ -1345,7 +1360,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### current_tab_handle
 
-返回当前标签页handle。
+返回当前标签页 handle。
 
 返回: str
 
@@ -1353,7 +1368,7 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### wait_ele()
 
-等待元素从dom删除、显示、隐藏。
+等待元素从 dom 删除、显示、隐藏。
 
 参数说明：
 
@@ -1367,13 +1382,13 @@ MixPage封装了页面操作的常用功能，可在driver和session模式间无
 
 ### check_page()
 
-d模式时检查网页是否符合预期。默认由response状态检查，可重载实现针对性检查。
+d 模式时检查网页是否符合预期。默认由 response 状态检查，可重载实现针对性检查。
 
 参数说明：
 
-- by_requests:bool  - 强制使用内置response进行检查
+- by_requests:bool  - 强制使用内置 response 进行检查
 
-返回: [bool, None]  - bool为是否可用，None为未知
+返回: [bool, None]  - bool 为是否可用，None 为未知
 
 
 
@@ -1383,7 +1398,7 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 参数说明：
 
-- script: str  - JavaScript代码文本
+- script: str  - JavaScript 代码文本
 - *args        - 传入的参数
 
 返回: Any
@@ -1416,7 +1431,7 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 参数说明：
 
-- num_or_handle:[int, str]  - 要保留的标签页序号或handle，序号第一个为0，最后为-1
+- num_or_handle:[int, str]  - 要保留的标签页序号或 handle，序号第一个为0，最后为-1
 
 返回: None
 
@@ -1436,18 +1451,18 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 ### to_iframe()
 
-跳转到iframe，默认跳转到最高层级，兼容selenium原生参数。
+跳转到 iframe，默认跳转到最高层级，兼容 selenium 原生参数。
 
 参数说明：
 
-- loc_or_ele:[int, str, tuple, WebElement, DriverElement] - 查找iframe元素的条件，可接收iframe序号(0开始)、id或name、查询字符串、loc参数、WebElement对象、DriverElement对象，传入'main'跳到最高层，传入'parent'跳到上一层
+- loc_or_ele:[int, str, tuple, WebElement, DriverElement] - 查找 iframe 元素的条件，可接收 iframe 序号（0开始）、id 或 name、查询字符串、loc参数、WebElement对象、DriverElement 对象，传入 'main' 跳到最高层，传入 'parent' 跳到上一层
 
 示例：
-- to_iframe('tag:iframe')          - 通过传入iframe的查询字符串定位
-- to_iframe('iframe_id')           - 通过iframe的id属性定位
-- to_iframe('iframe_name')     - 通过iframe的name属性定位
+- to_iframe('tag:iframe')          - 通过传入 iframe 的查询字符串定位
+- to_iframe('iframe_id')           - 通过 iframe 的 id 属性定位
+- to_iframe('iframe_name')     - 通过 iframe 的 name 属性定位
 - to_iframe(iframe_element)  - 通过传入元素对象定位
-- to_iframe(0)                         - 通过iframe的序号定位
+- to_iframe(0)                         - 通过 iframe 的序号定位
 - to_iframe('main')                  - 跳到最高层
 - to_iframe('parent')                - 跳到上一层
 
@@ -1461,7 +1476,7 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 参数说明：
 
-- loc_or_ele:[str, tuple, WebElement, DriverElement]  - 查找元素的条件，和ele()方法的查找条件一致。
+- loc_or_ele:[str, tuple, WebElement, DriverElement]  - 查找元素的条件，和 ele() 方法的查找条件一致。
 
 返回: None
 
@@ -1515,8 +1530,8 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 参数说明：
 
-- path: str         - 截图保存路径，默认为ini文件中指定的临时文件夹
-- filename: str  - 截图文件名，默认为页面title为文件名
+- path: str         - 截图保存路径，默认为 ini 文件中指定的临时文件夹
+- filename: str  - 截图文件名，默认为页面 title 为文件名
 
 返回: str
 
@@ -1541,7 +1556,7 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 参数说明：
 
 - mode: str  - 'ok' 或 'cancel'，若输入其它值，不会按按钮但依然返回文本值
-- text: str     - 处理prompt提示框时可输入文本
+- text: str     - 处理 prompt 提示框时可输入文本
 
 返回: [str, None]  - 提示框内容文本
 
@@ -1549,7 +1564,7 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 ### close_driver()
 
-关闭driver及浏览器。
+关闭 driver 及浏览器。
 
 返回: None
 
@@ -1557,7 +1572,7 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 ### close_session()
 
-关闭session。
+关闭 session。
 
 返回: None
 
@@ -1567,11 +1582,11 @@ d模式时检查网页是否符合预期。默认由response状态检查，可�
 
 ### class DriverElement()
 
-driver模式的元素对象，包装了一个WebElement对象，并封装了常用功能。
+driver 模式的元素对象，包装了一个 WebElement 对象，并封装了常用功能。
 
 参数说明：
 
-- ele: WebElement   - WebElement对象
+- ele: WebElement   - WebElement 对象
 - page: DriverPage  - 元素所在的页面对象
 - timeout: float         - 查找元素超时时间（每次查找元素时还可单独设置）
 
@@ -1579,7 +1594,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### inner_ele
 
-被包装的WebElement对象。
+被包装的 WebElement 对象。
 
 返回: WebElement
 
@@ -1587,7 +1602,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### html
 
-返回元素outerHTML文本。
+返回元素 outerHTML 文本。
 
 返回: str
 
@@ -1595,7 +1610,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### inner_html
 
-返回元素innerHTML文本。
+返回元素 innerHTML 文本。
 
 返回: str
 
@@ -1627,7 +1642,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### link
 
-返回元素href或src绝对url。
+返回元素 href 或 src 绝对 url。
 
 返回: str
 
@@ -1635,7 +1650,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### css_path
 
-返回元素css selector绝对路径。
+返回元素 css selector 绝对路径。
 
 返回: str
 
@@ -1643,7 +1658,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### xpath
 
-返回元素xpath绝对路径。
+返回元素 xpath 绝对路径。
 
 返回: str
 
@@ -1691,7 +1706,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### shadow_root
 
-返回当前元素的shadow_root元素对象
+返回当前元素的 shadow_root 元素对象
 
 返回: ShadowRoot
 
@@ -1699,7 +1714,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### before
 
-返回当前元素的::before伪元素内容
+返回当前元素的 ::before 伪元素内容
 
 返回: str
 
@@ -1707,7 +1722,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### after
 
-返回当前元素的::after伪元素内容
+返回当前元素的 ::after 伪元素内容
 
 返回: str
 
@@ -1727,7 +1742,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### parents()
 
-返回第N层父级元素对象。
+返回第 N 层父级元素对象。
 
 参数说明：
 
@@ -1739,7 +1754,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### nexts()
 
-返回后面第num个兄弟元素或节点文本。
+返回后面第 num 个兄弟元素或节点文本。
 
 参数说明：
 
@@ -1752,7 +1767,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### prevs()
 
-返回前面第num个兄弟元素或节点文本。
+返回前面第 num 个兄弟元素或节点文本。
 
 参数说明：
 
@@ -1783,7 +1798,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 参数说明：
 
-- loc_or_str: [Tuple[str, str], str]         - 元素的定位信息，可以是loc元组，或查询字符串
+- loc_or_str: [Tuple[str, str], str]         - 元素的定位信息，可以是 loc 元组，或查询字符串
 - mode: str                                         - 'single' 或 'all'，对应查找一个或全部
 - timeout: float                                   - 查找元素超时时间
 
@@ -1799,19 +1814,19 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
   其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串。
 
-  - ele.ele('@class:ele_class')                      - 返回第一个class含有ele_class的元素
-  - ele.ele('@name=ele_name')                    - 返回第一个name等于ele_name的元素
-  - ele.ele('@placeholder')                            - 返回第一个带placeholder属性的元素
-  - ele.ele('tag:p')                                          - 返回第一个p元素
-  - ele.ele('tag:div@class:ele_class')            - 返回第一个class含有ele_class的div元素
-  - ele.ele('tag:div@class=ele_class')           - 返回第一个class等于ele_class的div元素
-  - ele.ele('tag:div@text():some_text')           - 返回第一个文本含有some_text的div元素
-  - ele.ele('tag:div@text()=some_text')          - 返回第一个文本等于some_text的div元素
-  - ele.ele('text:some_text')                            - 返回第一个文本含有some_text的元素
-  - ele.ele('some_text')                                   - 返回第一个文本含有some_text的元素（等价于上一行）
-  - ele.ele('text=some_text')                           - 返回第一个文本等于some_text的元素
-  - ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素
-  - ele.ele('css:div.ele_class')                         - 返回第一个符合css selector的元素
+  - ele.ele('@class:ele_class')                      - 返回第一个 class 含有e le_class 的元素
+  - ele.ele('@name=ele_name')                    - 返回第一个 name 等于 ele_name 的元素
+  - ele.ele('@placeholder')                            - 返回第一个带 placeholder 属性的元素
+  - ele.ele('tag:p')                                          - 返回第一个 p 元素
+  - ele.ele('tag:div@class:ele_class')            - 返回第一个 class 含有 ele_class 的 div 元素
+  - ele.ele('tag:div@class=ele_class')           - 返回第一个 class 等于 ele_class 的 div 元素
+  - ele.ele('tag:div@text():some_text')           - 返回第一个文本含有 some_text 的 div 元素
+  - ele.ele('tag:div@text()=some_text')          - 返回第一个文本等于 some_tex t的 div 元素
+  - ele.ele('text:some_text')                            - 返回第一个文本含有 some_text 的元素
+  - ele.ele('some_text')                                   - 返回第一个文本含有 some_text 的元素（等价于上一行）
+  - ele.ele('text=some_text')                           - 返回第一个文本等于 some_text 的元素
+  - ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合 xpath 的元素
+  - ele.ele('css:div.ele_class')                         - 返回第一个符合 css selector 的元素
 
 返回: [DriverElement, str]
 
@@ -1819,7 +1834,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### eles()
 
-根据查询参数获取符合条件的元素列表。查询参数使用方法和ele方法一致。
+根据查询参数获取符合条件的元素列表。查询参数使用方法和 ele 方法一致。
 
 参数说明：
 
@@ -1845,7 +1860,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### click()
 
-点击元素，如不成功则用js方式点击，可指定是否用js方式点击。
+点击元素，如不成功则用 js 方式点击，可指定是否用 js 方式点击。
 
 参数说明：
 
@@ -1870,7 +1885,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### run_script()
 
-执行js代码，传入自己为第一个参数。
+执行 js 代码，传入自己为第一个参数。
 
 参数说明：
 
@@ -1923,7 +1938,7 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### is_valid()
 
-元素是否还在DOM内。该方法用于判断页面跳转元素不能用的情况
+元素是否还在 DOM 内。该方法用于判断页面跳转元素不能用的情况
 
 返回: bool
 
@@ -1935,8 +1950,8 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 参数说明：
 
-- path: str         - 截图保存路径，默认为ini文件中指定的临时文件夹
-- filename: str  - 截图文件名，默认为页面title为文件名
+- path: str         - 截图保存路径，默认为 ini 文件中指定的临时文件夹
+- filename: str  - 截图文件名，默认为页面 title 为文件名
 
 返回: str
 
@@ -2008,18 +2023,18 @@ driver模式的元素对象，包装了一个WebElement对象，并封装了常�
 
 ### class SessionElement()
 
-session模式的元素对象，包装了一个Element对象，并封装了常用功能。
+session 模式的元素对象，包装了一个Element对象，并封装了常用功能。
 
 参数说明：
 
-- ele: HtmlElement   - lxml库的HtmlElement对象
+- ele: HtmlElement   - lxml 库的 HtmlElement 对象
 - page: SessionPage  - 元素所在页面对象
 
 
 
 ### inner_ele
 
-被包装的HTMLElement对象。
+被包装的 HTMLElement 对象。
 
 返回: HtmlElement
 
@@ -2027,7 +2042,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### html
 
-返回元素outerHTML文本。
+返回元素 outerHTML 文本。
 
 返回: str
 
@@ -2035,7 +2050,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### inner_html
 
-返回元素innerHTML文本。
+返回元素 innerHTML 文本。
 
 返回: str
 
@@ -2059,7 +2074,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### text
 
-返回元素内的文本，即innerText。
+返回元素内的文本，即 innerText。
 
 返回: str
 
@@ -2067,7 +2082,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### link
 
-返回元素href或src绝对url。
+返回元素 href 或 src 绝对 url。
 
 返回: str
 
@@ -2075,7 +2090,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### css_path
 
-返回元素css selector绝对路径。
+返回元素 css selector 绝对路径。
 
 返回: srt
 
@@ -2083,7 +2098,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### xpath
 
-返回元素xpath绝对路径。
+返回元素 xpath 绝对路径。
 
 返回: srt
 
@@ -2127,7 +2142,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### nexts()
 
-返回后面第num个兄弟元素或节点文本。
+返回后面第 num 个兄弟元素或节点文本。
 
 参数说明：
 
@@ -2140,7 +2155,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### prevs()
 
-返回前N个兄弟元素对象。
+返回前 N 个兄弟元素对象。
 
 参数说明：
 
@@ -2188,19 +2203,19 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串。
 
-- ele.ele('@class:ele_class')                      - 返回第一个class含有ele_class的元素
-- ele.ele('@name=ele_name')                    - 返回第一个name等于ele_name的元素
-- ele.ele('@placeholder')                            - 返回第一个带placeholder属性的元素
-- ele.ele('tag:p')                                          - 返回第一个p元素
-- ele.ele('tag:div@class:ele_class')            - 返回第一个class含有ele_class的div元素
-- ele.ele('tag:div@class=ele_class')           - 返回第一个class等于ele_class的div元素
-- ele.ele('tag:div@text():some_text')           - 返回第一个文本含有some_text的div元素
-- ele.ele('tag:div@text()=some_text')          - 返回第一个文本等于some_text的div元素
-- ele.ele('text:some_text')                            - 返回第一个文本含有some_text的元素
-- ele.ele('some_text')                                   - 返回第一个文本含有some_text的元素（等价于上一行）
-- ele.ele('text=some_text')                           - 返回第一个文本等于some_text的元素
-- ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素
-- ele.ele('css:div.ele_class')                         - 返回第一个符合css selector的元素
+- ele.ele('@class:ele_class')                      - 返回第一个 class 含有 ele_class 的元素
+- ele.ele('@name=ele_name')                    - 返回第一个 name 等于 ele_name 的元素
+- ele.ele('@placeholder')                            - 返回第一个带 placeholder 属性的元素
+- ele.ele('tag:p')                                          - 返回第一个 p 元素
+- ele.ele('tag:div@class:ele_class')            - 返回第一个 class 含有 ele_class 的div元素
+- ele.ele('tag:div@class=ele_class')           - 返回第一个 class 等于 ele_class 的div元素
+- ele.ele('tag:div@text():some_text')           - 返回第一个文本含有 some_text 的div元素
+- ele.ele('tag:div@text()=some_text')          - 返回第一个文本等于 some_text 的div元素
+- ele.ele('text:some_text')                            - 返回第一个文本含有 some_text 的元素
+- ele.ele('some_text')                                   - 返回第一个文本含有 some_text 的元素（等价于上一行）
+- ele.ele('text=some_text')                           - 返回第一个文本等于 some_text 的元素
+- ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合 xpath 的元素
+- ele.ele('css:div.ele_class')                         - 返回第一个符合 css selector 的元素
 
 返回: [SessionElement, str]
 
@@ -2228,7 +2243,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 参数说明：
 
-- path:str  - ini文件路径，不传入则默认读取当前文件夹下的configs.ini文件
+- path:str  - ini文件路径，不传入则默认读取当前文件夹下的 configs.ini 文件
 
 
 
@@ -2277,7 +2292,7 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 参数说明：
 
-- path:str  - ini文件的路径，默认保存到模块文件夹下的
+- path:str  - ini 文件的路径，默认保存到模块文件夹下的
 
 返回: OptionsManager  - 返回自己
 
@@ -2287,17 +2302,17 @@ session模式的元素对象，包装了一个Element对象，并封装了常用
 
 ### class DriverOptions()
 
-chrome浏览器配置类，继承自selenium.webdriver.chrome.options的Options类，增加了删除配置和保存到文件方法。
+chrome 浏览器配置类，继承自 selenium.webdriver.chrome.options 的 Options 类，增加了删除配置和保存到文件方法。
 
 参数说明：
 
-- read_file:bool  - 创建时是否从ini文件读取配置信息
+- read_file:bool  - 创建时是否从 ini 文件读取配置信息
 
 
 
 ### driver_path
 
-chromedriver.exe的路径。
+chromedriver.exe 的路径。
 
 返回: str
 
@@ -2305,7 +2320,7 @@ chromedriver.exe的路径。
 
 ### chrome_path
 
-chrome.exe的路径
+chrome.exe 的路径
 
 返回: str
 
@@ -2317,7 +2332,7 @@ chrome.exe的路径
 
 参数说明：
 
-- path:str  - ini文件的路径，默认保存到模块文件夹下的
+- path:str  - ini 文件的路径，默认保存到模块文件夹下的
 
 返回: DriverOptions  - 返回自己
 
@@ -2337,11 +2352,11 @@ chrome.exe的路径
 
 ### remove_experimental_option()
 
-移除一个实验设置，传入key值删除。
+移除一个实验设置，传入 key 值删除。
 
 参数说明：
 
-- key:str  - 要移除的实验设置key值
+- key:str  - 要移除的实验设置 key 值
 
 返回: DriverOptions  - 返回自己
 
@@ -2357,12 +2372,12 @@ chrome.exe的路径
 
 ### set_argument()
 
-设置chrome属性，无值的属性可设置开关，有值的属性可设置属性的值。
+设置 chrome 属性，无值的属性可设置开关，有值的属性可设置属性的值。
 
 参数说明：
 
 - arg:str               - 属性名
-- value[bool, str]  - 属性值，有值的属性传入值，没有的传入bool
+- value[bool, str]  - 属性值，有值的属性传入值，没有的传入 bool
 
 返回: DriverOptions  - 返回自己
 
@@ -2394,7 +2409,7 @@ on_off: bool  - 打开或关闭
 
 ### set_no_js()
 
-是否禁用js。
+是否禁用 js。
 
 参数说明：
 
@@ -2418,11 +2433,11 @@ on_off: bool  - 打开或关闭
 
 ### set_user_agent()
 
-设置浏览器user agent。
+设置浏览器 user agent。
 
 参数说明：
 
-- user_agent:str  - user agent字符串
+- user_agent:str  - user agent 字符串
 
 返回: DriverOptions  - 返回自己
 
@@ -2446,8 +2461,8 @@ on_off: bool  - 打开或关闭
 
 参数说明：
 
-- driver_path:str              - chromedriver.exe的路径
-- chrome_path:str           - chrome.exe的路径
+- driver_path:str              - chromedriver.exe 的路径
+- chrome_path:str           - chrome.exe 的路径
 - debugger_address:str  - 调试浏览器地址，例：127.0.0.1:9222
 - download_path:str        - 下载文件路径
 - user_data_path:str        - 用户数据路径
@@ -2459,22 +2474,22 @@ on_off: bool  - 打开或关闭
 
 ## easy_set方法
 
-chrome的配置太难记，所以把常用的配置写成简单的方法，调用会修改ini文件相关内容。
+chrome 的配置太难记，所以把常用的配置写成简单的方法，调用会修改 ini 文件相关内容。
 
 ### set_paths()
 
-便捷的设置路径方法，把传入的路径保存到默认ini文件，并检查chrome和chromedriver版本是否匹配。
+便捷的设置路径方法，把传入的路径保存到默认 ini 文件，并检查 chrome 和 chromedriver 版本是否匹配。
 
 参数说明：
 
-- driver_path:str               - chromedriver.exe路径
-- chrome_path:str           - chrome.exe路径
+- driver_path:str               - chromedriver.exe 路径
+- chrome_path:str           - chrome.exe 路径
 - debugger_address:str  - 调试浏览器地址，例：127.0.0.1:9222
 - download_path:str        - 下载文件路径
 - global_tmp_path:str      - 临时文件夹路径
 - user_data_path:str        - 用户数据路径
 - cache_path:str               - 缓存路径
-- check_version:bool        - 是否检查chromedriver和chrome是否匹配
+- check_version:bool        - 是否检查 chromedriver 和 chrome 是否匹配
 
 返回: None
 
