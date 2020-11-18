@@ -4,6 +4,7 @@
 @Contact :   g1879@qq.com
 @File    :   drission.py
 """
+
 from typing import Union
 from urllib.parse import urlparse
 
@@ -60,10 +61,12 @@ class Drission(object):
             if driver_or_options is None:
                 om = OptionsManager(ini_path)
                 self._driver_options = om.get_option('chrome_options')
+
                 if 'chromedriver_path' in om.get_option('paths') and om.get_option('paths')['chromedriver_path']:
                     self._driver_path = om.get_option('paths')['chromedriver_path']
             else:
                 self._driver_options = _chrome_options_to_dict(driver_or_options)
+
                 if 'driver_path' in self._driver_options and self._driver_options['driver_path']:
                     self._driver_path = self._driver_options['driver_path']
 
@@ -150,6 +153,7 @@ class Drission(object):
             self._driver = None
             self._driver = self.driver
             self._driver.get(url)
+
             for cookie in cookies:
                 self._ensure_add_cookie(cookie)
 
@@ -190,8 +194,10 @@ class Drission(object):
         # 翻译cookies
         for i in [x for x in session.cookies if domain in x.domain]:
             cookie_data = {'name': i.name, 'value': str(i.value), 'path': i.path, 'domain': i.domain}
+
             if i.expires:
                 cookie_data['expiry'] = i.expires
+
             self._ensure_add_cookie(cookie_data, driver=driver)
 
     def _ensure_add_cookie(self, cookie, override_domain=None, driver=None) -> None:
@@ -202,6 +208,7 @@ class Drission(object):
         :return: None
         """
         driver = driver or self.driver
+
         if override_domain:
             cookie['domain'] = override_domain
 
@@ -224,6 +231,7 @@ class Drission(object):
         if not self._is_cookie_in_driver(cookie, driver):
             cookie['domain'] = extract(cookie['domain']).registered_domain
             driver.add_cookie(cookie)
+
             if not self._is_cookie_in_driver(cookie):
                 raise WebDriverException(f"Couldn't add the following cookie to the webdriver\n{cookie}\n")
 
@@ -236,11 +244,13 @@ class Drission(object):
         """
         driver = driver or self.driver
         for driver_cookie in driver.get_cookies():
+
             if (cookie['name'] == driver_cookie['name'] and
                     cookie['value'] == driver_cookie['value'] and
                     (cookie['domain'] == driver_cookie['domain'] or
                      f'.{cookie["domain"]}' == driver_cookie['domain'])):
                 return True
+
         return False
 
     def user_agent_to_session(self, driver: WebDriver = None, session: Session = None) -> None:
@@ -270,10 +280,12 @@ class Drission(object):
         """关闭session、driver和浏览器"""
         if self._driver:
             self.close_driver()
+
         if self._session:
             self.close_session()
 
     def __del__(self):
+        """关闭对象时关闭浏览器和Session"""
         try:
             self.close()
         except ImportError:
