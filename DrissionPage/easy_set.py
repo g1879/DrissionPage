@@ -10,12 +10,12 @@ from pprint import pprint
 from re import search as RE_SEARCH
 from typing import Union
 
-from common import unzip
 from selenium import webdriver
 
 from DrissionPage.config import OptionsManager, DriverOptions
 from DrissionPage.drission import Drission
 from DrissionPage.session_page import SessionPage
+from .common import unzip
 
 
 def show_settings(ini_path: str = None) -> None:
