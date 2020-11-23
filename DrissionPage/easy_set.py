@@ -53,6 +53,9 @@ def set_paths(driver_path: str = None,
     om = OptionsManager(ini_path)
 
     def format_path(path: str) -> str:
+        if not path:
+            return ''
+
         return str(path).replace('/', '\\')
 
     if driver_path is not None:
