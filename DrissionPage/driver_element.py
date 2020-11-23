@@ -186,13 +186,17 @@ class DriverElement(DrissionElement):
             loc_or_str: Union[Tuple[str, str], str],
             mode: str = None,
             timeout: float = None):
-        """返回当前元素下级符合条件的子元素、属性或节点文本，默认返回第一个                                    \n
+        """返回当前元素下级符合条件的子元素、属性或节点文本，默认返回第一个                                      \n
         示例：                                                                                            \n
         - 用loc元组查找：                                                                                 \n
             ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素                     \n
         - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector                                        \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                        \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+            ele.ele('.ele_class')                       - 返回第一个 class 为 ele_class 的子元素            \n
+            ele.ele('.:ele_class')                      - 返回第一个 class 中含有 ele_class 的子元素         \n
+            ele.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的子元素                  \n
+            ele.ele('#:ele_id')                         - 返回第一个 id 中含有 ele_id 的子元素               \n
             ele.ele('@class:ele_class')                 - 返回第一个class含有ele_class的子元素              \n
             ele.ele('@name=ele_name')                   - 返回第一个name等于ele_name的子元素                \n
             ele.ele('@placeholder')                     - 返回第一个带placeholder属性的子元素               \n
@@ -244,8 +248,12 @@ class DriverElement(DrissionElement):
         - 用loc元组查找：                                                                                 \n
             ele.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                      \n
         - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                        \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+            ele.eles('.ele_class')                       - 返回所有 class 为 ele_class 的子元素            \n
+            ele.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的子元素         \n
+            ele.eles('#ele_id')                          - 返回所有 id 为 ele_id 的子元素                  \n
+            ele.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的子元素               \n
             ele.eles('@class:ele_class')                 - 返回所有class含有ele_class的子元素              \n
             ele.eles('@name=ele_name')                   - 返回所有name等于ele_name的子元素                \n
             ele.eles('@placeholder')                     - 返回所有带placeholder属性的子元素               \n
@@ -562,7 +570,7 @@ def execute_driver_find(page_or_ele,
     if mode not in ['single', 'all']:
         raise ValueError(f"Argument mode can only be 'single' or 'all', not '{mode}'.")
 
-    if isinstance(page_or_ele, DriverElement):
+    if isinstance(page_or_ele, DrissionElement):
         page = page_or_ele.page
         driver = page_or_ele.inner_ele
     else:  # 传入的是DriverPage对象

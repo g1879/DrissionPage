@@ -20,15 +20,39 @@ class OptionsManager(object):
         """初始化，读取配置文件，如没有设置临时文件夹，则设置并新建  \n
         :param path: ini文件的路径，默认读取模块文件夹下的
         """
-        self.path = path or Path(__file__).parent / 'configs.ini'
+        self.ini_path = path or str(Path(__file__).parent / 'configs.ini')
         self._conf = ConfigParser()
-        self._conf.read(self.path, encoding='utf-8')
+        self._conf.read(self.ini_path, encoding='utf-8')
 
-        if 'global_tmp_path' not in self.get_option('paths') or not self.get_value('paths', 'global_tmp_path'):
+        if 'global_tmp_path' not in self.paths or not self.get_value('paths', 'global_tmp_path'):
             global_tmp_path = str((Path(__file__).parent / 'tmp').absolute())
             Path(global_tmp_path).mkdir(parents=True, exist_ok=True)
             self.set_item('paths', 'global_tmp_path', global_tmp_path)
             self.save()
+
+    def __text__(self) -> str:
+        """打印ini文件内容"""
+        return (f"paths:\n"
+                f"{self.get_option('paths')}\n\n"
+                "chrome options:\n"
+                f"{self.get_option('chrome_options')}\n\n"
+                "session options:\n"
+                f"{self.get_option('session_options')}")
+
+    @property
+    def paths(self) -> dict:
+        """返回paths设置"""
+        return self.get_option('paths')
+
+    @property
+    def chrome_options(self) -> dict:
+        """返回chrome设置"""
+        return self.get_option('chrome_options')
+
+    @property
+    def session_options(self) -> dict:
+        """返回session设置"""
+        return self.get_option('session_options')
 
     def get_value(self, section: str, item: str) -> Any:
         """获取配置的值         \n
@@ -70,12 +94,16 @@ class OptionsManager(object):
         return self
 
     def save(self, path: str = None):
-        """保存配置文件                                      \n
-        :param path: ini文件的路径，默认保存到模块文件夹下的
+        """保存配置文件                                               \n
+        :param path: ini文件的路径，传入 'default' 保存到默认ini文件
         :return: 当前对象
         """
-        path = path or Path(__file__).parent / 'configs.ini'
+        path = Path(__file__).parent / 'configs.ini' if path == 'default' else path
+        path = Path(path or self.ini_path)
+        path = path / 'config.ini' if path.is_dir() else path
+        path = path.absolute()
         self._conf.write(open(path, 'w', encoding='utf-8'))
+
         return self
 
 
@@ -84,23 +112,25 @@ class DriverOptions(Options):
     增加了删除配置和保存到文件方法。
     """
 
-    def __init__(self, read_file: bool = True):
+    def __init__(self, read_file: bool = True, ini_path: str = None):
         """初始化，默认从文件读取设置                      \n
         :param read_file: 是否从默认ini文件中读取配置信息
+        :param ini_path: ini文件路径，为None则读取默认ini文件
         """
         super().__init__()
         self._driver_path = None
+        self.ini_path = None
 
         if read_file:
-            options_dict = OptionsManager().get_option('chrome_options')
-            paths_dict = OptionsManager().get_option('paths')
-            self._binary_location = options_dict['binary_location'] if 'binary_location' in options_dict else ''
-            self._arguments = options_dict['arguments'] if 'arguments' in options_dict else []
-            self._extensions = options_dict['extensions'] if 'extensions' in options_dict else []
-            self._experimental_options = options_dict[
-                'experimental_options'] if 'experimental_options' in options_dict else {}
-            self._debugger_address = options_dict['debugger_address'] if 'debugger_address' in options_dict else None
-            self._driver_path = paths_dict['chromedriver_path'] if 'chromedriver_path' in paths_dict else None
+            self.ini_path = ini_path or str(Path(__file__).parent / 'configs.ini')
+            om = OptionsManager(self.ini_path)
+            options_dict = om.chrome_options
+            self._binary_location = options_dict.get('binary_location', '')
+            self._arguments = options_dict.get('arguments', [])
+            self._extensions = options_dict.get('extensions', [])
+            self._experimental_options = options_dict.get('experimental_options', {})
+            self._debugger_address = options_dict.get('debugger_address', None)
+            self._driver_path = om.paths.get('chromedriver_path', None)
 
     @property
     def driver_path(self) -> str:
@@ -111,18 +141,25 @@ class DriverOptions(Options):
         return self.binary_location
 
     def save(self, path: str = None):
-        """保存设置到文件                                     \n
-        :param path: ini文件的路径，默认保存到模块文件夹下的
+        """保存设置到文件                                              \n
+        :param path: ini文件的路径，传入 'default' 保存到默认ini文件
         :return: 当前对象
         """
         om = OptionsManager()
         options = _chrome_options_to_dict(self)
+        path = Path(__file__).parent / 'configs.ini' if path == 'default' else path
+        path = Path(path or self.ini_path)
+        path = path / 'config.ini' if path.is_dir() else path
+        path = path.absolute()
+
         for i in options:
             if i == 'driver_path':
                 om.set_item('paths', 'chromedriver_path', options[i])
             else:
                 om.set_item('chrome_options', i, options[i])
+
         om.save(path)
+
         return self
 
     def remove_argument(self, value: str):
@@ -178,6 +215,7 @@ class DriverOptions(Options):
         :param on_off: 开或关
         :return: 当前对象
         """
+        on_off = True if on_off else False
         return self.set_argument('--headless', on_off)
 
     def set_no_imgs(self, on_off: bool = True):
@@ -185,6 +223,7 @@ class DriverOptions(Options):
         :param on_off: 开或关
         :return: 当前对象
         """
+        on_off = True if on_off else False
         return self.set_argument('--blink-settings=imagesEnabled=false', on_off)
 
     def set_no_js(self, on_off: bool = True):
@@ -192,6 +231,7 @@ class DriverOptions(Options):
         :param on_off: 开或关
         :return: 当前对象
         """
+        on_off = True if on_off else False
         return self.set_argument('--disable-javascript', on_off)
 
     def set_mute(self, on_off: bool = True):
@@ -199,6 +239,7 @@ class DriverOptions(Options):
         :param on_off: 开或关
         :return: 当前对象
         """
+        on_off = True if on_off else False
         return self.set_argument('--mute-audio', on_off)
 
     def set_user_agent(self, user_agent: str):
@@ -263,43 +304,47 @@ def _dict_to_chrome_options(options: dict) -> Options:
     """
     chrome_options = webdriver.ChromeOptions()
     # 已打开的浏览器路径
-    if 'debugger_address' in options and options['debugger_address']:
+    if options.get('debugger_address', None):
         chrome_options.debugger_address = options['debugger_address']
 
     # 创建新的浏览器
     else:
         # 浏览器的exe文件路径
-        if 'binary_location' in options and options['binary_location']:
+        if options.get('binary_location', None):
             chrome_options.binary_location = options['binary_location']
 
         # 启动参数
-        if 'arguments' in options:
+        if options.get('arguments', None):
             if not isinstance(options['arguments'], list):
-                raise Exception(f'Arguments need list，not {type(options["arguments"])}.')
+                raise Exception(f"Arguments need list，not {type(options['arguments'])}.")
+
             for arg in options['arguments']:
                 chrome_options.add_argument(arg)
 
         # 加载插件
-        if 'extension_files' in options and options['extension_files']:
+        if options.get('extension_files', None):
             if not isinstance(options['extension_files'], list):
                 raise Exception(f'Extension files need list，not {type(options["extension_files"])}.')
+
             for arg in options['extension_files']:
                 chrome_options.add_extension(arg)
 
         # 扩展设置
-        if 'extensions' in options and options['extensions']:
+        if options.get('extensions', None):
             if not isinstance(options['extensions'], list):
                 raise Exception(f'Extensions need list，not {type(options["extensions"])}.')
+
             for arg in options['extensions']:
                 chrome_options.add_encoded_extension(arg)
 
         # 实验性质的设置参数
-        if 'experimental_options' in options and options['experimental_options']:
+        if options.get('experimental_options', None):
             if not isinstance(options['experimental_options'], dict):
                 raise Exception(f'Experimental options need dict，not {type(options["experimental_options"])}.')
+
             for i in options['experimental_options']:
                 chrome_options.add_experimental_option(i, options['experimental_options'][i])
-        # if 'capabilities' in options and options['capabilities']:
+        # if options.get('capabilities' ,None):
         #     pass  # 未知怎么用
     return chrome_options
 

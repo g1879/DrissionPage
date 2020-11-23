@@ -10,6 +10,7 @@ from pathlib import Path
 from re import split as re_SPLIT
 from shutil import rmtree
 from typing import Union
+from zipfile import ZipFile
 
 from lxml.html import HtmlElement
 from selenium.webdriver.remote.webelement import WebElement
@@ -76,24 +77,41 @@ class DrissionElement(object):
 
 
 def str_to_loc(loc: str) -> tuple:
-    """处理元素查找语句                                                \n
-    查找方式：属性、tag name及属性、文本、xpath、css selector            \n
-    =表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串             \n
-    示例：                                                            \n
-        @class:ele_class - class含有ele_class的元素                    \n
-        @class=ele_class - class等于ele_class的元素                    \n
-        @class - 带class属性的元素                                     \n
-        tag:div - div元素                                             \n
-        tag:div@class:ele_class - class含有ele_class的div元素          \n
-        tag:div@class=ele_class - class等于ele_class的div元素          \n
-        tag:div@text():search_text - 文本含有search_text的div元素       \n
-        tag:div@text()=search_text - 文本等于search_text的div元素       \n
-        text:search_text - 文本含有search_text的元素                    \n
-        text=search_text - 文本等于search_text的元素                    \n
-        xpath://div[@class="ele_class"]                               \n
-        css:div.ele_class                                             \n
+    """处理元素查找语句                                                                    \n
+    查找方式：属性、tag name及属性、文本、xpath、css selector、id、class                      \n
+    @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串    \n
+    示例：                                                                                \n
+        .ele_class                       - class等于ele_class的元素                        \n
+        .:ele_class                      - class含有ele_class的元素                        \n
+        #ele_id                          - id等于ele_id的元素                              \n
+        #:ele_id                         - id含有ele_id的元素                              \n
+        @class:ele_class                 - class含有ele_class的元素                        \n
+        @class=ele_class                 - class等于ele_class的元素                        \n
+        @class                           - 带class属性的元素                               \n
+        tag:div                          - div元素                                        \n
+        tag:div@class:ele_class          - class含有ele_class的div元素                     \n
+        tag:div@class=ele_class          - class等于ele_class的div元素                     \n
+        tag:div@text():search_text       - 文本含有search_text的div元素                     \n
+        tag:div@text()=search_text       - 文本等于search_text的div元素                     \n
+        text:search_text                 - 文本含有search_text的元素                        \n
+        text=search_text                 - 文本等于search_text的元素                        \n
+        xpath://div[@class="ele_class"]  - 用xpath查找                                     \n
+        css:div.ele_class                - 用css selector查找
     """
     loc_by = 'xpath'
+
+    # .和#替换为class和id查找
+    if loc.startswith('.'):
+        if loc.startswith(('.=', '.:',)):
+            loc = loc.replace('.', '@class', 1)
+        else:
+            loc = loc.replace('.', '@class=', 1)
+
+    if loc.startswith('#'):
+        if loc.startswith(('#=', '#:',)):
+            loc = loc.replace('#', '@id', 1)
+        else:
+            loc = loc.replace('#', '@id=', 1)
 
     # 根据属性查找
     if loc.startswith('@'):
@@ -166,7 +184,7 @@ def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy') -> str:
 
 
 def _make_search_str(search_str: str) -> str:
-    """将"转义，不知何故不能直接用\  \n
+    """将"转义，不知何故不能直接用\来转义  \n
     :param search_str: 查询字符串
     :return: 把"转义后的字符串
     """
@@ -184,6 +202,7 @@ def _make_search_str(search_str: str) -> str:
 
 
 def format_html(text: str) -> str:
+    """处理html编码字符"""
     return unescape(text).replace('\xa0', ' ') if text else text
 
 
@@ -263,3 +282,12 @@ def clean_folder(folder_path: str, ignore: list = None) -> None:
                 f.unlink()
             elif f.is_dir():
                 rmtree(f, True)
+
+
+def unzip(zip_path: str, to_path: str) -> Union[list, None]:
+    """解压下载的chromedriver.zip文件"""
+    if not zip_path:
+        return
+
+    with ZipFile(zip_path, 'r') as f:
+        return [f.extract(f.namelist()[0], path=to_path)]

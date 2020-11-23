@@ -80,11 +80,11 @@ The page element class in session mode can obtain element attribute values and s
 
 The following code implements exactly the same function, compare the amount of code between the two:
 
-- Use explicit waiting to find all elements that contain some text
+- Find the first element whose text contains some text with explicit wait
 
 ```python
 # Use selenium:
-element = WebDriverWait(driver).until(ec.presence_of_all_elements_located((By.XPATH,'//*[contains(text(), "some text")]')))
+element = WebDriverWait(driver).until(ec.presence_of_element_located((By.XPATH,'//*[contains(text(), "some text")]')))
 
 # Use DrissionPage:
 element = page('some text')
@@ -179,11 +179,11 @@ shadow_element = element.shadow_root
 
 
 
-- Use xpath to get attributes or nodes
+- Use xpath to get attributes or text nodes directly
 
 ```python
 # Use selenium:
-The usage is not supported
+Quite complicated
 
 # Use DrissionPage:
 class_name = element('xpath://div[@id="div_id"]/@class')
@@ -304,9 +304,9 @@ page.download(url, save_path)
 ```
 pip install DrissionPage
 ```
-Only supports python3.6 and above, and the driver mode currently only supports chrome.
-To use the driver mode, you must download chrome and **corresponding version** of chromedriver. [[chromedriver download]](https://chromedriver.chromium.org/downloads)
-It has only been tested in the Windows environment.
+Only supports python3.6 and above, and the driver mode currently only supports chrome.It has only been tested in the Windows environment.
+To use the driver mode, you must download chrome and **corresponding version** of chromedriver. [[chromedriver download]](https://chromedriver.chromium.org/downloads)  
+The get_match_driver() method in the easy_set tool can automatically identify the chrome version and download the matching driver.
 
 # Instructions
 
@@ -315,7 +315,7 @@ It has only been tested in the Windows environment.
 ## Import module
 
 ```python
-from DrissionPage import *
+from DrissionPage import MixPage
 ```
 
 
@@ -326,31 +326,76 @@ If you only use session mode, you can skip this section.
 
 Before using selenium, you must configure the path of chrome.exe and chromedriver.exe and ensure that their versions match.
 
-There are three ways to configure the path:
-- Write two paths to system variables.
-- Manually pass in the path when in use.
-- Write the path to the ini file of this library (recommended).
+There are four ways to configure the path:
+-Use the get_match_driver() method of the easy_set tool (recommended)
+-Write the path to the ini file of this library
+-Write two paths to system variables
+-Manually pass in the path when using
 
-If you choose the third method, please run these lines of code before using this library for the first time and record these two paths in the ini file.
+### Use get_match_driver() method
+
+If you choose the first method, please run the following code before using it for the first time. The program will automatically detect the Chrome version installed on your computer, download the corresponding driver, and record it in the ini file.
+
+```python
+from DrissionPage.easy_set import get_match_driver
+get_match_driver()
+```
+
+Output:
+
+```
+ini文件中chrome.exe路径 D:\Google Chrome\Chrome\chrome.exe 
+
+version 75.0.3770.100 
+
+chromedriver_win32.zip
+Downloading to: D:\python\projects\DrissionPage\DrissionPage
+ 100% Success.
+
+解压路径 D:\python\projects\chromedriver.exe 
+
+正在检测可用性...
+版本匹配，可正常使用。
+```
+
+Then you can start using it.
+
+If you want to use the specified chrome.exe (green version), and specify the ini file and the save path of chromedriver.exe, you can write:
+
+```python
+get_match_driver(ini_path ='ini file path', save_path ='save path', chrome_path='chrome path')
+```
+
+Tips: When you specify chrome_path, the program writes this path to the INI file after successful detection.
+
+
+
+### Use set_paths() method
+
+If the previous method fails, you can download chromedriver.exe yourself, and then run the following code to record the path to the ini file.
 
 ```python
 from DrissionPage.easy_set import set_paths
-driver_path ='D:\\chrome\\chromedriver.exe'  # Your chromedriver.exe path, optional
-chrome_path ='D:\\chrome\\chrome.exe'  # Your chrome.exe path, optional
+driver_path ='D:\\chrome\\chromedriver.exe' # Your chromedriver.exe path, if not filled in, it will be searched in system variables
+chrome_path ='D:\\chrome\\chrome.exe' # Your chrome.exe path, if not filled in, it will be searched in system variables
 set_paths(driver_path, chrome_path)
 ```
 
 This method also checks whether the chrome and chromedriver versions match, and displays:
 
 ```
-The version matches and can be used normally.
+正在检测可用性...
+版本匹配，可正常使用。
+```
 
-# Or
+or
 
-Abnormal:
+```
+出现异常：
 Message: session not created: Chrome version must be between 70 and 73
   (Driver info: chromedriver=73.0.3683.68 (47787ec04b6e38e22703e856e101e840b65afe72),platform=Windows NT 10.0.19631 x86_64)
-chromedriver download URL: https://chromedriver.chromium.org/downloads
+可执行easy_set.get_match_driver()自动下载匹配的版本。
+或自行从以下网址下载：https://chromedriver.chromium.org/downloads
 ```
 
 After passing the check, you can use the driver mode normally.
@@ -391,10 +436,9 @@ drission = Drission(ini_path ='D:\\settings.ini')
 drission = Drission(read_file = False)
 ```
 
-To manually pass in the configuration:
+To manually pass in the configuration (ignore the ini file):
 
 ```python
-# Create with the incoming configuration information (ignore the ini file)
 from DrissionPage.config import DriverOptions
 
 # Create a driver configuration object, read_file = False means not to read the ini file
@@ -418,7 +462,7 @@ drission = Drission(driver_options, session_options)
 The MixPage page object encapsulates common web page operations and realizes the switch between driver and session modes.
 MixPage must receive a Drission object and use the driver or session in it. If it is not passed in, MixPage will create a Drission by itself (using the configuration of the default ini file).
 
-Tips: When multiple page objects work together, remember to manually create a Drission object and pass it to the page object for use. Otherwise, the page objects will each create their own Drission objects, making the information unable to pass.
+Tips: When multiple objects work together, you can pass the Drission object in one MixPage to another, so that multiple objects can share login information or operate the same page.
 
 ### Create Object
 
@@ -433,7 +477,7 @@ page = MixPage('s')
 page = MixPage(drission)
 page = MixPage(drission, mode='s', timeout=5)  # session mode, waiting time is 5 seconds (default 10 seconds)
 
-# Create with incoming configuration information
+# Incoming configuration information, MixPage internally creates Drission according to the configuration
 page = MixPage(driver_options=DriverOption, session_options=SessionOption)  # default d mode
 ```
 
@@ -652,9 +696,46 @@ element.hover()  # Hover the mouse over the element
 
 
 
+## shadow-dom operation
+
+Supports obtaining shadow-root and internal elements. The obtained shadow-root element type is ShadowRootElement. The usage is similar to normal elements, but the function is simplified.
+
+**note:**
+
+- Only open shadow-root can be obtained
+
+- Find shadow-root internal elements cannot use xpath method
+
+Get the shadow-root element attached to the ordinary element
+
+```python
+shadow_root_element = element.shadow_root # element is an ordinary element containing shadow-root
+```
+
+Properties and methods
+
+```python
+shadow_root_element.tag # return'shadow-root'
+shadow_root_element.html # html content
+shadow_root_element.parent # parent element
+shadow_root_element.next # Next sibling element
+
+shadow_root_element.parents(num) # Get upward num parent elements
+shadow_root_element.nexts(num) # Get backward num sibling elements
+shadow_root_element.ele(loc_or_str) # Get the first eligible internal element
+shadow_root_element.eles(loc_or_str) # Get all eligible internal elements
+shadow_root_element.run_scrpit(js_text) # Run js script
+shadow_root_element.is_enabled() # Returns whether the element is available
+shadow_root_element.is_valid() # Returns whether the element is still in dom
+```
+
+**Tips:** The elements obtained by the above attributes or methods are ordinary DriverElement. For usage, please refer to the above.
+
+
+
 ## Docking with selenium code
 
-The DrissionPage code can be seamlessly spliced ​​with the selenium code, either directly using the selenium WebDriver object, or using its own WebDriver everywhere for the selenium code. Make the migration of existing projects very convenient.
+The DrissionPage code can be seamlessly spliced with the selenium code, either directly using the selenium WebDriver object, or using its own WebDriver everywhere for the selenium code. Make the migration of existing projects very convenient.
 
 ### selenium to DrissionPage
 
@@ -718,19 +799,20 @@ The configuration of chrome is very cumbersome. In order to simplify the use, th
 The DriverOptions object inherits from the Options object of selenium.webdriver.chrome.options, and the following methods are added to it:
 
 ```python
-remove_argument(value)  # delete an argument value
-remove_experimental_option(key)  # delete an experimental_option setting
-remove_all_extensions()  # Remove all plugins
-save()  # Save the configuration to the default ini file
-save('D:\\settings.ini')  # save to other path
-set_argument(arg, value)  # set argument attribute
-set_headless(on_off)  # Set whether to use no interface mode
-set_no_imgs(on_off)  # Set whether to load images
-set_no_js(on_off)  # Set whether to disable js
-set_mute(on_off)  # Set whether to mute
-set_user_agent(user_agent)  # set user agent
-set_proxy(proxy)  # set proxy address
-set_paths(driver_path, chrome_path, debugger_address, download_path, user_data_path, cache_path)  # Set browser- related paths
+options.remove_argument(value) # Remove an argument value
+options.remove_experimental_option(key) # delete an experimental_option setting
+options.remove_all_extensions() # Remove all plugins
+options.save() # Save the currently opened ini file
+options.save('D:\\settings.ini') # Save to the specified path ini file
+options.save('default') # Save the current settings to the default ini file
+options.set_argument(arg, value) # set argument property
+options.set_headless(on_off) # Set whether to use interfaceless mode
+options.set_no_imgs(on_off) # Set whether to load images
+options.set_no_js(on_off) # Set whether to disable js
+options.set_mute(on_off) # Set whether to mute
+options.set_user_agent(user_agent) # set user agent
+options.set_proxy(proxy) # Set proxy address
+options.set_paths(driver_path, chrome_path, debugger_address, download_path, user_data_path, cache_path) # Set browser-related paths
 ```
 
 
@@ -738,16 +820,17 @@ set_paths(driver_path, chrome_path, debugger_address, download_path, user_data_p
 ### Instructions
 
 ```python
-do = DriverOptions(read_file=False)  # Create chrome configuration object, not read from ini file
-do.set_headless(False)  # show the browser interface
-do.set_no_imgs(True)  # Do not load pictures
-do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe')  # set path
-do.set_headless(False).set_no_imgs(True)  # Support chain operation
+do = DriverOptions(read_file=False) # Create chrome configuration object, do not read from ini file
+do.set_headless(False) # show the browser interface
+do.set_no_imgs(True) # Do not load pictures
+do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe') # set path
+do.set_headless(False).set_no_imgs(True) # Support chain operation
 
-drission = Drission(driver_options=do)  # Create Drission object with configuration object
-page = MixPage(drission)  # Create a MixPage object with Drission object
+drission = Drission(driver_options=do) # Create Drission object with configuration object
+page = MixPage(drission) # Create MixPage object with Drission object
 
-do.save()  # Save the configuration to the default ini file
+do.save() # Save the currently opened ini file
+do.save('default') # Save the current settings to the default ini file
 ```
 
 
@@ -822,11 +905,15 @@ headers = {
 The OptionsManager object is used to read, set and save the configuration.
 
 ```python
-get_value(section, item) - > str  # Get the value of a configuration
-get_option(section) - > dict  # Return all attributes of configuration in dictionary format
-set_item(section, item, value)  # Set configuration attributes
-save()  # Save the configuration to the default ini file
-save('D:\\settings.ini')  # save to other path
+manager.paths # Return path settings in dictionary form
+manager.chrome_options # Return chrome settings in dictionary form
+manager.session_options # Return session settings in dictionary form
+manager.get_value(section, item) # Get the value of a configuration
+manager.get_option(section) # Return all attributes of configuration in dictionary format
+manager.set_item(section, item, value) # Set configuration properties
+manager.manager.save() # Save the currently opened ini file
+manager.save('D:\\settings.ini') # Save to the specified path ini file
+manager.save('default') # Save the current settings to the default ini file
 ```
 
 
@@ -836,22 +923,20 @@ save('D:\\settings.ini')  # save to other path
 ```python
 from DrissionPage.configs import *
 
-options_manager = OptionsManager()  # Create OptionsManager object from the default ini file
-options_manager = OptionsManager('D:\\settings.ini')  # Create OptionsManager object from other ini files
-driver_path = options_manager.get_value('paths','chromedriver_path')  # read path information
-options_manager.save()  # Save to the default ini file
-options_manager.save('D:\\settings.ini')  # save to other path
+options_manager = OptionsManager() # Create OptionsManager object from the default ini file
+options_manager = OptionsManager('D:\\settings.ini') # Create OptionsManager object from other ini files
+driver_path = options_manager.get_value('paths','chromedriver_path') # read path information
+options_manager.save() # Save the currently opened ini file
+options_manager.save('D:\\settings.ini') # Save to the specified path ini file
 
-drission = Drission(ini_path ='D:\\settings.ini')  # Use other ini files to create objects
+drission = Drission(ini_path='D:\\settings.ini') # Use the specified ini file to create the object
 ```
-
-**Note**: If you do not pass in the path when saving, it will be saved to the ini file in the module directory, even if the read is not the default ini file.
 
 
 
 ## easy_set method
 
-Calling the easy_set method will modify the content of the default ini file.
+The methods of frequently used settings can be quickly modified. Calling the easy_set method will modify the content of the default ini file.
 
 ```python
 set_headless(True)  # Turn on headless mode
@@ -1202,7 +1287,7 @@ Returns: None
 ### ele()
 
 Return the eligible elements on the page, the first one is returned by default.
-If the query parameter is a string, the options of'@attribute name:','tag:','text:','css:', and'xpath:' are available. When there is no control mode, the text mode is used to search by default.
+If the query parameter is a string, the options of '@attribute name:', 'tag:', 'text:', 'css:', 'xpath:', '.', '#' are available. When there is no control mode, the text mode is used to search by default.
 If it is loc, query directly according to the content.
 
 Parameter Description:
@@ -1221,10 +1306,14 @@ Example:
 
 - Find with query string:
 
-  Attributes, tag name and attributes, text, xpath, css selector.
+  Attributes, tag name and attributes, text, xpath, css selector, id, class.
 
-  Among them, @ means attribute, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
+  @ Means attribute,. Means class, # means id, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
 
+  - page.ele('.ele_class')  - returns the first element whose name is equal to ele_name
+  - page.ele('.:ele_class')  - returns the element with ele_class in the first class
+  - page.ele('#ele_id')  - Return the first element with id ele_id
+  - page.ele('#:ele_id')  - Returns the element with ele_id in the first id
   - page.ele('@class:ele_class')  - returns the element with ele_class in the first class
   - page.ele('@name=ele_name')  - returns the first element whose name is equal to ele_name
   - page.ele('@placeholder')  - returns the first element with placeholder attribute
@@ -1797,7 +1886,7 @@ Returns: str
 ### ele()
 
 Returns the sub- elements, attributes or node texts of the current element that meet the conditions.
-If the query parameter is a string, the options of'@attribute name:','tag:','text:','css:', and'xpath:' are available. When there is no control mode, the text mode is used to search by default.
+If the query parameter is a string, the options of '@attribute name:', 'tag:', 'text:', 'css:', 'xpath:', '.', '#' are available. When there is no control mode, the text mode is used to search by default.
 If it is loc, query directly according to the content.
 
 Parameter Description:
@@ -1814,23 +1903,43 @@ Example:
 
 - Find with query string:
 
-  Attributes, tag name and attributes, text, xpath, css selector.
+  Attributes, tag name and attributes, text, xpath, css selector, id, class.
 
-  Among them, @ means attribute, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
+  @ Means attribute,. Means class, # means id, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
 
-  - ele.ele('@class:ele_class')  - returns the first class element that contains ele_class
-  - ele.ele('@name=ele_name')  - returns the first element whose name is equal to ele_name
-  - ele.ele('@placeholder')  - returns the first element with placeholder attribute
-  - ele.ele('tag:p')  - returns the first p element
-  - ele.ele('tag:div@class:ele_class')    - Returns the div element with ele_class in the first class
-  - ele.ele('tag:div@class=ele_class')  - returns the first div element whose class is equal to ele_class
-  - ele.ele('tag:div@text():some_text')  - returns the first div element whose text contains some_text
-  - ele.ele('tag:div@text()=some_text')    - Returns the first div element whose text is equal to some_text
-  - ele.ele('text:some_text')  - returns the first element whose text contains some_text
-  - ele.ele('some_text')  - returns the first text element containing some_text (equivalent to the previous line)
-  - ele.ele('text=some_text')  - returns the first element whose text is equal to some_text
-  - ele.ele('xpath://div[@class="ele_class"]')  - Return the first element that matches xpath
-  - ele.ele('css:div.ele_class')  - returns the first element that matches the css selector
+  - ele.ele('.ele_class')-returns the first child element whose class is ele_class
+
+  - ele.ele('.:ele_class')-returns the child elements of the first class that contain ele_class
+
+  - ele.ele('#ele_id')-returns the first child element with id ele_id
+
+  - ele.ele('#:ele_id')-Returns the child element with ele_id in the first id
+
+  - ele.ele('@class:ele_class')-returns the first class that contains e le_class
+
+  - ele.ele('@name=ele_name')-returns the first child element whose name is equal to ele_name
+
+  - ele.ele('@placeholder')-returns the first child element with placeholder attribute
+
+  - ele.ele('tag:p')-returns the first p child element
+
+  - ele.ele('tag:div@class:ele_class')-returns the first div sub-element that contains ele_class
+
+  - ele.ele('tag:div@class=ele_class')-returns the first div child element whose class is equal to ele_class
+
+  - ele.ele('tag:div@text():some_text')-returns the first div child element whose text contains some_text
+
+  - ele.ele('tag:div@text()=some_text')-returns the first div child element whose text is equal to some_tex t
+
+  - ele.ele('text:some_text')-returns the first child element whose text contains some_text
+
+  - ele.ele('some_text')-returns the first text element with some_text (equivalent to the previous line)
+
+  - ele.ele('text=some_text')-returns the first child element whose text is equal to some_text
+
+  - ele.ele('xpath://div[@class="ele_class"]')-Return the first child element that matches xpath
+
+  - ele.ele('css:div.ele_class')-returns the first child element that matches the css selector
 
 Returns: [DriverElement, str]
 
@@ -2185,7 +2294,7 @@ Returns: str
 ### ele()
 
 Get elements based on query parameters.
-If the query parameter is a string, you can choose the methods of'@attribute name:','tag:','text:','css:', and'xpath:'. When there is no control mode, the text mode is used to search by default.
+If the query parameter is a string, you can choose the methods of '@attribute name:', 'tag:', 'text:', 'css:', 'xpath:', '.', '#'. When there is no control mode, the text mode is used to search by default.
 If it is loc, query directly according to the content.
 
 Parameter Description:
@@ -2203,23 +2312,43 @@ Example:
 
 - Find with query string:
 
-Attributes, tag name and attributes, text, xpath, css selector.
+Attributes, tag name and attributes, text, xpath, css selector, id, class.
 
-Among them, @ means attribute, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
+@ Means attribute,. Means class, # means id, = means exact match,: means fuzzy match, the string is searched by default when there is no control string.
 
-- ele.ele('@class:ele_class')  - return the first class element containing ele_class
-- ele.ele('@name=ele_name')  - returns the first element whose name is equal to ele_name
-- ele.ele('@placeholder')  - returns the first element with placeholder attribute
-- ele.ele('tag:p')  - return the first p element
-- ele.ele('tag:div@class:ele_class')    - Returns the div element with ele_class in the first class
-- ele.ele('tag:div@class=ele_class')  - returns the first div element whose class is equal to ele_class
-- ele.ele('tag:div@text():some_text')  - returns the first div element whose text contains some_text
-- ele.ele('tag:div@text()=some_text')    - Returns the first div element whose text is equal to some_text
-- ele.ele('text:some_text')  - returns the first element whose text contains some_text
-- ele.ele('some_text')  - returns the first element whose text contains some_text (equivalent to the previous line)
-- ele.ele('text=some_text')  - returns the first element whose text is equal to some_text
-- ele.ele('xpath://div[@class="ele_class"]')    - Return the first element that matches xpath
-- ele.ele('css:div.ele_class')  - returns the first element that matches the css selector
+- ele.ele('.ele_class')-returns the first child element whose class is ele_class
+
+- ele.ele('.:ele_class')-returns the child elements of the first class that contain ele_class
+
+- ele.ele('#ele_id')-returns the first child element with id ele_id
+
+- ele.ele('#:ele_id')-Returns the child element with ele_id in the first id
+
+- ele.ele('@class:ele_class')-returns the first class that contains e le_class
+
+- ele.ele('@name=ele_name')-returns the first child element whose name is equal to ele_name
+
+- ele.ele('@placeholder')-returns the first child element with placeholder attribute
+
+- ele.ele('tag:p')-returns the first p child element
+
+- ele.ele('tag:div@class:ele_class')-returns the first div sub-element that contains ele_class
+
+- ele.ele('tag:div@class=ele_class')-returns the first div child element whose class is equal to ele_class
+
+- ele.ele('tag:div@text():some_text')-returns the first div child element whose text contains some_text
+
+- ele.ele('tag:div@text()=some_text')-returns the first div child element whose text is equal to some_tex t
+
+- ele.ele('text:some_text')-returns the first child element whose text contains some_text
+
+- ele.ele('some_text')-returns the first text element with some_text (equivalent to the previous line)
+
+- ele.ele('text=some_text')-returns the first child element whose text is equal to some_text
+
+- ele.ele('xpath://div[@class="ele_class"]')-Return the first child element that matches xpath
+
+- ele.ele('css:div.ele_class')-returns the first child element that matches the css selector
 
 Returns: [SessionElement, str]
 
@@ -2237,6 +2366,134 @@ Returns: List[SessionElement or str]
 
 
 
+## ShadowRootElement class
+
+### class ShadowRootElement()
+
+The shadow-root element within the element.
+
+Parameter Description:
+
+- inner_ele: WebElement-the shadow-root element obtained by selenium
+
+- parent_ele: DriverElement-the element to which the shadow-root is attached
+
+- timeout: float-timeout
+
+
+
+### tag
+
+Element tag name.
+
+Returns: the'shadow-root' string.
+
+
+
+### html
+
+Internal html text.
+
+Returns: str
+
+
+
+### parent
+
+The parent element on which the shadow-root depends.
+
+Returns: DriverElement
+
+
+
+### next
+
+Return the next sibling element.
+
+Returns: DriverElement
+
+
+
+### parents()
+
+Return the parent element at level num above
+
+Parameter Description:
+
+- num: int-which level of parent element
+
+Returns: DriverElement
+
+
+
+### nexts()
+
+Return the next num sibling element
+
+Parameter Description:
+
+- num: int-which sibling element
+
+Returns: DriverElement
+
+
+
+### ele()
+
+Returns the first child element that meets the criteria.
+
+Parameter Description:
+
+- loc_or_str: Union[Tuple[str, str], str]-element positioning conditions
+
+- mode: str-'single' or'all', corresponding to get one and all
+
+- timeout: float-timeout
+
+Returns: DriverElement-the first element that meets the conditions
+
+
+
+### eles()
+
+Return all sub-elements that meet the criteria.
+
+Parameter Description:
+
+- loc_or_str: Union[Tuple[str, str], str]-element positioning conditions
+
+- timeout: float-timeout
+
+Returns: List[DriverElement]-a list of all eligible elements
+
+
+
+### run_script()
+
+Execute js code on the element.
+
+Parameter Description:
+
+- scrpit: str-js code
+
+- *args-the object passed in
+
+
+
+### is_enabled()
+
+Returns whether the element is available.
+
+Returns: bool
+
+
+
+### is_valid()
+
+Returns whether the element is still in the dom.
+
+Returns: bool
+
 
 
 ## OptionsManager class
@@ -2248,6 +2505,30 @@ The class that manages the content of the configuration file.
 Parameter Description:
 
 - path: str  - the path of the ini file, if not passed in, the configs.ini file in the current folder will be read by default
+
+
+
+### paths
+
+Return paths setting information.
+
+Returns: dict
+
+
+
+### chrome_options
+
+Return to chrome setting information.
+
+Returns: dict
+
+
+
+### session_options
+
+Return session setting information.
+
+Returns: dict
 
 
 
@@ -2296,7 +2577,7 @@ Save the settings to a file and return to yourself for chain operation.
 
 Parameter Description:
 
-- path: str  - the path of the ini file, saved to the module folder by default
+- path: str  - the path of the ini file, pass in 'default' would save to the default ini file
 
 Return: OptionsManager  - return to yourself
 
@@ -2311,6 +2592,7 @@ The Chrome browser configuration class, inherited from the Options class of sele
 Parameter Description:
 
 - read_file: bool  - Whether to read configuration information from the ini file when creating
+- ini_path: str      - ini file path, if it is None, the default ini file will be read
 
 
 
@@ -2336,7 +2618,7 @@ Save the settings to a file and return to yourself for chain operation.
 
 Parameter Description:
 
-- path: str  - the path of the ini file, saved to the module folder by default
+- path: str  - the path of the ini file, pass in 'default' would save to the default ini file
 
 Return: DriverOptions  - return self
 
@@ -2478,22 +2760,57 @@ Return: DriverOptions    - return self
 
 ## easy_set method
 
-Chrome's configuration is too difficult to remember, so the commonly used configuration is written as a simple method, and the call will modify the relevant content of the ini file.
+Chrome configuration is too complicated, so the commonly used configuration is written as a simple method, and the related content of the ini file will be modified by calling.
 
-### set_paths()
+### get_match_driver()
 
-Convenient way to set the path, save the incoming path to the default ini file, and check whether the chrome and chromedriver versions match.
+Automatically identify the chrome version and download the matching driver. Get the chrome.exe path recorded in the ini file, if not, get the path in the system variable.
 
 Parameter Description:
 
-- driver_path: str  - chromedriver.exe path
-- chrome_path: str  - chrome.exe path
-- debugger_address: str  - debug browser address, for example: 127.0.0.1:9222
-- download_path: str  - download file path
-- global_tmp_path: str  - Temporary folder path
-- user_data_path: str  - user data path
-- cache_path: str  - cache path
-- check_version: bool  - whether to check if chromedriver and chrome match
+- ini_path: str-the path of the ini file to be read and modified
+
+- save_path: str-chromedriver save path
+
+Returns: None
+
+
+
+### show_settings()
+
+Print all configuration information in the ini file.
+
+Parameter Description:
+
+- ini_path: str-ini file path, if it is None, read the default ini file
+
+Returns: None
+
+
+
+### set_paths()
+
+Convenient way to set the path, save the passed path to an ini file, and check whether the chrome and chromedriver versions match.
+
+Parameter Description:
+
+- driver_path: str-chromedriver.exe path
+
+- chrome_path: str-chrome.exe path
+
+- debugger_address: str-debug browser address, for example: 127.0.0.1:9222
+
+- download_path: str-download file path
+
+- global_tmp_path: str-Temporary folder path
+
+- user_data_path: str-user data path
+
+- cache_path: str-cache path
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
+
+- check_version: bool-whether to check if chromedriver and chrome match
 
 Returns: None
 
@@ -2501,12 +2818,15 @@ Returns: None
 
 ### set_argument()
 
-Set the properties. If the attribute has no value (such as'zh_CN.UTF- 8'), value is passed in bool to indicate switch; otherwise, value is passed in str, and when value is'' or False, delete the attribute item.
+Set the properties. If the attribute has no value (such as'zh_CN.UTF-8' ), value is passed in bool to indicate a switch; otherwise, value is assigned to the attribute. When value is'' or False, delete the attribute item.
 
 Parameter Description:
 
-- arg:str    - Property name
-- value[bool, str]  -  Attribute value, the attribute with value is passed in the value, and the attribute without value is passed in bool
+- arg: str-attribute name
+
+- value: [bool, str]-attribute value, the value attribute is passed in the value, and the non-property is passed in bool
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
 
 Returns: None
 
@@ -2518,7 +2838,9 @@ Turn headless mode on or off.
 
 Parameter Description:
 
-- on_off: bool  -  whether to turn on headless mode
+- on_off: bool-whether to turn on headless mode
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
 
 Returns: None
 
@@ -2530,7 +2852,9 @@ Turn picture display on or off.
 
 Parameter Description:
 
-- on_off: bool  -  Whether to turn on the no image mode
+- on_off: bool-whether to turn on the no image mode
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
 
 Returns: None
 
@@ -2542,7 +2866,9 @@ Turn on or off disable JS mode.
 
 Parameter Description:
 
-- on_off: bool  -  Whether to enable the disable JS mode
+- on_off: bool-whether to enable or disable JS mode
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
 
 Returns: None
 
@@ -2554,7 +2880,9 @@ Turn on or off the silent mode.
 
 Parameter Description:
 
-- on_off: bool  -  Whether to turn on silent mode
+- on_off: bool-whether to turn on silent mode
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
 
 Returns: None
 
@@ -2566,7 +2894,9 @@ Set user_agent.
 
 Parameter Description:
 
-- user_agent: str  -  user_agent value
+- user_agent: str-user_agent value
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
 
 Returns: None
 
@@ -2578,7 +2908,9 @@ Set up a proxy.
 
 Parameter Description:
 
-- proxy: str  -  proxy value
+- proxy: str-proxy value
+
+- ini_path: str-ini file path, if it is None, save to the default ini file
 
 Returns: None
 

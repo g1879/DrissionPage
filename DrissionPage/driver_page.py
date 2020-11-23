@@ -116,8 +116,12 @@ class DriverPage(object):
         - 用loc元组查找：                                                                                \n
             ele.ele((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                      \n
         - 用查询字符串查找：                                                                              \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                       \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+            page.ele('.ele_class')                       - 返回第一个 class 为 ele_class 的元素            \n
+            page.ele('.:ele_class')                      - 返回第一个 class 中含有 ele_class 的元素         \n
+            page.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的元素                  \n
+            page.ele('#:ele_id')                         - 返回第一个 id 中含有 ele_id 的元素               \n
             page.ele('@class:ele_class')                 - 返回第一个class含有ele_class的元素              \n
             page.ele('@name=ele_name')                   - 返回第一个name等于ele_name的元素                \n
             page.ele('@placeholder')                     - 返回第一个带placeholder属性的元素               \n
@@ -171,8 +175,12 @@ class DriverPage(object):
         - 用loc元组查找：                                                                                 \n
             page.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的元素                       \n
         - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                       \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+            page.eles('.ele_class')                       - 返回所有 class 为 ele_class 的元素            \n
+            page.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的元素         \n
+            page.eles('#ele_id')                          - 返回所有 id 为 ele_id 的元素                  \n
+            page.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的元素               \n
             page.eles('@class:ele_class')                 - 返回所有class含有ele_class的元素               \n
             page.eles('@name=ele_name')                   - 返回所有name等于ele_name的元素                 \n
             page.eles('@placeholder')                     - 返回所有带placeholder属性的元素                \n

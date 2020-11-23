@@ -17,7 +17,6 @@ from urllib.parse import urlparse, quote, unquote
 from requests import Session, Response
 
 from .common import str_to_loc, translate_loc, get_available_file_name, format_html
-from .config import OptionsManager
 from .session_element import SessionElement, execute_session_find
 
 
@@ -77,8 +76,12 @@ class SessionPage(object):
         - 用loc元组查找：                                                                                 \n
             ele.ele((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                       \n
         - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector                                        \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                        \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+            page.ele('.ele_class')                       - 返回第一个 class 为 ele_class 的元素            \n
+            page.ele('.:ele_class')                      - 返回第一个 class 中含有 ele_class 的元素         \n
+            page.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的元素                  \n
+            page.ele('#:ele_id')                         - 返回第一个 id 中含有 ele_id 的元素               \n
             page.ele('@class:ele_class')                 - 返回第一个class含有ele_class的元素              \n
             page.ele('@name=ele_name')                   - 返回第一个name等于ele_name的元素                \n
             page.ele('@placeholder')                     - 返回第一个带placeholder属性的元素               \n
@@ -123,8 +126,12 @@ class SessionPage(object):
         - 用loc元组查找：                                                                                \n
             page.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的元素                     \n
         - 用查询字符串查找：                                                                              \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector                                       \n
-            其中，@表示属性，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                       \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+            page.eles('.ele_class')                       - 返回所有 class 为 ele_class 的元素            \n
+            page.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的元素         \n
+            page.eles('#ele_id')                          - 返回所有 id 为 ele_id 的元素                  \n
+            page.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的元素               \n
             page.eles('@class:ele_class')                 - 返回所有class含有ele_class的元素              \n
             page.eles('@name=ele_name')                   - 返回所有name等于ele_name的元素                \n
             page.eles('@placeholder')                     - 返回所有带placeholder属性的元素               \n
@@ -259,7 +266,7 @@ class SessionPage(object):
 
     def download(self,
                  file_url: str,
-                 goal_path: str = None,
+                 goal_path: str,
                  rename: str = None,
                  file_exists: str = 'rename',
                  post_data: dict = None,
@@ -278,20 +285,13 @@ class SessionPage(object):
         :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
         """
         # 生成的response不写入self._response，是临时的
-        goal_path = goal_path or OptionsManager().get_value('paths', 'global_tmp_path')
-
-        if not goal_path:
-            raise IOError('No path specified.')
-
         kwargs['stream'] = True
 
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 20
 
-        if not post_data:
-            r, info = self._make_response(file_url, mode='get', show_errmsg=show_errmsg, **kwargs)
-        else:
-            r, info = self._make_response(file_url, mode='post', data=post_data, show_errmsg=show_errmsg, **kwargs)
+        mode = 'post' if post_data else 'get'
+        r, info = self._make_response(file_url, mode=mode, data=post_data, show_errmsg=show_errmsg, **kwargs)
 
         if r is None:
             if show_msg:
@@ -491,11 +491,14 @@ class SessionPage(object):
         else:
             # ----------------获取并设置编码开始-----------------
             # 在headers中获取编码
-            try:
-                charset = r.headers.get('Content-type').split('=')[1]
+            content_type = r.headers.get('content-type').lower()
+            charset = re.search(r'charset[=: ]*(.*)?[;]', content_type)
 
-            # 在headers中获取不到编码
-            except IndexError:
+            if charset:
+                r.encoding = charset.group(1)
+
+            # 在headers中获取不到编码，且如果是网页
+            elif content_type.replace(' ', '').lower().startswith('text/html'):
                 re_result = re_SEARCH(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', r.content)
 
                 if re_result:
@@ -503,7 +506,7 @@ class SessionPage(object):
                 else:
                     charset = r.apparent_encoding
 
-            r.encoding = charset
+                r.encoding = charset
             # ----------------获取并设置编码结束-----------------
 
             return r, 'Success'
