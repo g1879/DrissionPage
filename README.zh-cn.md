@@ -6,9 +6,9 @@ DrissionPage，即 driver 和 session 的合体。
 是个基于 python 的 Web 自动化操作集成工具。  
 它实现了 selenium 和 requests 之间的无缝切换。  
 因此可以兼顾 selenium 的便利性和 requests 的高效率。  
-它集成了页面常用功能，两种模式系统一致的 API，使用便捷。
+它集成了页面常用功能，两种模式系统一致的 API，使用便捷。  
 它用 POM 模式封装了页面元素常用的方法，很适合自动化操作功能扩展。  
-更棒的是，它的使用方式非常简洁和人性化，代码量少，对新手友好。  
+更棒的是，它的使用方式非常简洁和人性化，代码量少，对新手友好。
 
 **项目地址：**
 
@@ -17,7 +17,9 @@ DrissionPage，即 driver 和 session 的合体。
 
 **示例地址：** [使用DrissionPage的网页自动化及爬虫示例](https://gitee.com/g1879/DrissionPage-demos)
 
-**联系邮箱：** g1879@qq.com
+**联系邮箱：**  g1879@qq.com
+
+**交流QQ群：**  897838127
 
 # 理念及背景
 
@@ -26,8 +28,6 @@ DrissionPage，即 driver 和 session 的合体。
 ## 理念
 
 **简洁、易用 、可扩展**
-
-
 
 ## 背景
 
@@ -329,10 +329,11 @@ from DrissionPage import MixPage
 使用 selenium 前，必须配置 chrome.exe 和 chromedriver.exe 的路径，并确保它们版本匹配。  
 
 配置路径有四种方法：
+
 - 使用 easy_set 工具的 get_match_driver() 方法（推荐）
-- 将路径写入本库的ini文件
+- 将路径写入本库的 ini 文件
 - 将两个路径写入系统变量
-- 使用时手动传入路径
+- 在代码中填写路径
 
 ### 使用 get_match_driver()  方法
 
@@ -407,7 +408,7 @@ Message: session not created: Chrome version must be between 70 and 73
 ```python
 debugger_address  # 调试浏览器地址，如：127.0.0.1:9222
 download_path  # 下载文件路径
-global_tmp_path  # 临时文件夹路径
+tmp_path  # 临时文件夹路径
 user_data_path # 用户数据路径
 cache_path # 缓存路径
 ```
@@ -418,7 +419,9 @@ Tips：
 - 推荐使用绿色版 chrome，并手动设置路径，避免浏览器升级造成与 chromedriver 版本不匹配。
 - 调试项目时推荐设置 debugger_address，使用手动打开的浏览器，再用程序接管，好处多多。
 
+### 其它方法
 
+若你不想使用 ini 文件（如要打包项目时），可在系统路径写入以上两个路径，或在程序中填写。后者的使用方法见下一节。
 
 ## 创建驱动器对象 Drission
 
@@ -453,16 +456,19 @@ do.set_paths(chrome_path='D:\\chrome\\chrome.exe',
 # 用于 s 模式的设置
 session_options = {'headers': {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
 
+# 代理设置，可选
+proxy = {'http': '127.0.0.1:1080', 'https': '127.0.0.1:1080'}
+
 # 传入配置，driver_options 和 session_options 都是可选的，须要使用对应模式才须要传入
-drission = Drission(driver_options, session_options)  
+drission = Drission(driver_options, session_options, proxy=proxy)  
 ```
 
-
+DriverOptions 和 SessionOptions 用法详见下文。
 
 ## 使用页面对象 MixPage
 
 MixPage 页面对象封装了常用的网页操作，并实现 driver 和 session 模式之间的切换。  
-MixPage 须接收一个 Drission 对象并使用其中的 driver 或 session，如没有传入，MixPage 会自己创建一个（使用默认 ini 文件的配置）。
+MixPage 须控制一个 Drission 对象并使用其中的 driver 或 session，如没有传入，MixPage 会自己创建一个（使用传入的配置信息或从默认 ini 文件读取）。
 
 Tips: 多对象协同工作时，可将一个 MixPage 中的 Drission 对象传递给另一个，使多个对象共享登录信息或操作同一个页面。
 
@@ -487,8 +493,6 @@ page = MixPage(driver_options=do, session_options=so)  # 默认 d 模式
 
 ### 访问网页
 
-若连接出错，程序会自动重试2次，可指定重试次数和等待间隔。
-
 ```python
 # 默认方式
 page.get(url)
@@ -498,7 +502,7 @@ page.post(url, data, **kwargs)  # 只有 session 模式才有 post 方法
 page.get(url, retry=5, interval=0.5)
 ```
 
-
+Tips：若连接出错，程序会自动重试2次，可指定重试次数和等待间隔。
 
 ### 切换模式
 
@@ -508,7 +512,7 @@ page.get(url, retry=5, interval=0.5)
 page.change_mode(go=False)  # go 为 False 表示不跳转 url
 ```
 
-
+Tips：使用某种模式独有的方法时会自动跳转到该模式。
 
 ### 页面属性
 
@@ -536,7 +540,9 @@ page.current_tab_handle  # 返回当前标签页 handle
 调用只属于 d 模式的方法，会自动切换到 d 模式。详细用法见 APIs。
 
 ```python
-page.change_mode()  # 切换模式
+page.set_cookies()  # 设置cookies
+page.get_cookies()  # 获取 cookies，可以 list 或 dict 方式返回
+page.change_mode()  # 切换模式，会自动复制 cookies
 page.cookies_to_session()  # 从 WebDriver 对象复制 cookies 到 Session 对象
 page.cookies_to_driver()  # 从 Session 对象复制 cookies 到 WebDriver 对象
 page.get(url, retry, interval, **kwargs)  # 用 get 方式访问网页，可指定重试次数及间隔时间
@@ -555,10 +561,10 @@ page.run_script(js, *args)  # 运行 js 语句
 page.create_tab(url)  # 新建并定位到一个标签页,该标签页在最后面
 page.to_tab(num_or_handle)  # 跳转到标签页
 page.close_current_tab()  # 关闭当前标签页
-page.close_other_tabs(num)  # 关闭其它标签页
+page.close_other_tabs(num_or_handles)  # 关闭其它标签页
 page.to_iframe(iframe)  # 切入 iframe
 page.screenshot(path)  # 页面截图
-page.scrool_to_see(element)  # 滚动直到某元素可见
+page.scroll_to_see(element)  # 滚动直到某元素可见
 page.scroll_to(mode, pixel)  # 按参数指示方式滚动页面，可选滚动方向：'top', 'bottom', 'rightmost', 'leftmost', 'up', 'down', 'left', 'right'
 page.refresh()  # 刷新当前页面
 page.back()  # 浏览器后退
@@ -568,20 +574,35 @@ page.chrome_downloading()  # 获取 chrome 正在下载的文件列表
 page.process_alert(mode, text)  # 处理提示框
 ```
 
+### cookies 的使用
 
+MixPage 支持获取和设置 cookies，具体使用方法如下：
+
+```python
+page.cookies  # 以字典形式返回 cookies，只会返回当前域名可用的 cookies
+page.get_cookies(as_dict=False)  # 以列表形式返回当前域名可用 cookies，每个 cookie 包含所有详细信息
+page.get_cookies(all_domains=True)  # 以列表形式返回所有 cookies，只有 s 模式有效
+page.set_cookies(cookies)  # 设置 cookies，可传入 RequestsCookieJar, list, tuple, str, dict
+```
+
+Tips:
+
+- d 模式设置 cookies 后要刷新页面才能看到效果。
+- s 模式可在 ini 文件、SessionOptions、配置字典中设置 cookies，在 MixPage 初始化时即可传入，d 模式只能用 set_cookies() 函数设置。
 
 ## 查找元素
 
 ele() 返回第一个符合条件的元素，eles() 返回所有符合条件的元素列表。  
-你可在页面对象或元素对象下使用这两个函数，以查找下级元素。  
+你可在页面对象或元素对象下使用这两个函数，以查找下级元素。
 
-page.eles() 和 element.eles() 查找返回符合条件的所有元素列表。  
+page.eles() 和 element.eles() 查找返回符合条件的所有元素列表。
 
 说明：
 
-- 元素查找超时默认为10秒，你也可以按需要设置。
+- 元素查找超时默认为10秒，超时或找到元素时停止等待，你也可以按需要设置。
 - 下面的查找语句中，冒号 : 表示模糊匹配，等号 = 表示精确匹配
-- 查询字符串有 @属性名、tag、text、xpath、css 五种
+- 可用查询字符串或 selenium 原生的 loc 元组（s 模式也能用）查找元素
+- 查询字符串有 @属性名、tag、text、xpath、css、.、# 等7种方法
 
 ```python
 # 根据属性查找，@ 后面可跟任意属性
@@ -589,6 +610,12 @@ page.ele('@id:ele_id', timeout=2)  # 查找 id 为 ele_id 的元素，设置等�
 page.eles('@class')  # 查找所有拥有 class 属性的元素
 page.eles('@class:class_name')  # 查找所有 class 含有 ele_class 的元素 
 page.eles('@class=class_name')  # 查找所有 class 等于 ele_class 的元素 
+
+# 根据 class 或 id 查找
+page.ele('#ele_id')  # 等价于 page.ele('@id=ele_id')
+page.ele('#:ele_id')  # 等价于 page.ele('@id:ele_id')
+page.ele('.ele_class')  # 等价于 page.ele('@class=ele_class')
+page.ele('.:ele_class')  # 等价于 page.ele('@class:ele_class')
 
 # 根据 tag name 查找
 page.ele('tag:li')  # 查找第一个 li 元素  
@@ -603,7 +630,7 @@ page.ele('tag:div@text()=search_text') # 查找文本等于 search_text 的 div 
 
 # 根据文本内容查找
 page.ele('search text')  # 查找包含传入文本的元素  
-page.eles('text:search text')  # 如文本以 @、tag:、css:、xpath:、text: 开头，则在前面加上 text: 避免冲突  
+page.eles('text:search text')  # 如文本以 @、tag:、css:、xpath:、text: 开头，则应在前加上 text: 避免冲突  
 page.eles('text=search text')  # 文本等于 search_text 的元素
 
 # 根据 xpath 或 css selector 查找
@@ -626,7 +653,7 @@ element.parent  # 父元素
 element.next  # 下一个兄弟元素  
 element.prev  # 上一个兄弟元素  
 
-# 获取 shadow-dom，只支持 open 的 shadow-root
+# 获取 shadow-root，把它作为元素对待。只支持 open 的 shadow-root
 ele1 = element.shadow_root.ele('tag:div')
 
 # 串连查找
@@ -689,6 +716,7 @@ element.clear()  # 清空元素
 element.screenshot(path, filename)  # 对元素截图
 element.select(text)  # 根据文本选择下拉列表
 element.set_attr(attr, value)  # 设置元素属性值
+element.remove_attr(attr)  # 删除属性
 element.drag(x, y, speed, shake)  # 拖动元素相对距离，可设置速度和是否随机抖动
 element.drag_to(ele_or_loc, speed, shake)  # 拖动元素到另一个元素或某个坐标，可设置速度和是否随机抖动
 element.hover()  # 在元素上悬停鼠标
@@ -729,11 +757,10 @@ shadow_root_element.is_valid()  # 返回元素是否还在 dom 内
 
 **Tips：**以上属性或方法获取到的元素是普通的 DriverElement，用法参考上文所述。
 
+## 与 selenium 及 requests 代码对接
 
-
-## 与 selenium 代码对接
-
-DrissionPage 代码可与 selenium 代码无缝拼接，既可直接使用 selenium 的 WebDriver 对象，也可到处自身的 WebDriver 给 selenium 代码使用。使已有项目的迁移非常方便。
+DrissionPage 代码可与 selenium 及 requests 代码无缝拼接。既可直接使用 selenium 的 WebDriver 对象，也可导出自身的 WebDriver 给 selenium 代码使用。requests 的
+Session 对象也可直接传递。使已有项目的迁移非常方便。
 
 ### selenium 转 DrissionPage
 
@@ -745,8 +772,6 @@ page = MixPage(Drission(driver))  # 把 driver 传递给 Drission，创建 MixPa
 print(page.title)  # 打印结果：百度一下，你就知道
 ```
 
-
-
 ### DrissionPage 转 selenium
 
 ```python
@@ -755,9 +780,54 @@ page.get('https://www.baidu.com')
 
 driver = page.driver  # 从 MixPage 对象中获取 WebDriver 对象
 print(driver.title)  # 打印结果：百度一下，你就知道
+element = driver.find_element_by_xpath('//div')  # 使用 selenium 原生功能
 ```
 
+### requests 转 DrissionPage
 
+``` python
+session = requets.Session()
+drission = Drission(session_or_options=session)
+page = MixPage(drission, mode='s')
+
+page.get('https://www.baidu.com')
+```
+
+### DrissionPage 转 requests
+
+```python
+page = MixPage('s')
+session = page.session
+
+response = session.get('https://www.baidu.com')
+```
+
+## requests 功能使用
+
+### 连接参数
+
+除了在创建时传入配置信息及连接参数，如有必要，s 模式下也可在每次访问网址时设置连接参数。
+
+```python
+headers = {'User-Agent': '......', }
+cookies = {'name': 'value', }
+proxies = {'http': '127.0.0.1:1080', 'https': '127.0.0.1:1080'}
+page.get(url, headers=headers, cookies=cookies, proxies=proxies)
+```
+
+Tips：
+
+- 如果连接参数内没有指定，s 模式会根据当前域名自动填写 Host 和 Referer 属性
+- 在创建 MixPage 时传入的 Session 配置是全局有效的
+
+### Response 对象
+
+requests 获取到的 Response 对象存放在 page.response，可直接使用。如：
+
+```python
+print(page.response.status_code)
+print(page.response.headers)
+```
 
 ## 下载文件
 
@@ -785,10 +855,7 @@ save_path = r'C:\download'  # 存放路径
 page.download(url, save_path, 'img', 'rename', show_msg=True)
 ```
 
-
-
-
-## Chrome 快捷设置
+## Chrome 设置
 
 chrome 的配置很繁琐，为简化使用，本库提供了常用配置的设置方法。
 
@@ -818,24 +885,58 @@ options.set_paths(driver_path, chrome_path, debugger_address, download_path, use
 ### 使用方法
 
 ```python
-do = DriverOptions(read_file=False)  # 创建chrome配置对象，不从 ini 文件读取
+do = DriverOptions()  # 读取默认 ini 文件创建 DriverOptions 对象
+do = DriverOptions('D:\\settings.ini')  # 读取指定 ini 文件创建 DriverOptions 对象
+do = DriverOptions(read_file=False)  # 不读取 ini 文件，创建空的 DriverOptions 对象
+
 do.set_headless(False)  # 显示浏览器界面
 do.set_no_imgs(True)  # 不加载图片
 do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe')  # 设置路径
 do.set_headless(False).set_no_imgs(True)  # 支持链式操作
 
 drission = Drission(driver_options=do)  # 用配置对象创建 Drission 对象
-page = MixPage(drission)  # 用Drission对象创建 MixPage 对象
+page = MixPage(driver_options=do)  # 用配置对象创建 MixPage 对象
 
 do.save()  # 保存当前打开的 ini 文件
+do.save('D:\\settings.ini')  # 保存到指定的 ini 文件
 do.save('default')  # 保存当前设置到默认 ini 文件
 ```
 
+## Session 设置
 
+### SessionOPtions 对象
+
+SessionOptions 对象用于管理 Session 的配置信息。它创建时默认读取默认 ini 文件配置信息，也可手动设置所需信息。
+
+可配置的属性：
+
+headers、cookies、auth、proxies、hooks、params、verify、cert、adapters、stream、trust_env、max_redirects。
+
+**Tips:** cookies 可接收 dict、list、tuple、str、RequestsCookieJar 等格式的信息。
+
+### 使用方法
+
+```python
+so = SessionOptions()  # 读取默认 ini 文件创建 SessionOptions 对象
+so = SessionOptions('D:\\settings.ini')  # 读取指定 ini 文件创建 SessionOptions 对象
+so = SessionOptions(read_file=False)  # 不读取 ini 文件，创建空的 SessionOptions 对象
+
+so.cookies = ['key1=val1; domain=xxxx', 'key2=val2; domain=xxxx']  # 设置 cookies
+so.headers = {'User-Agent': 'xxxx', 'Accept-Charset': 'xxxx'}
+so.set_a_header('Connection', 'keep-alive')
+
+drission = Drission(session_options=so)  # 用配置对象创建 Drission 对象
+page = MixPage(session_options=so)  # 用配置对象创建 MixPage 对象
+
+so.save()  # 保存当前打开的 ini 文件
+so.save('D:\\settings.ini')  # 保存到指定的 ini 文件
+so.save('default')  # 保存当前设置到默认 ini 文件
+```
 
 ## 保存配置
 
-因 chrome 和 headers 配置繁多，故设置一个 ini 文件专门用于保存常用配置，你可使用 OptionsManager 对象获取和保存配置，用 DriverOptions 对象修改 chrome 配置。你也可以保存多个 ini 文件，按不同项目须要调用。
+因 chrome 和 headers 配置繁多，故设置一个 ini 文件专门用于保存常用配置，你可使用 OptionsManager 对象获取和保存配置，用 DriverOptions 对象修改 chrome 配置。你也可以保存多个 ini
+文件，按不同项目须要调用。
 
 Tips：建议把常用配置文件保存到别的路径，以防本库升级时配置被重置。
 
@@ -848,7 +949,7 @@ ini 文件默认拥有三部分配置：paths、chrome_options、session_options
 ; chromedriver.exe路径
 chromedriver_path =
 ; 临时文件夹路径，用于保存截图、文件下载等
-global_tmp_path =
+tmp_path =
 
 [chrome_options]
 ; 已打开的浏览器地址和端口，如127.0.0.1:9222
@@ -932,9 +1033,11 @@ drission = Drission(ini_path='D:\\settings.ini')  # 使用指定 ini 文件创�
 
 ## easy_set 方法
 
-可快速地修改常用设置的方法，调用 easy_set 方法会修改默认 ini 文件相关内容。
+可快速地修改常用设置的方法。全部用于 driver 模式的设置。调用 easy_set 方法会修改默认 ini 文件相关内容。
 
 ```python
+get_match_driver()  # 识别chrome版本并自动下载匹配的chromedriver.exe
+show_settings()  # 打印所有设置
 set_headless(True)  # 开启 headless 模式
 set_no_imgs(True)  # 开启无图模式
 set_no_js(True)  # 禁用 JS
@@ -943,6 +1046,7 @@ set_user_agent('Mozilla/5.0 (Macintosh; Int......')  # 设置 user agent
 set_proxy('127.0.0.1:8888')  # 设置代理
 set_paths(paths)  # 见 [初始化] 一节
 set_argument(arg, value)  # 设置属性，若属性无值（如'zh_CN.UTF-8'），value 为 bool 表示开关；否则value为str，当 value为''或 False，删除该属性项
+check_driver_version()  # 检查chrome和chromedriver版本是否匹配
 ```
 
 # POM 模式
@@ -1051,10 +1155,10 @@ Drission 类用于管理 WebDriver 对象和 Session 对象，是驱动器的角
 
 参数说明：
 
-- driver_or_options: [WebDriver, dict, Options]     - WebDriver 对象或 chrome 配置参数。
-- session_or_options: [Session, dict]                    - Session 对象配置参数
-- ini_path: str                                                        - ini 文件路径，默认为 DrissionPage 文件夹下的ini文件
-- proxy: dict                                                          - 代理设置
+- driver_or_options: [WebDriver, dict, Options, DriverOptions]     - WebDriver 对象或 chrome 配置参数。
+- session_or_options: [Session, dict]                                            - Session 对象配置参数
+- ini_path: str - ini 文件路径，默认为 DrissionPage 文件夹下的ini文件
+- proxy: dict - 代理设置
 
 
 
@@ -1096,15 +1200,23 @@ Drission 类用于管理 WebDriver 对象和 Session 对象，是驱动器的角
 
 返回： None
 
-
-
 ### proxy
 
 返回代理配置。
 
 返回： dict
 
+### set_cookies()
 
+设置 cookies。
+
+参数说明：
+
+- cookies: Union[RequestsCookieJar, list, tuple, str, dict]  - cookies 信息，可为CookieJar, list, tuple, str, dict
+- set_session: bool - 是否设置 session 的 cookies
+- set_driver: bool - 是否设置 driver 的 cookies
+
+返回： None
 
 ### cookies_to_session()
 
@@ -1112,9 +1224,7 @@ Drission 类用于管理 WebDriver 对象和 Session 对象，是驱动器的角
 
 参数说明：
 
-- copy_user_agent: bool  - 是否复制 user_agent 到 session
-- driver: WebDriver           - 复制 cookies 的 WebDriver 对象
-- session: Session            - 接收 cookies 的 Session 对象
+- copy_user_agent: bool - 是否复制 user_agent 到 session
 
 返回： None
 
@@ -1127,8 +1237,6 @@ Drission 类用于管理 WebDriver 对象和 Session 对象，是驱动器的角
 参数说明：
 
 - url: str                       - cookies 的域
-- driver: WebDriver     - 接收 cookies 的 WebDriver 对象
-- session: Session      - 复制 cookies 的 Session 对象
 
 返回： None
 
@@ -1257,15 +1365,32 @@ MixPage 封装了页面操作的常用功能，可在 driver 和 session 模式�
 
 返回： str
 
-
-
 ### url_available
 
 返回当前 url 有效性。
 
 返回： bool
 
+### set_cookies()
 
+设置 cookies。
+
+参数说明：
+
+- cookies: Union[RequestsCookieJar, list, tuple, str, dict]  - cookies 信息，可为CookieJar, list, tuple, str, dict
+
+返回： None
+
+### get_cookies()
+
+返回 cookies。
+
+参数说明：
+
+- as_dict: bool - 是否以 dict 方式返回，默认以 list 返回完整的 cookies
+- all_domains: bool - 是否返回所有域名的 cookies，只有 s 模式下生效
+
+返回：cookies 字典或列表
 
 ### change_mode()
 
@@ -1273,8 +1398,8 @@ MixPage 封装了页面操作的常用功能，可在 driver 和 session 模式�
 
 参数说明：
 
-- mode: str  - 指定目标模式，'d' 或 's'。
-- go: bool    - 切换模式后是否跳转到当前 url
+- mode: str - 指定目标模式，'d' 或 's'。
+- go: bool - 切换模式后是否跳转到当前 url
 
 返回： None
 
@@ -1516,11 +1641,11 @@ d 模式时检查网页是否符合预期。默认由 response 状态检查，�
 
 ### close_other_tabs()
 
-关闭传入的标签页以外标签页，默认保留当前页。
+关闭传入的标签页以外标签页，默认保留当前页。可传入列表或元组。
 
 参数说明：
 
-- num_or_handle:[int, str]  - 要保留的标签页序号或 handle，序号第一个为0，最后为-1
+- num_or_handles:[int, str]  - 要保留的标签页序号或 handle，可传入 handle 组成的列表或元组
 
 返回： None
 
@@ -2068,12 +2193,20 @@ driver 模式的元素对象，包装了一个 WebElement 对象，并封装了�
 
 参数说明：
 
-- attr: str     - 参数名
-- value: str  - 参数值
+- attr: str - 参数名
+- value: str - 参数值
 
-返回： bool  -是否成功
+返回： bool -是否成功
 
+### remove_attr()
 
+删除元素属性。
+
+参数说明：
+
+- attr: str - 参数名
+
+返回： bool -是否成功
 
 ### drag()
 
@@ -2081,9 +2214,9 @@ driver 模式的元素对象，包装了一个 WebElement 对象，并封装了�
 
 参数说明：
 
-- x: int             - 拖拽x方向距离
-- y: int             - 拖拽y方向距离
-- speed: int     - 拖拽速度
+- x: int - 拖拽x方向距离
+- y: int - 拖拽y方向距离
+- speed: int - 拖拽速度
 - shake: bool  - 是否随机抖动
 
 返回： bool
@@ -2535,11 +2668,129 @@ shadow-root 所依赖的父元素。
 
 参数说明：
 
-- path: str  - ini 文件的路径，传入 'default' 保存到默认ini文件
+- path: str - ini 文件的路径，传入 'default' 保存到默认ini文件
 
-返回： OptionsManager  - 返回自己
+返回： OptionsManager - 返回自己
 
+## SessionOptions 类
 
+### class SessionOptions()
+
+Session 对象配置类。
+
+参数说明：
+
+- read_file: bool - 创建时是否从 ini 文件读取配置信息
+- ini_path:  str - ini 文件路径，为None则读取默认 ini 文件
+
+### headers
+
+headers 配置信息。
+
+返回： dict
+
+### cookies
+
+cookies 配置信息。
+
+返回： list
+
+### auth
+
+auth 配置信息。
+
+返回： tuple
+
+### proxies
+
+proxies 配置信息。
+
+返回： dict
+
+### hooks
+
+hooks 配置信息。
+
+返回： dict
+
+### params
+
+params 配置信息。
+
+返回： dict
+
+### verify
+
+verify 配置信息。
+
+返回： bool
+
+### cert
+
+cert 配置信息。
+
+返回： [str, tuple]
+
+### adapters
+
+adapters 配置信息。
+
+返回： adapters
+
+### stream
+
+stream 配置信息。
+
+返回： bool
+
+### trust_env
+
+srust_env 配置信息。
+
+返回： bool
+
+### max_redirects
+
+max_redirect 配置信息。
+
+返回： int
+
+### set_a_header()
+
+设置 headers 中一个项。
+
+参数说明：
+
+- attr: str - 配置项名称
+- value: str - 配置的值
+
+返回： 当前对象
+
+### remove_a_header()
+
+从 headers 中删除一个设置。
+
+参数说明：
+
+- attr: str - 要删除的配置名称
+
+返回：当前对象
+
+### save()
+
+保存设置到文件。
+
+参数说明：
+
+- path: str - ini文件的路径，传入 'default' 保存到默认ini文件
+
+返回：当前对象
+
+### as_dict()
+
+以字典形式返回当前对象。
+
+返回： dict
 
 ## DriverOptions 类
 
@@ -2549,7 +2800,7 @@ chrome 浏览器配置类，继承自 selenium.webdriver.chrome.options 的 Opti
 
 参数说明：
 
-- read_file: bool  - 创建时是否从 ini 文件读取配置信息
+- read_file: bool - 创建时是否从 ini 文件读取配置信息
 - ini_path:  str     - ini 文件路径，为None则读取默认 ini 文件
 
 
@@ -2751,15 +3002,15 @@ chrome 配置太复杂，所以把常用的配置写成简单的方法，调用�
 
 参数说明：
 
-- driver_path: str               - chromedriver.exe 路径
-- chrome_path: str           - chrome.exe 路径
-- debugger_address: str  - 调试浏览器地址，例：127.0.0.1:9222
-- download_path: str        - 下载文件路径
-- global_tmp_path: str      - 临时文件夹路径
-- user_data_path: str        - 用户数据路径
-- cache_path: str              - 缓存路径
-- ini_path: str                    - ini 文件路径，为 None 则保存到默认 ini 文件
-- check_version: bool       - 是否检查 chromedriver 和 chrome 是否匹配
+- driver_path: str - chromedriver.exe 路径
+- chrome_path: str - chrome.exe 路径
+- debugger_address: str - 调试浏览器地址，例：127.0.0.1:9222
+- download_path: str - 下载文件路径
+- tmp_path: str - 临时文件夹路径
+- user_data_path: str - 用户数据路径
+- cache_path: str - 缓存路径
+- ini_path: str - ini 文件路径，为 None 则保存到默认 ini 文件
+- check_version: bool - 是否检查 chromedriver 和 chrome 是否匹配
 
 返回： None
 

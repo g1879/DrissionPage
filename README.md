@@ -405,25 +405,34 @@ In addition to the above two paths, this method can also set the following paths
 ```python
 debugger_address  # Debug browser address, such as: 127.0.0.1:9222
 download_path  # Download file path
-global_tmp_path  # Temporary folder path
+tmp_path  # Temporary folder path
 user_data_path  # User data path
 cache_path  # cache path
 ```
 
 Tips:
 
-- Different projects may require different versions of chrome and chromedriver. You can also save multiple ini files and use them as needed.
-- It is recommended to use the green version of chrome, and manually set the path, to avoid browser upgrades causing mismatch with the chromedriver version.
-- It is recommended to set the debugger_address when debugging the project and use the manually opened browser to debug, saving time and effort.
+- Different projects may require different versions of chrome and chromedriver. You can also save multiple ini files and
+  use them as needed.
+- It is recommended to use the green version of chrome, and manually set the path, to avoid browser upgrades causing
+  mismatch with the chromedriver version.
+- It is recommended to set the debugger_address when debugging the project and use the manually opened browser to debug,
+  saving time and effort.
 
+### Other methods
 
+If you don't want to use the ini file (for example, when you want to package the project), you can write the above two
+paths in the system path, or fill in the program. See the next section for the use of the latter.
 
 ## Create drive object Drission
 
-The creation step is not necessary. If you want to get started quickly, you can skip this section. The MixPage object will automatically create the object.
+The creation step is not necessary. If you want to get started quickly, you can skip this section. The MixPage object
+will automatically create the object.
 
-Drission objects are used to manage driver and session objects. When multiple pages work together, the Drission object is used to pass the driver, so that multiple page classes can control the same browser or Session object.
-The configuration information of the ini file can be directly read and created, or the configuration information can be passed in during initialization.
+Drission objects are used to manage driver and session objects. When multiple pages work together, the Drission object
+is used to pass the driver, so that multiple page classes can control the same browser or Session object. The
+configuration information of the ini file can be directly read and created, or the configuration information can be
+passed in during initialization.
 
 ```python
 # Create from the default ini file
@@ -451,18 +460,23 @@ do.set_paths(chrome_path ='D:\\chrome\\chrome.exe',
 # Settings for s mode
 session_options = {'headers': {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)'}}
 
+# Proxy settings, optional
+proxy = {'http': '127.0.0.1:1080','https': '127.0.0.1:1080'}
+
 # Incoming configuration, driver_options and session_options are optional, you need to use the corresponding mode to pass in
-drission = Drission(driver_options, session_options)
+drission = Drission(driver_options, session_options, proxy=proxy)
 ```
 
-
+The usage of DriverOptions and SessionOptions is detailed below.
 
 ## Use page object MixPage
 
-The MixPage page object encapsulates common web page operations and realizes the switch between driver and session modes.
-MixPage must receive a Drission object and use the driver or session in it. If it is not passed in, MixPage will create a Drission by itself (using the configuration of the default ini file).
+The MixPage page object encapsulates common web page operations and realizes the switch between driver and session
+modes. MixPage must control a Drission object and use its driver or session. If it is not passed in, MixPage will create
+one by itself (using the incoming configuration information or reading from the default ini file).
 
-Tips: When multiple objects work together, you can pass the Drission object in one MixPage to another, so that multiple objects can share login information or operate the same page.
+Tips: When multiple objects work together, you can pass the Drission object in one MixPage to another, so that multiple
+objects can share login information or operate the same page.
 
 ### Create Object
 
@@ -485,8 +499,6 @@ page = MixPage(driver_options=DriverOption, session_options=SessionOption)  # de
 
 ### visit website
 
-If there is an error in the connection, the program will automatically retry twice. The number of retries and the waiting interval can be specified.
-
 ```python
 # Default mode
 page.get(url)
@@ -496,17 +508,19 @@ page.post(url, data, **kwargs)  # Only session mode has post method
 page.get(url, retry=5, interval=0.5)
 ```
 
-
+Tips: If there is an error in the connection, the program will automatically retry twice. The number of retries and the
+waiting interval can be specified.
 
 ### Switch mode
 
-Switch between s and d modes, the cookies and the URL you are visiting will be automatically synchronized when switching.
+Switch between s and d modes, the cookies and the URL you are visiting will be automatically synchronized when
+switching.
 
 ```python
 page.change_mode(go=False)  # If go is False, it means that the url is not redirected
 ```
 
-
+Tips: When using a method unique to a certain mode, it will automatically jump to that mode.
 
 ### Page properties
 
@@ -534,7 +548,9 @@ page.current_tab_handle  # Return to the current tab page handle
 When calling a method that only belongs to d mode, it will automatically switch to d mode. See APIs for detailed usage.
 
 ```python
-page.change_mode()  # switch mode
+page.set_cookies()  # set cookies
+page.get_cookies() # Get cookies, which can be returned by list or dict
+page.change_mode()  # Switch mode, it will automatically copy cookies
 page.cookies_to_session()  # Copy cookies from WebDriver object to Session object
 page.cookies_to_driver()  # Copy cookies from Session object to WebDriver object
 page.get(url, retry, interval, **kwargs)  # Use get to access the web page, you can specify the number of retries and the interval
@@ -553,7 +569,7 @@ page.run_script(js, *args)  # Run js statement
 page.create_tab(url)  # Create and locate a tab page, which is at the end
 page.to_tab(num_or_handle)  # Jump to tab page
 page.close_current_tab()  # Close the current tab page
-page.close_other_tabs(num)  # Close other tabs
+page.close_other_tabs(num_or_handles)  # Close other tabs
 page.to_iframe(iframe)  # cut into iframe
 page.screenshot(path)  # Page screenshot
 page.scrool_to_see(element)  # Scroll until an element is visible
@@ -566,22 +582,37 @@ page.chrome_downloading()  # Get the list of files that chrome is downloading
 page.process_alert(mode, text)  # Process the prompt box
 ```
 
+### Use of cookies
 
+MixPage supports obtaining and setting cookies. The specific usage methods are as follows:
+
+```python
+page.cookies # Return cookies in dictionary form, only cookies available for the current domain name will be returned
+page.get_cookies(as_dict=False) # Return the cookies available for the current domain name in the form of a list, each cookie contains all the detailed information
+page.get_cookies(all_domains=True) # Return all cookies in list form, only s mode is valid
+page.set_cookies(cookies) # Set cookies, you can pass in RequestsCookieJar, list, tuple, str, dict
+```
+
+Tips:
+
+- After setting cookies in d mode, you must refresh the page to see the effect.
+
+- The s mode can set cookies in the ini file, SessionOptions, and configuration dictionary, which can be passed in when
+  MixPage is initialized. The d mode can only be set with the set_cookies() function.
 
 ## Find element
 
-ele() returns the first eligible element, and eles() returns a list of all eligible elements.
-You can use these two functions under the page object or element object to find subordinate elements.
+ele() returns the first eligible element, and eles() returns a list of all eligible elements. You can use these two
+functions under the page object or element object to find subordinate elements.
 
 page.eles() and element.eles() search and return a list of all elements that meet the conditions.
 
 Description:
 
-- The element search timeout is 10 seconds by default, you can also set it as needed.
-
-- In the following search statement, the colon: indicates a fuzzy match, and the equal sign = indicates an exact match
-
-- There are five types of query strings: @attribute name, tag, text, xpath, and css
+- The element search timeout is 10 seconds by default, and it stops waiting when it times out or finds an element. You
+  can also set it as needed.
+- -You can find elements with query string or selenium native loc tuple (s mode can also be used)
+  -The query string has 7 methods such as @attribute name, tag, text, xpath, css, ., #, etc.
 
 ```python
 # Find by attribute
@@ -589,6 +620,12 @@ page.ele('@id:ele_id', timeout = 2)  # Find the element whose id is ele_id and s
 page.eles('@class')  # Find all elements with class attribute
 page.eles('@class:class_name')  # Find all elements that have ele_class in class
 page.eles('@class=class_name')  # Find all elements whose class is equal to ele_class
+
+# Find by class or id
+page.ele('#ele_id') # equivalent to page.ele('@id=ele_id')
+page.ele('#:ele_id') # equivalent to page.ele('@id:ele_id')
+page.ele('.ele_class') # equivalent to page.ele('@class=ele_class')
+page.ele('.:ele_class') # equivalent to page.ele('@class:ele_class')
 
 # Find by tag name
 page.ele('tag:li')  # Find the first li element
@@ -603,7 +640,7 @@ page.ele('tag:div@text()=search_text')  # Find the div element whose text is equ
 
 # Find according to text content
 page.ele('search text')  # find the element containing the incoming text
-page.eles('text:search text')  # If the text starts with @, tag:, css:, xpath:, text:, add text: in front to avoid conflicts
+page.eles('text:search text')  # If the text starts with @, tag:, css:, xpath:, text:, you should add text: in front to avoid conflicts
 page.eles('text=search text')  # The text is equal to the element of search_text
 
 # Find according to xpath or css selector
@@ -626,7 +663,7 @@ element.parent  # parent element
 element.next  # next sibling element
 element.prev  # previous sibling element
 
-# Get shadow- dom, only support open shadow- root
+# Get the shadow-root and treat it as an element. Only support open shadow-root
 ele1 = element.shadow_root.ele('tag:div')
 
 # Chain search
@@ -689,6 +726,7 @@ element.clear()  # Clear the element
 element.screenshot(path, filename)  # Take a screenshot of the element
 element.select(text)  # Select the drop- down list based on the text
 element.set_attr(attr, value)  # Set element attribute value
+element.remove_attr(attr)  # remove a element attribute
 element.drag(x, y, speed, shake)  # Drag the relative distance of the element, you can set the speed and whether to shake randomly
 element.drag_to(ele_or_loc, speed, shake)  # Drag the element to another element or a certain coordinate, you can set the speed and whether to shake randomly
 element.hover()  # Hover the mouse over the element
@@ -731,11 +769,11 @@ shadow_root_element.is_valid() # Returns whether the element is still in dom
 
 **Tips:** The elements obtained by the above attributes or methods are ordinary DriverElement. For usage, please refer to the above.
 
+## Splicing with selenium or requests code
 
-
-## Docking with selenium code
-
-The DrissionPage code can be seamlessly spliced with the selenium code, either directly using the selenium WebDriver object, or using its own WebDriver everywhere for the selenium code. Make the migration of existing projects very convenient.
+DrissionPage code can be seamlessly spliced with selenium and requests code. You can use Selenium's WebDriver object
+directly, or you can export your own WebDriver to selenium code. The Session object of requests can also be passed
+directly. Make the migration of existing projects very convenient.
 
 ### selenium to DrissionPage
 
@@ -744,10 +782,9 @@ driver = webdriver.Chrome()
 driver.get('https://www.baidu.com')
 
 page = MixPage(Drission(driver))  # Pass the driver to Drission, create a MixPage object
-print(page.title)  # Print result: You will know by clicking on Baidu
+print(page.title)  # Print result: 百度一下，你就知道
+element = driver.find_element_by_xpath('//div') # Use selenium native functions
 ```
-
-
 
 ### DrissionPage to selenium
 
@@ -756,17 +793,63 @@ page = MixPage()
 page.get('https://www.baidu.com')
 
 driver = page.driver  # Get the WebDriver object from the MixPage object
-print(driver.title)  # Print results: You will know by clicking on Baidu
+print(driver.title)  # Print results: 百度一下，你就知道
 ```
 
+### requests  to  DrissionPage
 
+``` python
+session = requets.Session()
+drission = Drission(session_or_options=session)
+page = MixPage(drission, mode='s')
+
+page.get('https://www.baidu.com')
+```
+
+### DrissionPage  to  requests
+
+```python
+page = MixPage('s')
+session = page.session
+
+response = session.get('https://www.baidu.com')
+```
+
+## requests function usage
+
+### Connection parameters
+
+In addition to passing in configuration information and connection parameters when creating, if necessary, you can also
+set connection parameters every time you visit the URL in the s mode.
+
+```python
+headers = {'User-Agent':'...',}
+cookies = {'name':'value',}
+proxies = {'http': '127.0.0.1:1080','https': '127.0.0.1:1080'}
+page.get(url, headers=headers, cookies=cookies, proxies=proxies)
+```
+
+Tips:
+
+-If the connection parameters are not specified, the s mode will automatically fill in the Host and Referer attributes
+according to the current domain name -The Session configuration passed in when creating MixPage is globally effective
+
+### Response object
+
+The Response object obtained by requests is stored in page.response and can be used directly. Such as:
+
+```python
+print(page.response.status_code)
+print(page.response.headers)
+```
 
 ## download file
 
-Selenium lacks effective management of browser download files, and it is difficult to detect download status, rename, and fail management.
-Using requests to download files can better achieve the above functions, but the code is more cumbersome.
-Therefore, DrissionPage encapsulates the download method and integrates the advantages of the two. You can obtain login information from selenium and download it with requests.
-To make up for the shortcomings of selenium, make the download simple and efficient.
+Selenium lacks effective management of browser download files, and it is difficult to detect download status, rename,
+and fail management. Using requests to download files can better achieve the above functions, but the code is more
+cumbersome. Therefore, DrissionPage encapsulates the download method and integrates the advantages of the two. You can
+obtain login information from selenium and download it with requests. To make up for the shortcomings of selenium, make
+the download simple and efficient.
 
 ### Features
 
@@ -787,10 +870,7 @@ save_path = r'C:\download'  # save path
 page.download(url, save_path,'img','rename', show_msg=True)
 ```
 
-
-
-
-## Chrome Quick Settings
+## Chrome Settings
 
 The configuration of chrome is very cumbersome. In order to simplify the use, this library provides setting methods for common configurations.
 
@@ -820,26 +900,64 @@ options.set_paths(driver_path, chrome_path, debugger_address, download_path, use
 ### Instructions
 
 ```python
-do = DriverOptions(read_file=False) # Create chrome configuration object, do not read from ini file
+do = DriverOptions() # read the default ini file to create a DriverOptions object
+do = DriverOptions('D:\\settings.ini') # read the specified ini file to create a DriverOptions object
+do = DriverOptions(read_file=False) # Do not read the ini file, create an empty DriverOptions object
+
 do.set_headless(False) # show the browser interface
 do.set_no_imgs(True) # Do not load pictures
 do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe') # set path
 do.set_headless(False).set_no_imgs(True) # Support chain operation
 
 drission = Drission(driver_options=do) # Create Drission object with configuration object
-page = MixPage(drission) # Create MixPage object with Drission object
+page = MixPage(driver_options=do) # Create MixPage object with configuration object
 
-do.save() # Save the currently opened ini file
+do.save() # save the currently opened ini file
+do.save('D:\\settings.ini') # save to the specified ini file
 do.save('default') # Save the current settings to the default ini file
 ```
 
+## Session Settings
 
+### SessionOPtions Object
+
+The SessionOptions object is used to manage the configuration information of the Session. It reads the default ini file
+configuration information by default when it is created, or you can manually set the required information.
+
+Configurable properties:
+
+headers, cookies, auth, proxies, hooks, params, verify, cert, adapters, stream, trust_env, max_redirects.
+
+**Tips:** cookies can receive information in dict, list, tuple, str, RequestsCookieJar and other formats.
+
+### Instructions
+
+```python
+so = SessionOptions() # read the default ini file to create a SessionOptions object
+so = SessionOptions('D:\\settings.ini') # read the specified ini file to create a SessionOptions object
+so = SessionOptions(read_file=False) # Do not read the ini file, create an empty SessionOptions object
+
+so.cookies = ['key1=val1; domain=xxxx','key2=val2; domain=xxxx'] # set cookies
+so.headers = {'User-Agent':'xxxx','Accept-Charset':'xxxx'}
+so.set_a_header('Connection','keep-alive')
+
+drission = Drission(session_options=so) # Create Drission object with configuration object
+page = MixPage(session_options=so) # Create MixPage object with configuration object
+
+so.save() # Save the currently opened ini file
+so.save('D:\\settings.ini') # save to the specified ini file
+so.save('default') # Save the current settings to the default ini file
+```
 
 ## Save configuration
 
-Because there are many configurations of chrome and headers, an ini file is set up specifically to save common configurations. You can use the OptionsManager object to get and save the configuration, and use the DriverOptions object to modify the chrome configuration. You can also save multiple ini files and call them according to different projects.
+Because there are many configurations of chrome and headers, an ini file is set up specifically to save common
+configurations. You can use the OptionsManager object to get and save the configuration, and use the DriverOptions
+object to modify the chrome configuration. You can also save multiple ini files and call them according to different
+projects.
 
-Tips: It is recommended to save the commonly used configuration files to another path to prevent the configuration from being reset when the library is upgraded.
+Tips: It is recommended to save the commonly used configuration files to another path to prevent the configuration from
+being reset when the library is upgraded.
 
 ### ini file content
 
@@ -850,7 +968,7 @@ The ini file has three parts by default: paths, chrome_options, and session_opti
 ; chromedriver.exe path
 chromedriver_path =
 ; Temporary folder path, used to save screenshots, file downloads, etc.
-global_tmp_path =
+tmp_path =
 
 [chrome_options]
 ; The address and port of the opened browser, such as 127.0.0.1:9222
@@ -936,17 +1054,21 @@ drission = Drission(ini_path='D:\\settings.ini') # Use the specified ini file to
 
 ## easy_set method
 
-The methods of frequently used settings can be quickly modified. Calling the easy_set method will modify the content of the default ini file.
+Methods to quickly modify common settings. All for driver mode settings. Calling the easy_set method will modify the
+content of the default ini file.
 
 ```python
-set_headless(True)  # Turn on headless mode
-set_no_imgs(True)  # Turn on no image mode
-set_no_js(True)  # Disable JS
-set_mute(True)  # Turn on mute mode
-set_user_agent('Mozilla/5.0 (Macintosh; Int......')  # set user agent
-set_proxy('127.0.0.1:8888')  # set proxy
-set_paths(paths)  # See [Initialization] section
-set_argument(arg, value)  # Set the attribute. If the attribute has no value (such as'zh_CN.UTF- 8'), the value is bool, which means switch; otherwise, the value is str. When the value is'' or False, delete the attribute item
+get_match_driver() # Identify the chrome version and automatically download the matching chromedriver.exe
+show_settings() # Print all settings
+set_headless(True) # Turn on headless mode
+set_no_imgs(True) # Turn on no image mode
+set_no_js(True) # Disable JS
+set_mute(True) # Turn on mute mode
+set_user_agent('Mozilla/5.0 (Macintosh; Int......') # set user agent
+set_proxy('127.0.0.1:8888') # set proxy
+set_paths(paths) # See [Initialization] section
+set_argument(arg, value) # Set the attribute. If the attribute has no value (such as'zh_CN.UTF-8'), the value is bool to indicate the switch; otherwise, the value is str. When the value is'' or False, delete the attribute item
+check_driver_version() # Check if chrome and chromedriver versions match
 ```
 
 # POM mode
@@ -1055,7 +1177,7 @@ The Drission class is used to manage WebDriver objects and Session objects, and 
 
 Parameter Description:
 
-- driver_or_options: [WebDriver, dict, Options]  - WebDriver object or chrome configuration parameters.
+- driver_or_options: [WebDriver, dict, Options, DriverOptions]  - WebDriver object or chrome configuration parameters.
 - session_or_options: [Session, dict]  - Session object configuration parameters
 - ini_path: str  - ini file path, the default is the ini file under the DrissionPage folder
 - proxy: dict  - proxy settings
@@ -1108,21 +1230,30 @@ Return to proxy configuration.
 
 Returns: dict
 
-
-
 ### cookies_to_session()
 
 Copy the cookies of the driver object to the session object.
 
 Parameter Description:
 
-- copy_user_agent: bool  - whether to copy user_agent to session
-- driver: WebDriver- Copy the WebDriver object of cookies
-- session: Session- Session object that receives cookies
+- copy_user_agent: bool - whether to copy user_agent to session
 
 Returns: None
 
+### set_cookies()
 
+Set cookies.
+
+Parameter Description:
+
+- cookies: Union[RequestsCookieJar, list, tuple, str, dict]-cookies information, can be CookieJar, list, tuple, str,
+  dict
+
+- set_session: bool-whether to set session cookies
+
+- set_driver: bool-whether to set driver cookies
+
+Returns: None
 
 ### cookies_to_driver()
 
@@ -1131,8 +1262,6 @@ Copy cookies from session to driver.
 Parameter Description:
 
 - url: str  - the domain of cookies
-- driver: WebDriver- WebDriver object that receives cookies
-- session: Session- Copy the Session object of cookies
 
 Returns: None
 
@@ -1261,15 +1390,34 @@ Return to the page title.
 
 Returns: str
 
-
-
 ### url_available
 
 Returns the validity of the current url.
 
 Returns: bool
 
+### set_cookies()
 
+Set cookies.
+
+Parameter Description:
+
+- cookies: Union[RequestsCookieJar, list, tuple, str, dict]  - cookies information, can be CookieJar, list, tuple, str,
+  dict
+
+Returns: None
+
+### get_cookies()
+
+Return cookies.
+
+Parameter Description:
+
+- as_dict: bool - Whether to return as dict, the default is to return complete cookies as list
+
+- all_domains: bool - whether to return cookies of all domains, only valid in s mode
+
+Returns: a dictionary or list of cookies
 
 ### change_mode()
 
@@ -1277,8 +1425,8 @@ Switch mode,'d' or's'. When switching, the cookies of the current mode will be c
 
 Parameter Description:
 
-- mode: str  - Specify the target mode,'d' or's'.
-- go: bool  - whether to jump to the current url after switching mode
+- mode: str - Specify the target mode,'d' or's'.
+- go: bool - whether to jump to the current url after switching mode
 
 Returns: None
 
@@ -1520,11 +1668,11 @@ Returns: None
 
 ### close_other_tabs()
 
-Close tab pages other than the incoming tab page, and keep the current page by default.
+Close tab pages other than the incoming tab page, and keep the current page by default. You can pass in a list or tuple.
 
 Parameter Description:
 
-- num_or_handle:[int, str]  - The serial number or handle of the tab to keep, the first serial number is 0, and the last is - 1
+- num_or_handles:[int, str]-The serial number or handle of the tab to keep, you can pass in a list or tuple of handles
 
 Returns: None
 
@@ -2088,12 +2236,20 @@ Set element attributes.
 
 Parameter Description:
 
-- attr: str  - parameter name
-- value: str  - parameter value
+- attr: str - parameter name
+- value: str - parameter value
 
-Returns: bool  - whether it was successful
+Returns: bool - whether it was successful
 
+### remove_attr()
 
+Remove element attributes.
+
+Parameter Description:
+
+- attr: str -parameter name
+
+Returns: bool - whether it was successful
 
 ### drag()
 
@@ -2101,9 +2257,9 @@ Drag the current element a certain distance, and return whether the drag is succ
 
 Parameter Description:
 
-- x: int  - drag distance in x direction
-- y: int  - drag distance in y direction
-- speed: int  - drag speed
+- x: int - drag distance in x direction
+- y: int - drag distance in y direction
+- speed: int - drag speed
 - shake: bool  - whether to shake randomly
 
 Returns: bool
@@ -2577,21 +2733,141 @@ Save the settings to a file and return to yourself for chain operation.
 
 Parameter Description:
 
-- path: str  - the path of the ini file, pass in 'default' would save to the default ini file
+- path: str - the path of the ini file, pass in 'default' would save to the default ini file
 
-Return: OptionsManager  - return to yourself
+Return: OptionsManager - return to yourself
 
+## SessionOptions class
 
+### class SessionOptions()
+
+Session object configuration class.
+
+Parameter Description:
+
+-read_file: bool-whether to read configuration information from ini file when creating -ini_path: str-the path of the
+ini file, if it is None, the default ini file will be read
+
+### headers
+
+headers configuration information.
+
+Returns: dict
+
+### cookies
+
+Cookies configuration information.
+
+Returns: list
+
+### auth
+
+auth configuration information.
+
+Returns: tuple
+
+### proxies
+
+proxies configuration information.
+
+Returns: dict
+
+### hooks
+
+hooks configuration information.
+
+Returns: dict
+
+### params
+
+params configuration information.
+
+Returns: dict
+
+### verify
+
+Verify configuration information.
+
+Returns: bool
+
+### cert
+
+cert configuration information.
+
+Returns: [str, tuple]
+
+### adapters
+
+Adapters configuration information.
+
+Returns: adapters
+
+### stream
+
+stream configuration information.
+
+Returns: bool
+
+### trust_env
+
+srust_env configuration information.
+
+Returns: bool
+
+### max_redirects
+
+max_redirect configuration information.
+
+Returns: int
+
+### set_a_header()
+
+Set an item in headers.
+
+Parameter Description:
+
+- attr: str-configuration item name
+
+- value: str-configured value
+
+Returns: the current object
+
+### remove_a_header()
+
+Remove a setting from headers.
+
+Parameter Description:
+
+- attr: str-the name of the configuration to be deleted
+
+Returns: current object
+
+### save()
+
+Save the settings to a file.
+
+Parameter Description:
+
+- path: str-the path of the ini file, pass in'default' and save to the default ini file
+
+Returns: current object
+
+### as_dict()
+
+Return the current object as a dictionary.
+
+Returns: dict
 
 ## DriverOptions class
 
 ### class DriverOptions()
 
-The Chrome browser configuration class, inherited from the Options class of selenium.webdriver.chrome.options, adds the methods of deleting configuration and saving to file.
+The Chrome browser configuration class, inherited from the Options class of selenium.webdriver.chrome.options, adds the
+methods of deleting configuration and saving to file.
 
 Parameter Description:
 
-- read_file: bool  - Whether to read configuration information from the ini file when creating
+- read_file: bool - Whether to read configuration information from the ini file when creating
 - ini_path: str      - ini file path, if it is None, the default ini file will be read
 
 
@@ -2802,7 +3078,7 @@ Parameter Description:
 
 - download_path: str-download file path
 
-- global_tmp_path: str-Temporary folder path
+- tmp_path: str-Temporary folder path
 
 - user_data_path: str-user data path
 
