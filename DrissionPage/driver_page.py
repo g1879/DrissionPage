@@ -53,12 +53,19 @@ class DriverPage(object):
     @property
     def cookies(self) -> list:
         """返回当前网站cookies"""
-        return self.driver.get_cookies()
+        return self.get_cookies(True)
 
     @property
     def title(self) -> str:
         """返回网页title"""
         return self.driver.title
+
+    def get_cookies(self, as_dict: bool = False) -> Union[list, dict]:
+        """返回当前网站cookies"""
+        if as_dict:
+            return {cookie['name']: cookie['value'] for cookie in self.driver.get_cookies()}
+        else:
+            return self.driver.get_cookies()
 
     def _try_to_connect(self,
                         to_url: str,
@@ -108,7 +115,7 @@ class DriverPage(object):
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, DriverElement, WebElement],
             mode: str = None,
-            timeout: float = None) -> Union[DriverElement, List[DriverElement or str], str, None]:
+            timeout: float = None) -> Union[DriverElement, List[DriverElement], str, None]:
         """返回页面中符合条件的元素，默认返回第一个                                                         \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -149,8 +156,8 @@ class DriverPage(object):
                     raise ValueError("Len of loc_or_ele must be 2 when it's a tuple.")
                 loc_or_ele = translate_loc(loc_or_ele)
 
-            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
-                loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
+            # if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
+            #     loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
 
         # 接收到DriverElement对象直接返回
         elif isinstance(loc_or_ele, DriverElement):
@@ -169,7 +176,7 @@ class DriverPage(object):
 
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None) -> List[DriverElement or str]:
+             timeout: float = None) -> List[DriverElement]:
         """返回页面中所有符合条件的元素                                                                     \n
         示例：                                                                                            \n
         - 用loc元组查找：                                                                                 \n
@@ -328,33 +335,35 @@ class DriverPage(object):
         if self.tabs_count:
             self.to_tab(0)
 
-    def close_other_tabs(self, num_or_handle: Union[int, str] = None) -> None:
-        """关闭传入的标签页以外标签页，默认保留当前页                                \n
-        :param num_or_handle: 要保留的标签页序号或handle，序号第一个为0，最后为-1
+    def close_other_tabs(self, num_or_handles: Union[int, str, list, tuple] = None) -> None:
+        """关闭传入的标签页以外标签页，默认保留当前页。可传入列表或元组                                \n
+        :param num_or_handles: 要保留的标签页序号或handle，可传入handle组成的列表或元组
         :return: None
         """
         try:
-            tab = int(num_or_handle)
+            tab = int(num_or_handles)
         except (ValueError, TypeError):
-            tab = num_or_handle
+            tab = num_or_handles
 
         tabs = self.driver.window_handles
 
         if tab is None:
-            page_handle = self.current_tab_handle
+            page_handle = (self.current_tab_handle,)
         elif isinstance(tab, int):
-            page_handle = tabs[tab]
+            page_handle = (tabs[tab],)
         elif isinstance(tab, str):
+            page_handle = (tab,)
+        elif isinstance(tab, (list, tuple)):
             page_handle = tab
         else:
-            raise TypeError('Argument num_or_handle can only be int or str.')
+            raise TypeError('Argument num_or_handle can only be int, str, list or tuple.')
 
         for i in tabs:  # 遍历所有标签页，关闭非保留的
-            if i != page_handle:
+            if i not in page_handle:
                 self.driver.switch_to.window(i)
                 self.driver.close()
 
-        self.driver.switch_to.window(page_handle)  # 把权柄定位回保留的页面
+        self.driver.switch_to.window(page_handle[0])  # 把权柄定位回保留的页面
 
     def to_tab(self, num_or_handle: Union[int, str] = 0) -> None:
         """跳转到标签页                                                         \n

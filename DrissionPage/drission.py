@@ -6,24 +6,25 @@
 """
 from sys import exit
 from typing import Union
-from urllib.parse import urlparse
 
 from requests import Session
+from requests.cookies import RequestsCookieJar
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException, SessionNotCreatedException
+from selenium.common.exceptions import SessionNotCreatedException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 from tldextract import extract
 
-from .config import OptionsManager, _dict_to_chrome_options, _chrome_options_to_dict
+from .config import (_dict_to_chrome_options, _session_options_to_dict,
+                     SessionOptions, DriverOptions, _chrome_options_to_dict, OptionsManager, _cookies_to_tuple)
 
 
 class Drission(object):
     """Drission类用于管理WebDriver对象和Session对象，是驱动器的角色"""
 
     def __init__(self,
-                 driver_or_options: Union[WebDriver, dict, Options] = None,
-                 session_or_options: Union[Session, dict] = None,
+                 driver_or_options: Union[WebDriver, dict, Options, DriverOptions] = None,
+                 session_or_options: Union[Session, dict, SessionOptions] = None,
                  ini_path: str = None,
                  proxy: dict = None):
         """初始化，可接收现成的WebDriver和Session对象，或接收它们的配置信息生成对象       \n
@@ -34,53 +35,42 @@ class Drission(object):
         """
         self._session = None
         self._driver = None
-        self._driver_path = 'chromedriver'
         self._proxy = proxy
 
-        # 若接收到Session对象，直接记录
-        if isinstance(session_or_options, Session):
-            self._session = session_or_options
+        om = OptionsManager(ini_path) if session_or_options is None or driver_or_options is None else None
 
-        # 否则记录其配置信息
+        # ------------------处理session options----------------------
+        if session_or_options is None:
+            self._session_options = om.session_options
+
         else:
+            # 若接收到Session对象，直接记录
+            if isinstance(session_or_options, Session):
+                self._session = session_or_options
 
-            # 若接收到配置信息则记录，否则从ini文件读取
-            if session_or_options is None:
-                self._session_options = OptionsManager(ini_path).session_options
+            # 否则记录其配置信息
             else:
-                self._session_options = session_or_options
+                self._session_options = _session_options_to_dict(session_or_options)
 
-        # 若接收到WebDriver对象，直接记录
-        if isinstance(driver_or_options, WebDriver):
-            self._driver = driver_or_options
+        # ------------------处理driver options----------------------
+        if driver_or_options is None:
+            self._driver_options = om.chrome_options
+            self._driver_options['driver_path'] = om.get_value('paths', 'chromedriver_path')
 
-        # 否则记录其配置信息
         else:
+            # 若接收到WebDriver对象，直接记录
+            if isinstance(driver_or_options, WebDriver):
+                self._driver = driver_or_options
 
-            # 若接收到配置信息则记录，否则从ini文件读取
-            if driver_or_options is None:
-                om = OptionsManager(ini_path)
-                self._driver_options = om.chrome_options
-
-                if om.paths.get('chromedriver_path', None):
-                    self._driver_path = om.paths['chromedriver_path']
+            # 否则记录其配置信息
             else:
                 self._driver_options = _chrome_options_to_dict(driver_or_options)
-
-                if self._driver_options.get('driver_path', None):
-                    self._driver_path = self._driver_options['driver_path']
 
     @property
     def session(self) -> Session:
         """返回Session对象，如未初始化则按配置信息创建"""
         if self._session is None:
-            self._session = Session()
-            attrs = ['headers', 'cookies', 'auth', 'proxies', 'hooks', 'params', 'verify',
-                     'cert', 'adapters', 'stream', 'trust_env', 'max_redirects']
-
-            for i in attrs:
-                if i in self._session_options:
-                    exec(f'self._session.{i} = self._session_options["{i}"]')
+            self._set_session(self._session_options)
 
             if self._proxy:
                 self._session.proxies = self._proxy
@@ -99,8 +89,10 @@ class Drission(object):
             if self._proxy:
                 options.add_argument(f'--proxy-server={self._proxy["http"]}')
 
+            driver_path = self._driver_options.get('driver_path', None) or 'chromedriver'
+
             try:
-                self._driver = webdriver.Chrome(self._driver_path, options=options)
+                self._driver = webdriver.Chrome(driver_path, options=options)
             except SessionNotCreatedException:
                 print('Chrome版本与chromedriver版本不匹配，可执行easy_set.get_match_driver()自动下载匹配的版本。')
                 exit(0)
@@ -127,12 +119,13 @@ class Drission(object):
         return self._session_options
 
     @session_options.setter
-    def session_options(self, value: dict) -> None:
-        """设置session配置
-        :param value: session配置字典
+    def session_options(self, options: Union[dict, SessionOptions]) -> None:
+        """设置session配置                  \n
+        :param options: session配置字典
         :return: None
         """
-        self._session_options = value
+        self._session_options = _session_options_to_dict(options)
+        self._set_session(self._session_options)
 
     @property
     def proxy(self) -> Union[None, dict]:
@@ -159,103 +152,95 @@ class Drission(object):
             self._driver.get(url)
 
             for cookie in cookies:
-                self._ensure_add_cookie(cookie)
+                self.set_cookies(cookie, set_driver=True)
 
-    def cookies_to_session(self, copy_user_agent: bool = False,
-                           driver: WebDriver = None,
-                           session: Session = None) -> None:
+    def set_cookies(self,
+                    cookies: Union[RequestsCookieJar, list, tuple, str, dict],
+                    set_session: bool = False,
+                    set_driver: bool = False) -> None:
+        """设置cookies                                                      \n
+        :param cookies: cookies信息，可为CookieJar, list, tuple, str, dict
+        :param set_session: 是否设置session的cookies
+        :param set_driver: 是否设置driver的cookies
+        :return: None
+        """
+        cookies = _cookies_to_tuple(cookies)
+
+        for cookie in cookies:
+            if cookie['value'] is None:
+                cookie['value'] = ''
+
+            # 添加cookie到session
+            if set_session:
+                kwargs = {x: cookie[x] for x in cookie if x not in ('name', 'value', 'httpOnly', 'expiry')}
+
+                if 'expiry' in cookie:
+                    kwargs['expires'] = cookie['expiry']
+
+                self.session.cookies.set(cookie['name'], cookie['value'], **kwargs)
+
+            # 添加cookie到driver
+            if set_driver:
+                if 'expiry' in cookie:
+                    cookie['expiry'] = int(cookie['expiry'])
+
+                try:
+                    browser_domain = extract(self.driver.current_url).fqdn
+                except AttributeError:
+                    browser_domain = ''
+
+                if not cookie.get('domain', None):
+                    if browser_domain:
+                        url = extract(browser_domain)
+                        cookie_domain = f'{url.domain}.{url.suffix}'
+                    else:
+                        raise ValueError('There is no domain name in the cookie or the browser has not visited a URL.')
+
+                    cookie['domain'] = cookie_domain
+
+                else:
+                    cookie_domain = cookie['domain'] if cookie['domain'][0] != '.' else cookie['domain'][1:]
+
+                if cookie_domain not in browser_domain:
+                    self.driver.get(cookie_domain if cookie_domain.startswith('http://')
+                                    else f'http://{cookie_domain}')
+
+                self.driver.add_cookie(cookie)
+
+    def _set_session(self, data: dict) -> None:
+        if self._session is None:
+            self._session = Session()
+
+        attrs = ['headers', 'auth', 'proxies', 'hooks', 'params', 'verify',
+                 'cert', 'stream', 'trust_env', 'max_redirects']  # , 'adapters'
+
+        if 'cookies' in data:
+            self.set_cookies(data['cookies'], set_session=True)
+
+        for i in attrs:
+            if i in data:
+                self._session.__setattr__(i, data[i])
+
+    def cookies_to_session(self, copy_user_agent: bool = False) -> None:
         """把driver对象的cookies复制到session对象    \n
         :param copy_user_agent: 是否复制ua信息
-        :param driver: 来源driver对象
-        :param session: 目标session对象
         :return: None
         """
-        driver = driver or self.driver
-        session = session or self.session
-
         if copy_user_agent:
-            self.user_agent_to_session(driver, session)
+            self.user_agent_to_session(self.driver, self.session)
 
-        for cookie in driver.get_cookies():
-            session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+        self.set_cookies(self.driver.get_cookies(), set_session=True)
 
-    def cookies_to_driver(self, url: str,
-                          driver: WebDriver = None,
-                          session: Session = None) -> None:
+    def cookies_to_driver(self, url: str) -> None:
         """把session对象的cookies复制到driver对象  \n
         :param url: 作用域
-        :param driver: 目标driver对象
-        :param session: 来源session对象
         :return: None
         """
-        driver = driver or self.driver
-        session = session or self.session
-        domain = urlparse(url).netloc
+        url = extract(url)
+        domain = f'{url.domain}.{url.suffix}'
+        cookies = tuple(x for x in self.session.cookies if domain in x.domain)
 
-        if not domain:
-            raise Exception('Without specifying a domain')
-
-        # 翻译cookies
-        for i in [x for x in session.cookies if domain in x.domain]:
-            cookie_data = {'name': i.name, 'value': str(i.value), 'path': i.path, 'domain': i.domain}
-
-            if i.expires:
-                cookie_data['expiry'] = i.expires
-
-            self._ensure_add_cookie(cookie_data, driver=driver)
-
-    def _ensure_add_cookie(self, cookie, override_domain=None, driver=None) -> None:
-        """添加cookie到driver                  \n
-        :param cookie: 要添加的cookie
-        :param override_domain: 覆盖作用域
-        :param driver: 操作的driver对象
-        :return: None
-        """
-        driver = driver or self.driver
-
-        if override_domain:
-            cookie['domain'] = override_domain
-
-        cookie_domain = cookie['domain'] if cookie['domain'][0] != '.' else cookie['domain'][1:]
-
-        try:
-            browser_domain = extract(driver.current_url).fqdn
-        except AttributeError:
-            browser_domain = ''
-
-        if cookie_domain not in browser_domain:
-            driver.get(f'http://{cookie_domain.lstrip("http://")}')
-
-        if 'expiry' in cookie:
-            cookie['expiry'] = int(cookie['expiry'])
-
-        driver.add_cookie(cookie)
-
-        # 如果添加失败，尝试更宽的域名
-        if not self._is_cookie_in_driver(cookie, driver):
-            cookie['domain'] = extract(cookie['domain']).registered_domain
-            driver.add_cookie(cookie)
-
-            if not self._is_cookie_in_driver(cookie):
-                raise WebDriverException(f"Couldn't add the following cookie to the webdriver\n{cookie}\n")
-
-    def _is_cookie_in_driver(self, cookie, driver=None) -> bool:
-        """检查cookie是否已经在driver里                   \n
-        只检查name、value、domain，检查domain时比较宽      \n
-        :param cookie: 要检查的cookie
-        :param driver: 被检查的driver
-        :return: 返回布尔值
-        """
-        driver = driver or self.driver
-        for driver_cookie in driver.get_cookies():
-
-            if (cookie['name'] == driver_cookie['name'] and
-                    cookie['value'] == driver_cookie['value'] and
-                    (cookie['domain'] == driver_cookie['domain'] or
-                     f'.{cookie["domain"]}' == driver_cookie['domain'])):
-                return True
-
-        return False
+        self.set_cookies(cookies, set_driver=True)
 
     def user_agent_to_session(self, driver: WebDriver = None, session: Session = None) -> None:
         """把driver的user-agent复制到session    \n

@@ -15,8 +15,10 @@ from typing import Union, List, Tuple
 from urllib.parse import urlparse, quote, unquote
 
 from requests import Session, Response
+from tldextract import extract
 
 from .common import str_to_loc, translate_loc, get_available_file_name, format_html
+from .config import _cookie_to_dict
 from .session_element import SessionElement, execute_session_find
 
 
@@ -54,21 +56,39 @@ class SessionPage(object):
     @property
     def cookies(self) -> dict:
         """返回session的cookies"""
-        return self.session.cookies.get_dict()
+        return self.get_cookies(True)
 
     @property
     def title(self) -> str:
         """返回网页title"""
-        return self.ele(('css selector', 'title')).text
+        return self.ele('tag:title').text
 
     @property
     def html(self) -> str:
         """返回页面html文本"""
         return format_html(self.response.text)
 
+    def get_cookies(self, as_dict: bool = False, all_domains: bool = False) -> Union[dict, list]:
+        """返回cookies                               \n
+        :param as_dict: 是否以字典方式返回
+        :param all_domains: 是否返回所有域的cookies
+        :return: cookies信息
+        """
+        if all_domains:
+            cookies = self.session.cookies
+        else:
+            url = extract(self.url)
+            domain = f'{url.domain}.{url.suffix}'
+            cookies = tuple(x for x in self.session.cookies if domain in x.domain)
+
+        if as_dict:
+            return {x.name: x.value for x in cookies}
+        else:
+            return [_cookie_to_dict(cookie) for cookie in cookies]
+
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, SessionElement],
-            mode: str = None) -> Union[SessionElement, List[SessionElement or str], str, None]:
+            mode: str = None) -> Union[SessionElement, List[SessionElement], str, None]:
         """返回页面中符合条件的元素、属性或节点文本，默认返回第一个                                           \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -108,8 +128,8 @@ class SessionPage(object):
 
                 loc_or_ele = translate_loc(loc_or_ele)
 
-            if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
-                loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
+            # if loc_or_ele[0] == 'xpath' and not loc_or_ele[1].startswith(('/', '(')):
+            #     loc_or_ele = loc_or_ele[0], f'//{loc_or_ele[1]}'
 
         elif isinstance(loc_or_ele, SessionElement):
             return loc_or_ele
@@ -120,7 +140,7 @@ class SessionPage(object):
         return execute_session_find(self, loc_or_ele, mode)
 
     def eles(self,
-             loc_or_str: Union[Tuple[str, str], str]) -> List[SessionElement or str]:
+             loc_or_str: Union[Tuple[str, str], str]) -> List[SessionElement]:
         """返回页面中所有符合条件的元素、属性或节点文本                                                     \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n
@@ -374,11 +394,12 @@ class SessionPage(object):
 
         # -------------------打印要下载的文件-------------------
         if show_msg:
+            print(file_url)
             print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
             print(f'Downloading to: {goal_path}')
 
             if skip:
-                print('Skipped.')
+                print('Skipped.\n')
 
         # -------------------开始下载-------------------
         if skip:
@@ -428,7 +449,7 @@ class SessionPage(object):
 
         # -------------------显示并返回值-------------------
         if show_msg:
-            print(info)
+            print(info, '\n')
 
         info = f'{goal_path}\\{full_name}' if download_status else info
         return download_status, info
@@ -447,6 +468,11 @@ class SessionPage(object):
         :param kwargs: 其它参数
         :return: tuple，第一位为Response或None，第二位为出错信息或'Sussess'
         """
+        if not url:
+            if show_errmsg:
+                raise ValueError('url is empty.')
+            return None, 'url is empty.'
+
         if mode not in ['get', 'post']:
             raise ValueError("Argument mode can only be 'get' or 'post'.")
 

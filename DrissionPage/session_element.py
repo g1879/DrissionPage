@@ -92,7 +92,7 @@ class SessionElement(DrissionElement):
         """返回前一个兄弟元素"""
         return self._get_brother(1, 'ele', 'prev')
 
-    def texts(self, text_node_only: bool = False) -> List[str]:
+    def texts(self, text_node_only: bool = False) -> list:
         """返回元素内所有直接子节点的文本，包括元素和文本节点   \n
         :param text_node_only: 是否只返回文本节点
         :return: 文本列表
@@ -340,7 +340,7 @@ class SessionElement(DrissionElement):
 
 def execute_session_find(page_or_ele,
                          loc: Tuple[str, str],
-                         mode: str = 'single', ) -> Union[SessionElement, List[SessionElement or str], str, None]:
+                         mode: str = 'single', ) -> Union[SessionElement, List[SessionElement], str, None]:
     """执行session模式元素的查找                              \n
     页面查找元素及元素查找下级元素皆使用此方法                   \n
     :param page_or_ele: SessionPage对象或SessionElement对象

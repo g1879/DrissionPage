@@ -140,7 +140,7 @@ class DriverElement(DrissionElement):
         return self.get_style_property('content', 'after')
 
     # -----------------共有函数-------------------
-    def texts(self, text_node_only: bool = False) -> List[str]:
+    def texts(self, text_node_only: bool = False) -> list:
         """返回元素内所有直接子节点的文本，包括元素和文本节点   \n
         :param text_node_only: 是否只返回文本节点
         :return: 文本列表
@@ -407,9 +407,19 @@ class DriverElement(DrissionElement):
         try:
             self.run_script(f"arguments[0].{attr} = '{value}';")
             return True
-        except Exception as e:
-            print(e)
+        except:
             return False
+
+    def remove_attr(self, attr: str) -> bool:
+        """设置元素属性          \n
+        :param attr: 属性名
+        :return: 是否设置成功
+        """
+        try:
+            self.run_script(f'arguments[0].removeAttribute("{attr}");')
+            return True
+        except:
+            raise False
 
     def drag(self, x: int, y: int, speed: int = 40, shake: bool = True) -> bool:
         """拖拽当前元素到相对位置                   \n
@@ -557,7 +567,7 @@ class DriverElement(DrissionElement):
 def execute_driver_find(page_or_ele,
                         loc: Tuple[str, str],
                         mode: str = 'single',
-                        timeout: float = 10) -> Union[DriverElement, List[DriverElement or str], str, None]:
+                        timeout: float = 10) -> Union[DriverElement, List[DriverElement], str, None]:
     """执行driver模式元素的查找                               \n
     页面查找元素及元素查找下级元素皆使用此方法                   \n
     :param page_or_ele: DriverPage对象或DriverElement对象

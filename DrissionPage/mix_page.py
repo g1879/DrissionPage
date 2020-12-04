@@ -7,10 +7,11 @@
 from typing import Union, List, Tuple
 
 from requests import Response, Session
+from requests.cookies import RequestsCookieJar
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from .config import DriverOptions
+from .config import DriverOptions, SessionOptions
 from .drission import Drission
 from .driver_element import DriverElement
 from .driver_page import DriverPage
@@ -38,7 +39,7 @@ class MixPage(Null, SessionPage, DriverPage):
                  mode: str = 'd',
                  timeout: float = 10,
                  driver_options: Union[dict, DriverOptions] = None,
-                 session_options: dict = None):
+                 session_options: Union[dict, SessionOptions] = None):
         """初始化函数                                                                         \n
         :param drission: Drission对象，传入's'或'd'可自动创建Drission对象
         :param mode: 'd' 或 's'，即driver模式和session模式
@@ -139,6 +140,27 @@ class MixPage(Null, SessionPage, DriverPage):
         elif self._mode == 'd':
             return super(SessionPage, self).title
 
+    def set_cookies(self, cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None:
+        """设置cookies                                                          \n
+        :param cookies: cookies信息，可为CookieJar, list, tuple, str, dict
+        :return: None
+        """
+        if self._mode == 's':
+            self.drission.set_cookies(cookies, set_session=True)
+        elif self._mode == 'd':
+            self.drission.set_cookies(cookies, set_driver=True)
+
+    def get_cookies(self, as_dict: bool = False, all_domains: bool = False) -> Union[dict, list]:
+        """返回cookies                               \n
+        :param as_dict: 是否以字典方式返回
+        :param all_domains: 是否返回所有域的cookies
+        :return: cookies信息
+        """
+        if self._mode == 's':
+            return super().get_cookies(as_dict, all_domains)
+        elif self._mode == 'd':
+            return super(SessionPage, self).get_cookies(as_dict)
+
     def change_mode(self, mode: str = None, go: bool = True) -> None:
         """切换模式，接收's'或'd'，除此以外的字符串会切换为d模式   \n
         切换时会把当前模式的cookies复制到目标模式                 \n
@@ -155,8 +177,10 @@ class MixPage(Null, SessionPage, DriverPage):
         if self._mode == 'd':
             self._driver = True
             self._url = None if not self._driver else self._drission.driver.current_url
+
             if self._session_url:
                 self.cookies_to_driver(self._session_url)
+
                 if go:
                     self.get(self._session_url)
 
@@ -164,8 +188,10 @@ class MixPage(Null, SessionPage, DriverPage):
         elif self._mode == 's':
             self._session = True
             self._url = self._session_url
+
             if self._driver:
                 self.cookies_to_session()
+
                 if go and self._drission.driver.current_url.startswith('http'):
                     self.get(self._drission.driver.current_url)
 
@@ -310,7 +336,8 @@ class MixPage(Null, SessionPage, DriverPage):
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, DriverElement, SessionElement, WebElement],
             mode: str = None,
-            timeout: float = None) -> Union[DriverElement, SessionElement, str]:
+            timeout: float = None) -> Union[
+        DriverElement, SessionElement, str, List[SessionElement], List[DriverElement]]:
         """返回页面中符合条件的元素、属性或节点文本，默认返回第一个                                            \n
         示例：                                                                                           \n
         - 接收到元素对象时：                                                                              \n
@@ -350,7 +377,7 @@ class MixPage(Null, SessionPage, DriverPage):
 
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None) -> Union[List[DriverElement or str], List[SessionElement or str]]:
+             timeout: float = None) -> Union[List[DriverElement], List[SessionElement]]:
         """返回页面中所有符合条件的元素、属性或节点文本                                                     \n
         示例：                                                                                          \n
         - 用loc元组查找：                                                                                \n

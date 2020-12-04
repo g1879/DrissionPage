@@ -256,7 +256,7 @@ def get_available_file_name(folder_path: str, file_name: str) -> str:
         base_name = file_Path.stem
         num = base_name.split(' ')[-1]
 
-        if num[0] == '(' and num[-1] == ')' and num[1:-1].isdigit():
+        if num and num[0] == '(' and num[-1] == ')' and num[1:-1].isdigit():
             num = int(num[1:-1])
             file_name = f'{base_name.replace(f"({num})", "", -1)}({num + 1}){ext_name}'
         else:

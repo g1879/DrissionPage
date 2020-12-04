@@ -53,10 +53,7 @@ def set_paths(driver_path: str = None,
     om = OptionsManager(ini_path)
 
     def format_path(path: str) -> str:
-        if not path:
-            return ''
-
-        return str(path).replace('/', '\\')
+        return '' if not path else str(path).replace('/', '\\')
 
     if driver_path is not None:
         om.set_item('paths', 'chromedriver_path', format_path(driver_path))
@@ -68,7 +65,7 @@ def set_paths(driver_path: str = None,
         om.set_item('chrome_options', 'debugger_address', format_path(debugger_address))
 
     if tmp_path is not None:
-        om.set_item('paths', 'global_tmp_path', format_path(tmp_path))
+        om.set_item('paths', 'tmp_path', format_path(tmp_path))
 
     if download_path is not None:
         experimental_options = om.get_value('chrome_options', 'experimental_options')
