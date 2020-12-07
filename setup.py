@@ -8,7 +8,7 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setup(
     name="DrissionPage",
-    version="1.5.3",
+    version="1.7.1",
     author="g1879",
     author_email="g1879@qq.com",
     description="A module that integrates selenium and requests session, encapsulates common page operations.",
@@ -23,8 +23,7 @@ setup(
         "selenium",
         "lxml",
         "tldextract",
-        "requests",
-        "cssselect"
+        "requests"
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",
