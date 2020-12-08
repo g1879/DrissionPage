@@ -13,6 +13,7 @@ from urllib.parse import quote
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support.wait import WebDriverWait
 
 from .common import str_to_loc, get_available_file_name, translate_loc, format_html
 from .driver_element import DriverElement, execute_driver_find
@@ -24,9 +25,10 @@ class DriverPage(object):
     def __init__(self, driver: WebDriver, timeout: float = 10):
         """初始化函数，接收一个WebDriver对象，用来操作网页"""
         self._driver = driver
-        self.timeout = timeout
+        self._timeout = timeout
         self._url = None
         self._url_available = None
+        self._wait = None
 
     @property
     def driver(self) -> WebDriver:
@@ -59,6 +61,22 @@ class DriverPage(object):
     def title(self) -> str:
         """返回网页title"""
         return self.driver.title
+
+    @property
+    def timeout(self) -> float:
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, second: float) -> None:
+        self._timeout = second
+        self._wait = None
+
+    @property
+    def wait(self) -> WebDriverWait:
+        if self._wait is None:
+            self._wait = WebDriverWait(self.driver, timeout=self.timeout)
+
+        return self._wait
 
     def get_cookies(self, as_dict: bool = False) -> Union[list, dict]:
         """返回当前网站cookies"""
@@ -165,7 +183,7 @@ class DriverPage(object):
 
         # 接收到WebElement对象打包成DriverElement对象返回
         elif isinstance(loc_or_ele, WebElement):
-            return DriverElement(loc_or_ele, self, self.timeout)
+            return DriverElement(loc_or_ele, self)
 
         # 接收到的类型不正确，抛出异常
         else:

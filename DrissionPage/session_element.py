@@ -8,8 +8,7 @@ import re
 from typing import Union, List, Tuple
 from urllib.parse import urlparse, urljoin, urlunparse
 
-from cssselect import SelectorSyntaxError
-from lxml.etree import tostring, XPathEvalError
+from lxml.etree import tostring
 from lxml.html import HtmlElement, fromstring
 
 from .common import DrissionElement, str_to_loc, translate_loc, format_html
@@ -285,20 +284,20 @@ class SessionElement(DrissionElement):
         ele = self
 
         while ele:
-            ele_id = ele.attr('id')
+            # ele_id = ele.attr('id')
 
-            if ele_id:
-                return f'#{ele_id}{path_str}' if mode == 'css' else f'//{ele.tag}[@id="{ele_id}"]{path_str}'
+            # if ele_id:
+            #     return f'#{ele_id}{path_str}' if mode == 'css' else f'//{ele.tag}[@id="{ele_id}"]{path_str}'
+            # else:
+
+            if mode == 'css':
+                brothers = len(ele.eles(f'xpath:./preceding-sibling::*'))
+                path_str = f'>:nth-child({brothers + 1}){path_str}'
             else:
+                brothers = len(ele.eles(f'xpath:./preceding-sibling::{ele.tag}'))
+                path_str = f'/{ele.tag}[{brothers + 1}]{path_str}' if brothers > 0 else f'/{ele.tag}{path_str}'
 
-                if mode == 'css':
-                    brothers = len(ele.eles(f'xpath:./preceding-sibling::*'))
-                    path_str = f'>:nth-child({brothers + 1}){path_str}'
-                else:
-                    brothers = len(ele.eles(f'xpath:./preceding-sibling::{ele.tag}'))
-                    path_str = f'/{ele.tag}[{brothers + 1}]{path_str}' if brothers > 0 else f'/{ele.tag}{path_str}'
-
-                ele = ele.parent
+            ele = ele.parent
 
         return path_str[1:] if mode == 'css' else path_str
 
@@ -383,8 +382,11 @@ def execute_session_find(page_or_ele,
         elif mode == 'all':
             return [SessionElement(e, page) if isinstance(e, HtmlElement) else e for e in ele if e != '\n']
 
-    except XPathEvalError:
-        raise SyntaxError(f'Invalid xpath syntax. {loc}')
+    except Exception as e:
 
-    except SelectorSyntaxError:
-        raise SyntaxError(f'Invalid css selector syntax. {loc}')
+        if 'Invalid expression' in str(e):
+            raise SyntaxError(f'Invalid xpath syntax. {loc}')
+        elif 'Expected selector' in str(e):
+            raise SyntaxError(f'Invalid css selector syntax. {loc}')
+
+        raise e

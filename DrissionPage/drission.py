@@ -79,7 +79,9 @@ class Drission(object):
 
     @property
     def driver(self) -> WebDriver:
-        """返回WebDriver对象，如未初始化则按配置信息创建"""
+        """返回WebDriver对象，如未初始化则按配置信息创建。         \n
+        如设置了本地调试浏览器，可自动接入或打开浏览器进程。
+        """
         if self._driver is None:
             if isinstance(self._driver_options, dict):
                 options = _dict_to_chrome_options(self._driver_options)
@@ -92,7 +94,14 @@ class Drission(object):
             driver_path = self._driver_options.get('driver_path', None) or 'chromedriver'
 
             try:
+                if options.debugger_address and _check_port(options.debugger_address) is False:
+                    from subprocess import Popen
+                    port = options.debugger_address.split(':')[-1]
+                    chrome_path = self._driver_options.get('binary_location', None) or 'chrome.exe'
+                    Popen(f'{chrome_path} --remote-debugging-port={port}', shell=False)
+
                 self._driver = webdriver.Chrome(driver_path, options=options)
+
             except SessionNotCreatedException:
                 print('Chrome版本与chromedriver版本不匹配，可执行easy_set.get_match_driver()自动下载匹配的版本。')
                 exit(0)
@@ -279,3 +288,25 @@ class Drission(object):
             self.close()
         except ImportError:
             pass
+
+
+def _check_port(debugger_address: str) -> Union[bool, None]:
+    """检查端口是否可用                               \n
+    :param debugger_address: 浏览器地址及端口
+    :return: bool
+    """
+    import socket
+
+    ip, port = debugger_address.split(':')
+
+    if ip not in ('127.0.0.1', 'localhost'):
+        return
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    try:
+        s.connect((ip, int(port)))
+        s.shutdown(2)
+        return True
+    except socket.error:
+        return False
