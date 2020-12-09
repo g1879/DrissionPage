@@ -469,6 +469,8 @@ drission = Drission(driver_options, session_options, proxy=proxy)
 
 The usage of DriverOptions and SessionOptions is detailed below.
 
+
+
 ## Use page object MixPage
 
 The MixPage page object encapsulates common web page operations and realizes the switch between driver and session
@@ -521,6 +523,8 @@ page.change_mode(go=False)  # If go is False, it means that the url is not redir
 ```
 
 Tips: When using a method unique to a certain mode, it will automatically jump to that mode.
+
+
 
 ### Page properties
 
@@ -769,6 +773,8 @@ shadow_root_element.is_valid() # Returns whether the element is still in dom
 
 **Tips:** The elements obtained by the above attributes or methods are ordinary DriverElement. For usage, please refer to the above.
 
+
+
 ## Splicing with selenium or requests code
 
 DrissionPage code can be seamlessly spliced with selenium and requests code. You can use Selenium's WebDriver object
@@ -815,6 +821,8 @@ session = page.session
 response = session.get('https://www.baidu.com')
 ```
 
+
+
 ## requests function usage
 
 ### Connection parameters
@@ -842,6 +850,8 @@ The Response object obtained by requests is stored in page.response and can be u
 print(page.response.status_code)
 print(page.response.headers)
 ```
+
+
 
 ## download file
 
@@ -872,11 +882,13 @@ page.download(url, save_path,'img','rename', show_msg=True)
 
 ## Chrome Settings
 
-The configuration of chrome is very cumbersome. In order to simplify the use, this library provides setting methods for common configurations.
+The configuration of chrome is very cumbersome. In order to simplify the use, this library provides setting methods for
+common configurations.
 
 ### DriverOptions Object
 
-The DriverOptions object inherits from the Options object of selenium.webdriver.chrome.options, and the following methods are added to it:
+The DriverOptions object inherits from the Options object of selenium.webdriver.chrome.options, and the following
+methods are added to it:
 
 ```python
 options.remove_argument(value) # Remove an argument value
@@ -917,6 +929,8 @@ do.save('D:\\settings.ini') # save to the specified ini file
 do.save('default') # Save the current settings to the default ini file
 ```
 
+
+
 ## Session Settings
 
 ### SessionOPtions Object
@@ -929,6 +943,8 @@ Configurable properties:
 headers, cookies, auth, proxies, hooks, params, verify, cert, adapters, stream, trust_env, max_redirects.
 
 **Tips:** cookies can receive information in dict, list, tuple, str, RequestsCookieJar and other formats.
+
+
 
 ### Instructions
 
@@ -948,6 +964,8 @@ so.save() # Save the currently opened ini file
 so.save('D:\\settings.ini') # save to the specified ini file
 so.save('default') # Save the current settings to the default ini file
 ```
+
+
 
 ## Save configuration
 
@@ -1230,6 +1248,8 @@ Return to proxy configuration.
 
 Returns: dict
 
+
+
 ### cookies_to_session()
 
 Copy the cookies of the driver object to the session object.
@@ -1239,6 +1259,8 @@ Parameter Description:
 - copy_user_agent: bool - whether to copy user_agent to session
 
 Returns: None
+
+
 
 ### set_cookies()
 
@@ -1254,6 +1276,8 @@ Parameter Description:
 - set_driver: bool-whether to set driver cookies
 
 Returns: None
+
+
 
 ### cookies_to_driver()
 
@@ -1390,11 +1414,15 @@ Return to the page title.
 
 Returns: str
 
+
+
 ### url_available
 
 Returns the validity of the current url.
 
 Returns: bool
+
+
 
 ### set_cookies()
 
@@ -2260,7 +2288,7 @@ Parameter Description:
 - x: int - drag distance in x direction
 - y: int - drag distance in y direction
 - speed: int - drag speed
-- shake: bool  - whether to shake randomly
+- shake: bool - whether to shake randomly
 
 Returns: bool
 
@@ -2868,7 +2896,7 @@ methods of deleting configuration and saving to file.
 Parameter Description:
 
 - read_file: bool - Whether to read configuration information from the ini file when creating
-- ini_path: str      - ini file path, if it is None, the default ini file will be read
+- ini_path: str - ini file path, if it is None, the default ini file will be read
 
 
 
