@@ -10,10 +10,9 @@ from .driver_element import execute_driver_find, DriverElement
 
 
 class ShadowRootElement(DrissionElement):
-    def __init__(self, inner_ele: WebElement, parent_ele: DriverElement, timeout: float = 10):
+    def __init__(self, inner_ele: WebElement, parent_ele: DriverElement):
         super().__init__(inner_ele, parent_ele.page)
         self.parent_ele = parent_ele
-        self.timeout = timeout
 
     def __repr__(self):
         return f'<ShadowRootElement in {self.parent_ele} >'
@@ -29,7 +28,7 @@ class ShadowRootElement(DrissionElement):
         :param timeout: 超时时间
         :return: DriverElement对象
         """
-        return self.ele(loc_or_str, mode, timeout or self.timeout)
+        return self.ele(loc_or_str, mode, timeout)
 
     @property
     def tag(self):
@@ -106,8 +105,6 @@ class ShadowRootElement(DrissionElement):
                 raise ValueError('不支持xpath')
         else:
             raise ValueError('Argument loc_or_str can only be tuple or str.')
-
-        timeout = timeout or self.timeout
 
         if loc_or_str[0] == 'css selector':
             return execute_driver_find(self, loc_or_str, mode, timeout)
@@ -192,18 +189,18 @@ class ShadowRootElement(DrissionElement):
                 if text == txt:
 
                     if mode == 'single':
-                        return DriverElement(ele, self.page, self.timeout)
+                        return DriverElement(ele, self.page)
                     elif mode == 'all':
-                        results.append(DriverElement(ele, self.page, self.timeout))
+                        results.append(DriverElement(ele, self.page))
 
             # 模糊匹配
             elif match == 'fuzzy':
                 if text in txt:
 
                     if mode == 'single':
-                        return DriverElement(ele, self.page, self.timeout)
+                        return DriverElement(ele, self.page)
                     elif mode == 'all':
-                        results.append(DriverElement(ele, self.page, self.timeout))
+                        results.append(DriverElement(ele, self.page))
 
         return None if mode == 'single' else results
 

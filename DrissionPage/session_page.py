@@ -77,9 +77,12 @@ class SessionPage(object):
         if all_domains:
             cookies = self.session.cookies
         else:
-            url = extract(self.url)
-            domain = f'{url.domain}.{url.suffix}'
-            cookies = tuple(x for x in self.session.cookies if domain in x.domain)
+            if self.url:
+                url = extract(self.url)
+                domain = f'{url.domain}.{url.suffix}'
+                cookies = tuple(x for x in self.session.cookies if domain in x.domain or x.domain == '')
+            else:
+                cookies = tuple(x for x in self.session.cookies)
 
         if as_dict:
             return {x.name: x.value for x in cookies}
