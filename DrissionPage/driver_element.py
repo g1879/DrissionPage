@@ -586,6 +586,7 @@ def execute_driver_find(page_or_ele,
         if timeout and timeout != page.timeout:
             wait = WebDriverWait(driver, timeout=timeout)
         else:
+            page.wait._driver = driver
             wait = page.wait
 
         if loc[0] == 'xpath':

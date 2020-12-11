@@ -140,15 +140,19 @@ class MixPage(Null, SessionPage, DriverPage):
         elif self._mode == 'd':
             return super(SessionPage, self).title
 
-    def set_cookies(self, cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None:
+    def set_cookies(self, cookies: Union[RequestsCookieJar, list, tuple, str, dict], refresh: bool = True) -> None:
         """设置cookies                                                          \n
         :param cookies: cookies信息，可为CookieJar, list, tuple, str, dict
+        :param refresh: 设置cookies后是否刷新页面
         :return: None
         """
         if self._mode == 's':
             self.drission.set_cookies(cookies, set_session=True)
         elif self._mode == 'd':
             self.drission.set_cookies(cookies, set_driver=True)
+
+            if refresh:
+                self.refresh()
 
     def get_cookies(self, as_dict: bool = False, all_domains: bool = False) -> Union[dict, list]:
         """返回cookies                               \n

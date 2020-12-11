@@ -245,9 +245,21 @@ class Drission(object):
         :param url: 作用域
         :return: None
         """
-        url = extract(url)
-        domain = f'{url.domain}.{url.suffix}'
-        cookies = tuple(x for x in self.session.cookies if domain in x.domain)
+        browser_domain = extract(self.driver.current_url).fqdn
+        ex_url = extract(url)
+
+        if ex_url.fqdn not in browser_domain:
+            self.driver.get(url)
+
+        domain = f'{ex_url.domain}.{ex_url.suffix}'
+
+        cookies = []
+        for cookie in self.session.cookies:
+            if cookie.domain == '':
+                cookie.domain = domain
+
+            if domain in cookie.domain:
+                cookies.append(cookie)
 
         self.set_cookies(cookies, set_driver=True)
 
