@@ -10,7 +10,7 @@ from typing import Union
 from requests import Session
 from requests.cookies import RequestsCookieJar
 from selenium import webdriver
-from selenium.common.exceptions import SessionNotCreatedException
+from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 from tldextract import extract
@@ -92,19 +92,32 @@ class Drission(object):
                 options.add_argument(f'--proxy-server={self._proxy["http"]}')
 
             driver_path = self._driver_options.get('driver_path', None) or 'chromedriver'
+            chrome_path = self._driver_options.get('binary_location', None) or 'chrome.exe'
+
+            if options.debugger_address and _check_port(options.debugger_address) is False:
+                from subprocess import Popen
+                port = options.debugger_address.split(':')[-1]
+
+                Popen(f'{chrome_path} --remote-debugging-port={port}', shell=False)
 
             try:
-                if options.debugger_address and _check_port(options.debugger_address) is False:
-                    from subprocess import Popen
-                    port = options.debugger_address.split(':')[-1]
-                    chrome_path = self._driver_options.get('binary_location', None) or 'chrome.exe'
-                    Popen(f'{chrome_path} --remote-debugging-port={port}', shell=False)
-
                 self._driver = webdriver.Chrome(driver_path, options=options)
 
-            except SessionNotCreatedException:
-                print('Chrome版本与chromedriver版本不匹配，可执行easy_set.get_match_driver()自动下载匹配的版本。')
-                exit(0)
+            except (WebDriverException, SessionNotCreatedException):
+                from .easy_set import get_match_driver
+
+                chrome_path = self._driver_options.get('binary_location', None) or None
+                driver_path = get_match_driver(chrome_path=chrome_path, check_version=False, show_msg=False)
+
+                if driver_path:
+                    try:
+                        self._driver = webdriver.Chrome(driver_path, options=options)
+                    except:
+                        print('无法启动，请检查chromedriver版本与Chrome是否匹配，并手动设置。')
+                        exit(0)
+                else:
+                    print('无法启动，请检查chromedriver版本与Chrome是否匹配，并手动设置。')
+                    exit(0)
 
             # 反爬设置，似乎没用
             self._driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {

@@ -190,27 +190,33 @@ def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bo
 
 
 # -------------------------自动识别chrome版本号并下载对应driver------------------------
-def get_match_driver(ini_path: str = None,
+def get_match_driver(ini_path: Union[str, None] = 'default',
                      save_path: str = None,
-                     chrome_path: str = None) -> None:
+                     chrome_path: str = None,
+                     show_msg: bool = True,
+                     check_version: bool = True) -> Union[str, None]:
     """自动识别chrome版本并下载匹配的driver             \n
     :param ini_path: 要读取和修改的ini文件路径
     :param save_path: chromedriver保存路径
     :param chrome_path: 指定chrome.exe位置
+    :param show_msg: 是否打印信息
+    :param check_version: 是否检查版本匹配
     :return: None
     """
     save_path = save_path or str(Path(__file__).parent)
 
-    chrome_path = chrome_path or _get_chrome_path(ini_path)
+    chrome_path = chrome_path or _get_chrome_path(ini_path, show_msg)
     chrome_path = Path(chrome_path).absolute() if chrome_path else None
-    print('chrome.exe路径', chrome_path, '\n')
+    if show_msg:
+        print('chrome.exe路径', chrome_path, '\n')
 
     ver = _get_chrome_version(chrome_path)
-    print('version', ver, '\n')
+    if show_msg:
+        print('version', ver, '\n')
 
-    zip_path = _download_driver(ver, save_path)
+    zip_path = _download_driver(ver, save_path, show_msg=show_msg)
 
-    if not zip_path:
+    if not zip_path and show_msg:
         print('没有找到对应版本的driver。')
 
     try:
@@ -218,28 +224,37 @@ def get_match_driver(ini_path: str = None,
     except TypeError:
         driver_path = None
 
-    print('\n解压路径', driver_path, '\n')
+    if show_msg:
+        print('\n解压路径', driver_path, '\n')
 
     if driver_path:
         Path(zip_path).unlink()
-        set_paths(driver_path=driver_path, chrome_path=str(chrome_path), ini_path=ini_path, check_version=False)
+        if ini_path:
+            set_paths(driver_path=driver_path, chrome_path=str(chrome_path), ini_path=ini_path, check_version=False)
 
-        if not check_driver_version(driver_path, chrome_path):
-            print('获取失败，请手动配置。')
+        if check_version:
+            if not check_driver_version(driver_path, chrome_path) and show_msg:
+                print('获取失败，请手动配置。')
     else:
-        print('获取失败，请手动配置。')
+        if show_msg:
+            print('获取失败，请手动配置。')
+
+    return driver_path
 
 
-def _get_chrome_path(ini_path: str = None) -> Union[str, None]:
+def _get_chrome_path(ini_path: str = None, show_msg: bool = True) -> Union[str, None]:
     """从ini文件或系统变量中获取chrome.exe的路径    \n
     :param ini_path: ini文件路径
     :return: chrome.exe路径
     """
     # -----------从ini文件中获取--------------
-    try:
-        path = OptionsManager(ini_path).chrome_options['binary_location']
-    except KeyError:
-        return None
+    if ini_path:
+        try:
+            path = OptionsManager(ini_path).chrome_options['binary_location']
+        except KeyError:
+            path = None
+    else:
+        path = None
 
     if path and Path(path).is_file():
         print('ini文件中', end='')
@@ -253,7 +268,8 @@ def _get_chrome_path(ini_path: str = None) -> Union[str, None]:
         path = Path(r.group(0)) if 'chrome.exe' in r.group(0) else Path(r.group(0)) / 'chrome.exe'
 
         if path.exists():
-            print('系统中', end='')
+            if show_msg:
+                print('系统中', end='')
             return str(path)
 
     paths = paths.split(';')
@@ -262,7 +278,8 @@ def _get_chrome_path(ini_path: str = None) -> Union[str, None]:
         path = Path(path) / 'chrome.exe'
 
         if path.exists():
-            print('系统中', end='')
+            if show_msg:
+                print('系统中', end='')
             return str(path)
 
 
@@ -283,7 +300,7 @@ def _get_chrome_version(path: str) -> Union[str, None]:
         return None
 
 
-def _download_driver(version: str, save_path: str = None) -> Union[str, None]:
+def _download_driver(version: str, save_path: str = None, show_msg: bool = True) -> Union[str, None]:
     """根据传入的版本号到镜像网站查找，下载最相近的          \n
     :param version: 本地版本号
     :return: 保存地址
@@ -317,7 +334,7 @@ def _download_driver(version: str, save_path: str = None) -> Union[str, None]:
     if remote_ver:
         url = f'https://cdn.npm.taobao.org/dist/chromedriver/{remote_ver}chromedriver_win32.zip'
         save_path = save_path or Path(__file__).parent
-        result = page.download(url, save_path, file_exists='overwrite', show_msg=True)
+        result = page.download(url, save_path, file_exists='overwrite', show_msg=show_msg)
 
         if result[0]:
             return result[1]

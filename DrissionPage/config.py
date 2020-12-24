@@ -22,7 +22,7 @@ class OptionsManager(object):
         """初始化，读取配置文件，如没有设置临时文件夹，则设置并新建  \n
         :param path: ini文件的路径，默认读取模块文件夹下的
         """
-        self.ini_path = path or str(Path(__file__).parent / 'configs.ini')
+        self.ini_path = str(Path(__file__).parent / 'configs.ini') if path == 'default' or path is None else path
         self._conf = RawConfigParser()
         self._conf.read(self.ini_path, encoding='utf-8')
 
