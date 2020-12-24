@@ -520,7 +520,7 @@ class SessionPage(object):
         else:
             # ----------------获取并设置编码开始-----------------
             # 在headers中获取编码
-            content_type = r.headers.get('content-type').lower()
+            content_type = r.headers.get('content-type', '').lower()
             charset = re.search(r'charset[=: ]*(.*)?[;]', content_type)
 
             if charset:
