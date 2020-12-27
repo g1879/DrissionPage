@@ -527,7 +527,7 @@ class SessionPage(object):
                 r.encoding = charset.group(1)
 
             # 在headers中获取不到编码，且如果是网页
-            elif content_type.replace(' ', '').lower().startswith('text/html'):
+            elif content_type.replace(' ', '').startswith('text/html'):
                 re_result = re_SEARCH(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', r.content)
 
                 if re_result:
