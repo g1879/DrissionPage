@@ -260,6 +260,23 @@ def _get_chrome_path(ini_path: str = None, show_msg: bool = True) -> Union[str, 
         print('ini文件中', end='')
         return str(path)
 
+    # -----------从注册表中获取--------------
+    import winreg
+    try:
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                             r'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe',
+                             reserved=0, access=winreg.KEY_READ)
+        k = winreg.EnumValue(key, 0)
+        winreg.CloseKey(key)
+
+        if show_msg:
+            print('注册表中', end='')
+
+        return k[1]
+
+    except FileNotFoundError:
+        pass
+
     # -----------从系统路径中获取--------------
     paths = popen('set path').read().lower()
     r = RE_SEARCH(r'[^;]*chrome[^;]*', paths)
@@ -284,23 +301,6 @@ def _get_chrome_path(ini_path: str = None, show_msg: bool = True) -> Union[str, 
                 return str(path)
         except OSError:
             pass
-
-    # -----------从注册表中获取--------------
-    import winreg
-    try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                             r'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe',
-                             reserved=0, access=winreg.KEY_READ)
-        k = winreg.EnumValue(key, 0)
-        winreg.CloseKey(key)
-
-        if show_msg:
-            print('注册表中', end='')
-
-        return k[1]
-
-    except FileNotFoundError:
-        return
 
 
 def _get_chrome_version(path: str) -> Union[str, None]:
