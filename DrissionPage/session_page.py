@@ -33,6 +33,9 @@ class SessionPage(object):
         self._url_available = None
         self._response = None
 
+        self.retry_times = 3
+        self.retry_interval = 2
+
     @property
     def session(self) -> Session:
         """返回session对象"""
@@ -212,8 +215,8 @@ class SessionPage(object):
             url: str,
             go_anyway: bool = False,
             show_errmsg: bool = False,
-            retry: int = 0,
-            interval: float = 1,
+            retry: int = None,
+            interval: float = None,
             **kwargs) -> Union[bool, None]:
         """用get方式跳转到url                                 \n
         :param url: 目标url
@@ -225,6 +228,8 @@ class SessionPage(object):
         :return: url是否可用
         """
         to_url = quote(url, safe='/:&?=%;#@+')
+        retry = int(retry) if retry is not None else int(self.retry_times)
+        interval = int(interval) if interval is not None else int(self.retry_interval)
 
         if not url or (not go_anyway and self.url == to_url):
             return
@@ -252,8 +257,8 @@ class SessionPage(object):
              data: dict = None,
              go_anyway: bool = True,
              show_errmsg: bool = False,
-             retry: int = 0,
-             interval: float = 1,
+             retry: int = None,
+             interval: float = None,
              **kwargs) -> Union[bool, None]:
         """用post方式跳转到url                                 \n
         :param url: 目标url
@@ -266,6 +271,8 @@ class SessionPage(object):
         :return: url是否可用
         """
         to_url = quote(url, safe='/:&?=%;#@')
+        retry = int(retry) if retry is not None else int(self.retry_times)
+        interval = int(interval) if interval is not None else int(self.retry_interval)
 
         if not url or (not go_anyway and self._url == to_url):
             return

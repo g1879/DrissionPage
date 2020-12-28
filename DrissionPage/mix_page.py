@@ -58,6 +58,9 @@ class MixPage(Null, SessionPage, DriverPage):
         self._url_available = None
         self._mode = mode
 
+        self.retry_times = 3
+        self.retry_interval = 2
+
         if mode == 's':
             self._driver = None
             self._session = True
@@ -236,8 +239,8 @@ class MixPage(Null, SessionPage, DriverPage):
              data: dict = None,
              go_anyway: bool = False,
              show_errmsg: bool = False,
-             retry: int = 2,
-             interval: float = 1,
+             retry: int = None,
+             interval: float = None,
              **kwargs) -> Union[bool, None]:
         """用post方式跳转到url，会切换到s模式                        \n
         :param url: 目标url
@@ -319,8 +322,8 @@ class MixPage(Null, SessionPage, DriverPage):
             url: str,
             go_anyway=False,
             show_errmsg: bool = False,
-            retry: int = 2,
-            interval: float = 1,
+            retry: int = None,
+            interval: float = None,
             **kwargs) -> Union[bool, None]:
         """跳转到一个url                                         \n
         跳转前先同步cookies，跳转后判断目标url是否可用

@@ -30,6 +30,9 @@ class DriverPage(object):
         self._url_available = None
         self._wait = None
 
+        self.retry_times = 3
+        self.retry_interval = 2
+
     @property
     def driver(self) -> WebDriver:
         return self._driver
@@ -99,22 +102,24 @@ class DriverPage(object):
         """
         self.driver.get(to_url)
         is_ok = self.check_page()
+
         while times and is_ok is False:
             sleep(interval)
             self.driver.get(to_url)
             is_ok = self.check_page()
             times -= 1
+
         if is_ok is False and show_errmsg:
             raise ConnectionError('Connect error.')
+
         return is_ok
 
     def get(self,
             url: str,
             go_anyway: bool = False,
             show_errmsg: bool = False,
-            retry: int = 0,
-            interval: float = 1,
-            ) -> Union[None, bool]:
+            retry: int = None,
+            interval: float = None) -> Union[None, bool]:
         """访问url                                            \n
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
@@ -124,10 +129,15 @@ class DriverPage(object):
         :return: 目标url是否可用
         """
         to_url = quote(url, safe='/:&?=%;#@')
+        retry = int(retry) if retry is not None else int(self.retry_times)
+        interval = int(interval) if interval is not None else int(self.retry_interval)
+
         if not url or (not go_anyway and self.url == to_url):
             return
+
         self._url = to_url
         self._url_available = self._try_to_connect(to_url, times=retry, interval=interval, show_errmsg=show_errmsg)
+
         return self._url_available
 
     def ele(self,
