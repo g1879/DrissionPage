@@ -368,6 +368,9 @@ def execute_session_find(page_or_ele,
         else:
             ele = page_or_ele.cssselect(loc[1])
 
+        if not isinstance(ele, list):
+            return ele
+
         # 把lxml元素对象包装成SessionElement对象并按需要返回第一个或全部
         if mode == 'single':
             ele = ele[0] if ele else None
