@@ -627,7 +627,7 @@ class ElementsByXpath(object):
             """用js通过xpath获取元素、节点或属性
             :param node: 'document' 或 元素对象
             :param xpath_txt: xpath语句
-            :param type_txt: resultType,参考https://developer.mozilla.org/zh-CN/docs/Web/API/Document/evaluate
+            :param type_txt: resultType,参考 https://developer.mozilla.org/zh-CN/docs/Web/API/Document/evaluate
             :return: 元素对象或属性、文本字符串
             """
             node_txt = 'document' if not node or node == 'document' else 'arguments[0]'
@@ -685,8 +685,14 @@ class ElementsByXpath(object):
                     return e
 
             # 找不到目标时
-            except JavascriptException:
-                return None
+            except JavascriptException as err:
+                if 'The result is not a node set' in err.msg:
+                    try:
+                        return get_nodes(the_node, xpath_txt=self.xpath, type_txt='1')
+                    except JavascriptException:
+                        return None
+                else:
+                    return None
 
         elif self.mode == 'all':
             return ([DriverElement(x, self.page) if isinstance(x, WebElement)
