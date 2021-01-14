@@ -110,6 +110,8 @@ select_element.select_by_visible_text('text')
 element.select('text')
 ```
 
+
+
 - 拖拽一个元素
 
 ```python
@@ -120,6 +122,8 @@ ActionChains(driver).drag_and_drop(ele1, ele2).perform()
 ele1.drag_to(ele2)
 ```
 
+
+
 - 滚动窗口到底部（保持水平滚动条不变）
 
 ```python
@@ -129,6 +133,8 @@ driver.execute_script("window.scrollTo(document.documentElement.scrollLeft, docu
 # 使用 DrissionPage：
 page.scroll_to('bottom')
 ```
+
+
 
 - 设置 headless 模式
 
@@ -141,6 +147,8 @@ options.add_argument("--headless")
 set_headless()
 ```
 
+
+
 - 获取伪元素内容
 
 ```python
@@ -150,6 +158,8 @@ text = webdriver.execute_script('return window.getComputedStyle(arguments[0], ":
 # 使用 DrissionPage：
 text = element.after
 ```
+
+
 
 - 获取 shadow-root
 
@@ -591,10 +601,10 @@ page.eles('tag:li')  # 查找所有 li 元素
 
 # 根据 tag name 及属性查找
 page.ele('tag:div@class=div_class')  # 查找 class 为 div_class 的 div 元素
-page.ele('tag:div@class:ele_class')  # 查找 class 含有 ele_class 的 div 元素
-page.ele('tag:div@class=ele_class')  # 查找 class 等于 ele_class 的 div 元素
-page.ele('tag:div@text():search_text')  # 查找文本含有 search_text 的 div 元素
-page.ele('tag:div@text()=search_text')  # 查找文本等于 search_text 的 div 元素
+page.ele('tag:div@class:ele_class') # 查找 class 含有 ele_class 的 div 元素
+page.ele('tag:div@class=ele_class') # 查找 class 等于 ele_class 的 div 元素
+page.ele('tag:div@text():search_text') # 查找文本含有 search_text 的 div 元素
+page.ele('tag:div@text()=search_text') # 查找文本等于 search_text 的 div 元素
 
 # 根据文本内容查找
 page.ele('search text')  # 查找包含传入文本的元素  
@@ -602,8 +612,8 @@ page.eles('text:search text')  # 如文本以 @、tag:、css:、xpath:、text: �
 page.eles('text=search text')  # 文本等于 search_text 的元素
 
 # 根据 xpath 或 css selector 查找
-page.eles('xpath://div[@class="ele_class"]')
-page.eles('css:div.ele_class')
+page.eles('xpath://div[@class="ele_class"]')  
+page.eles('css:div.ele_class')  
 
 # 根据 loc 查找
 loc1 = By.ID, 'ele_id'
@@ -639,6 +649,7 @@ element.html  # 返回元素 outerHTML
 element.inner_html  # 返回元素 innerHTML
 element.tag  # 返回元素 tag name
 element.text  # 返回元素 innerText 值
+element.comments  # 返回元素内注释列表
 element.link  # 返回元素 href 或 src 绝对 url
 element.texts()  # 返回元素内所有直接子节点的文本，包括元素和文本节点，可指定只返回文本节点
 element.attrs  # 返回元素所有属性的字典

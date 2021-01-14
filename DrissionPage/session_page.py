@@ -197,17 +197,25 @@ class SessionPage(object):
         :param kwargs: 连接参数
         :return: HTMLResponse对象
         """
-        r = self._make_response(to_url, mode=mode, show_errmsg=show_errmsg, **kwargs)[0]
+        err = None
+        r = None
 
-        while times and (not r or r.content == b''):
-            if r is not None and r.status_code in (403, 404):
+        for _ in range(times + 1):
+            try:
+                r = self._make_response(to_url, mode=mode, show_errmsg=True, **kwargs)[0]
+            except Exception as e:
+                err = e
+                r = None
+
+            if r and (r.content != b'' or r.status_code in (403, 404)):
                 break
 
-            print('重试', to_url)
-            sleep(interval)
+            if _ < times:
+                sleep(interval)
+                print(f'重试 {to_url}')
 
-            r = self._make_response(to_url, mode=mode, show_errmsg=show_errmsg, **kwargs)[0]
-            times -= 1
+        if not r and show_errmsg:
+            raise err if err is not None else ConnectionError('Connect error.')
 
         return r
 
@@ -315,6 +323,12 @@ class SessionPage(object):
         :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
         """
         # 生成的response不写入self._response，是临时的
+        if file_exists == 'skip' and Path(f'{goal_path}\\{rename}').exists():
+            if show_msg:
+                print(f'{file_url}\n{goal_path}\\{rename}\nSkipped.\n')
+
+            return False, 'Skipped because a file with the same name already exists.'
+
         kwargs['stream'] = True
 
         if 'timeout' not in kwargs:
@@ -383,9 +397,8 @@ class SessionPage(object):
             goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re_SUB(r'[*:|<>?"]', '', i).strip()
             goal_path += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
 
-        goal_Path = Path(goal_path)
+        goal_Path = Path(goal_path).absolute()
         goal_Path.mkdir(parents=True, exist_ok=True)
-        goal_path = goal_Path.absolute()
         full_path = Path(f'{goal_path}\\{full_name}')
 
         if full_path.exists():
@@ -448,7 +461,7 @@ class SessionPage(object):
                 download_status, info = False, 'File size is 0.'
 
             else:
-                download_status, info = True, 'Success.'
+                download_status, info = True, str(full_path)
 
         finally:
             # 删除下载出错文件
@@ -476,14 +489,14 @@ class SessionPage(object):
         :param data: post方式要提交的数据
         :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 其它参数
-        :return: tuple，第一位为Response或None，第二位为出错信息或'Sussess'
+        :return: tuple，第一位为Response或None，第二位为出错信息或'Success'
         """
         if not url:
             if show_errmsg:
                 raise ValueError('url is empty.')
             return None, 'url is empty.'
 
-        if mode not in ['get', 'post']:
+        if mode not in ('get', 'post'):
             raise ValueError("Argument mode can only be 'get' or 'post'.")
 
         url = quote(url, safe='/:&?=%;#@+')

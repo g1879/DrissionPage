@@ -93,6 +93,12 @@ class ShadowRootElement(DrissionElement):
             ele.ele('some_text')                        - 返回第一个文本含有some_text的子元素（等价于上一行）  \n
             ele.ele('text=some_text')                   - 返回第一个文本等于some_text的子元素                \n
             ele.ele('css:div.ele_class')                - 返回第一个符合css selector的子元素                 \n
+        - 查询字符串还有最精简模式，用c代替css、t代替tag、tx代替text：                                          \n
+            ele.ele('c:div.ele_class')                  - 等同于 ele.ele('css:div.ele_class')              \n
+            ele.ele('t:div')                            - 等同于 ele.ele('tag:div')                        \n
+            ele.ele('t:div@tx()=some_text')             - 等同于 ele.ele('tag:div@txet()=some_text')       \n
+            ele.ele('tx:some_text')                     - 等同于 ele.ele('text:some_text')                 \n
+            ele.ele('tx=some_text')                     - 等同于 ele.ele('text=some_text')
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param mode: 'single' 或 'all'，对应查找一个或全部
         :param timeout: 查找元素超时时间
@@ -137,6 +143,12 @@ class ShadowRootElement(DrissionElement):
             ele.eles('some_text')                        - 返回所有文本含有some_text的子元素（等价于上一行）  \n
             ele.eles('text=some_text')                   - 返回所有文本等于some_text的子元素                \n
             ele.eles('css:div.ele_class')                - 返回所有符合css selector的子元素                 \n
+        - 查询字符串还有最精简模式，用c代替css、t代替tag、tx代替text：                                          \n
+            ele.eles('c:div.ele_class')                  - 等同于 ele.eles('css:div.ele_class')            \n
+            ele.eles('t:div')                            - 等同于 ele.eles('tag:div')                      \n
+            ele.eles('t:div@tx()=some_text')             - 等同于 ele.eles('tag:div@txet()=some_text')     \n
+            ele.eles('tx:some_text')                     - 等同于 ele.eles('text:some_text')               \n
+            ele.eles('tx=some_text')                     - 等同于 ele.eles('text=some_text')
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间
         :return: DriverElement对象组成的列表
@@ -235,11 +247,20 @@ def str_to_css_loc(loc: str) -> tuple:
         else:
             loc = loc.replace('.', '@class=', 1)
 
-    if loc.startswith('#'):
+    elif loc.startswith('#'):
         if loc.startswith(('#=', '#:',)):
             loc = loc.replace('#', '@id', 1)
         else:
             loc = loc.replace('#', '@id=', 1)
+
+    elif loc.startswith(('t:', 't=')):
+        loc = f'tag:{loc[2:]}'
+
+    elif loc.startswith(('tx:', 'tx=')):
+        loc = f'text{loc[2:]}'
+
+    elif loc.startswith(('x:', 'x=', 'xpath:', 'xpath=')):
+        raise ValueError('不支持xpath')
 
     # 根据属性查找
     if loc.startswith('@'):
@@ -261,7 +282,7 @@ def str_to_css_loc(loc: str) -> tuple:
             r = re_SPLIT(r'([:=])', at_lst[1], maxsplit=1)
 
             if len(r) == 3:
-                if r[0] == 'text()':
+                if r[0] in ('text()', 'tx()'):
                     match = 'exact' if r[1] == '=' else 'fuzzy'
                     return 'text', r[2], at_lst[0], match
                 mode = '=' if r[1] == '=' else '*='
@@ -272,10 +293,6 @@ def str_to_css_loc(loc: str) -> tuple:
     # 用css selector查找
     elif loc.startswith(('css=', 'css:')):
         loc_str = loc[4:]
-
-    # 用xpath查找
-    elif loc.startswith(('xpath=', 'xpath:')):
-        raise ValueError('不支持xpath')
 
     # 根据文本查找
     elif loc.startswith(('text=', 'text:')):

@@ -739,10 +739,11 @@ def _cookie_to_dict(cookie: Union[Cookie, str, dict]) -> dict:
             attr_val = attr.lstrip().split('=')
 
             if key == 0:
+                # TODO: 检查
                 cookie_dict['name'] = attr_val[0]
-                cookie_dict['value'] = attr_val[1]
+                cookie_dict['value'] = attr_val[1] if len(attr_val) == 2 else ''
             else:
-                cookie_dict[attr_val[0]] = attr_val[1]
+                cookie_dict[attr_val[0]] = attr_val[1] if len(attr_val) == 2 else ''
 
         return cookie_dict
 

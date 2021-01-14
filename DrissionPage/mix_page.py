@@ -47,7 +47,7 @@ class MixPage(Null, SessionPage, DriverPage):
         :param session_options: requests设置，没有传入drission参数时会用这个设置新建Drission对象
         """
         super().__init__()
-        if drission in ['s', 'd', 'S', 'D']:
+        if drission in ('s', 'd', 'S', 'D'):
             mode = drission.lower()
             drission = None
 
@@ -74,7 +74,7 @@ class MixPage(Null, SessionPage, DriverPage):
                  loc_or_str: Union[Tuple[str, str], str, DriverElement, SessionElement, WebElement],
                  mode: str = 'single',
                  timeout: float = None):
-        return self.ele(loc_or_str, mode, timeout or self.timeout)
+        return self.ele(loc_or_str, mode, timeout)
 
     @property
     def url(self) -> Union[str, None]:
@@ -345,32 +345,39 @@ class MixPage(Null, SessionPage, DriverPage):
             mode: str = None,
             timeout: float = None) \
             -> Union[DriverElement, SessionElement, str, List[SessionElement], List[DriverElement]]:
-        """返回页面中符合条件的元素、属性或节点文本，默认返回第一个                                            \n
-        示例：                                                                                           \n
-        - 接收到元素对象时：                                                                              \n
-            返回元素对象对象                                                                              \n
-        - 用loc元组查找：                                                                                 \n
-            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素                     \n
-        - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                              \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串            \n
-            page.ele('.ele_class')                       - 返回第一个 class 为 ele_class 的元素            \n
-            page.ele('.:ele_class')                      - 返回第一个 class 中含有 ele_class 的元素         \n
-            page.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的元素                  \n
-            page.ele('#:ele_id')                         - 返回第一个 id 中含有 ele_id 的元素               \n
-            page.ele('@class:ele_class')                 - 返回第一个class含有ele_class的元素              \n
-            page.ele('@name=ele_name')                   - 返回第一个name等于ele_name的元素                \n
-            page.ele('@placeholder')                     - 返回第一个带placeholder属性的元素               \n
-            page.ele('tag:p')                            - 返回第一个<p>元素                              \n
-            page.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div元素           \n
-            page.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div元素           \n
-            page.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div元素             \n
-            page.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div元素             \n
-            page.ele('text:some_text')                   - 返回第一个文本含有some_text的元素                \n
-            page.ele('some_text')                        - 返回第一个文本含有some_text的元素（等价于上一行）  \n
-            page.ele('text=some_text')                   - 返回第一个文本等于some_text的元素                \n
-            page.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素                        \n
-            page.ele('css:div.ele_class')                - 返回第一个符合css selector的元素                 \n
+        """返回页面中符合条件的元素、属性或节点文本，默认返回第一个                                               \n
+        示例：                                                                                             \n
+        - 接收到元素对象时：                                                                                 \n
+            返回元素对象对象                                                                                 \n
+        - 用loc元组查找：                                                                                    \n
+            ele.ele((By.CLASS_NAME, 'ele_class'))        - 返回第一个class为ele_class的子元素                 \n
+        - 用查询字符串查找：                                                                                  \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                                \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串              \n
+            page.ele('.ele_class')                       - 返回第一个 class 为 ele_class 的元素               \n
+            page.ele('.:ele_class')                      - 返回第一个 class 中含有 ele_class 的元素            \n
+            page.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的元素                     \n
+            page.ele('#:ele_id')                         - 返回第一个 id 中含有 ele_id 的元素                  \n
+            page.ele('@class:ele_class')                 - 返回第一个class含有ele_class的元素                  \n
+            page.ele('@name=ele_name')                   - 返回第一个name等于ele_name的元素                    \n
+            page.ele('@placeholder')                     - 返回第一个带placeholder属性的元素                   \n
+            page.ele('tag:p')                            - 返回第一个<p>元素                                  \n
+            page.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div元素               \n
+            page.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div元素               \n
+            page.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div元素                 \n
+            page.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div元素                 \n
+            page.ele('text:some_text')                   - 返回第一个文本含有some_text的元素                    \n
+            page.ele('some_text')                        - 返回第一个文本含有some_text的元素（等价于上一行）      \n
+            page.ele('text=some_text')                   - 返回第一个文本等于some_text的元素                    \n
+            page.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的元素                           \n
+            page.ele('css:div.ele_class')                - 返回第一个符合css selector的元素                    \n
+        - 查询字符串还有最精简模式，用x代替xpath、c代替css、t代替tag、tx代替text：                                  \n
+            page.ele('x://div[@class="ele_class"]')      - 等同于 page.ele('xpath://div[@class="ele_class"]') \n
+            page.ele('c:div.ele_class')                  - 等同于 page.ele('css:div.ele_class')               \n
+            page.ele('t:div')                            - 等同于 page.ele('tag:div')                         \n
+            page.ele('t:div@tx()=some_text')             - 等同于 page.ele('tag:div@text()=some_text')        \n
+            page.ele('tx:some_text')                     - 等同于 page.ele('text:some_text')                  \n
+            page.ele('tx=some_text')                     - 等同于 page.ele('text=some_text')
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param mode: 'single' 或 'all‘，对应查找一个或全部
         :param timeout: 查找元素超时时间，d模式专用
@@ -379,36 +386,42 @@ class MixPage(Null, SessionPage, DriverPage):
         if self._mode == 's':
             return super().ele(loc_or_ele, mode=mode)
         elif self._mode == 'd':
-            timeout = timeout or self.timeout
             return super(SessionPage, self).ele(loc_or_ele, mode=mode, timeout=timeout)
 
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
              timeout: float = None) -> Union[List[DriverElement], List[SessionElement]]:
-        """返回页面中所有符合条件的元素、属性或节点文本                                                     \n
-        示例：                                                                                          \n
-        - 用loc元组查找：                                                                                \n
-            page.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的元素                     \n
-        - 用查询字符串查找：                                                                              \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
-            page.eles('.ele_class')                       - 返回所有 class 为 ele_class 的元素            \n
-            page.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的元素         \n
-            page.eles('#ele_id')                          - 返回所有 id 为 ele_id 的元素                  \n
-            page.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的元素               \n
-            page.eles('@class:ele_class')                 - 返回所有class含有ele_class的元素              \n
-            page.eles('@name=ele_name')                   - 返回所有name等于ele_name的元素                \n
-            page.eles('@placeholder')                     - 返回所有带placeholder属性的元素               \n
-            page.eles('tag:p')                            - 返回所有<p>元素                              \n
-            page.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div元素           \n
-            page.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div元素           \n
-            page.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div元素             \n
-            page.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div元素             \n
-            page.eles('text:some_text')                   - 返回所有文本含有some_text的元素                \n
-            page.eles('some_text')                        - 返回所有文本含有some_text的元素（等价于上一行）  \n
-            page.eles('text=some_text')                   - 返回所有文本等于some_text的元素                \n
-            page.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的元素                        \n
-            page.eles('css:div.ele_class')                - 返回所有符合css selector的元素                 \n
+        """返回页面中所有符合条件的元素、属性或节点文本                                                           \n
+        示例：                                                                                                \n
+        - 用loc元组查找：                                                                                      \n
+            page.eles((By.CLASS_NAME, 'ele_class'))       - 返回所有class为ele_class的元素                      \n
+        - 用查询字符串查找：                                                                                    \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                                  \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串                \n
+            page.eles('.ele_class')                       - 返回所有 class 为 ele_class 的元素                  \n
+            page.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的元素              \n
+            page.eles('#ele_id')                          - 返回所有 id 为 ele_id 的元素                        \n
+            page.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的元素                    \n
+            page.eles('@class:ele_class')                 - 返回所有class含有ele_class的元素                    \n
+            page.eles('@name=ele_name')                   - 返回所有name等于ele_name的元素                      \n
+            page.eles('@placeholder')                     - 返回所有带placeholder属性的元素                     \n
+            page.eles('tag:p')                            - 返回所有<p>元素                                    \n
+            page.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div元素                 \n
+            page.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div元素                 \n
+            page.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div元素                   \n
+            page.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div元素                   \n
+            page.eles('text:some_text')                   - 返回所有文本含有some_text的元素                      \n
+            page.eles('some_text')                        - 返回所有文本含有some_text的元素（等价于上一行）        \n
+            page.eles('text=some_text')                   - 返回所有文本等于some_text的元素                      \n
+            page.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的元素                              \n
+            page.eles('css:div.ele_class')                - 返回所有符合css selector的元素                       \n
+        - 查询字符串还有最精简模式，用x代替xpath、c代替css、t代替tag、tx代替text：                                    \n
+            page.eles('x://div[@class="ele_class"]')      - 等同于 page.eles('xpath://div[@class="ele_class"]') \n
+            page.eles('c:div.ele_class')                  - 等同于 page.eles('css:div.ele_class')               \n
+            page.eles('t:div')                            - 等同于 page.eles('tag:div')                         \n
+            page.eles('t:div@tx()=some_text')             - 等同于 page.eles('tag:div@text()=some_text')        \n
+            page.eles('tx:some_text')                     - 等同于 page.eles('text:some_text')                  \n
+            page.eles('tx=some_text')                     - 等同于 page.eles('text=some_text')
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间，d模式专用
         :return: 元素对象或属性、文本节点文本组成的列表

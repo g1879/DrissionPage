@@ -107,11 +107,13 @@ class Drission(object):
                 from .easy_set import get_match_driver
 
                 chrome_path = self._driver_options.get('binary_location', None) or None
+                print('自动下载chromedriver...')
                 driver_path = get_match_driver(chrome_path=chrome_path, check_version=False, show_msg=False)
 
                 if driver_path:
                     try:
                         self._driver = webdriver.Chrome(driver_path, options=options)
+                        print('下载完成。')
                     except:
                         print('无法启动，请检查chromedriver版本与Chrome是否匹配，并手动设置。')
                         exit(0)
@@ -194,7 +196,8 @@ class Drission(object):
 
             # 添加cookie到session
             if set_session:
-                kwargs = {x: cookie[x] for x in cookie if x not in ('name', 'value', 'httpOnly', 'expiry')}
+                kwargs = {x: cookie[x] for x in cookie
+                          if x.lower() not in ('name', 'value', 'httponly', 'expiry', 'samesite')}
 
                 if 'expiry' in cookie:
                     kwargs['expires'] = cookie['expiry']

@@ -100,17 +100,28 @@ class DriverPage(object):
         :param show_errmsg: 是否抛出异常
         :return: 是否成功
         """
-        self.driver.get(to_url)
-        is_ok = self.check_page()
+        err = None
+        is_ok = False
 
-        while times and is_ok is False:
-            sleep(interval)
-            self.driver.get(to_url)
-            is_ok = self.check_page()
-            times -= 1
+        for _ in range(times + 1):
+            try:
+                self.driver.get(to_url)
+                go_ok = True
+            except Exception as e:
+                err = e
+                go_ok = False
+
+            is_ok = self.check_page() if go_ok else False
+
+            if is_ok is not False:
+                break
+
+            if _ < times:
+                sleep(interval)
+                print(f'重试 {to_url}')
 
         if is_ok is False and show_errmsg:
-            raise ConnectionError('Connect error.')
+            raise err if err is not None else ConnectionError('Connect error.')
 
         return is_ok
 
@@ -199,7 +210,6 @@ class DriverPage(object):
         else:
             raise ValueError('Argument loc_or_str can only be tuple, str, DriverElement, DriverElement.')
 
-        timeout = timeout or self.timeout
         return execute_driver_find(self, loc_or_ele, mode, timeout)
 
     def eles(self,
@@ -249,7 +259,7 @@ class DriverPage(object):
         :param timeout: 等待超时时间
         :return: 等待是否成功
         """
-        if mode.lower() not in ['del', 'display', 'hidden']:
+        if mode.lower() not in ('del', 'display', 'hidden'):
             raise ValueError('Argument mode can only be "del", "display", "hidden"')
 
         from selenium.webdriver.support.wait import WebDriverWait

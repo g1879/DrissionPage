@@ -96,7 +96,12 @@ def str_to_loc(loc: str) -> tuple:
         text:search_text                 - 文本含有search_text的元素                        \n
         text=search_text                 - 文本等于search_text的元素                        \n
         xpath://div[@class="ele_class"]  - 用xpath查找                                     \n
-        css:div.ele_class                - 用css selector查找
+        css:div.ele_class                - 用css selector查找                              \n
+        xpath://div[@class="ele_class"]  - 等同于 x://div[@class="ele_class"]              \n
+        css:div.ele_class                - 等同于 c:div.ele_class                          \n
+        tag:div                          - 等同于 t:div                                    \n
+        text:search_text                 - 等同于 tx:search_text                           \n
+        text=search_text                 - 等同于 tx=search_text                           \n
     """
     loc_by = 'xpath'
 
@@ -107,11 +112,17 @@ def str_to_loc(loc: str) -> tuple:
         else:
             loc = loc.replace('.', '@class=', 1)
 
-    if loc.startswith('#'):
+    elif loc.startswith('#'):
         if loc.startswith(('#=', '#:',)):
             loc = loc.replace('#', '@id', 1)
         else:
             loc = loc.replace('#', '@id=', 1)
+
+    elif loc.startswith(('t:', 't=')):
+        loc = f'tag:{loc[2:]}'
+
+    elif loc.startswith(('tx:', 'tx=')):
+        loc = f'text{loc[2:]}'
 
     # 根据属性查找
     if loc.startswith('@'):
@@ -123,7 +134,7 @@ def str_to_loc(loc: str) -> tuple:
             loc_str = f'//*[@{loc[1:]}]'
 
     # 根据tag name查找
-    elif loc.startswith(('tag=', 'tag:')):
+    elif loc.startswith(('tag:', 'tag=')):
         if '@' not in loc[4:]:
             loc_str = f'//*[name()="{loc[4:]}"]'
         else:
@@ -131,13 +142,13 @@ def str_to_loc(loc: str) -> tuple:
             r = re_SPLIT(r'([:=])', at_lst[1], maxsplit=1)
             if len(r) == 3:
                 mode = 'exact' if r[1] == '=' else 'fuzzy'
-                arg_str = r[0] if r[0] == 'text()' else f'@{r[0]}'
+                arg_str = 'text()' if r[0] in ('text()', 'tx()') else f'@{r[0]}'
                 loc_str = _make_xpath_str(at_lst[0], arg_str, r[2], mode)
             else:
                 loc_str = f'//*[name()="{at_lst[0]}" and @{r[0]}]'
 
     # 根据文本查找
-    elif loc.startswith(('text=', 'text:')):
+    elif loc.startswith(('text:', 'text=')):
         if len(loc) > 5:
             mode = 'exact' if loc[4] == '=' else 'fuzzy'
             loc_str = _make_xpath_str('*', 'text()', loc[5:], mode)
@@ -145,13 +156,18 @@ def str_to_loc(loc: str) -> tuple:
             loc_str = '//*[not(text())]'
 
     # 用xpath查找
-    elif loc.startswith(('xpath=', 'xpath:')):
+    elif loc.startswith(('xpath:', 'xpath=')):
         loc_str = loc[6:]
+    elif loc.startswith(('x:', 'x=')):
+        loc_str = loc[2:]
 
     # 用css selector查找
-    elif loc.startswith(('css=', 'css:')):
+    elif loc.startswith(('css:', 'css=')):
         loc_by = 'css selector'
         loc_str = loc[4:]
+    elif loc.startswith(('c:', 'c=')):
+        loc_by = 'css selector'
+        loc_str = loc[2:]
 
     # 根据文本模糊查找
     else:
@@ -177,14 +193,18 @@ def _make_xpath_str(tag: str, arg: str, val: str, mode: str = 'fuzzy') -> str:
         return f'//*[{tag_name}{arg}={_make_search_str(val)}]'
 
     elif mode == 'fuzzy':
-        return f"//*[{tag_name}contains({arg},{_make_search_str(val)})]"
+        if arg == 'text()':
+            tag_name = '' if tag == '*' else f'{tag}/'
+            return f'//{tag_name}text()[contains(., {_make_search_str(val)})]/..'
+        else:
+            return f"//*[{tag_name}contains({arg},{_make_search_str(val)})]"
 
     else:
         raise ValueError("Argument mode can only be 'exact' or 'fuzzy'.")
 
 
 def _make_search_str(search_str: str) -> str:
-    """将"转义，不知何故不能直接用\来转义  \n
+    """将"转义，不知何故不能直接用 \ 来转义 \n
     :param search_str: 查询字符串
     :return: 把"转义后的字符串
     """
@@ -201,9 +221,15 @@ def _make_search_str(search_str: str) -> str:
     return search_str
 
 
-def format_html(text: str) -> str:
+def format_html(text: str, trans: bool = True) -> str:
     """处理html编码字符"""
-    return unescape(text).replace('\xa0', ' ') if text else text
+    if not text:
+        return text
+
+    if trans:
+        text = unescape(text)
+
+    return text.replace('\xa0', ' ')
 
 
 def translate_loc(loc: tuple) -> tuple:

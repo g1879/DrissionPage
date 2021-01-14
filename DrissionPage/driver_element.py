@@ -4,6 +4,7 @@
 @Contact :   g1879@qq.com
 @File    :   driver_element.py
 """
+import re
 from pathlib import Path
 from time import sleep
 from typing import Union, List, Any, Tuple
@@ -78,7 +79,17 @@ class DriverElement(DrissionElement):
     @property
     def text(self) -> str:
         """返回元素内所有文本"""
-        return self.attr('innerText')
+        # return format_html(self.inner_ele.get_attribute('innerText'), False)
+        re_str = self.inner_ele.get_attribute('innerText')
+        re_str = re.sub(r'\n{2,}', '\n', re_str)
+        re_str = re.sub(r' {2,}', ' ', re_str)
+
+        return format_html(re_str.strip('\n '), False)
+
+    @property
+    def raw_text(self) -> str:
+        """返回未格式化处理的元素内文本"""
+        return self.inner_ele.get_attribute('innerText')
 
     @property
     def link(self) -> str:
@@ -109,6 +120,10 @@ class DriverElement(DrissionElement):
         """返回前一个兄弟元素"""
         return self._get_brother(1, 'ele', 'prev')
 
+    @property
+    def comments(self):
+        return self.eles('xpath:.//comment()')
+
     # -----------------driver独占属性-------------------
     @property
     def size(self) -> dict:
@@ -129,6 +144,11 @@ class DriverElement(DrissionElement):
             return ShadowRootElement(shadow, self)
 
     @property
+    def sr(self):
+        """返回当前元素的shadow_root元素对象"""
+        return self.shadow_root
+
+    @property
     def before(self) -> str:
         """返回当前元素的::before伪元素内容"""
         return self.get_style_property('content', 'before')
@@ -145,9 +165,11 @@ class DriverElement(DrissionElement):
         :return: 文本列表
         """
         if text_node_only:
-            return self.eles('xpath:./text()')
+            texts = self.eles('xpath:/text()')
         else:
-            return [x if isinstance(x, str) else x.text for x in self.eles('xpath:./node()')]
+            texts = [x if isinstance(x, str) else x.text for x in self.eles('xpath:./text() | *')]
+
+        return [x.strip(' ') for x in texts if x and x.replace('\n', '').replace('\t', '').replace(' ', '') != '']
 
     def parents(self, num: int = 1):
         """返回上面第num级父元素              \n
@@ -155,7 +177,7 @@ class DriverElement(DrissionElement):
         :return: DriverElement对象
         """
         loc = 'xpath', f'.{"/.." * num}'
-        return self.ele(loc, timeout=0.1)
+        return self.ele(loc, timeout=0)
 
     def nexts(self, num: int = 1, mode: str = 'ele'):
         """返回后面第num个兄弟元素或节点文本                                   \n
@@ -178,7 +200,10 @@ class DriverElement(DrissionElement):
         :param attr: 属性名
         :return: 属性值文本
         """
-        attr = 'innerText' if attr == 'text' else attr
+        # attr = 'innerText' if attr == 'text' else attr
+        if attr in ('text', 'innerText'):
+            return self.text
+
         return format_html(self.inner_ele.get_attribute(attr))
 
     def ele(self,
@@ -188,27 +213,34 @@ class DriverElement(DrissionElement):
         """返回当前元素下级符合条件的子元素、属性或节点文本，默认返回第一个                                      \n
         示例：                                                                                            \n
         - 用loc元组查找：                                                                                 \n
-            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素                     \n
+            ele.ele((By.CLASS_NAME, 'ele_class'))       - 返回第一个class为ele_class的子元素               \n
         - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                              \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串            \n
             ele.ele('.ele_class')                       - 返回第一个 class 为 ele_class 的子元素            \n
             ele.ele('.:ele_class')                      - 返回第一个 class 中含有 ele_class 的子元素         \n
-            ele.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的子元素                  \n
+            ele.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的子元素                   \n
             ele.ele('#:ele_id')                         - 返回第一个 id 中含有 ele_id 的子元素               \n
-            ele.ele('@class:ele_class')                 - 返回第一个class含有ele_class的子元素              \n
-            ele.ele('@name=ele_name')                   - 返回第一个name等于ele_name的子元素                \n
-            ele.ele('@placeholder')                     - 返回第一个带placeholder属性的子元素               \n
-            ele.ele('tag:p')                            - 返回第一个<p>子元素                              \n
-            ele.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div子元素           \n
-            ele.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div子元素           \n
-            ele.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div子元素             \n
-            ele.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div子元素             \n
-            ele.ele('text:some_text')                   - 返回第一个文本含有some_text的子元素                \n
-            ele.ele('some_text')                        - 返回第一个文本含有some_text的子元素（等价于上一行）  \n
-            ele.ele('text=some_text')                   - 返回第一个文本等于some_text的子元素                \n
-            ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的子元素                        \n
-            ele.ele('css:div.ele_class')                - 返回第一个符合css selector的子元素                 \n
+            ele.ele('@class:ele_class')                 - 返回第一个class含有ele_class的子元素               \n
+            ele.ele('@name=ele_name')                   - 返回第一个name等于ele_name的子元素                 \n
+            ele.ele('@placeholder')                     - 返回第一个带placeholder属性的子元素                \n
+            ele.ele('tag:p')                            - 返回第一个<p>子元素                               \n
+            ele.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div子元素            \n
+            ele.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div子元素            \n
+            ele.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div子元素              \n
+            ele.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div子元素              \n
+            ele.ele('text:some_text')                   - 返回第一个文本含有some_text的子元素                 \n
+            ele.ele('some_text')                        - 返回第一个文本含有some_text的子元素（等价于上一行）   \n
+            ele.ele('text=some_text')                   - 返回第一个文本等于some_text的子元素                 \n
+            ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的子元素                         \n
+            ele.ele('css:div.ele_class')                - 返回第一个符合css selector的子元素                  \n
+        - 查询字符串还有最精简模式，用x代替xpath、c代替css、t代替tag、tx代替text：                                \n
+            ele.ele('x://div[@class="ele_class"]')      - 等同于 ele.ele('xpath://div[@class="ele_class"]') \n
+            ele.ele('c:div.ele_class')                  - 等同于 ele.ele('css:div.ele_class')               \n
+            ele.ele('t:div')                            - 等同于 ele.ele('tag:div')                         \n
+            ele.ele('t:div@tx()=some_text')             - 等同于 ele.ele('tag:div@text()=some_text')        \n
+            ele.ele('tx:some_text')                     - 等同于 ele.ele('text:some_text')                  \n
+            ele.ele('tx=some_text')                     - 等同于 ele.ele('text=some_text')
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param mode: 'single' 或 'all'，对应查找一个或全部
         :param timeout: 查找元素超时时间
@@ -241,30 +273,37 @@ class DriverElement(DrissionElement):
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
              timeout: float = None):
-        """返回当前元素下级所有符合条件的子元素、属性或节点文本                                               \n
-        示例：                                                                                           \n
-        - 用loc元组查找：                                                                                 \n
-            ele.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                      \n
-        - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                             \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
-            ele.eles('.ele_class')                       - 返回所有 class 为 ele_class 的子元素            \n
-            ele.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的子元素         \n
-            ele.eles('#ele_id')                          - 返回所有 id 为 ele_id 的子元素                  \n
-            ele.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的子元素               \n
-            ele.eles('@class:ele_class')                 - 返回所有class含有ele_class的子元素              \n
-            ele.eles('@name=ele_name')                   - 返回所有name等于ele_name的子元素                \n
-            ele.eles('@placeholder')                     - 返回所有带placeholder属性的子元素               \n
-            ele.eles('tag:p')                            - 返回所有<p>子元素                              \n
-            ele.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div子元素           \n
-            ele.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div子元素           \n
-            ele.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div子元素             \n
-            ele.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div子元素             \n
-            ele.eles('text:some_text')                   - 返回所有文本含有some_text的子元素                \n
-            ele.eles('some_text')                        - 返回所有文本含有some_text的子元素（等价于上一行）  \n
-            ele.eles('text=some_text')                   - 返回所有文本等于some_text的子元素                \n
-            ele.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的子元素                        \n
-            ele.eles('css:div.ele_class')                - 返回所有符合css selector的子元素                 \n
+        """返回当前元素下级所有符合条件的子元素、属性或节点文本                                                   \n
+        示例：                                                                                              \n
+        - 用loc元组查找：                                                                                    \n
+            ele.eles((By.CLASS_NAME, 'ele_class'))       - 返回所有class为ele_class的子元素                   \n
+        - 用查询字符串查找：                                                                                  \n
+            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                                \n
+            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串              \n
+            ele.eles('.ele_class')                       - 返回所有 class 为 ele_class 的子元素               \n
+            ele.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的子元素            \n
+            ele.eles('#ele_id')                          - 返回所有 id 为 ele_id 的子元素                      \n
+            ele.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的子元素                  \n
+            ele.eles('@class:ele_class')                 - 返回所有class含有ele_class的子元素                  \n
+            ele.eles('@name=ele_name')                   - 返回所有name等于ele_name的子元素                    \n
+            ele.eles('@placeholder')                     - 返回所有带placeholder属性的子元素                   \n
+            ele.eles('tag:p')                            - 返回所有<p>子元素                                  \n
+            ele.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div子元素               \n
+            ele.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div子元素               \n
+            ele.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div子元素                 \n
+            ele.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div子元素                 \n
+            ele.eles('text:some_text')                   - 返回所有文本含有some_text的子元素                    \n
+            ele.eles('some_text')                        - 返回所有文本含有some_text的子元素（等价于上一行）      \n
+            ele.eles('text=some_text')                   - 返回所有文本等于some_text的子元素                    \n
+            ele.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的子元素                            \n
+            ele.eles('css:div.ele_class')                - 返回所有符合css selector的子元素                     \n
+        - 查询字符串还有最精简模式，用x代替xpath、c代替css、t代替tag、tx代替text：                                  \n
+            ele.eles('x://div[@class="ele_class"]')      - 等同于 ele.eles('xpath://div[@class="ele_class"]') \n
+            ele.eles('c:div.ele_class')                  - 等同于 ele.eles('css:div.ele_class')               \n
+            ele.eles('t:div')                            - 等同于 ele.eles('tag:div')                         \n
+            ele.eles('t:div@tx()=some_text')             - 等同于 ele.eles('tag:div@text()=some_text')        \n
+            ele.eles('tx:some_text')                     - 等同于 ele.eles('text:some_text')                  \n
+            ele.eles('tx=some_text')                     - 等同于 ele.eles('text=some_text')
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间
         :return: DriverElement对象组成的列表
@@ -514,7 +553,6 @@ class DriverElement(DrissionElement):
                         sib = sib.previousSibling;
                     }
                     ''' + txt4 + '''
-                
                 el = el.parentNode;
             }
             ''' + txt5 + '''
@@ -548,13 +586,15 @@ class DriverElement(DrissionElement):
         else:
             raise ValueError(f"Argument direction can only be 'next' or 'prev', not '{direction}'.")
 
+        timeout = 0 if direction == 'prev' else .5
+
         # 获取节点
-        ele_or_node = self.ele(f'xpath:./{direction_txt}-sibling::{node_txt}[{num}]', timeout=0.1)
+        ele_or_node = self.ele(f'xpath:./{direction_txt}-sibling::{node_txt}[{num}]', timeout=timeout)
 
         # 跳过元素间的换行符
-        while ele_or_node == '\n':
+        while isinstance(ele_or_node, str) and ele_or_node.replace('\n', '').replace('\t', '').replace(' ', '') == '':
             num += 1
-            ele_or_node = self.ele(f'xpath:./{direction_txt}-sibling::{node_txt}[{num}]', timeout=0.1)
+            ele_or_node = self.ele(f'xpath:./{direction_txt}-sibling::{node_txt}[{num}]', timeout=timeout)
 
         return ele_or_node
 
@@ -572,7 +612,7 @@ def execute_driver_find(page_or_ele,
     :return: 返回DriverElement元素或它们组成的列表
     """
     mode = mode or 'single'
-    if mode not in ['single', 'all']:
+    if mode not in ('single', 'all'):
         raise ValueError(f"Argument mode can only be 'single' or 'all', not '{mode}'.")
 
     if isinstance(page_or_ele, DrissionElement):
@@ -582,15 +622,19 @@ def execute_driver_find(page_or_ele,
         page = page_or_ele
         driver = page_or_ele.driver
 
-    try:
-        if timeout and timeout != page.timeout:
-            wait = WebDriverWait(driver, timeout=timeout)
-        else:
-            page.wait._driver = driver
-            wait = page.wait
+    # 设置等待对象
+    if timeout is not None and timeout != page.timeout:
+        wait = WebDriverWait(driver, timeout=timeout)
+    else:
+        page.wait._driver = driver
+        wait = page.wait
 
+    try:
+        # 使用xpath查找
         if loc[0] == 'xpath':
             return wait.until(ElementsByXpath(page, loc[1], mode, timeout))
+
+        # 使用css selector查找
         else:
             if mode == 'single':
                 return DriverElement(wait.until(ec.presence_of_element_located(loc)), page)
@@ -627,7 +671,7 @@ class ElementsByXpath(object):
             """用js通过xpath获取元素、节点或属性
             :param node: 'document' 或 元素对象
             :param xpath_txt: xpath语句
-            :param type_txt: resultType,参考https://developer.mozilla.org/zh-CN/docs/Web/API/Document/evaluate
+            :param type_txt: resultType,参考 https://developer.mozilla.org/zh-CN/docs/Web/API/Document/evaluate
             :return: 元素对象或属性、文本字符串
             """
             node_txt = 'document' if not node or node == 'document' else 'arguments[0]'
@@ -638,6 +682,7 @@ class ElementsByXpath(object):
                 return_txt = '''
                     if(e.singleNodeValue.constructor.name=="Text"){return e.singleNodeValue.data;}
                     else if(e.singleNodeValue.constructor.name=="Attr"){return e.singleNodeValue.nodeValue;}
+                    else if(e.singleNodeValue.constructor.name=="Comment"){return e.singleNodeValue.nodeValue;}
                     else{return e.singleNodeValue;}
                     '''
 
@@ -648,6 +693,7 @@ class ElementsByXpath(object):
                     for(var i = 0; i <e.snapshotLength ; i++){
                         if(e.snapshotItem(i).constructor.name=="Text"){a.push(e.snapshotItem(i).data);}
                         else if(e.snapshotItem(i).constructor.name=="Attr"){a.push(e.snapshotItem(i).nodeValue);}
+                        else if(e.snapshotItem(i).constructor.name=="Comment"){a.push(e.snapshotItem(i).nodeValue);}
                         else{a.push(e.snapshotItem(i));}
                     }
                     """
@@ -661,18 +707,18 @@ class ElementsByXpath(object):
                 return_txt = 'return e.singleNodeValue;'
 
             js = """
-                var e=document.evaluate('""" + xpath_txt + """', """ + node_txt + """, null, """ + type_txt + """,null);
+                var e=document.evaluate(arguments[1], """ + node_txt + """, null, """ + type_txt + """,null);
                 """ + for_txt + """
                 """ + return_txt + """
                 """
-            return driver.execute_script(js, node)
+            return driver.execute_script(js, node, xpath_txt)
 
         if isinstance(ele_or_driver, WebDriver):
             driver, the_node = ele_or_driver, 'document'
         else:
             driver, the_node = ele_or_driver.parent, ele_or_driver
 
-            # 把lxml元素对象包装成DriverElement对象并按需要返回第一个或全部
+        # 把lxml元素对象包装成DriverElement对象并按需要返回第一个或全部
         if self.mode == 'single':
             try:
                 e = get_nodes(the_node, xpath_txt=self.xpath, type_txt='9')
@@ -685,8 +731,14 @@ class ElementsByXpath(object):
                     return e
 
             # 找不到目标时
-            except JavascriptException:
-                return None
+            except JavascriptException as err:
+                if 'The result is not a node set' in err.msg:
+                    try:
+                        return get_nodes(the_node, xpath_txt=self.xpath, type_txt='1')
+                    except JavascriptException:
+                        return None
+                else:
+                    return None
 
         elif self.mode == 'all':
             return ([DriverElement(x, self.page) if isinstance(x, WebElement)
