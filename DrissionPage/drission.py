@@ -121,14 +121,15 @@ class Drission(object):
                     print('无法启动，请检查chromedriver版本与Chrome是否匹配，并手动设置。')
                     exit(0)
 
-            # 反爬设置，似乎没用
-            self._driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-                "source": """
-                Object.defineProperty(navigator, 'webdriver', {
-                  get: () => Chrome
-                })
-              """
-            })
+            # 反爬设置
+            try:
+                self._driver.execute_script('Object.defineProperty(navigator,"webdriver",{get:() => Chrome,});')
+            except:
+                pass
+
+            # self._driver.execute_cdp_cmd(
+            #     'Page.addScriptToEvaluateOnNewDocument',
+            #     {'source': 'Object.defineProperty(navigator,"webdriver",{get:() => Chrome,});'})
 
         return self._driver
 
