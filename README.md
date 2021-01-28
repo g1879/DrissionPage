@@ -171,6 +171,8 @@ shadow_element = webdriver.execute_script('return arguments[0].shadowRoot', elem
 shadow_element = element.shadow_root
 ```
 
+
+
 - 用 xpath 直接获取属性或文本节点（返回文本）
 
 ```python
@@ -206,6 +208,8 @@ title = page('tag:h1').text
 ```
 
 Tips: DrissionPage 自带默认 headers
+
+
 
 - 下载文件
 
@@ -299,6 +303,8 @@ easy_set 工具中的 get_match_driver() 方法可自动识别 chrome 版本并�
 ```python
 from DrissionPage import MixPage
 ```
+
+
 
 ## 初始化
 
@@ -441,8 +447,8 @@ session_options = {'headers': {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac 
 # 代理设置，可选
 proxy = {'http': '127.0.0.1:1080', 'https': '127.0.0.1:1080'}
 
-# 传入配置，driver_options 和 session_options 都是可选的，须要使用对应模式才须要传入
-drission = Drission(driver_options, session_options, proxy=proxy)  
+# 传入配置，driver_or_options 和 session_or_options 都是可选的，须要使用对应模式才须要传入
+drission = Drission(driver_or_options, session_or_options, proxy=proxy)  
 ```
 
 DriverOptions 和 SessionOptions 用法详见下文。
@@ -567,6 +573,8 @@ Tips:
 
 - d 模式设置 cookies 后要刷新页面才能看到效果。
 - s 模式可在 ini 文件、SessionOptions、配置字典中设置 cookies，在 MixPage 初始化时即可传入，d 模式只能用 set_cookies() 函数设置。
+
+
 
 ## 查找元素
 
@@ -865,7 +873,7 @@ do.set_no_imgs(True)  # 不加载图片
 do.set_paths(driver_path='D:\\chromedriver.exe', chrome_path='D:\\chrome.exe')  # 设置路径
 do.set_headless(False).set_no_imgs(True)  # 支持链式操作
 
-drission = Drission(driver_options=do)  # 用配置对象创建 Drission 对象
+drission = Drission(driver_or_options=do)  # 用配置对象创建 Drission 对象
 page = MixPage(driver_options=do)  # 用配置对象创建 MixPage 对象
 
 do.save()  # 保存当前打开的 ini 文件
@@ -896,7 +904,7 @@ so.cookies = ['key1=val1; domain=xxxx', 'key2=val2; domain=xxxx']  # 设置 cook
 so.headers = {'User-Agent': 'xxxx', 'Accept-Charset': 'xxxx'}
 so.set_a_header('Connection', 'keep-alive')
 
-drission = Drission(session_options=so)  # 用配置对象创建 Drission 对象
+drission = Drission(session_or_options=so)  # 用配置对象创建 Drission 对象
 page = MixPage(session_options=so)  # 用配置对象创建 MixPage 对象
 
 so.save()  # 保存当前打开的 ini 文件
