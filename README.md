@@ -433,6 +433,7 @@ drission = Drission(read_file=False)
 
 ```python
 from DrissionPage.config import DriverOptions
+from DrissionPage import Drission
 
 # 创建 driver 配置对象，read_file = False 表示不读取 ini 文件
 do = DriverOptions(read_file=False)  
@@ -488,7 +489,7 @@ page.post(url, data, **kwargs)  # 只有 session 模式才有 post 方法
 page.get(url, retry=5, interval=0.5)
 ```
 
-Tips：若连接出错，程序会自动重试2次，可指定重试次数和等待间隔。
+Tips：若连接出错，程序会自动重试3次，可指定重试次数和等待间隔。
 
 **切换模式**
 
@@ -650,6 +651,8 @@ eles = page('@id:ele_id')('tag:div').next('some text').eles('tag:a')
 ele2 = ele1('tag:li').next('some text')
 ```
 
+
+
 ## 获取元素属性
 
 ```python
@@ -686,14 +689,17 @@ element.is_enabled()  # 返回元素是否可用
 element.is_displayed()  # 返回元素是否可见
 ```
 
+
+
 ## 元素操作
 
 元素操作为 d 模式独有，调用以下方法会自动切换到 d 模式。
 
 ```python
 element.click(by_js)  # 点击元素，可选择是否用 js 方式点击
-element.input(value)  # 输入文本
-element.run_script(js)  # 对元素运行 JavaScript 脚本
+element.click_at(x, y, by_js)  # 带偏移量点击本元素，相对于左上角坐标。不传入 x 或 y 值时点击元素中点，可选择是否用 js 方式点击
+element.input(value, clear)  # 输入文本或组合键，组合键用 tuple 格式输入。clear 参数为输入前是否清空元素。
+element.run_script(js, *args)  # 对元素运行 JavaScript 脚本
 element.submit()  # 提交
 element.clear()  # 清空元素
 element.screenshot(path, filename)  # 对元素截图
@@ -704,6 +710,8 @@ element.drag(x, y, speed, shake)  # 拖动元素相对距离，可设置速度�
 element.drag_to(ele_or_loc, speed, shake)  # 拖动元素到另一个元素或某个坐标，可设置速度和是否随机抖动
 element.hover()  # 在元素上悬停鼠标
 ```
+
+
 
 ## shadow-dom 操作
 

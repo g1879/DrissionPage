@@ -139,7 +139,7 @@ class DriverPage(object):
         :param interval: 重试间隔（秒）
         :return: 目标url是否可用
         """
-        to_url = quote(url, safe='/:&?=%;#@')
+        to_url = quote(url, safe='/:&?=%;#@+!')
         retry = int(retry) if retry is not None else int(self.retry_times)
         interval = int(interval) if interval is not None else int(self.retry_interval)
 
@@ -148,6 +148,11 @@ class DriverPage(object):
 
         self._url = to_url
         self._url_available = self._try_to_connect(to_url, times=retry, interval=interval, show_errmsg=show_errmsg)
+
+        try:
+            self._driver.execute_script('Object.defineProperty(navigator,"webdriver",{get:() => Chrome,});')
+        except:
+            pass
 
         return self._url_available
 
@@ -529,16 +534,19 @@ class DriverPage(object):
         self.driver.back()
 
     def set_window_size(self, x: int = None, y: int = None) -> None:
-        """设置浏览器窗口大小，默认最大化  \n
+        """设置浏览器窗口大小，默认最大化，任一参数为0最小化  \n
         :param x: 浏览器窗口高
         :param y: 浏览器窗口宽
         :return: None
         """
-        if not x and not y:
+        if x is None and y is None:
             self.driver.maximize_window()
 
+        elif x == 0 or y == 0:
+            self.driver.minimize_window()
+
         else:
-            if x <= 0 or y <= 0:
+            if x < 0 or y < 0:
                 raise ValueError('Arguments x and y must greater than 0.')
 
             new_x = x or self.driver.get_window_size()['width']

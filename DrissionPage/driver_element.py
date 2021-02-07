@@ -324,14 +324,14 @@ class DriverElement(DrissionElement):
 
         return None if r == 'none' else r
 
-    def click(self, by_js=None) -> bool:
+    def click(self, by_js: bool = None) -> bool:
         """点击元素                                                                      \n
-        尝试点击10次，若都失败就改用js点击                                                  \n
+        尝试点击3次，若都失败就改用js点击                                                  \n
         :param by_js: 是否用js点击，为True时直接用js点击，为False时重试失败也不会改用js
         :return: 是否点击成功
         """
         if not by_js:
-            for _ in range(10):
+            for _ in range(3):
                 try:
                     self.inner_ele.click()
                     return True
@@ -345,17 +345,35 @@ class DriverElement(DrissionElement):
 
         return False
 
-    def input(self, value: str, clear: bool = True) -> bool:
-        """输入文本                          \n
-        :param value: 文本值
+    def click_at(self, x: int = None, y: int = None, by_js=True) -> None:
+        """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素中点    \n
+        :param x: 相对元素左上角坐标的x轴偏移量
+        :param y: 相对元素左上角坐标的y轴偏移量
+        :param by_js: 是否用js点击
+        :return: None
+        """
+        x = self.location['x'] + x if x is not None else self.location['x'] + self.size['width'] // 2
+        y = self.location['y'] + y if y is not None else self.location['y'] + self.size['height'] // 2
+
+        if by_js:
+            self.page.run_script(f'document.elementFromPoint({x}, {y}).click();')
+        else:
+            from selenium.webdriver import ActionChains
+            ActionChains(self.page.driver).move_by_offset(x, y).click().perform()
+
+    def input(self, value: Union[str, tuple], clear: bool = True) -> bool:
+        """输入文本或组合键                          \n
+        :param value: 文本值或按键组合
         :param clear: 输入前是否清空文本框
         :return: 是否输入成功
         """
         try:
             if clear:
                 self.clear()
-            self.inner_ele.send_keys(value)
+
+            self.inner_ele.send_keys(*value)
             return True
+
         except Exception as e:
             print(e)
             return False
@@ -532,12 +550,14 @@ class DriverElement(DrissionElement):
             if(nth>1){path = '/' + tag + '[' + nth + ']' + path;}
                     else{path = '/' + tag + path;}'''
             txt5 = '''return path;'''
+
         elif mode == 'css':
             txt1 = ''
             # txt2 = '''return '#' + el.id + path;'''
             txt3 = ''
             txt4 = '''path = '>' + ":nth-child(" + nth + ")" + path;'''
             txt5 = '''return path.substr(1);'''
+
         else:
             raise ValueError(f"Argument mode can only be 'xpath' or 'css', not '{mode}'.")
 

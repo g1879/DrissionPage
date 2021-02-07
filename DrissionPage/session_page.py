@@ -235,7 +235,7 @@ class SessionPage(object):
         :param kwargs: 连接参数
         :return: url是否可用
         """
-        to_url = quote(url, safe='/:&?=%;#@+')
+        to_url = quote(url, safe='/:&?=%;#@+!')
         retry = int(retry) if retry is not None else int(self.retry_times)
         interval = int(interval) if interval is not None else int(self.retry_interval)
 
@@ -278,7 +278,7 @@ class SessionPage(object):
         :param kwargs: 连接参数
         :return: url是否可用
         """
-        to_url = quote(url, safe='/:&?=%;#@')
+        to_url = quote(url, safe='/:&?=%;#@+!')
         retry = int(retry) if retry is not None else int(self.retry_times)
         interval = int(interval) if interval is not None else int(self.retry_interval)
 
@@ -310,6 +310,8 @@ class SessionPage(object):
                  post_data: dict = None,
                  show_msg: bool = False,
                  show_errmsg: bool = False,
+                 retry: int = None,
+                 interval: float = None,
                  **kwargs) -> tuple:
         """下载一个文件                                                                   \n
         :param file_url: 文件url
@@ -319,163 +321,189 @@ class SessionPage(object):
         :param post_data: post方式的数据
         :param show_msg: 是否显示下载信息
         :param show_errmsg: 是否抛出和显示异常
+        :param retry: 重试次数
+        :param interval: 重试间隔时间
         :param kwargs: 连接参数
         :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
         """
-        # 生成的response不写入self._response，是临时的
         if file_exists == 'skip' and Path(f'{goal_path}\\{rename}').exists():
             if show_msg:
                 print(f'{file_url}\n{goal_path}\\{rename}\nSkipped.\n')
 
             return False, 'Skipped because a file with the same name already exists.'
 
-        kwargs['stream'] = True
+        def do(url: str,
+               goal: str,
+               new_name: str = None,
+               exists: str = 'rename',
+               data: dict = None,
+               msg: bool = False,
+               errmsg: bool = False,
+               **args) -> tuple:
+            args['stream'] = True
 
-        if 'timeout' not in kwargs:
-            kwargs['timeout'] = 20
+            if 'timeout' not in args:
+                args['timeout'] = 20
 
-        mode = 'post' if post_data else 'get'
-        r, info = self._make_response(file_url, mode=mode, data=post_data, show_errmsg=show_errmsg, **kwargs)
+            mode = 'post' if data else 'get'
+            # 生成的response不写入self._response，是临时的
+            r, info = self._make_response(url, mode=mode, data=data, show_errmsg=errmsg, **args)
 
-        if r is None:
-            if show_msg:
-                print(info)
+            if r is None:
+                if msg:
+                    print(info)
 
-            return False, info
+                return False, info
 
-        if not r.ok:
-            if show_errmsg:
-                raise ConnectionError(f'Status code: {r.status_code}.')
+            if not r.ok:
+                if errmsg:
+                    raise ConnectionError(f'Status code: {r.status_code}.')
 
-            return False, f'Status code: {r.status_code}.'
+                return False, f'Status code: {r.status_code}.'
 
-        # -------------------获取文件名-------------------
-        file_name = ''
-        content_disposition = r.headers.get('content-disposition')
+            # -------------------获取文件名-------------------
+            file_name = ''
+            content_disposition = r.headers.get('content-disposition')
 
-        # 使用header里的文件名
-        if content_disposition:
-            file_name = r.headers[content_disposition[0]].encode('ISO-8859-1').decode('utf-8')
-            file_name = re.search(r'filename *= *"?([^";]+)', file_name)
-            if file_name:
-                file_name = file_name.group(1)
+            # 使用header里的文件名
+            if content_disposition:
+                file_name = r.headers[content_disposition[0]].encode('ISO-8859-1').decode('utf-8')
+                file_name = re.search(r'filename *= *"?([^";]+)', file_name)
 
-                if file_name[0] == file_name[-1] == "'":
-                    file_name = file_name[1:-1]
+                if file_name:
+                    file_name = file_name.group(1)
 
-        # 在url里获取文件名
-        if not file_name and os_PATH.basename(file_url):
-            file_name = os_PATH.basename(file_url).split("?")[0]
+                    if file_name[0] == file_name[-1] == "'":
+                        file_name = file_name[1:-1]
 
-        # 找不到则用时间和随机数生成文件名
-        if not file_name:
-            file_name = f'untitled_{time()}_{randint(0, 100)}'
+            # 在url里获取文件名
+            if not file_name and os_PATH.basename(url):
+                file_name = os_PATH.basename(url).split("?")[0]
 
-        # 去除非法字符
-        file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()
-        file_name = unquote(file_name)
+            # 找不到则用时间和随机数生成文件名
+            if not file_name:
+                file_name = f'untitled_{time()}_{randint(0, 100)}'
 
-        # -------------------重命名，不改变扩展名-------------------
-        if rename:
-            rename = re_SUB(r'[\\/*:|<>?"]', '', rename).strip()
-            ext_name = file_name.split('.')[-1]
+            # 去除非法字符
+            file_name = re_SUB(r'[\\/*:|<>?"]', '', file_name).strip()
+            file_name = unquote(file_name)
 
-            if '.' in rename or ext_name == file_name:
-                full_name = rename
-            else:
-                full_name = f'{rename}.{ext_name}'
+            # -------------------重命名，不改变扩展名-------------------
+            if new_name:
+                new_name = re_SUB(r'[\\/*:|<>?"]', '', new_name).strip()
+                ext_name = file_name.split('.')[-1]
 
-        else:
-            full_name = file_name
-
-        # -------------------生成路径-------------------
-        goal_Path = Path(goal_path)
-        goal_path = ''
-        skip = False
-
-        for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
-            goal_path += goal_Path.drive if key == 0 and goal_Path.drive else re_SUB(r'[*:|<>?"]', '', i).strip()
-            goal_path += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
-
-        goal_Path = Path(goal_path).absolute()
-        goal_Path.mkdir(parents=True, exist_ok=True)
-        full_path = Path(f'{goal_path}\\{full_name}')
-
-        if full_path.exists():
-            if file_exists == 'rename':
-                full_name = get_available_file_name(goal_path, full_name)
-                full_path = Path(f'{goal_path}\\{full_name}')
-
-            elif file_exists == 'skip':
-                skip = True
-
-            elif file_exists == 'overwrite':
-                pass
+                if '.' in new_name or ext_name == file_name:
+                    full_name = new_name
+                else:
+                    full_name = f'{new_name}.{ext_name}'
 
             else:
-                raise ValueError("Argument file_exists can only be 'skip', 'overwrite', 'rename'.")
+                full_name = file_name
 
-        # -------------------打印要下载的文件-------------------
-        if show_msg:
-            print(file_url)
-            print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
-            print(f'Downloading to: {goal_path}')
+            # -------------------生成路径-------------------
+            goal_Path = Path(goal)
+            goal = ''
+            skip = False
 
+            for key, i in enumerate(goal_Path.parts):  # 去除路径中的非法字符
+                goal += goal_Path.drive if key == 0 and goal_Path.drive else re_SUB(r'[*:|<>?"]', '', i).strip()
+                goal += '\\' if i != '\\' and key < len(goal_Path.parts) - 1 else ''
+
+            goal_Path = Path(goal).absolute()
+            goal_Path.mkdir(parents=True, exist_ok=True)
+            full_path = Path(f'{goal}\\{full_name}')
+
+            if full_path.exists():
+                if file_exists == 'rename':
+                    full_name = get_available_file_name(goal, full_name)
+                    full_path = Path(f'{goal}\\{full_name}')
+
+                elif exists == 'skip':
+                    skip = True
+
+                elif exists == 'overwrite':
+                    pass
+
+                else:
+                    raise ValueError("Argument file_exists can only be 'skip', 'overwrite', 'rename'.")
+
+            # -------------------打印要下载的文件-------------------
+            if msg:
+                print(file_url)
+                print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
+                print(f'Downloading to: {goal}')
+
+                if skip:
+                    print('Skipped.\n')
+
+            # -------------------开始下载-------------------
             if skip:
-                print('Skipped.\n')
+                return False, 'Skipped because a file with the same name already exists.'
 
-        # -------------------开始下载-------------------
-        if skip:
-            return False, 'Skipped because a file with the same name already exists.'
+            # 获取远程文件大小
+            content_length = r.headers.get('content-length')
+            file_size = int(content_length) if content_length else None
 
-        # 获取远程文件大小
-        content_length = r.headers.get('content-length')
-        file_size = int(content_length) if content_length else None
+            # 已下载文件大小和下载状态
+            downloaded_size, download_status = 0, False
 
-        # 已下载文件大小和下载状态
-        downloaded_size, download_status = 0, False
+            try:
+                with open(str(full_path), 'wb') as tmpFile:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:
+                            tmpFile.write(chunk)
 
-        try:
-            with open(str(full_path), 'wb') as tmpFile:
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk:
-                        tmpFile.write(chunk)
+                            # 如表头有返回文件大小，显示进度
+                            if msg and file_size:
+                                downloaded_size += 1024
+                                rate = downloaded_size / file_size if downloaded_size < file_size else 1
+                                print('\r {:.0%} '.format(rate), end="")
 
-                        # 如表头有返回文件大小，显示进度
-                        if show_msg and file_size:
-                            downloaded_size += 1024
-                            rate = downloaded_size / file_size if downloaded_size < file_size else 1
-                            print('\r {:.0%} '.format(rate), end="")
+            except Exception as e:
+                if errmsg:
+                    raise ConnectionError(e)
 
-        except Exception as e:
-            if show_errmsg:
-                raise ConnectionError(e)
-
-            download_status, info = False, f'Download failed.\n{e}'
-
-        else:
-            if full_path.stat().st_size == 0:
-                if show_errmsg:
-                    raise ValueError('File size is 0.')
-
-                download_status, info = False, 'File size is 0.'
+                download_status, info = False, f'Download failed.\n{e}'
 
             else:
-                download_status, info = True, str(full_path)
+                if full_path.stat().st_size == 0:
+                    if errmsg:
+                        raise ValueError('File size is 0.')
 
-        finally:
-            # 删除下载出错文件
-            if not download_status and full_path.exists():
-                full_path.unlink()
+                    download_status, info = False, 'File size is 0.'
 
-            r.close()
+                else:
+                    download_status, info = True, str(full_path)
 
-        # -------------------显示并返回值-------------------
-        if show_msg:
-            print(info, '\n')
+            finally:
+                # 删除下载出错文件
+                if not download_status and full_path.exists():
+                    full_path.unlink()
 
-        info = f'{goal_path}\\{full_name}' if download_status else info
-        return download_status, info
+                r.close()
+
+            # -------------------显示并返回值-------------------
+            if msg:
+                print(info, '\n')
+
+            info = f'{goal}\\{full_name}' if download_status else info
+            return download_status, info
+
+        retry_times = retry or self.retry_times
+        retry_interval = interval or self.retry_interval
+        result = do(file_url, goal_path, rename, file_exists, post_data, show_msg, show_errmsg, **kwargs)
+
+        if not result[0] and not str(result[1]).startswith('Skipped'):
+            for i in range(retry_times):
+                sleep(retry_interval)
+
+                print(f'重试 {file_url}')
+                result = do(file_url, goal_path, rename, file_exists, post_data, show_msg, show_errmsg, **kwargs)
+                if result[0]:
+                    break
+
+        return result
 
     def _make_response(self,
                        url: str,
@@ -499,7 +527,7 @@ class SessionPage(object):
         if mode not in ('get', 'post'):
             raise ValueError("Argument mode can only be 'get' or 'post'.")
 
-        url = quote(url, safe='/:&?=%;#@+')
+        url = quote(url, safe='/:&?=%;#@+!')
 
         # 设置referer和host值
         kwargs_set = set(x.lower() for x in kwargs)

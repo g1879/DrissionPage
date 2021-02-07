@@ -263,6 +263,8 @@ class MixPage(Null, SessionPage, DriverPage):
                  post_data: dict = None,
                  show_msg: bool = False,
                  show_errmsg: bool = False,
+                 retry: int = None,
+                 interval: float = None,
                  **kwargs) -> Tuple[bool, str]:
         """下载一个文件                                                                      \n
         d模式下下载前先同步cookies                                                            \n
@@ -273,12 +275,16 @@ class MixPage(Null, SessionPage, DriverPage):
         :param post_data: post方式的数据
         :param show_msg: 是否显示下载信息
         :param show_errmsg: 是否显示和抛出异常
+        :param retry: 重试次数
+        :param interval: 重试间隔时间
         :param kwargs: 连接参数
         :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组
         """
         if self.mode == 'd':
             self.cookies_to_session()
-        return super().download(file_url, goal_path, rename, file_exists, post_data, show_msg, show_errmsg, **kwargs)
+
+        return super().download(file_url, goal_path, rename, file_exists, post_data, show_msg, show_errmsg, retry,
+                                interval, **kwargs)
 
     # ----------------重写DriverPage的函数-----------------------
 
