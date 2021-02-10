@@ -460,7 +460,7 @@ class DriverElement(DrissionElement):
         :return: 是否设置成功
         """
         try:
-            self.run_script(f"arguments[0].{attr} = '{value}';")
+            self.run_script(f"arguments[0].setAttribute(arguments[1], arguments[2]);", attr, value)
             return True
         except:
             return False
