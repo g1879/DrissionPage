@@ -352,14 +352,24 @@ class DriverElement(DrissionElement):
         :param by_js: 是否用js点击
         :return: None
         """
-        x = self.location['x'] + x if x is not None else self.location['x'] + self.size['width'] // 2
-        y = self.location['y'] + y if y is not None else self.location['y'] + self.size['height'] // 2
-
         if by_js:
-            self.page.run_script(f'document.elementFromPoint({x}, {y}).click();')
+            x = self.location['x'] + x if x is not None else self.location['x'] + self.size['width'] // 2
+            y = self.location['y'] + y if y is not None else self.location['y'] + self.size['height'] // 2
+            js = f"""
+            var ev = document.createEvent('HTMLEvents'); 
+            ev.clientX = {x};
+            ev.clientY = {y};
+            ev.initEvent('click', false, true);
+            arguments[0].dispatchEvent(ev);
+            """
+            self.run_script(js)
+
         else:
+            x = x if x is not None else self.size['width'] // 2
+            y = y if y is not None else self.size['height'] // 2
+
             from selenium.webdriver import ActionChains
-            ActionChains(self.page.driver).move_by_offset(x, y).click().perform()
+            ActionChains(self.page.driver).move_to_element_with_offset(self.inner_ele, x, y).click().perform()
 
     def input(self, value: Union[str, tuple], clear: bool = True) -> bool:
         """输入文本或组合键                          \n
