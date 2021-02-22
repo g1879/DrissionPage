@@ -345,7 +345,7 @@ class DriverElement(DrissionElement):
 
         return False
 
-    def click_at(self, x: int = None, y: int = None, by_js=True) -> None:
+    def click_at(self, x: int = None, y: int = None, by_js=False) -> None:
         """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素中点    \n
         :param x: 相对元素左上角坐标的x轴偏移量
         :param y: 相对元素左上角坐标的y轴偏移量
