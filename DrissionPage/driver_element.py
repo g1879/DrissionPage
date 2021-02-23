@@ -345,7 +345,7 @@ class DriverElement(DrissionElement):
 
         return False
 
-    def click_at(self, x: int = None, y: int = None, by_js=False) -> None:
+    def click_at(self, x: Union[int, str] = None, y: Union[int, str] = None, by_js=False) -> None:
         """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素中点    \n
         :param x: 相对元素左上角坐标的x轴偏移量
         :param y: 相对元素左上角坐标的y轴偏移量
@@ -353,8 +353,8 @@ class DriverElement(DrissionElement):
         :return: None
         """
         if by_js:
-            x = self.location['x'] + x if x is not None else self.location['x'] + self.size['width'] // 2
-            y = self.location['y'] + y if y is not None else self.location['y'] + self.size['height'] // 2
+            x = self.location['x'] + int(x) if x is not None else self.location['x'] + self.size['width'] // 2
+            y = self.location['y'] + int(y) if y is not None else self.location['y'] + self.size['height'] // 2
             js = f"""
             var ev = document.createEvent('HTMLEvents'); 
             ev.clientX = {x};
@@ -365,8 +365,8 @@ class DriverElement(DrissionElement):
             self.run_script(js)
 
         else:
-            x = x if x is not None else self.size['width'] // 2
-            y = y if y is not None else self.size['height'] // 2
+            x = int(x) if x is not None else self.size['width'] // 2
+            y = int(y) if y is not None else self.size['height'] // 2
 
             from selenium.webdriver import ActionChains
             ActionChains(self.page.driver).move_to_element_with_offset(self.inner_ele, x, y).click().perform()
