@@ -434,7 +434,8 @@ class DriverElement(DrissionElement):
         name = filename or self.tag
         path = Path(path).absolute()
         path.mkdir(parents=True, exist_ok=True)
-        name = get_available_file_name(str(path), f'{name}.png')
+        name = f'{name}.png' if not name.endswith('.png') else name
+        name = get_available_file_name(str(path), name)
 
         # 等待元素加载完成
         if self.tag == 'img':
