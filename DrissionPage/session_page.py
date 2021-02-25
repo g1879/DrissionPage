@@ -367,7 +367,7 @@ class SessionPage(object):
 
             # 使用header里的文件名
             if content_disposition:
-                file_name = r.headers[content_disposition[0]].encode('ISO-8859-1').decode('utf-8')
+                file_name = content_disposition.encode('ISO-8859-1').decode('utf-8')
                 file_name = re.search(r'filename *= *"?([^";]+)', file_name)
 
                 if file_name:
