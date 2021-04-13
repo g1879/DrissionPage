@@ -29,6 +29,8 @@ address:** [Use DrissionPage to crawl common websites and automation](https://gi
 
 **Concise, easy to use, extensible**
 
+
+
 ## Background
 
 When the requests crawler faces the website to be logged in, it has to analyze data packets and JS source code,
@@ -60,7 +62,6 @@ Keep everything simple, try to provide simple and direct usage, and be more frie
 # Project structure
 
 ***
-
 ## Structure diagram
 
 ![](https://gitee.com/g1879/DrissionPage-demos/raw/master/pics/20201118164542.jpg)
@@ -104,6 +105,8 @@ element = WebDriverWait(driver).until(ec.presence_of_element_located((By.XPATH,'
 element = page('some text')
 ```
 
+
+
 - Jump to the first tab
 
 ```python
@@ -113,6 +116,8 @@ driver.switch_to.window(driver.window_handles[0])
 # Use DrissionPage:
 page.to_tab(0)
 ```
+
+
 
 - Select drop- down list by text
 
@@ -126,6 +131,8 @@ select_element.select_by_visible_text('text')
 element.select('text')
 ```
 
+
+
 - Drag and drop an element
 
 ```python
@@ -136,6 +143,8 @@ ActionChains(driver).drag_and_drop(ele1, ele2).perform()
 ele1.drag_to(ele2)
 ```
 
+
+
 - Scroll the window to the bottom (keep the horizontal scroll bar unchanged)
 
 ```python
@@ -145,6 +154,8 @@ driver.execute_script("window.scrollTo(document.documentElement.scrollLeft, docu
 # Use DrissionPage:
 page.scroll_to('bottom')
 ```
+
+
 
 - Set headless mode
 
@@ -157,6 +168,8 @@ options.add_argument("- - headless")
 set_headless()
 ```
 
+
+
 - Get pseudo element content
 
 ```python
@@ -166,6 +179,8 @@ text = webdriver.execute_script('return window.getComputedStyle(arguments[0], ":
 # Use DrissionPage:
 text = element.after
 ```
+
+
 
 - Get shadow- root
 
@@ -177,6 +192,8 @@ shadow_element = webdriver.execute_script('return arguments[0].shadowRoot', elem
 shadow_element = element.shadow_root
 ```
 
+
+
 - Use xpath to get attributes or text nodes directly
 
 ```python
@@ -187,6 +204,8 @@ Quite complicated
 class_name = element('xpath://div[@id="div_id"]/@class')
 text = element('xpath://div[@id="div_id"]/text()[2]')
 ```
+
+
 
 ## Compare with requests code
 
@@ -229,6 +248,8 @@ with open(f'{save_path}\\img.png','wb') as fd:
 page.download(url, save_path,'img')  # Support renaming and handle file name conflicts
 ```
 
+
+
 ## Mode switch
 
 Log in to the website with selenium, and then switch to requests to read the web page. Both will share login
@@ -250,6 +271,8 @@ Output:
 ```
 Title after login: Personal Information- Code Cloud Gitee.com
 ```
+
+
 
 ## Get and print element attributes
 
@@ -276,6 +299,8 @@ Git command learning https://oschina.gitee.io/learn- git- branching/
 Git command learning
 ```
 
+
+
 ## download file
 
 ```python
@@ -283,6 +308,8 @@ url ='https://www.baidu.com/img/flexible/logo/pc/result.png'
 save_path = r'C:\download'
 page.download(url, save_path)
 ```
+
+
 
 # Installation
 
@@ -374,6 +401,8 @@ get_match_driver(ini_path ='ini file path', save_path ='save path', chrome_path=
 ```
 
 Tips: When you specify chrome_path, the program writes this path to the INI file after successful detection.
+
+
 
 ### Use set_paths() method
 
@@ -475,6 +504,8 @@ drission = Drission(driver_or_options, session_or_options, proxy=proxy)
 
 The usage of DriverOptions and SessionOptions is detailed below.
 
+
+
 ## Use page object MixPage
 
 The MixPage page object encapsulates common web page operations and realizes the switch between driver and session
@@ -502,6 +533,8 @@ page = MixPage(drission, mode='s', timeout=5)  # session mode, waiting time is 5
 page = MixPage(driver_options=DriverOption, session_options=SessionOption)  # default d mode
 ```
 
+
+
 ### visit website
 
 ```python
@@ -527,6 +560,8 @@ page.change_mode(go=False)  # If go is False, it means that the url is not redir
 
 Tips: When using a method unique to a certain mode, it will automatically jump to that mode.
 
+
+
 ### Page properties
 
 ```python
@@ -546,17 +581,20 @@ page.current_tab_num  # Return the serial number of the current tab page
 page.current_tab_handle  # Return to the current tab page handle
 ```
 
+
+
 ### Page operation
 
 When calling a method that only belongs to d mode, it will automatically switch to d mode. See APIs for detailed usage.
 
 ```python
 page.set_cookies()  # set cookies
-page.get_cookies() # Get cookies, which can be returned by list or dict
+page.get_cookies()  # Get cookies, which can be returned by list or dict
 page.change_mode()  # Switch mode, it will automatically copy cookies
 page.cookies_to_session()  # Copy cookies from WebDriver object to Session object
 page.cookies_to_driver()  # Copy cookies from Session object to WebDriver object
-page.get(url, retry, interval, **kwargs)  # Use get to access the web page, you can specify the number of retries and the interval
+page.get(url, retry, interval,
+         **kwargs)  # Use get to access the web page, you can specify the number of retries and the interval
 page.ele(loc_or_ele, timeout)  # Get the first element, node or attribute that meets the conditions
 page.eles(loc_or_ele, timeout)  # Get all eligible elements, nodes or attributes
 page.download(url, save_path, rename, file_exists, **kwargs)  # download file
@@ -564,7 +602,8 @@ page.close_driver()  # Close the WebDriver object
 page.close_session()  # Close the Session object
 
 # s mode unique:
-page.post(url, data, retry, interval, **kwargs)  # To access the webpage in post mode, you can specify the number of retries and the interval
+page.post(url, data, retry, interval,
+          **kwargs)  # To access the webpage in post mode, you can specify the number of retries and the interval
 
 # d mode unique:
 page.wait_ele(loc_or_ele, mode, timeout)  # Wait for the element to be deleted, displayed, and hidden from the dom
@@ -573,10 +612,11 @@ page.create_tab(url)  # Create and locate a tab page, which is at the end
 page.to_tab(num_or_handle)  # Jump to tab page
 page.close_current_tab()  # Close the current tab page
 page.close_other_tabs(num_or_handles)  # Close other tabs
-page.to_iframe(iframe)  # cut into iframe
+page.to_frame(iframe)  # cut into iframe
 page.screenshot(path)  # Page screenshot
 page.scrool_to_see(element)  # Scroll until an element is visible
-page.scroll_to(mode, pixel)  # Scroll the page as indicated by the parameter, and the scroll direction is optional:'top','bottom','rightmost','leftmost','up','down','left', ' right'
+page.scroll_to(mode,
+               pixel)  # Scroll the page as indicated by the parameter, and the scroll direction is optional:'top', 'bottom', 'rightmost', 'leftmost', 'up', 'down', 'left', ' right', 'half'
 page.refresh()  # refresh the current page
 page.back()  # Browser back
 page.et_window_size(x, y)  # Set the browser window size, maximize by default
@@ -677,6 +717,8 @@ eles = page('@id:ele_id')('tag:div').next('some text').eles('tag:a')
 ele2 = ele1('tag:li').next('some text')
 ```
 
+
+
 ## Get element attributes
 
 ```python
@@ -713,6 +755,8 @@ element.is_enabled()  # Returns whether the element is available
 element.is_displayed()  # Returns whether the element is visible
 ```
 
+
+
 ## Element operation
 
 Element operation is unique to d mode. Calling the following method will automatically switch to d mode.
@@ -725,13 +769,32 @@ element.run_script(js, *args)  # Run JavaScript script on the element
 element.submit()  # Submit
 element.clear()  # Clear the element
 element.screenshot(path, filename)  # Take a screenshot of the element
-element.select(text)  # Select the drop- down list based on the text
 element.set_attr(attr, value)  # Set element attribute value
 element.remove_attr(attr)  # remove a element attribute
 element.drag(x, y, speed, shake)  # Drag the relative distance of the element, you can set the speed and whether to shake randomly
 element.drag_to(ele_or_loc, speed, shake)  # Drag the element to another element or a certain coordinate, you can set the speed and whether to shake randomly
 element.hover()  # Hover the mouse over the element
+
+# select function:
+element.select.is_multi # Whether to select multiple lists
+element.select.options # Return all list item objects
+element.select.selected_option # Return the first selected option element
+element.select.selected_options # Return a list of all selected option elements
+
+element.select(text) # Select the drop-down list item based on the text
+element.select(value,'value') # Select the drop-down list item according to the value
+element.select(index,'index') # Select the drop-down list item according to the serial number
+
+element.select.deselect(text) # Deselect drop-down list items based on the text (valid for multiple selection lists)
+element.select.deselect(value,'value') # Deselect drop-down list items according to value (valid for multiple selection lists)
+element.select.deselect(index,'index') # Deselect drop-down list items according to the serial number (valid for multiple selection lists)
+# Note: When the list is a multi-selection list, the first parameter above can receive list or tuple, and select or deselect multiple items at the same time
+
+element.select.clear() # Clear multiple selection list options
+element.select.invert() # Invert multiple selection list options
 ```
+
+
 
 ## shadow-dom operation
 
@@ -816,6 +879,8 @@ session = page.session
 response = session.get('https://www.baidu.com')
 ```
 
+
+
 ## requests function usage
 
 ### Connection parameters
@@ -843,6 +908,8 @@ The Response object obtained by requests is stored in page.response and can be u
 print(page.response.status_code)
 print(page.response.headers)
 ```
+
+
 
 ## download file
 
@@ -898,6 +965,8 @@ options.set_proxy(proxy) # Set proxy address
 options.set_paths(driver_path, chrome_path, debugger_address, download_path, user_data_path, cache_path) # Set browser-related paths
 ```
 
+
+
 ### Instructions
 
 ```python
@@ -918,6 +987,8 @@ do.save('D:\\settings.ini') # save to the specified ini file
 do.save('default') # Save the current settings to the default ini file
 ```
 
+
+
 ## Session Settings
 
 ### SessionOPtions Object
@@ -930,6 +1001,8 @@ Configurable properties:
 headers, cookies, auth, proxies, hooks, params, verify, cert, adapters, stream, trust_env, max_redirects.
 
 **Tips:** cookies can receive information in dict, list, tuple, str, RequestsCookieJar and other formats.
+
+
 
 ### Instructions
 
@@ -949,6 +1022,8 @@ so.save() # Save the currently opened ini file
 so.save('D:\\settings.ini') # save to the specified ini file
 so.save('default') # Save the current settings to the default ini file
 ```
+
+
 
 ## Save configuration
 
@@ -1017,6 +1092,8 @@ headers = {
           }
 ```
 
+
+
 ### OptionsManager Object
 
 The OptionsManager object is used to read, set and save the configuration.
@@ -1033,6 +1110,8 @@ manager.save('D:\\settings.ini') # Save to the specified path ini file
 manager.save('default') # Save the current settings to the default ini file
 ```
 
+
+
 ### Usage example
 
 ```python
@@ -1046,6 +1125,8 @@ options_manager.save('D:\\settings.ini') # Save to the specified path ini file
 
 drission = Drission(ini_path='D:\\settings.ini') # Use the specified ini file to create the object
 ```
+
+
 
 ## easy_set method
 
@@ -1178,11 +1259,15 @@ Parameter Description:
 - ini_path: str - ini file path, the default is the ini file under the DrissionPage folder
 - proxy: dict - proxy settings
 
+
+
 ### session
 
 Return the Session object, which is automatically initialized according to the configuration information.
 
 Returns: Session- the managed Session object
+
+
 
 ### driver
 
@@ -1190,11 +1275,15 @@ Return the WebDriver object, which is automatically initialized according to the
 
 Returns: WebDriver- Managed WebDriver object
 
+
+
 ### driver_options
 
 Return or set the driver configuration.
 
 Returns: dict
+
+
 
 ### session_options
 
@@ -1202,17 +1291,23 @@ Return to session configuration.
 
 Returns: dict
 
+
+
 ### session_options()
 
 Set the session configuration.
 
 Returns: None
 
+
+
 ### proxy
 
 Return to proxy configuration.
 
 Returns: dict
+
+
 
 ### cookies_to_session()
 
@@ -1223,6 +1318,8 @@ Parameter Description:
 - copy_user_agent: bool - whether to copy user_agent to session
 
 Returns: None
+
+
 
 ### set_cookies()
 
@@ -1239,6 +1336,8 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### cookies_to_driver()
 
 Copy cookies from session to driver.
@@ -1248,6 +1347,8 @@ Parameter Description:
 - url: str - the domain of cookies
 
 Returns: None
+
+
 
 ### user_agent_to_session()
 
@@ -1260,11 +1361,15 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### close_driver()
 
 Close the browser and set the driver to None.
 
 Returns: None
+
+
 
 ### close_session()
 
@@ -1272,11 +1377,15 @@ Close the session and set it to None.
 
 Returns: None
 
+
+
 ### close()
 
 Close the driver and session.
 
 Returns: None
+
+
 
 ## MixPage Class
 
@@ -1295,11 +1404,15 @@ Parameter Description:
 - mode: str - mode, optional'd' or's', default is'd'
 - timeout: float - timeout, driver mode is the time to find elements, session mode is the connection waiting time
 
+
+
 ### url
 
 Returns the URL currently visited by the MixPage object.
 
 Returns: str
+
+
 
 ### mode
 
@@ -1307,11 +1420,15 @@ Returns the current mode ('s' or'd').
 
 Returns: str
 
+
+
 ### drission
 
 Returns the Dirssion object currently in use.
 
 Returns: Drission
+
+
 
 ### driver
 
@@ -1319,11 +1436,15 @@ Return the driver object, if not, create it, and switch to driver mode when call
 
 Returns: WebDriver
 
+
+
 ### session
 
 Return the session object, if not, create it.
 
 Returns: Session
+
+
 
 ### response
 
@@ -1331,11 +1452,15 @@ Return the Response object obtained in s mode, and switch to s mode when called.
 
 Returns: Response
 
+
+
 ### cookies
 
 Return cookies, obtained from the current mode.
 
 Returns: [dict, list]
+
+
 
 ### html
 
@@ -1343,17 +1468,23 @@ Return the html text of the page.
 
 Returns: str
 
+
+
 ### title
 
 Return to the page title.
 
 Returns: str
 
+
+
 ### url_available
 
 Returns the validity of the current url.
 
 Returns: bool
+
+
 
 ### set_cookies()
 
@@ -1367,6 +1498,8 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### get_cookies()
 
 Return cookies.
@@ -1379,6 +1512,8 @@ Parameter Description:
 
 Returns: a dictionary or list of cookies
 
+
+
 ### change_mode()
 
 Switch mode,'d' or's'. When switching, the cookies of the current mode will be copied to the target mode.
@@ -1389,6 +1524,8 @@ Parameter Description:
 - go: bool - whether to jump to the current url after switching mode
 
 Returns: None
+
+
 
 ### ele()
 
@@ -1461,6 +1598,8 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### cookies_to_driver()
 
 Copy cookies from the Session object to the WebDriver object.
@@ -1470,6 +1609,8 @@ Parameter Description:
 - url: str - the domain or url of cookies
 
 Returns: None
+
+
 
 ### get()
 
@@ -1487,6 +1628,8 @@ Parameter Description:
 
 Returns: [bool, None]  - whether the url is available
 
+
+
 ### post()
 
 Jump in post mode, automatically switch to session mode when calling.
@@ -1503,6 +1646,8 @@ Parameter Description:
 - **kwargs - connection parameters for requests
 
 Returns: [bool, None]  - whether the url is available
+
+
 
 ### download()
 
@@ -1540,17 +1685,23 @@ Returns the handle list of all tabs.
 
 Returns: list
 
+
+
 ### current_tab_num
 
 Returns the serial number of the current tab page.
 
 Returns: int
 
+
+
 ### current_tab_handle
 
 Returns the handle of the current tab page.
 
 Returns: str
+
+
 
 ### wait_ele()
 
@@ -1564,6 +1715,8 @@ Parameter Description:
 
 Returns: bool - whether the wait is successful
 
+
+
 ### check_page()
 
 In d mode, check whether the web page meets expectations. The response status is checked by default, and can be
@@ -1574,6 +1727,8 @@ Parameter Description:
 - by_requests: bool - Force the use of built- in response for checking
 
 Return: [bool, None]  - bool is available, None is unknown
+
+
 
 ### run_script()
 
@@ -1586,6 +1741,8 @@ Parameter Description:
 
 Returns: Any
 
+
+
 ### create_tab()
 
 Create and locate a tab page, which is at the end.
@@ -1596,11 +1753,15 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### close_current_tab()
 
 Close the current tab.
 
 Returns: None
+
+
 
 ### close_other_tabs()
 
@@ -1612,6 +1773,8 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### to_tab()
 
 Jump to the tab page.
@@ -1622,7 +1785,7 @@ Parameter Description:
 
 Returns: None
 
-### to_iframe()
+### to_frame()
 
 Jump to iframe, jump to the highest level by default, compatible with selenium native parameters.
 
@@ -1634,13 +1797,13 @@ Parameter Description:
 
 Example:
 
-- to_iframe('tag:iframe')- locate by the query string passed in iframe
-- to_iframe('iframe_id')- Positioning by the id attribute of the iframe
-- to_iframe('iframe_name')- locate by the name attribute of iframe
-- to_iframe(iframe_element)- locate by passing in the element object
-- to_iframe(0)- locate by the serial number of the iframe
-- to_iframe('main')- jump to the top level
-- to_iframe('parent')- jump to the previous level
+- to_frame('tag:iframe')- locate by the query string passed in iframe
+- to_frame('iframe_id')- Positioning by the id attribute of the iframe
+- to_frame('iframe_name')- locate by the name attribute of iframe
+- to_frame(iframe_element)- locate by passing in the element object
+- to_frame(0)- locate by the serial number of the iframe
+- to_frame('main')- jump to the top level
+- to_frame('parent')- jump to the previous level
 
 Returns: None
 
@@ -1853,6 +2016,12 @@ Returns the content of the ::after pseudo element of the current element
 
 Returns: str
 
+#### select
+
+If it is a select element, it returns the Select object, otherwise it returns None.
+
+Returns: Union[Select, None]
+
 ### texts()
 
 Returns the text of all direct child nodes within the element, including elements and text nodes
@@ -2008,8 +2177,8 @@ x or y value is not passed in, and you can choose whether to click with js.
 
 Parameter Description:
 
-- x: Union[int, str]           - The x-axis offset relative to the upper left corner of the element
-- y: Union[int, str]           - The y-axis offset relative to the upper left corner of the element
+- x: int - The x-axis offset relative to the upper left corner of the element
+- y: int - The y-axis offset relative to the upper left corner of the element
 - by_js: bool - whether to click with js
 
 Returns: None
@@ -2083,15 +2252,7 @@ Parameter Description:
 
 Returns: str
 
-### select()
 
-Select from the drop- down list.
-
-Parameter Description:
-
-- text: str - option text
-
-Returns: bool - success
 
 ### set_attr()
 

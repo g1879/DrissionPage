@@ -450,6 +450,9 @@ proxy = {'http': '127.0.0.1:1080', 'https': '127.0.0.1:1080'}
 
 # 传入配置，driver_or_options 和 session_or_options 都是可选的，须要使用对应模式才须要传入
 drission = Drission(driver_or_options, session_or_options, proxy=proxy)  
+
+# 关闭浏览器，debug 模式下须要显式调用这句，浏览器才能关掉
+drission.kill_browser()
 ```
 
 DriverOptions 和 SessionOptions 用法详见下文。
@@ -547,10 +550,11 @@ page.create_tab(url)  # 新建并定位到一个标签页,该标签页在最后�
 page.to_tab(num_or_handle)  # 跳转到标签页
 page.close_current_tab()  # 关闭当前标签页
 page.close_other_tabs(num_or_handles)  # 关闭其它标签页
-page.to_iframe(iframe)  # 切入 iframe
+page.to_frame(iframe)  # 切入 iframe
 page.screenshot(path)  # 页面截图
 page.scroll_to_see(element)  # 滚动直到某元素可见
-page.scroll_to(mode, pixel)  # 按参数指示方式滚动页面，可选滚动方向：'top', 'bottom', 'rightmost', 'leftmost', 'up', 'down', 'left', 'right'
+page.scroll_to(mode,
+               pixel)  # 按参数指示方式滚动页面，可选滚动方向：'top', 'bottom', 'rightmost', 'leftmost', 'up', 'down', 'left', 'right', 'half'
 page.refresh()  # 刷新当前页面
 page.back()  # 浏览器后退
 page.et_window_size(x, y)  # 设置浏览器窗口大小，默认最大化
@@ -703,12 +707,30 @@ element.run_script(js, *args)  # 对元素运行 JavaScript 脚本
 element.submit()  # 提交
 element.clear()  # 清空元素
 element.screenshot(path, filename)  # 对元素截图
-element.select(text)  # 根据文本选择下拉列表
 element.set_attr(attr, value)  # 设置元素属性值
 element.remove_attr(attr)  # 删除属性
 element.drag(x, y, speed, shake)  # 拖动元素相对距离，可设置速度和是否随机抖动
 element.drag_to(ele_or_loc, speed, shake)  # 拖动元素到另一个元素或某个坐标，可设置速度和是否随机抖动
 element.hover()  # 在元素上悬停鼠标
+
+# select 功能：
+element.select.is_multi  # 是否多选列表
+element.select.options  # 返回所有列表项对象
+element.select.selected_option  # 返回第一个被选中的 option 元素
+element.select.selected_options  # 返回所有被选中的 option 元素列表
+
+element.select(text)  # 根据文本选择下拉列表项
+element.select(value, 'value')  # 根据 value 选择下拉列表项
+element.select(index, 'index')  # 根据序号选择下拉列表项
+
+# 多选列表功能：
+element.select.deselect(text)  # 根据文本取消选择下拉列表项（多选列表时有效）
+element.select.deselect(value, 'value')  # 根据 value 取消选择下拉列表项（多选列表时有效）
+element.select.deselect(index, 'index')  # 根据序号取消选择下拉列表项（多选列表时有效）
+# 注：当列表为多选列表时，以上的第一个参数可以接收 list 或 tuple，同时选择或取消选择多个项
+
+element.select.clear()  # 清空多选列表选项
+element.select.invert()  # 反选多选列表选项
 ```
 
 
@@ -745,6 +767,8 @@ shadow_root_element.is_valid()  # 返回元素是否还在 dom 内
 ```
 
 **Tips:** 以上属性或方法获取到的元素是普通的 DriverElement，用法参考上文所述。
+
+
 
 ## 对接 selenium 及 requests
 
@@ -791,6 +815,8 @@ session = page.session
 response = session.get('https://www.baidu.com')
 ```
 
+
+
 ## requests 功能使用
 
 **连接参数**
@@ -817,6 +843,8 @@ requests 获取到的 Response 对象存放在 page.response，可直接使用�
 print(page.response.status_code)
 print(page.response.headers)
 ```
+
+
 
 ## 下载文件
 
