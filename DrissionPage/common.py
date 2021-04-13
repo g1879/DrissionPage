@@ -317,3 +317,25 @@ def unzip(zip_path: str, to_path: str) -> Union[list, None]:
 
     with ZipFile(zip_path, 'r') as f:
         return [f.extract(f.namelist()[0], path=to_path)]
+
+
+def get_exe_path_from_port(port: Union[str, int]) -> Union[str, None]:
+    """获取端口号第一条进程的可执行文件路径      \n
+    :param port: 端口号
+    :return: 可执行文件的绝对路径
+    """
+    from os import popen
+    from time import perf_counter
+    process = popen(f'netstat -ano |findstr {port}').read().split('\n')[0]
+    t = perf_counter()
+
+    while not process and perf_counter() - t < 10:
+        process = popen(f'netstat -ano |findstr {port}').read().split('\n')[0]
+
+    processid = process[process.rfind(' ') + 1:]
+
+    if not processid:
+        return
+    else:
+        file_lst = popen(f'wmic process where processid={processid} get executablepath').read().split('\n')
+        return file_lst[2].strip() if len(file_lst) > 2 else None

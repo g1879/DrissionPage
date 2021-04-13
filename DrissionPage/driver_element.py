@@ -23,6 +23,7 @@ class DriverElement(DrissionElement):
 
     def __init__(self, ele: WebElement, page=None):
         super().__init__(ele, page)
+        self._select = None
 
     def __repr__(self):
         attrs = [f"{attr}='{self.attrs[attr]}'" for attr in self.attrs]
@@ -55,7 +56,7 @@ class DriverElement(DrissionElement):
     @property
     def tag(self) -> str:
         """返回元素类型"""
-        return self._inner_ele.tag_name
+        return self._inner_ele.tag_name.lower()
 
     @property
     def attrs(self) -> dict:
@@ -158,7 +159,19 @@ class DriverElement(DrissionElement):
         """返回当前元素的::after伪元素内容"""
         return self.get_style_property('content', 'after')
 
+    @property
+    def select(self):
+        """返回专门处理下拉列表的Select类，非下拉列表元素返回False"""
+        if self._select is None:
+            if self.tag != 'select':
+                self._select = False
+            else:
+                self._select = Select(self)
+
+        return self._select
+
     # -----------------共有函数-------------------
+
     def texts(self, text_node_only: bool = False) -> list:
         """返回元素内所有直接子节点的文本，包括元素和文本节点   \n
         :param text_node_only: 是否只返回文本节点
@@ -448,21 +461,6 @@ class DriverElement(DrissionElement):
         self.inner_ele.screenshot(img_path)
 
         return img_path
-
-    def select(self, text: str) -> bool:
-        """选择下拉列表中子元素       \n
-        :param text: 要选择的文本
-        :return: 是否选择成功
-        """
-        from selenium.webdriver.support.select import Select
-        ele = Select(self.inner_ele)
-
-        try:
-            ele.select_by_visible_text(text)
-            return True
-        except Exception as e:
-            print(e)
-            return False
 
     def set_attr(self, attr: str, value: str) -> bool:
         """设置元素属性          \n
@@ -776,3 +774,152 @@ class ElementsByXpath(object):
                      else format_html(x)
                      for x in get_nodes(the_node, xpath_txt=self.xpath)
                      if x != '\n'])
+
+
+class Select(object):
+    def __init__(self, ele: DriverElement):
+        if ele.tag != 'select':
+            raise TypeError(f"Select only works on <select> elements, not on {ele.tag}")
+
+        from selenium.webdriver.support.select import Select as sl
+        self.inner_ele = ele
+        self.select_ele = sl(ele.inner_ele)
+
+    def __call__(self,
+                 text_value_index: Union[str, int, list, tuple] = None,
+                 para_type: str = 'text',
+                 deselect: bool = False) -> bool:
+        """选定或取消选定下拉列表中子元素                                                             \n
+        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param para_type: 参数类型，可选 'text'、'value'、'index'
+        :param deselect: 是否取消选择
+        :return: 是否选择成功
+        """
+        return self.select(text_value_index, para_type, deselect)
+
+    @property
+    def is_multi(self) -> bool:
+        """返回是否多选表单"""
+        return self.select_ele.is_multiple
+
+    @property
+    def options(self) -> List[DriverElement]:
+        """返回所有选项元素组成的列表"""
+        return self.inner_ele.eles('tag:option')
+
+    @property
+    def selected_options(self) -> List[DriverElement]:
+        """返回所有被选中的option元素列表  \n
+        :return: DriverElement对象组成的列表
+        """
+        return [x for x in self.options if x.is_selected()]
+
+    @property
+    def selected_option(self) -> Union[DriverElement, None]:
+        """返回第一个被选中的option元素  \n
+        :return: DriverElement对象或None
+        """
+        ele = self.inner_ele.run_script('return arguments[0].options[arguments[0].selectedIndex];')
+        return None if ele is None else DriverElement(ele, self.inner_ele.page)
+
+    def clear(self) -> None:
+        """清除所有已选项"""
+        self.select_ele.deselect_all()
+
+    def select(self,
+               text_value_index: Union[str, int, list, tuple] = None,
+               para_type: str = 'text',
+               deselect: bool = False) -> bool:
+        """选定或取消选定下拉列表中子元素                                                             \n
+        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param para_type: 参数类型，可选 'text'、'value'、'index'
+        :param deselect: 是否取消选择
+        :return: 是否选择成功
+        """
+        if not self.is_multi and isinstance(text_value_index, (list, tuple)):
+            raise TypeError('单选下拉列表不能传入list和tuple')
+
+        if isinstance(text_value_index, (str, int)):
+            try:
+                if para_type == 'text':
+                    if deselect:
+                        self.select_ele.deselect_by_visible_text(text_value_index)
+                    else:
+                        self.select_ele.select_by_visible_text(text_value_index)
+                elif para_type == 'value':
+                    if deselect:
+                        self.select_ele.deselect_by_value(text_value_index)
+                    else:
+                        self.select_ele.select_by_value(text_value_index)
+                elif para_type == 'index':
+                    if deselect:
+                        self.select_ele.deselect_by_index(int(text_value_index))
+                    else:
+                        self.select_ele.select_by_index(int(text_value_index))
+                else:
+                    raise ValueError('para_type参数只能传入"text"、"value"或"index"。')
+                return True
+
+            except:
+                return False
+
+        elif isinstance(text_value_index, (list, tuple)):
+            self.select_multi(text_value_index, para_type, deselect)
+
+        else:
+            raise TypeError('只能传入str、int、list和tuple类型。')
+
+    def select_multi(self,
+                     text_value_index: Union[list, tuple] = None,
+                     para_type: str = 'text',
+                     deselect: bool = False) -> Union[bool, list]:
+        """选定或取消选定下拉列表中多个子元素                                                             \n
+        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param para_type: 参数类型，可选 'text'、'value'、'index'
+        :param deselect: 是否取消选择
+        :return: 是否选择成功
+        """
+        if para_type not in ('text', 'value', 'index'):
+            raise ValueError('para_type参数只能传入“text”、“value”或“index”')
+
+        if isinstance(text_value_index, (list, tuple)):
+            fail_list = []
+            for i in text_value_index:
+                if not isinstance(i, (int, str)):
+                    raise TypeError('列表只能由str或int组成')
+
+                if not self.select(i, para_type, deselect):
+                    fail_list.append(i)
+
+            return fail_list or True
+
+        else:
+            raise TypeError('只能传入list或tuple类型。')
+
+    def deselect(self,
+                 text_value_index: Union[str, int, list, tuple] = None,
+                 para_type: str = 'text') -> bool:
+        """取消选定下拉列表中子元素                                                             \n
+        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param para_type: 参数类型，可选 'text'、'value'、'index'
+        :return: 是否选择成功
+        """
+        return self.select(text_value_index, para_type, True)
+
+    def deselect_multi(self,
+                       text_value_index: Union[list, tuple] = None,
+                       para_type: str = 'text') -> Union[bool, list]:
+        """取消选定下拉列表中多个子元素                                                             \n
+        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param para_type: 参数类型，可选 'text'、'value'、'index'
+        :return: 是否选择成功
+        """
+        return self.select_multi(text_value_index, para_type, True)
+
+    def invert(self) -> None:
+        """反选"""
+        if not self.is_multi:
+            raise NotImplementedError("You may only deselect options of a multi-select")
+
+        for i in self.options:
+            i.click()

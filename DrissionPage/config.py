@@ -399,7 +399,7 @@ class SessionOptions(object):
         path = path / 'config.ini' if path.is_dir() else path
 
         if path.exists():
-            om = OptionsManager(path)
+            om = OptionsManager(str(path))
         else:
             om = OptionsManager(self.ini_path or str(Path(__file__).parent / 'configs.ini'))
 
@@ -466,7 +466,7 @@ class DriverOptions(Options):
         path = path / 'config.ini' if path.is_dir() else path
 
         if path.exists():
-            om = OptionsManager(path)
+            om = OptionsManager(str(path))
         else:
             om = OptionsManager(self.ini_path or str(Path(__file__).parent / 'configs.ini'))
 

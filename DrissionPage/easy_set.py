@@ -208,11 +208,11 @@ def get_match_driver(ini_path: Union[str, None] = 'default',
     chrome_path = chrome_path or _get_chrome_path(ini_path, show_msg)
     chrome_path = Path(chrome_path).absolute() if chrome_path else None
     if show_msg:
-        print('chrome.exe路径', chrome_path, '\n')
+        print('chrome.exe路径', chrome_path)
 
-    ver = _get_chrome_version(chrome_path)
+    ver = _get_chrome_version(str(chrome_path))
     if show_msg:
-        print('version', ver, '\n')
+        print('version', ver)
 
     zip_path = _download_driver(ver, save_path, show_msg=show_msg)
 
@@ -225,7 +225,7 @@ def get_match_driver(ini_path: Union[str, None] = 'default',
         driver_path = None
 
     if show_msg:
-        print('\n解压路径', driver_path, '\n')
+        print('解压路径', driver_path)
 
     if driver_path:
         Path(zip_path).unlink()
@@ -242,13 +242,17 @@ def get_match_driver(ini_path: Union[str, None] = 'default',
     return driver_path
 
 
-def _get_chrome_path(ini_path: str = None, show_msg: bool = True) -> Union[str, None]:
+def _get_chrome_path(ini_path: str = None,
+                     show_msg: bool = True,
+                     from_ini: bool = True,
+                     from_regedit: bool = True,
+                     from_system_path: bool = True, ) -> Union[str, None]:
     """从ini文件或系统变量中获取chrome.exe的路径    \n
     :param ini_path: ini文件路径
     :return: chrome.exe路径
     """
     # -----------从ini文件中获取--------------
-    if ini_path:
+    if ini_path and from_ini:
         try:
             path = OptionsManager(ini_path).chrome_options['binary_location']
         except KeyError:
@@ -261,46 +265,48 @@ def _get_chrome_path(ini_path: str = None, show_msg: bool = True) -> Union[str, 
         return str(path)
 
     # -----------从注册表中获取--------------
-    import winreg
-    try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                             r'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe',
-                             reserved=0, access=winreg.KEY_READ)
-        k = winreg.EnumValue(key, 0)
-        winreg.CloseKey(key)
-
-        if show_msg:
-            print('注册表中', end='')
-
-        return k[1]
-
-    except FileNotFoundError:
-        pass
-
-    # -----------从系统路径中获取--------------
-    paths = popen('set path').read().lower()
-    r = RE_SEARCH(r'[^;]*chrome[^;]*', paths)
-
-    if r:
-        path = Path(r.group(0)) if 'chrome.exe' in r.group(0) else Path(r.group(0)) / 'chrome.exe'
-
-        if path.exists():
-            if show_msg:
-                print('系统中', end='')
-            return str(path)
-
-    paths = paths.split(';')
-
-    for path in paths:
-        path = Path(path) / 'chrome.exe'
-
+    if from_regedit:
+        import winreg
         try:
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                                 r'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe',
+                                 reserved=0, access=winreg.KEY_READ)
+            k = winreg.EnumValue(key, 0)
+            winreg.CloseKey(key)
+
+            if show_msg:
+                print('注册表中', end='')
+
+            return k[1]
+
+        except FileNotFoundError:
+            pass
+
+    # -----------从系统变量中获取--------------
+    if from_system_path:
+        paths = popen('set path').read().lower()
+        r = RE_SEARCH(r'[^;]*chrome[^;]*', paths)
+
+        if r:
+            path = Path(r.group(0)) if 'chrome.exe' in r.group(0) else Path(r.group(0)) / 'chrome.exe'
+
             if path.exists():
                 if show_msg:
                     print('系统变量中', end='')
                 return str(path)
-        except OSError:
-            pass
+
+        paths = paths.split(';')
+
+        for path in paths:
+            path = Path(path) / 'chrome.exe'
+
+            try:
+                if path.exists():
+                    if show_msg:
+                        print('系统变量中', end='')
+                    return str(path)
+            except OSError:
+                pass
 
 
 def _get_chrome_version(path: str) -> Union[str, None]:
