@@ -122,7 +122,8 @@ class DriverElement(DrissionElement):
         return self._get_brother(1, 'ele', 'prev')
 
     @property
-    def comments(self):
+    def comments(self) -> list:
+        """返回元素注释文本组成的列表"""
         return self.eles('xpath:.//comment()')
 
     # -----------------driver独占属性-------------------
@@ -777,7 +778,12 @@ class ElementsByXpath(object):
 
 
 class Select(object):
+    """Select 类专门用于处理 d 模式下 select 标签"""
+
     def __init__(self, ele: DriverElement):
+        """初始化                      \n
+        :param ele: select 元素对象
+        """
         if ele.tag != 'select':
             raise TypeError(f"Select only works on <select> elements, not on {ele.tag}")
 
@@ -808,19 +814,19 @@ class Select(object):
         return self.inner_ele.eles('tag:option')
 
     @property
-    def selected_options(self) -> List[DriverElement]:
-        """返回所有被选中的option元素列表  \n
-        :return: DriverElement对象组成的列表
-        """
-        return [x for x in self.options if x.is_selected()]
-
-    @property
     def selected_option(self) -> Union[DriverElement, None]:
-        """返回第一个被选中的option元素  \n
+        """返回第一个被选中的option元素        \n
         :return: DriverElement对象或None
         """
         ele = self.inner_ele.run_script('return arguments[0].options[arguments[0].selectedIndex];')
         return None if ele is None else DriverElement(ele, self.inner_ele.page)
+
+    @property
+    def selected_options(self) -> List[DriverElement]:
+        """返回所有被选中的option元素列表        \n
+        :return: DriverElement对象组成的列表
+        """
+        return [x for x in self.options if x.is_selected()]
 
     def clear(self) -> None:
         """清除所有已选项"""
@@ -874,7 +880,7 @@ class Select(object):
                      para_type: str = 'text',
                      deselect: bool = False) -> Union[bool, list]:
         """选定或取消选定下拉列表中多个子元素                                                             \n
-        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param text_value_index: 根据文本、值选或序号择选多项
         :param para_type: 参数类型，可选 'text'、'value'、'index'
         :param deselect: 是否取消选择
         :return: 是否选择成功
@@ -910,7 +916,7 @@ class Select(object):
                        text_value_index: Union[list, tuple] = None,
                        para_type: str = 'text') -> Union[bool, list]:
         """取消选定下拉列表中多个子元素                                                             \n
-        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param text_value_index: 根据文本、值选或序号取消择选多项
         :param para_type: 参数类型，可选 'text'、'value'、'index'
         :return: 是否选择成功
         """

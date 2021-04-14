@@ -1275,39 +1275,35 @@ Return the WebDriver object, which is automatically initialized according to the
 
 Returns: WebDriver- Managed WebDriver object
 
-
-
 ### driver_options
 
 Return or set the driver configuration.
 
 Returns: dict
 
-
-
 ### session_options
 
-Return to session configuration.
+Return session configuration.
 
 Returns: dict
 
+### proxy
 
+Return proxy configuration.
+
+Returns: dict
+
+### debugger_progress
+
+Return debug browser process.
+
+Returns: debug browser process
 
 ### session_options()
 
 Set the session configuration.
 
 Returns: None
-
-
-
-### proxy
-
-Return to proxy configuration.
-
-Returns: dict
-
-
 
 ### cookies_to_session()
 
@@ -1377,15 +1373,15 @@ Close the session and set it to None.
 
 Returns: None
 
-
-
 ### close()
 
 Close the driver and session.
 
 Returns: None
 
+### kill_browser()
 
+Close the browser process (if possible).
 
 ## MixPage Class
 
@@ -1807,6 +1803,8 @@ Example:
 
 Returns: None
 
+
+
 ### scroll_to_see()
 
 Scroll until the element is visible.
@@ -1817,6 +1815,8 @@ Parameter Description:
   ele() method.
 
 Returns: None
+
+
 
 ### scroll_to()
 
@@ -1829,17 +1829,23 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### refresh()
 
 refresh page.
 
 Returns: None
 
+
+
 ### back()
 
 The page goes back.
 
 Returns: None
+
+
 
 ### set_window_size()
 
@@ -1852,6 +1858,8 @@ Parameter Description:
 
 Returns: None
 
+
+
 ### screenshot()
 
 Take a screenshot of the web page and return the path of the screenshot file
@@ -1863,6 +1871,8 @@ Parameter Description:
 
 Returns: str
 
+
+
 ### chrome_downloading()
 
 Return to the list of files downloaded by the browser.
@@ -1872,6 +1882,8 @@ Parameter Description:
 - download_path: str - download folder path
 
 Returns: list
+
+
 
 ### process_alert()
 
@@ -1885,17 +1897,23 @@ Parameter Description:
 
 Returns: [str, None]  - the text of the prompt box content
 
+
+
 ### close_driver()
 
 Close the driver and browser.
 
 Returns: None
 
+
+
 ### close_session()
 
 Close the session.
 
 Returns: None
+
+
 
 ## DriverElement class
 
@@ -1908,11 +1926,15 @@ Parameter Description:
 - ele: WebElement- WebElement object
 - page: DriverPage- the page object where the element is located
 
+
+
 ### inner_ele
 
 The wrapped WebElement object.
 
 Returns: WebElement
+
+
 
 ### html
 
@@ -1920,17 +1942,23 @@ Returns the outerHTML text of the element.
 
 Returns: str
 
+
+
 ### inner_html
 
 Returns the innerHTML text of the element.
 
 Returns: str
 
+
+
 ### tag
 
 Returns the element tag name.
 
 Returns: str
+
+
 
 ### attrs
 
@@ -1962,11 +1990,15 @@ Returns the absolute path of the element css selector.
 
 Returns: str
 
+
+
 ### xpath
 
 Returns the absolute path of the element xpath.
 
 Returns: str
+
+
 
 ### parent
 
@@ -1974,11 +2006,15 @@ Returns the parent element object.
 
 Returns: DriverElement
 
+
+
 ### next
 
 Return the next sibling element object.
 
 Returns: DriverElement
+
+
 
 ### prev
 
@@ -1986,11 +2022,15 @@ Returns the previous sibling element object.
 
 Returns: DriverElement
 
+
+
 ### size
 
 Return the element size in a dictionary.
 
 Returns: dict
+
+
 
 ### location
 
@@ -1998,11 +2038,15 @@ Replace the element coordinates in a dictionary.
 
 Returns: dict
 
+
+
 ### shadow_root
 
 Returns the shadow_root element object of the current element
 
 Returns: ShadowRoot
+
+
 
 ### before
 
@@ -2032,6 +2076,8 @@ Parameter Description:
 
 Returns: List[str]
 
+
+
 ### parents()
 
 Returns the Nth level parent element object.
@@ -2041,6 +2087,8 @@ Parameter Description:
 - num: int - which level of parent element
 
 Returns: DriverElement
+
+
 
 ### nexts()
 
@@ -2053,6 +2101,8 @@ Parameter Description:
 
 Returns: [DriverElement, str]
 
+
+
 ### prevs()
 
 Returns the text of the previous num sibling element or node.
@@ -2064,6 +2114,8 @@ Parameter Description:
 
 Returns: [DriverElement, str]
 
+
+
 ### attr()
 
 Get the value of an attribute of an element.
@@ -2073,6 +2125,8 @@ Parameter Description:
 - attr: str - attribute name
 
 Returns: str
+
+
 
 ### ele()
 
@@ -2137,6 +2191,8 @@ Example:
 
 Returns: [DriverElement, str]
 
+
+
 ### eles()
 
 Get the list of elements that meet the conditions according to the query parameters. The query parameter usage method is
@@ -2149,6 +2205,8 @@ Parameter Description:
 
 Returns: List[DriverElement or str]
 
+
+
 ### get_style_property()
 
 Returns the element style attribute value.
@@ -2159,6 +2217,8 @@ Parameter Description:
 - pseudo_ele: str - pseudo element name
 
 Returns: str
+
+
 
 ### click()
 
@@ -2194,6 +2254,8 @@ Parameter Description:
 
 Returns: bool
 
+
+
 ### run_script()
 
 Execute the js code and pass in yourself as the first parameter.
@@ -2205,11 +2267,15 @@ Parameter Description:
 
 Returns: Any
 
+
+
 ### submit()
 
 submit Form.
 
 Returns: None
+
+
 
 ### clear()
 
@@ -2217,11 +2283,15 @@ Clear the text box.
 
 Returns: None
 
+
+
 ### is_selected()
 
 Whether the element is selected.
 
 Returns: bool
+
+
 
 ### is_enabled()
 
@@ -2229,17 +2299,23 @@ Whether the element is available on the page.
 
 Returns: bool
 
+
+
 ### is_displayed()
 
 Whether the element is visible.
 
 Returns: bool
 
+
+
 ### is_valid()
 
 Whether the element is still in the DOM. This method is used to determine when the page jump element cannot be used
 
 Returns: bool
+
+
 
 ### screenshot()
 
@@ -2265,6 +2341,8 @@ Parameter Description:
 
 Returns: bool - whether it was successful
 
+
+
 ### remove_attr()
 
 Remove element attributes.
@@ -2274,6 +2352,8 @@ Parameter Description:
 - attr: str -parameter name
 
 Returns: bool - whether it was successful
+
+
 
 ### drag()
 
@@ -2287,6 +2367,8 @@ Parameter Description:
 - shake: bool - whether to shake randomly
 
 Returns: bool
+
+
 
 ### drag_to()
 
@@ -2509,6 +2591,93 @@ Parameter Description:
 - loc_or_str: [Tuple[str, str], str]  - query condition parameter
 
 Returns: List[SessionElement or str]
+
+## Select class
+
+### class Select()
+
+The Select class is specifically used to process select tags in d mode.
+
+Parameter Description:
+
+- ele: DriverElement - select element object
+
+### is_multi
+
+Returns: bool - Whether to select multiple lists
+
+### options
+
+Returns: List[DriverElement]  - a list of all selected option elements
+
+### selected_option
+
+Returns: Union[DriverElement, None]  - the first option element selected
+
+### selected_options
+
+Returns: List[DriverElement]  -a list of all selected option elements
+
+### clear()
+
+Clear all selected items.
+
+### select()
+
+Select or deselect child elements in the drop-down list.
+
+Parameter Description:
+
+- text_value_index: Union[str, int, list, tuple]  - select options based on text, value or serial number. If multiple
+  selections are allowed, multiple selections can be made by inputting a list or tuple
+
+- para_type: str - parameter type, optional'text','value','index'
+
+- deselect: bool - Whether to cancel the selection
+
+Returns: bool - Whether the selection is successful
+
+### select_multi()
+
+Select or deselect multiple child elements in the drop-down list.
+
+Parameter Description:
+
+- text_value_index: Union[list, tuple]  - Select multiple items based on text, value or serial number
+
+- para_type: str - parameter type, optional'text','value','index'
+
+- deselect: bool - Whether to cancel the selection
+
+Returns: Whether the selection is successful
+
+### deselect()
+
+Select or deselect child elements in the drop-down list.
+
+Parameter Description:
+
+- text_value_index: Union[str, int, list, tuple]  - deselect options based on text, value selection, or serial number.
+  If multiple selections are allowed, multiple selections can be made by inputting a list or tuple
+
+- para_type: str - parameter type, optional'text','value','index'
+
+Returns: Whether the selection is successful
+
+### deselect_multi()
+
+Select or deselect multiple child elements in the drop-down list.
+
+Parameter Description:
+
+- text_value_index: Union[list, tuple]  - Select multiple items based on text, value selection or serial number
+- para_type: str - parameter type, optional'text','value','index'
+
+Returns: Whether the selection is successful
+
+### invert()
+
+Invert the election.
 
 ## ShadowRootElement class
 

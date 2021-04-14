@@ -393,7 +393,7 @@ def _create_chrome(chrome_path: str, port: str, args: list, proxy: dict) -> tupl
         else:
             args1.append(arg)
 
-    args = ' '.join(args1)
+    args = ' '.join(set(args1))
 
     if proxy:
         args = f'{args} --proxy-server={proxy["http"]}'
