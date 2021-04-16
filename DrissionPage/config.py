@@ -667,8 +667,7 @@ def _dict_to_chrome_options(options: dict) -> Options:
 
             for i in options['experimental_options']:
                 chrome_options.add_experimental_option(i, options['experimental_options'][i])
-        # if options.get('capabilities' ,None):
-        #     pass  # 未知怎么用
+
     return chrome_options
 
 
@@ -683,8 +682,9 @@ def _chrome_options_to_dict(options: Union[dict, DriverOptions, Options, None]) 
     re_dict = dict()
     attrs = ['debugger_address', 'binary_location', 'arguments', 'extensions', 'experimental_options', 'driver_path']
 
+    options_dir = options.__dir__()
     for attr in attrs:
-        re_dict[attr] = options.__getattribute__(f'_{attr}')
+        re_dict[attr] = options.__getattribute__(f'_{attr}') if attr in options_dir else None
 
     return re_dict
 
