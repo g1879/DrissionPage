@@ -417,7 +417,7 @@ class DriverElement(DrissionElement):
     def clear(self) -> None:
         """清空元素文本"""
         self.run_script("arguments[0].value=''")
-        # self.ele.clear()
+        # self.inner_ele.clear()
 
     def is_selected(self) -> bool:
         """是否选中"""
@@ -463,10 +463,23 @@ class DriverElement(DrissionElement):
 
         return img_path
 
-    def set_attr(self, attr: str, value: str) -> bool:
-        """设置元素属性          \n
-        :param attr: 属性名
+    def set_property(self, prop: str, value: str) -> bool:
+        """设置元素property属性          \n
+        :param prop: 属性名
         :param value: 属性值
+        :return: 是否设置成功
+        """
+        try:
+            value = value.replace("'", "\\'")
+            self.run_script(f"arguments[0].{prop}='{value}';")
+            return True
+        except:
+            return False
+
+    def set_attr(self, attr: str, value: str) -> bool:
+        """设置元素attribute参数          \n
+        :param attr: 参数名
+        :param value: 参数值
         :return: 是否设置成功
         """
         try:
