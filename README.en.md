@@ -2376,8 +2376,8 @@ Drag the current element, the target is another element or coordinate tuple, and
 
 Parameter Description:
 
-- ele_or_loc[tuple, WebElement, DrissionElement]  - Another element or relative current position, the coordinates are
-  the coordinates of the element's midpoint.
+- ele_or_loc[tuple, WebElement, BaseElement]  - Another element or relative current position, the coordinates are the
+  coordinates of the element's midpoint.
 - speed: int - drag speed
 - shake: bool - whether to shake randomly
 
