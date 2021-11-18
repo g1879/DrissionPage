@@ -1,3 +1,7 @@
+# 声明
+访问github经常抽风，新版本主要在gitee更新，请移步查看。
+https://gitee.com/g1879/DrissionPage
+
 # 简介
 
 ***
