@@ -2,3 +2,4 @@ selenium
 requests
 tldextract
 lxml
+cssselect
