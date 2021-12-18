@@ -1,51 +1,56 @@
-#!/usr/bin/env python
 # -*- coding:utf-8 -*-
+"""
+@Author  :   g1879
+@Contact :   g1879@qq.com
+@File    :   shadow_root_element.py
+"""
 from re import split as re_SPLIT
-from typing import Union, Any, Tuple
+from typing import Union, Any, Tuple, List
 
 from selenium.webdriver.remote.webelement import WebElement
 
-from .common import format_html, DrissionElement
-from .driver_element import execute_driver_find, DriverElement
+from .base import BaseElement
+from .driver_element import make_driver_ele, DriverElement
+from .session_element import make_session_ele
 
 
-class ShadowRootElement(DrissionElement):
+class ShadowRootElement(BaseElement):
+    """ShadowRootElement是用于处理ShadowRoot的类，使用方法和DriverElement基本一致"""
+
     def __init__(self, inner_ele: WebElement, parent_ele: DriverElement):
         super().__init__(inner_ele, parent_ele.page)
         self.parent_ele = parent_ele
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<ShadowRootElement in {self.parent_ele} >'
 
     def __call__(self,
                  loc_or_str: Union[Tuple[str, str], str],
-                 mode: str = 'single',
-                 timeout: float = None):
-        """实现查找元素的简化写法                                     \n
+                 timeout: float = None) -> Union[DriverElement, List[DriverElement], str]:
+        """在内部查找元素                                            \n
         例：ele2 = ele1('@id=ele_id')                               \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param mode: 'single' 或 'all'，对应查找一个或全部
         :param timeout: 超时时间
-        :return: DriverElement对象
+        :return: DriverElement对象或属性、文本
         """
-        return self.ele(loc_or_str, mode, timeout)
+        return self.ele(loc_or_str, timeout)
 
     @property
-    def tag(self):
+    def tag(self) -> str:
         """元素标签名"""
         return 'shadow-root'
 
     @property
-    def html(self):
-        """内部html文本"""
-        return format_html(self.inner_ele.get_attribute('innerHTML'))
+    def html(self) -> str:
+        """返回内部的html文本"""
+        return self.inner_ele.get_attribute('innerHTML')
 
     @property
-    def parent(self):
+    def parent(self) -> DriverElement:
         """shadow-root所依赖的父元素"""
         return self.parent_ele
 
-    def parents(self, num: int = 1):
+    def parents(self, num: int = 1) -> DriverElement:
         """返回上面第num级父元素              \n
         :param num: 第几级父元素
         :return: DriverElement对象
@@ -53,12 +58,7 @@ class ShadowRootElement(DrissionElement):
         loc = 'xpath', f'.{"/.." * (num - 1)}'
         return self.parent_ele.ele(loc, timeout=0.1)
 
-    @property
-    def next(self):
-        """返回后一个兄弟元素"""
-        return self.nexts()
-
-    def nexts(self, num: int = 1):
+    def nexts(self, num: int = 1) -> DriverElement:
         """返回后面第num个兄弟元素      \n
         :param num: 后面第几个兄弟元素
         :return: DriverElement对象
@@ -68,92 +68,60 @@ class ShadowRootElement(DrissionElement):
 
     def ele(self,
             loc_or_str: Union[Tuple[str, str], str],
-            mode: str = 'single',
-            timeout: float = None):
-        """返回当前元素下级符合条件的子元素，默认返回第一个                                                    \n
-        示例：                                                                                           \n
-        - 用loc元组查找：                                                                                 \n
-            ele.ele((By.CLASS_NAME, 'ele_class')) - 返回第一个class为ele_class的子元素                     \n
-        - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、css selector                                               \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
-            ele.ele('.ele_class')                       - 返回所有 class 为 ele_class 的子元素             \n
-            ele.ele('.:ele_class')                      - 返回所有 class 中含有 ele_class 的子元素          \n
-            ele.ele('#ele_id')                          - 返回所有 id 为 ele_id 的子元素                   \n
-            ele.ele('#:ele_id')                         - 返回所有 id 中含有 ele_id 的子元素                \n
-            ele.ele('@class:ele_class')                 - 返回第一个class含有ele_class的子元素              \n
-            ele.ele('@name=ele_name')                   - 返回第一个name等于ele_name的子元素                \n
-            ele.ele('@placeholder')                     - 返回第一个带placeholder属性的子元素               \n
-            ele.ele('tag:p')                            - 返回第一个<p>子元素                              \n
-            ele.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div子元素           \n
-            ele.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div子元素           \n
-            ele.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div子元素             \n
-            ele.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div子元素             \n
-            ele.ele('text:some_text')                   - 返回第一个文本含有some_text的子元素                \n
-            ele.ele('some_text')                        - 返回第一个文本含有some_text的子元素（等价于上一行）  \n
-            ele.ele('text=some_text')                   - 返回第一个文本等于some_text的子元素                \n
-            ele.ele('css:div.ele_class')                - 返回第一个符合css selector的子元素                 \n
-        - 查询字符串还有最精简模式，用c代替css、t代替tag、tx代替text：                                          \n
-            ele.ele('c:div.ele_class')                  - 等同于 ele.ele('css:div.ele_class')              \n
-            ele.ele('t:div')                            - 等同于 ele.ele('tag:div')                        \n
-            ele.ele('t:div@tx()=some_text')             - 等同于 ele.ele('tag:div@txet()=some_text')       \n
-            ele.ele('tx:some_text')                     - 等同于 ele.ele('text:some_text')                 \n
-            ele.ele('tx=some_text')                     - 等同于 ele.ele('text=some_text')
+            timeout: float = None) -> Union[DriverElement, List[DriverElement]]:
+        """返回当前元素下级符合条件的第一个元素，默认返回                                   \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param mode: 'single' 或 'all'，对应查找一个或全部
         :param timeout: 查找元素超时时间
+        :return: DriverElement对象或属性、文本
+        """
+        return self._ele(loc_or_str, timeout)
+
+    def eles(self,
+             loc_or_str: Union[Tuple[str, str], str],
+             timeout: float = None) -> List[DriverElement]:
+        """返回当前元素下级所有符合条件的子元素                                              \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param timeout: 查找元素超时时间
+        :return: DriverElement对象或属性、文本组成的列表
+        """
+        return self._ele(loc_or_str, timeout=timeout, single=False)
+
+    def s_ele(self, loc_or_ele=None):
+        """查找第一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高                 \n
+        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :return: SessionElement对象或属性、文本
+        """
+        return make_session_ele(self, loc_or_ele)
+
+    def s_eles(self, loc_or_ele):
+        """查找所有符合条件的元素以SessionElement列表形式返回，处理复杂页面时效率很高                 \n
+        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :return: SessionElement对象或属性、文本
+        """
+        return make_session_ele(self, loc_or_ele, single=False)
+
+    def _ele(self,
+             loc_or_str: Union[Tuple[str, str], str],
+             timeout: float = None,
+             single: bool = True) -> Union[DriverElement, List[DriverElement]]:
+        """返回当前元素下级符合条件的子元素，默认返回第一个                                                    \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param timeout: 查找元素超时时间
+        :param single: True则返回第一个，False则返回全部
         :return: DriverElement对象
         """
         if isinstance(loc_or_str, str):
             loc_or_str = str_to_css_loc(loc_or_str)
         elif isinstance(loc_or_str, tuple) and len(loc_or_str) == 2:
             if loc_or_str[0] == 'xpath':
-                raise ValueError('不支持xpath')
+                raise ValueError('不支持xpath。')
         else:
-            raise ValueError('Argument loc_or_str can only be tuple or str.')
+            raise ValueError('loc_or_str参数只能是tuple或str类型。')
 
         if loc_or_str[0] == 'css selector':
-            return execute_driver_find(self, loc_or_str, mode, timeout)
+            return make_driver_ele(self, loc_or_str, single, timeout)
         elif loc_or_str[0] == 'text':
-            return self._find_eles_by_text(loc_or_str[1], loc_or_str[2], loc_or_str[3], mode)
-
-    def eles(self,
-             loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None):
-        """返回当前元素下级所有符合条件的子元素                                                            \n
-        示例：                                                                                          \n
-        - 用loc元组查找：                                                                                \n
-            ele.eles((By.CLASS_NAME, 'ele_class')) - 返回所有class为ele_class的子元素                     \n
-        - 用查询字符串查找：                                                                              \n
-            查找方式：属性、tag name和属性、文本、css selector                                              \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
-            ele.eles('.ele_class')                       - 返回所有 class 为 ele_class 的子元素            \n
-            ele.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的子元素         \n
-            ele.eles('#ele_id')                          - 返回所有 id 为 ele_id 的子元素                  \n
-            ele.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的子元素               \n
-            ele.eles('@class:ele_class')                 - 返回所有class含有ele_class的子元素              \n
-            ele.eles('@name=ele_name')                   - 返回所有name等于ele_name的子元素                \n
-            ele.eles('@placeholder')                     - 返回所有带placeholder属性的子元素               \n
-            ele.eles('tag:p')                            - 返回所有<p>子元素                              \n
-            ele.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div子元素           \n
-            ele.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div子元素           \n
-            ele.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div子元素             \n
-            ele.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div子元素             \n
-            ele.eles('text:some_text')                   - 返回所有文本含有some_text的子元素                \n
-            ele.eles('some_text')                        - 返回所有文本含有some_text的子元素（等价于上一行）  \n
-            ele.eles('text=some_text')                   - 返回所有文本等于some_text的子元素                \n
-            ele.eles('css:div.ele_class')                - 返回所有符合css selector的子元素                 \n
-        - 查询字符串还有最精简模式，用c代替css、t代替tag、tx代替text：                                          \n
-            ele.eles('c:div.ele_class')                  - 等同于 ele.eles('css:div.ele_class')            \n
-            ele.eles('t:div')                            - 等同于 ele.eles('tag:div')                      \n
-            ele.eles('t:div@tx()=some_text')             - 等同于 ele.eles('tag:div@txet()=some_text')     \n
-            ele.eles('tx:some_text')                     - 等同于 ele.eles('text:some_text')               \n
-            ele.eles('tx=some_text')                     - 等同于 ele.eles('text=some_text')
-        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
-        :return: DriverElement对象组成的列表
-        """
-        return self.ele(loc_or_str, mode='all', timeout=timeout)
+            return self._find_eles_by_text(loc_or_str[1], loc_or_str[2], loc_or_str[3], single)
 
     def run_script(self, script: str, *args) -> Any:
         """执行js代码，传入自己为第一个参数  \n
@@ -172,15 +140,20 @@ class ShadowRootElement(DrissionElement):
         try:
             self.is_enabled()
             return True
-        except:
+        except Exception:
             return False
 
-    def _find_eles_by_text(self, text: str, tag: str = '', match: str = 'exact', mode: str = 'single'):
+    # ----------------ShadowRootElement独有方法-----------------------
+    def _find_eles_by_text(self,
+                           text: str,
+                           tag: str = '',
+                           match: str = 'exact',
+                           single: bool = True) -> Union[DriverElement, List[DriverElement]]:
         """根据文本获取页面元素                               \n
         :param text: 文本字符串
         :param tag: tag name
         :param match: 'exact' 或 'fuzzy'，对应精确或模糊匹配
-        :param mode: 'single' 或 'all'，对应匹配一个或全部
+        :param single: True则返回第一个，False则返回全部
         :return: 返回DriverElement对象或组成的列表
         """
         # 获取所有元素
@@ -200,43 +173,27 @@ class ShadowRootElement(DrissionElement):
             if text == '' or match == 'exact':
                 if text == txt:
 
-                    if mode == 'single':
+                    if single:
                         return DriverElement(ele, self.page)
-                    elif mode == 'all':
+                    else:
                         results.append(DriverElement(ele, self.page))
 
             # 模糊匹配
             elif match == 'fuzzy':
                 if text in txt:
 
-                    if mode == 'single':
+                    if single:
                         return DriverElement(ele, self.page)
-                    elif mode == 'all':
+                    else:
                         results.append(DriverElement(ele, self.page))
 
-        return None if mode == 'single' else results
+        return None if single else results
 
 
 def str_to_css_loc(loc: str) -> tuple:
     """处理元素查找语句                                                                              \n
-    查找方式：属性、tag name及属性、文本、css selector                                                \n
+    查找方式：属性、tag name及属性、文本、css selector                                              \n
     @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
-    示例：                                                                                          \n
-        .ele_class                  - class为ele_class的元素                                        \n
-        .:ele_class                 - class含有ele_class的元素                                      \n
-        #ele_id                     - id为ele_id的元素                                              \n
-        #:ele_id                    - id含有ele_id的元素                                            \n
-        @class:ele_class            - class含有ele_class的元素                                      \n
-        @class=ele_class            - class等于ele_class的元素                                      \n
-        @class                      - 带class属性的元素                                             \n
-        tag:div                     - div元素                                                      \n
-        tag:div@class:ele_class     - class含有ele_class的div元素                                   \n
-        tag:div@class=ele_class     - class等于ele_class的div元素                                   \n
-        tag:div@text():search_text  - 文本含有search_text的div元素                                  \n
-        tag:div@text()=search_text  - 文本等于search_text的div元素                                  \n
-        text:search_text            - 文本含有search_text的元素                                     \n
-        text=search_text            - 文本等于search_text的元素                                     \n
-        css:div.ele_class           - 符合css selector的元素                                       \n
     """
     loc_by = 'css selector'
 
@@ -260,7 +217,7 @@ def str_to_css_loc(loc: str) -> tuple:
         loc = f'text{loc[2:]}'
 
     elif loc.startswith(('x:', 'x=', 'xpath:', 'xpath=')):
-        raise ValueError('不支持xpath')
+        raise ValueError('不支持xpath。')
 
     # 根据属性查找
     if loc.startswith('@'):

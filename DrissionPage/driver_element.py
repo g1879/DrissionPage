@@ -4,9 +4,9 @@
 @Contact :   g1879@qq.com
 @File    :   driver_element.py
 """
-import re
+from os import sep
 from pathlib import Path
-from time import sleep
+from time import time, perf_counter
 from typing import Union, List, Any, Tuple
 
 from selenium.common.exceptions import TimeoutException, JavascriptException, InvalidElementStateException
@@ -15,48 +15,52 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
-from .common import DrissionElement, str_to_loc, get_available_file_name, translate_loc, format_html
+from .base import DrissionElement, BaseElement
+from .common import str_to_loc, get_usable_path, translate_loc, format_html, get_ele_txt
+from .session_element import make_session_ele
 
 
 class DriverElement(DrissionElement):
     """driver模式的元素对象，包装了一个WebElement对象，并封装了常用功能"""
 
     def __init__(self, ele: WebElement, page=None):
+        """初始化对象                          \n
+        :param ele: 被包装的WebElement元素
+        :param page: 元素所在页面
+        """
         super().__init__(ele, page)
         self._select = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         attrs = [f"{attr}='{self.attrs[attr]}'" for attr in self.attrs]
         return f'<DriverElement {self.tag} {" ".join(attrs)}>'
 
     def __call__(self,
                  loc_or_str: Union[Tuple[str, str], str],
-                 mode: str = 'single',
                  timeout: float = None):
-        """实现查找元素的简化写法                                     \n
+        """在内部查找元素                                             \n
         例：ele2 = ele1('@id=ele_id')                               \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param mode: 'single' 或 'all'，对应查找一个或全部
         :param timeout: 超时时间
-        :return: DriverElement对象
+        :return: DriverElement对象或属性、文本
         """
-        return self.ele(loc_or_str, mode, timeout)
+        return self.ele(loc_or_str, timeout)
 
-    # -----------------共有属性-------------------
-    @property
-    def html(self) -> str:
-        """返回元素outerHTML文本"""
-        return self.attr('outerHTML')
-
-    @property
-    def inner_html(self) -> str:
-        """返回元素innerHTML文本"""
-        return self.attr('innerHTML')
-
+    # -----------------共有属性和方法-------------------
     @property
     def tag(self) -> str:
         """返回元素类型"""
         return self._inner_ele.tag_name.lower()
+
+    @property
+    def html(self) -> str:
+        """返回元素outerHTML文本"""
+        return self.inner_ele.get_attribute('outerHTML')
+
+    @property
+    def inner_html(self) -> str:
+        """返回元素innerHTML文本"""
+        return self.inner_ele.get_attribute('innerHTML')
 
     @property
     def attrs(self) -> dict:
@@ -80,12 +84,7 @@ class DriverElement(DrissionElement):
     @property
     def text(self) -> str:
         """返回元素内所有文本"""
-        # return format_html(self.inner_ele.get_attribute('innerText'), False)
-        re_str = self.inner_ele.get_attribute('innerText')
-        re_str = re.sub(r'\n{2,}', '\n', re_str)
-        re_str = re.sub(r' {2,}', ' ', re_str)
-
-        return format_html(re_str.strip('\n '), False)
+        return get_ele_txt(make_session_ele(self.html))
 
     @property
     def raw_text(self) -> str:
@@ -93,40 +92,122 @@ class DriverElement(DrissionElement):
         return self.inner_ele.get_attribute('innerText')
 
     @property
-    def link(self) -> str:
-        """返回href或src绝对url"""
-        return self.attr('href') or self.attr('src')
-
-    @property
-    def css_path(self) -> str:
-        """返回当前元素的css路径"""
-        return self._get_ele_path('css')
-
-    @property
-    def xpath(self) -> str:
-        return self._get_ele_path('xpath')
-
-    @property
     def parent(self):
         """返回父级元素"""
         return self.parents()
 
-    @property
-    def next(self):
-        """返回后一个兄弟元素"""
-        return self._get_brother(1, 'ele', 'next')
+    def parents(self, num: int = 1):
+        """返回上面第num级父元素              \n
+        :param num: 第几级父元素
+        :return: DriverElement对象
+        """
+        loc = 'xpath', f'.{"/.." * num}'
+        return self.ele(loc, timeout=0)
 
-    @property
-    def prev(self):
-        """返回前一个兄弟元素"""
-        return self._get_brother(1, 'ele', 'prev')
+    def attr(self, attr: str) -> str:
+        """获取attribute属性值            \n
+        :param attr: 属性名
+        :return: 属性值文本
+        """
+        if attr == 'text':
+            return self.text
+        elif attr == 'innerText':
+            return self.raw_text
+        elif attr in ('html', 'outerHTML'):
+            return self.html
+        elif attr == 'innerHTML':
+            return self.inner_html
+        else:
+            return format_html(self.inner_ele.get_attribute(attr))
 
-    @property
-    def comments(self) -> list:
-        """返回元素注释文本组成的列表"""
-        return self.eles('xpath:.//comment()')
+    def ele(self,
+            loc_or_str: Union[Tuple[str, str], str],
+            timeout: float = None):
+        """返回当前元素下级符合条件的第一个元素、属性或节点文本                                      \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param timeout: 查找元素超时时间
+        :return: DriverElement对象或属性、文本
+        """
+        return self._ele(loc_or_str, timeout)
 
-    # -----------------driver独占属性-------------------
+    def eles(self,
+             loc_or_str: Union[Tuple[str, str], str],
+             timeout: float = None):
+        """返回当前元素下级所有符合条件的子元素、属性或节点文本                                                   \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param timeout: 查找元素超时时间
+        :return: DriverElement对象或属性、文本组成的列表
+        """
+        return self._ele(loc_or_str, timeout=timeout, single=False)
+
+    def s_ele(self, loc_or_ele=None):
+        """查找第一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高        \n
+        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :return: SessionElement对象或属性、文本
+        """
+        return make_session_ele(self, loc_or_ele)
+
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str]):
+        """查找所有符合条件的元素以SessionElement列表形式返回                         \n
+        :param loc_or_str: 定位符
+        :return: SessionElement或属性、文本组成的列表
+        """
+        return make_session_ele(self, loc_or_str, single=False)
+
+    def _ele(self,
+             loc_or_str: Union[Tuple[str, str], str],
+             timeout: float = None,
+             single: bool = True):
+        """返回当前元素下级符合条件的子元素、属性或节点文本，默认返回第一个                                      \n
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
+        :param timeout: 查找元素超时时间
+        :param single: True则返回第一个，False则返回全部
+        :return: DriverElement对象
+        """
+        return make_driver_ele(self, loc_or_str, single, timeout)
+
+    def _get_ele_path(self, mode) -> str:
+        """返获取css路径或xpath路径"""
+        if mode == 'xpath':
+            txt1 = 'var tag = el.nodeName.toLowerCase();'
+            # txt2 = '''return '//' + tag + '[@id="' + el.id + '"]'  + path;'''
+            txt3 = ''' && sib.nodeName.toLowerCase()==tag'''
+            txt4 = '''
+            if(nth>1){path = '/' + tag + '[' + nth + ']' + path;}
+                    else{path = '/' + tag + path;}'''
+            txt5 = '''return path;'''
+
+        elif mode == 'css':
+            txt1 = ''
+            # txt2 = '''return '#' + el.id + path;'''
+            txt3 = ''
+            txt4 = '''path = '>' + ":nth-child(" + nth + ")" + path;'''
+            txt5 = '''return path.substr(1);'''
+
+        else:
+            raise ValueError(f"mode参数只能是'xpath'或'css'，现在是：'{mode}'。")
+
+        js = '''
+        function e(el) {
+            if (!(el instanceof Element)) return;
+            var path = '';
+            while (el.nodeType === Node.ELEMENT_NODE) {
+                ''' + txt1 + '''
+                    var sib = el, nth = 0;
+                    while (sib) {
+                        if(sib.nodeType === Node.ELEMENT_NODE''' + txt3 + '''){nth += 1;}
+                        sib = sib.previousSibling;
+                    }
+                    ''' + txt4 + '''
+                el = el.parentNode;
+            }
+            ''' + txt5 + '''
+        }
+        return e(arguments[0]);
+        '''
+        return self.run_script(js)
+
+    # -----------------driver独有属性和方法-------------------
     @property
     def size(self) -> dict:
         """返回元素宽和高"""
@@ -153,12 +234,12 @@ class DriverElement(DrissionElement):
     @property
     def before(self) -> str:
         """返回当前元素的::before伪元素内容"""
-        return self.get_style_property('content', 'before')
+        return self.style('content', 'before')
 
     @property
     def after(self) -> str:
         """返回当前元素的::after伪元素内容"""
-        return self.get_style_property('content', 'after')
+        return self.style('content', 'after')
 
     @property
     def select(self):
@@ -171,165 +252,107 @@ class DriverElement(DrissionElement):
 
         return self._select
 
-    # -----------------共有函数-------------------
-
-    def texts(self, text_node_only: bool = False) -> list:
-        """返回元素内所有直接子节点的文本，包括元素和文本节点   \n
-        :param text_node_only: 是否只返回文本节点
-        :return: 文本列表
-        """
-        if text_node_only:
-            texts = self.eles('xpath:/text()')
-        else:
-            texts = [x if isinstance(x, str) else x.text for x in self.eles('xpath:./text() | *')]
-
-        return [x.strip(' ') for x in texts if x and x.replace('\n', '').replace('\t', '').replace(' ', '') != '']
-
-    def parents(self, num: int = 1):
-        """返回上面第num级父元素              \n
-        :param num: 第几级父元素
+    def left(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
+        """获取网页上显示在当前元素左边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param index: 获取第几个
         :return: DriverElement对象
         """
-        loc = 'xpath', f'.{"/.." * num}'
-        return self.ele(loc, timeout=0)
+        return self._get_relative_eles('left', filter_loc, 1, index)[0]
 
-    def nexts(self, num: int = 1, mode: str = 'ele'):
-        """返回后面第num个兄弟元素或节点文本                                   \n
-        :param num: 后面第几个兄弟元素或节点
-        :param mode: 'ele', 'node' 或 'text'，匹配元素、节点、或文本节点
-        :return: DriverElement对象或字符串
-        """
-        return self._get_brother(num, mode, 'next')
-
-    def prevs(self, num: int = 1, mode: str = 'ele'):
-        """返回前面第num个兄弟元素或节点文本                                   \n
-        :param num: 前面第几个兄弟元素或节点
-        :param mode: 'ele', 'node' 或 'text'，匹配元素、节点、或文本节点
-        :return: DriverElement对象或字符串
-        """
-        return self._get_brother(num, mode, 'prev')
-
-    def attr(self, attr: str) -> str:
-        """获取属性值            \n
-        :param attr: 属性名
-        :return: 属性值文本
-        """
-        # attr = 'innerText' if attr == 'text' else attr
-        if attr in ('text', 'innerText'):
-            return self.text
-
-        return format_html(self.inner_ele.get_attribute(attr))
-
-    def ele(self,
-            loc_or_str: Union[Tuple[str, str], str],
-            mode: str = None,
-            timeout: float = None):
-        """返回当前元素下级符合条件的子元素、属性或节点文本，默认返回第一个                                      \n
-        示例：                                                                                            \n
-        - 用loc元组查找：                                                                                 \n
-            ele.ele((By.CLASS_NAME, 'ele_class'))       - 返回第一个class为ele_class的子元素               \n
-        - 用查询字符串查找：                                                                               \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                              \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串            \n
-            ele.ele('.ele_class')                       - 返回第一个 class 为 ele_class 的子元素            \n
-            ele.ele('.:ele_class')                      - 返回第一个 class 中含有 ele_class 的子元素         \n
-            ele.ele('#ele_id')                          - 返回第一个 id 为 ele_id 的子元素                   \n
-            ele.ele('#:ele_id')                         - 返回第一个 id 中含有 ele_id 的子元素               \n
-            ele.ele('@class:ele_class')                 - 返回第一个class含有ele_class的子元素               \n
-            ele.ele('@name=ele_name')                   - 返回第一个name等于ele_name的子元素                 \n
-            ele.ele('@placeholder')                     - 返回第一个带placeholder属性的子元素                \n
-            ele.ele('tag:p')                            - 返回第一个<p>子元素                               \n
-            ele.ele('tag:div@class:ele_class')          - 返回第一个class含有ele_class的div子元素            \n
-            ele.ele('tag:div@class=ele_class')          - 返回第一个class等于ele_class的div子元素            \n
-            ele.ele('tag:div@text():some_text')         - 返回第一个文本含有some_text的div子元素              \n
-            ele.ele('tag:div@text()=some_text')         - 返回第一个文本等于some_text的div子元素              \n
-            ele.ele('text:some_text')                   - 返回第一个文本含有some_text的子元素                 \n
-            ele.ele('some_text')                        - 返回第一个文本含有some_text的子元素（等价于上一行）   \n
-            ele.ele('text=some_text')                   - 返回第一个文本等于some_text的子元素                 \n
-            ele.ele('xpath://div[@class="ele_class"]')  - 返回第一个符合xpath的子元素                         \n
-            ele.ele('css:div.ele_class')                - 返回第一个符合css selector的子元素                  \n
-        - 查询字符串还有最精简模式，用x代替xpath、c代替css、t代替tag、tx代替text：                                \n
-            ele.ele('x://div[@class="ele_class"]')      - 等同于 ele.ele('xpath://div[@class="ele_class"]') \n
-            ele.ele('c:div.ele_class')                  - 等同于 ele.ele('css:div.ele_class')               \n
-            ele.ele('t:div')                            - 等同于 ele.ele('tag:div')                         \n
-            ele.ele('t:div@tx()=some_text')             - 等同于 ele.ele('tag:div@text()=some_text')        \n
-            ele.ele('tx:some_text')                     - 等同于 ele.ele('text:some_text')                  \n
-            ele.ele('tx=some_text')                     - 等同于 ele.ele('text=some_text')
-        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param mode: 'single' 或 'all'，对应查找一个或全部
-        :param timeout: 查找元素超时时间
+    def right(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
+        """获取网页上显示在当前元素右边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param index: 获取第几个
         :return: DriverElement对象
         """
-        if isinstance(loc_or_str, (str, tuple)):
-            if isinstance(loc_or_str, str):
-                loc_or_str = str_to_loc(loc_or_str)
-            else:
-                if len(loc_or_str) != 2:
-                    raise ValueError("Len of loc_or_str must be 2 when it's a tuple.")
+        return self._get_relative_eles('right', filter_loc, 1, index)[0]
 
-                loc_or_str = translate_loc(loc_or_str)
+    def above(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
+        """获取网页上显示在当前元素上边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param index: 获取第几个
+        :return: DriverElement对象
+        """
+        return self._get_relative_eles('left', filter_loc, 1, index)[0]
 
-        else:
-            raise ValueError('Argument loc_or_str can only be tuple or str.')
+    def below(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
+        """获取网页上显示在当前元素下边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param index: 获取第几个
+        :return: DriverElement对象
+        """
+        return self._get_relative_eles('left', filter_loc, 1, index)[0]
 
-        loc_str = loc_or_str[1]
+    def near(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
+        """获取网页上显示在当前元素最近的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param index: 获取第几个
+        :return: DriverElement对象
+        """
+        return self._get_relative_eles('near', filter_loc, 1, index)[0]
 
-        if loc_or_str[0] == 'xpath' and loc_or_str[1].lstrip().startswith('/'):
-            loc_str = f'.{loc_str}'
-
-        if loc_or_str[0] == 'css selector' and loc_or_str[1].lstrip().startswith('>'):
-            loc_str = f'{self.css_path}{loc_or_str[1]}'
-
-        loc_or_str = loc_or_str[0], loc_str
-
-        return execute_driver_find(self, loc_or_str, mode, timeout)
-
-    def eles(self,
-             loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None):
-        """返回当前元素下级所有符合条件的子元素、属性或节点文本                                                   \n
-        示例：                                                                                              \n
-        - 用loc元组查找：                                                                                    \n
-            ele.eles((By.CLASS_NAME, 'ele_class'))       - 返回所有class为ele_class的子元素                   \n
-        - 用查询字符串查找：                                                                                  \n
-            查找方式：属性、tag name和属性、文本、xpath、css selector、id、class                                \n
-            @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串              \n
-            ele.eles('.ele_class')                       - 返回所有 class 为 ele_class 的子元素               \n
-            ele.eles('.:ele_class')                      - 返回所有 class 中含有 ele_class 的子元素            \n
-            ele.eles('#ele_id')                          - 返回所有 id 为 ele_id 的子元素                      \n
-            ele.eles('#:ele_id')                         - 返回所有 id 中含有 ele_id 的子元素                  \n
-            ele.eles('@class:ele_class')                 - 返回所有class含有ele_class的子元素                  \n
-            ele.eles('@name=ele_name')                   - 返回所有name等于ele_name的子元素                    \n
-            ele.eles('@placeholder')                     - 返回所有带placeholder属性的子元素                   \n
-            ele.eles('tag:p')                            - 返回所有<p>子元素                                  \n
-            ele.eles('tag:div@class:ele_class')          - 返回所有class含有ele_class的div子元素               \n
-            ele.eles('tag:div@class=ele_class')          - 返回所有class等于ele_class的div子元素               \n
-            ele.eles('tag:div@text():some_text')         - 返回所有文本含有some_text的div子元素                 \n
-            ele.eles('tag:div@text()=some_text')         - 返回所有文本等于some_text的div子元素                 \n
-            ele.eles('text:some_text')                   - 返回所有文本含有some_text的子元素                    \n
-            ele.eles('some_text')                        - 返回所有文本含有some_text的子元素（等价于上一行）      \n
-            ele.eles('text=some_text')                   - 返回所有文本等于some_text的子元素                    \n
-            ele.eles('xpath://div[@class="ele_class"]')  - 返回所有符合xpath的子元素                            \n
-            ele.eles('css:div.ele_class')                - 返回所有符合css selector的子元素                     \n
-        - 查询字符串还有最精简模式，用x代替xpath、c代替css、t代替tag、tx代替text：                                  \n
-            ele.eles('x://div[@class="ele_class"]')      - 等同于 ele.eles('xpath://div[@class="ele_class"]') \n
-            ele.eles('c:div.ele_class')                  - 等同于 ele.eles('css:div.ele_class')               \n
-            ele.eles('t:div')                            - 等同于 ele.eles('tag:div')                         \n
-            ele.eles('t:div@tx()=some_text')             - 等同于 ele.eles('tag:div@text()=some_text')        \n
-            ele.eles('tx:some_text')                     - 等同于 ele.eles('text:some_text')                  \n
-            ele.eles('tx=some_text')                     - 等同于 ele.eles('text=some_text')
-        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+    def lefts(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
+        """获取网页上显示在当前元素左边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param total: 获取多少个
+        :param begin: 从第几个开始返回
         :return: DriverElement对象组成的列表
         """
-        return self.ele(loc_or_str, mode='all', timeout=timeout)
+        return self._get_relative_eles('left', filter_loc, total, begin)
 
-    # -----------------driver独占函数-------------------
+    def rights(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
+        """获取网页上显示在当前元素右边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param total: 获取多少个
+        :param begin: 从第几个开始返回
+        :return: DriverElement对象组成的列表
+        """
+        return self._get_relative_eles('right', filter_loc, total, begin)
 
-    def get_style_property(self, style: str, pseudo_ele: str = '') -> str:
-        """返回元素样式属性值
+    def aboves(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
+        """获取网页上显示在当前元素上边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param total: 获取多少个
+        :param begin: 从第几个开始返回
+        :return: DriverElement对象组成的列表
+        """
+        return self._get_relative_eles('left', filter_loc, total, begin)
+
+    def belows(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
+        """获取网页上显示在当前元素下边的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param total: 获取多少个
+        :param begin: 从第几个开始返回
+        :return: DriverElement对象组成的列表
+        """
+        return self._get_relative_eles('left', filter_loc, total, begin)
+
+    def nears(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
+        """获取网页上显示在当前元素最近的某个元素，可设置选取条件                          \n
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param begin: 从第几个开始返回
+        :param total: 获取多少个
+        :return: DriverElement对象组成的列表
+        """
+        return self._get_relative_eles('near', filter_loc, total, begin)
+
+    def wait_ele(self,
+                 loc_or_ele: Union[str, tuple, DrissionElement, WebElement],
+                 mode: str,
+                 timeout: float = None) -> bool:
+        """等待子元素从dom删除、显示、隐藏                             \n
+        :param loc_or_ele: 可以是元素、查询字符串、loc元组
+        :param mode: 等待方式，可选：'del', 'display', 'hidden'
+        :param timeout: 等待超时时间
+        :return: 等待是否成功
+        """
+        return _wait_ele(self, loc_or_ele, mode, timeout)
+
+    def style(self, style: str, pseudo_ele: str = '') -> str:
+        """返回元素样式属性值，可获取伪元素属性值                \n
         :param style: 样式属性名称
-        :param pseudo_ele: 伪元素名称
+        :param pseudo_ele: 伪元素名称（如有）
         :return: 样式属性的值
         """
         if pseudo_ele:
@@ -338,19 +361,22 @@ class DriverElement(DrissionElement):
 
         return None if r == 'none' else r
 
-    def click(self, by_js: bool = None) -> bool:
+    def click(self, by_js: bool = None, timeout: float = None) -> bool:
         """点击元素                                                                      \n
-        尝试点击3次，若都失败就改用js点击                                                  \n
+        尝试点击直到超时，若都失败就改用js点击                                                \n
         :param by_js: 是否用js点击，为True时直接用js点击，为False时重试失败也不会改用js
+        :param timeout: 尝试点击的超时时间，不指定则使用父页面的超时时间
         :return: 是否点击成功
         """
         if not by_js:
-            for _ in range(3):
+            timeout = timeout if timeout is not None else self.page.timeout
+            t1 = perf_counter()
+            while perf_counter() - t1 <= timeout:
                 try:
                     self.inner_ele.click()
                     return True
-                except:
-                    sleep(0.2)
+                except Exception:
+                    pass
 
         # 若点击失败，用js方式点击
         if by_js is not False:
@@ -359,7 +385,10 @@ class DriverElement(DrissionElement):
 
         return False
 
-    def click_at(self, x: Union[int, str] = None, y: Union[int, str] = None, by_js=False) -> None:
+    def click_at(self,
+                 x: Union[int, str] = None,
+                 y: Union[int, str] = None,
+                 by_js: bool = False) -> None:
         """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素中点    \n
         :param x: 相对元素左上角坐标的x轴偏移量
         :param y: 相对元素左上角坐标的y轴偏移量
@@ -385,22 +414,69 @@ class DriverElement(DrissionElement):
             from selenium.webdriver import ActionChains
             ActionChains(self.page.driver).move_to_element_with_offset(self.inner_ele, x, y).click().perform()
 
-    def input(self, value: Union[str, tuple], clear: bool = True) -> bool:
-        """输入文本或组合键                          \n
-        :param value: 文本值或按键组合
-        :param clear: 输入前是否清空文本框
-        :return: 是否输入成功
-        """
-        try:
-            if clear:
-                self.clear()
+    def r_click(self) -> None:
+        """右键单击"""
+        from selenium.webdriver import ActionChains
+        ActionChains(self.page.driver).context_click(self.inner_ele).perform()
 
-            self.inner_ele.send_keys(*value)
+    def r_click_at(self, x: Union[int, str] = None, y: Union[int, str] = None) -> None:
+        """带偏移量右键单击本元素，相对于左上角坐标。不传入x或y值时点击元素中点    \n
+        :param x: 相对元素左上角坐标的x轴偏移量
+        :param y: 相对元素左上角坐标的y轴偏移量
+        :return: None
+        """
+        x = int(x) if x is not None else self.size['width'] // 2
+        y = int(y) if y is not None else self.size['height'] // 2
+        from selenium.webdriver import ActionChains
+        ActionChains(self.page.driver).move_to_element_with_offset(self.inner_ele, x, y).context_click().perform()
+
+    def input(self,
+              vals: Union[str, tuple],
+              clear: bool = True,
+              insure_input: bool = True,
+              timeout: float = None) -> bool:
+        """输入文本或组合键，也可用于输入文件路径到input元素（文件间用\n间隔）                          \n
+        :param vals: 文本值或按键组合
+        :param clear: 输入前是否清空文本框
+        :param insure_input: 确保输入正确，解决文本框有时输入失效的问题，不能用于输入组合键
+        :param timeout: 尝试输入的超时时间，不指定则使用父页面的超时时间，只在insure_input为True时生效
+        :return: bool
+        """
+        if not insure_input:  # 普通输入
+            if clear:
+                self.inner_ele.clear()
+
+            self.inner_ele.send_keys(*vals)
             return True
 
-        except Exception as e:
-            print(e)
-            return False
+        else:  # 确保输入正确
+            if not isinstance(vals, str):
+                raise TypeError('insure_input参数生效时vals只能接收str数据。')
+            enter = '\n' if vals.endswith('\n') else None
+            full_txt = vals if clear else f'{self.attr("value")}{vals}'
+            full_txt = full_txt.rstrip('\n')
+
+            self.click(by_js=True)
+            timeout = timeout if timeout is not None else self.page.timeout
+            t1 = perf_counter()
+            while self.is_valid() and self.attr('value') != full_txt and perf_counter() - t1 <= timeout:
+                try:
+                    if clear:
+                        self.inner_ele.send_keys(u'\ue009', 'a', u'\ue017')  # 有些ui下clear()不生效，用CTRL+a代替
+                    self.inner_ele.send_keys(vals)
+
+                except Exception:
+                    pass
+
+            if not self.is_valid():
+                return False
+            else:
+                if self.attr('value') != full_txt:
+                    return False
+                else:
+                    if enter:
+                        self.inner_ele.send_keys(enter)
+                    return True
 
     def run_script(self, script: str, *args) -> Any:
         """执行js代码，传入自己为第一个参数  \n
@@ -410,14 +486,28 @@ class DriverElement(DrissionElement):
         """
         return self.inner_ele.parent.execute_script(script, self.inner_ele, *args)
 
-    def submit(self) -> None:
+    def submit(self) -> Union[bool, None]:
         """提交表单"""
-        self.inner_ele.submit()
+        try:
+            self.inner_ele.submit()
+            return True
+        except Exception:
+            pass
 
-    def clear(self) -> None:
-        """清空元素文本"""
-        self.run_script("arguments[0].value=''")
-        # self.inner_ele.clear()
+    def clear(self, insure_clear: bool = True) -> Union[None, bool]:
+        """清空元素文本                                    \n
+        :param insure_clear: 是否确保清空
+        :return: 是否清空成功，不能清空的元素返回None
+        """
+        if insure_clear:
+            return self.input('')
+
+        else:
+            try:
+                self.inner_ele.clear()
+                return True
+            except InvalidElementStateException:
+                return None
 
     def is_selected(self) -> bool:
         """是否选中"""
@@ -436,7 +526,7 @@ class DriverElement(DrissionElement):
         try:
             self.is_enabled()
             return True
-        except:
+        except Exception:
             return False
 
     def screenshot(self, path: str, filename: str = None) -> str:
@@ -448,8 +538,8 @@ class DriverElement(DrissionElement):
         name = filename or self.tag
         path = Path(path).absolute()
         path.mkdir(parents=True, exist_ok=True)
-        name = f'{name}.png' if not name.endswith('.png') else name
-        name = get_available_file_name(str(path), name)
+        if not name.lower().endswith('.png'):
+            name = f'{name}.png'
 
         # 等待元素加载完成
         if self.tag == 'img':
@@ -458,12 +548,19 @@ class DriverElement(DrissionElement):
             while not self.run_script(js):
                 pass
 
-        img_path = f'{path}\\{name}'
+        img_path = str(get_usable_path(f'{path}{sep}{name}'))
         self.inner_ele.screenshot(img_path)
 
         return img_path
 
-    def set_property(self, prop: str, value: str) -> bool:
+    def prop(self, prop: str) -> str:
+        """获取property属性值            \n
+        :param prop: 属性名
+        :return: 属性值文本
+        """
+        return format_html(self.inner_ele.get_property(prop))
+
+    def set_prop(self, prop: str, value: str) -> bool:
         """设置元素property属性          \n
         :param prop: 属性名
         :param value: 属性值
@@ -473,31 +570,31 @@ class DriverElement(DrissionElement):
             value = value.replace("'", "\\'")
             self.run_script(f"arguments[0].{prop}='{value}';")
             return True
-        except:
+        except Exception:
             return False
 
     def set_attr(self, attr: str, value: str) -> bool:
-        """设置元素attribute参数          \n
-        :param attr: 参数名
-        :param value: 参数值
+        """设置元素attribute属性          \n
+        :param attr: 属性名
+        :param value: 属性值
         :return: 是否设置成功
         """
         try:
             self.run_script(f"arguments[0].setAttribute(arguments[1], arguments[2]);", attr, value)
             return True
-        except:
+        except Exception:
             return False
 
     def remove_attr(self, attr: str) -> bool:
-        """设置元素属性          \n
+        """删除元素attribute属性          \n
         :param attr: 属性名
-        :return: 是否设置成功
+        :return: 是否删除成功
         """
         try:
             self.run_script(f'arguments[0].removeAttribute("{attr}");')
             return True
-        except:
-            raise False
+        except Exception:
+            return False
 
     def drag(self, x: int, y: int, speed: int = 40, shake: bool = True) -> bool:
         """拖拽当前元素到相对位置                   \n
@@ -528,7 +625,7 @@ class DriverElement(DrissionElement):
         elif isinstance(ele_or_loc, tuple):
             target_x, target_y = ele_or_loc
         else:
-            raise TypeError('Need DriverElement, WebElement object or coordinate information.')
+            raise TypeError('需要DriverElement、WebElement对象或坐标。')
 
         current_x = self.location['x'] + self.size['width'] // 2
         current_y = self.location['y'] + self.size['height'] // 2
@@ -557,154 +654,136 @@ class DriverElement(DrissionElement):
 
         return False if self.location == loc1 else True
 
-    def hover(self) -> None:
-        """鼠标悬停"""
-        from selenium.webdriver import ActionChains
-        ActionChains(self.page.driver).move_to_element(self.inner_ele).perform()
-
-    # -----------------私有函数-------------------
-    def _get_ele_path(self, mode) -> str:
-        """返获取css路径或xpath路径"""
-        if mode == 'xpath':
-            txt1 = 'var tag = el.nodeName.toLowerCase();'
-            # txt2 = '''return '//' + tag + '[@id="' + el.id + '"]'  + path;'''
-            txt3 = ''' && sib.nodeName.toLowerCase()==tag'''
-            txt4 = '''
-            if(nth>1){path = '/' + tag + '[' + nth + ']' + path;}
-                    else{path = '/' + tag + path;}'''
-            txt5 = '''return path;'''
-
-        elif mode == 'css':
-            txt1 = ''
-            # txt2 = '''return '#' + el.id + path;'''
-            txt3 = ''
-            txt4 = '''path = '>' + ":nth-child(" + nth + ")" + path;'''
-            txt5 = '''return path.substr(1);'''
-
-        else:
-            raise ValueError(f"Argument mode can only be 'xpath' or 'css', not '{mode}'.")
-
-        js = '''
-        function e(el) {
-            if (!(el instanceof Element)) return;
-            var path = '';
-            while (el.nodeType === Node.ELEMENT_NODE) {
-                ''' + txt1 + '''
-                    var sib = el, nth = 0;
-                    while (sib) {
-                        if(sib.nodeType === Node.ELEMENT_NODE''' + txt3 + '''){nth += 1;}
-                        sib = sib.previousSibling;
-                    }
-                    ''' + txt4 + '''
-                el = el.parentNode;
-            }
-            ''' + txt5 + '''
-        }
-        return e(arguments[0]);
-        '''
-        return self.run_script(js)
-
-    def _get_brother(self, num: int = 1, mode: str = 'ele', direction: str = 'next'):
-        """返回前面第num个兄弟节点或元素        \n
-        :param num: 前面第几个兄弟节点或元素
-        :param mode: 'ele', 'node' 或 'text'，匹配元素、节点、或文本节点
-        :param direction: 'next' 或 'prev'，查找的方向
-        :return: DriverElement对象或字符串
+    def hover(self, x: int = None, y: int = None) -> None:
+        """鼠标悬停，可接受偏移量，偏移量相对于元素左上角坐标。不传入x或y值时悬停在元素中点    \n
+        :param x: 相对元素左上角坐标的x轴偏移量
+        :param y: 相对元素左上角坐标的y轴偏移量
+        :return: None
         """
-        # 查找节点的类型
-        if mode == 'ele':
-            node_txt = '*'
-        elif mode == 'node':
-            node_txt = 'node()'
-        elif mode == 'text':
-            node_txt = 'text()'
-        else:
-            raise ValueError(f"Argument mode can only be 'node' ,'ele' or 'text', not '{mode}'.")
+        from selenium.webdriver import ActionChains
+        x = int(x) if x is not None else self.size['width'] // 2
+        y = int(y) if y is not None else self.size['height'] // 2
+        ActionChains(self.page.driver).move_to_element_with_offset(self.inner_ele, x, y).perform()
 
-        # 查找节点的方向
-        if direction == 'next':
-            direction_txt = 'following'
-        elif direction == 'prev':
-            direction_txt = 'preceding'
-        else:
-            raise ValueError(f"Argument direction can only be 'next' or 'prev', not '{direction}'.")
+    def _get_relative_eles(self,
+                           mode: str,
+                           loc: Union[tuple, str] = '',
+                           total: int = 1,
+                           begin: int = 1) -> Union[List['DriverElement'], 'DriverElement']:
+        """获取网页上相对于当前元素周围的某个元素，可设置选取条件                          \n
+        :param mode: 可选：'left', 'right', 'above', 'below', 'near'
+        :param loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+        :param total: 一共获取几个
+        :param begin: 从第几个开始获取
+        :return: DriverElement对象
+        """
+        if not isinstance(begin, int) or begin < 1 or not isinstance(total, int) or total < 1:
+            raise ValueError('begin和total参数只能是大于0的整数。')
 
-        timeout = 0 if direction == 'prev' else .5
+        try:
+            from selenium.webdriver.support.relative_locator import RelativeBy
+        except ImportError:
+            raise ImportError('该方法只支持selenium4及以上版本。')
 
-        # 获取节点
-        ele_or_node = self.ele(f'xpath:./{direction_txt}-sibling::{node_txt}[{num}]', timeout=timeout)
+        if isinstance(loc, str):
+            loc = str_to_loc(loc)
 
-        # 跳过元素间的换行符
-        while isinstance(ele_or_node, str) and ele_or_node.replace('\n', '').replace('\t', '').replace(' ', '') == '':
-            num += 1
-            ele_or_node = self.ele(f'xpath:./{direction_txt}-sibling::{node_txt}[{num}]', timeout=timeout)
+        try:
+            if mode == 'left':
+                eles = self.page.driver.find_elements(RelativeBy({loc[0]: loc[1]}).to_left_of(self.inner_ele))
+            elif mode == 'right':
+                eles = self.page.driver.find_elements(RelativeBy({loc[0]: loc[1]}).to_right_of(self.inner_ele))
+            elif mode == 'above':
+                eles = self.page.driver.find_elements(RelativeBy({loc[0]: loc[1]}).above(self.inner_ele))
+            elif mode == 'below':
+                eles = self.page.driver.find_elements(RelativeBy({loc[0]: loc[1]}).below(self.inner_ele))
+            else:  # 'near'
+                eles = self.page.driver.find_elements(RelativeBy({loc[0]: loc[1]}).near(self.inner_ele))
 
-        return ele_or_node
+            end = None if not total or total >= len(eles) else begin + total - 1
+            return [self.page.ele(e) for e in eles[begin - 1:end]]
+
+        except IndexError:
+            raise ValueError('未找到元素，请检查浏览器版本，低版本的浏览器无法使用此方法。')
 
 
-def execute_driver_find(page_or_ele,
-                        loc: Tuple[str, str],
-                        mode: str = 'single',
-                        timeout: float = None) -> Union[DriverElement, List[DriverElement], str, None]:
+def make_driver_ele(page_or_ele,
+                    loc: Union[str, Tuple[str, str]],
+                    single: bool = True,
+                    timeout: float = None) -> Union[DriverElement, List[DriverElement], str, None]:
     """执行driver模式元素的查找                               \n
     页面查找元素及元素查找下级元素皆使用此方法                   \n
     :param page_or_ele: DriverPage对象或DriverElement对象
     :param loc: 元素定位元组
-    :param mode: 'single' 或 'all'，对应获取第一个或全部
+    :param single: True则返回第一个，False则返回全部
     :param timeout: 查找元素超时时间
     :return: 返回DriverElement元素或它们组成的列表
     """
-    mode = mode or 'single'
-    if mode not in ('single', 'all'):
-        raise ValueError(f"Argument mode can only be 'single' or 'all', not '{mode}'.")
+    # ---------------处理定位符---------------
+    if isinstance(loc, str):
+        loc = str_to_loc(loc)
+    elif isinstance(loc, tuple):
+        loc = translate_loc(loc)
+    else:
+        raise ValueError("定位符必须为str或长度为2的tuple。")
 
-    if isinstance(page_or_ele, DrissionElement):
+    # ---------------设置 page 和 driver---------------
+    if isinstance(page_or_ele, BaseElement):  # 传入DriverElement 或 ShadowRootElement
+        loc_str = loc[1]
+        if loc[0] == 'xpath' and loc[1].lstrip().startswith('/'):
+            loc_str = f'.{loc_str}'
+        elif loc[0] == 'css selector' and loc[1].lstrip().startswith('>') and isinstance(page_or_ele, DriverElement):
+            loc_str = f'{page_or_ele.css_path}{loc[1]}'
+        loc = loc[0], loc_str
+
         page = page_or_ele.page
         driver = page_or_ele.inner_ele
+
     else:  # 传入的是DriverPage对象
         page = page_or_ele
         driver = page_or_ele.driver
 
-    # 设置等待对象
+    # -----------------设置等待对象-----------------
     if timeout is not None and timeout != page.timeout:
         wait = WebDriverWait(driver, timeout=timeout)
     else:
-        page.wait._driver = driver
-        wait = page.wait
+        page.wait_object._driver = driver
+        wait = page.wait_object
 
+    # ---------------执行查找-----------------
     try:
         # 使用xpath查找
         if loc[0] == 'xpath':
-            return wait.until(ElementsByXpath(page, loc[1], mode, timeout))
+            return wait.until(ElementsByXpath(page, loc[1], single, timeout))
 
         # 使用css selector查找
         else:
-            if mode == 'single':
+            if single:
                 return DriverElement(wait.until(ec.presence_of_element_located(loc)), page)
-            elif mode == 'all':
+            else:
                 eles = wait.until(ec.presence_of_all_elements_located(loc))
                 return [DriverElement(ele, page) for ele in eles]
 
     except TimeoutException:
-        return [] if mode == 'all' else None
+        return [] if not single else None
 
     except InvalidElementStateException:
-        raise ValueError(f'Invalid query syntax. {loc}')
+        raise ValueError(f'无效的查找语句：{loc}')
 
 
 class ElementsByXpath(object):
     """用js通过xpath获取元素、节点或属性，与WebDriverWait配合使用"""
 
-    def __init__(self, page, xpath: str = None, mode: str = 'all', timeout: float = 10):
+    def __init__(self, page, xpath: str = None, single: bool = False, timeout: float = 10):
         """
         :param page: DrissionPage对象
         :param xpath: xpath文本
-        :param mode: 'all' 或 'single'
+        :param single: True则返回第一个，False则返回全部
         :param timeout: 超时时间
         """
         self.page = page
         self.xpath = xpath
-        self.mode = mode
+        self.single = single
         self.timeout = timeout
 
     def __call__(self, ele_or_driver: Union[WebDriver, WebElement]) \
@@ -762,7 +841,7 @@ class ElementsByXpath(object):
             driver, the_node = ele_or_driver.parent, ele_or_driver
 
         # 把lxml元素对象包装成DriverElement对象并按需要返回第一个或全部
-        if self.mode == 'single':
+        if self.single:
             try:
                 e = get_nodes(the_node, xpath_txt=self.xpath, type_txt='9')
 
@@ -783,7 +862,7 @@ class ElementsByXpath(object):
                 else:
                     return None
 
-        elif self.mode == 'all':
+        else:  # 返回全部
             return ([DriverElement(x, self.page) if isinstance(x, WebElement)
                      else format_html(x)
                      for x in get_nodes(the_node, xpath_txt=self.xpath)
@@ -798,11 +877,11 @@ class Select(object):
         :param ele: select 元素对象
         """
         if ele.tag != 'select':
-            raise TypeError(f"Select only works on <select> elements, not on {ele.tag}")
+            raise TypeError(f"select方法只能在<select>元素使用，现在是：{ele.tag}。")
 
-        from selenium.webdriver.support.select import Select as sl
+        from selenium.webdriver.support.select import Select
         self.inner_ele = ele
-        self.select_ele = sl(ele.inner_ele)
+        self.select_ele = Select(ele.inner_ele)
 
     def __call__(self,
                  text_value_index: Union[str, int, list, tuple] = None,
@@ -879,7 +958,7 @@ class Select(object):
                     raise ValueError('para_type参数只能传入"text"、"value"或"index"。')
                 return True
 
-            except:
+            except Exception:
                 return False
 
         elif isinstance(text_value_index, (list, tuple)):
@@ -938,7 +1017,84 @@ class Select(object):
     def invert(self) -> None:
         """反选"""
         if not self.is_multi:
-            raise NotImplementedError("You may only deselect options of a multi-select")
+            raise NotImplementedError("只能对多项选框执行反选。")
 
         for i in self.options:
             i.click()
+
+
+def _wait_ele(page_or_ele,
+              loc_or_ele: Union[str, tuple, DriverElement, WebElement],
+              mode: str,
+              timeout: float = None) -> bool:
+    """等待元素从dom删除、显示、隐藏                             \n
+    :param page_or_ele: 要等待子元素的页面或元素
+    :param loc_or_ele: 可以是元素、查询字符串、loc元组
+    :param mode: 等待方式，可选：'del', 'display', 'hidden'
+    :param timeout: 等待超时时间
+    :return: 等待是否成功
+    """
+    if mode.lower() not in ('del', 'display', 'hidden'):
+        raise ValueError('mode参数只能是"del"、"display"或"hidden"。')
+
+    if isinstance(page_or_ele, BaseElement):
+        page = page_or_ele.page
+        ele_or_driver = page_or_ele.inner_ele
+    else:
+        page = page_or_ele
+        ele_or_driver = page_or_ele.driver
+
+    timeout = timeout or page.timeout
+    is_ele = False
+
+    if isinstance(loc_or_ele, DriverElement):
+        loc_or_ele = loc_or_ele.inner_ele
+        is_ele = True
+
+    elif isinstance(loc_or_ele, WebElement):
+        is_ele = True
+
+    elif isinstance(loc_or_ele, str):
+        loc_or_ele = str_to_loc(loc_or_ele)
+
+    elif isinstance(loc_or_ele, tuple):
+        pass
+
+    else:
+        raise TypeError('loc_or_ele参数只能是str、tuple、DriverElement 或 WebElement类型')
+
+    # 当传入参数是元素对象时
+    if is_ele:
+        end_time = time() + timeout
+
+        while time() < end_time:
+            if mode == 'del':
+                try:
+                    loc_or_ele.is_enabled()
+                except Exception:
+                    return True
+
+            elif mode == 'display' and loc_or_ele.is_displayed():
+                return True
+
+            elif mode == 'hidden' and not loc_or_ele.is_displayed():
+                return True
+
+        return False
+
+    # 当传入参数是控制字符串或元组时
+    else:
+        try:
+            if mode == 'del':
+                WebDriverWait(ele_or_driver, timeout).until_not(ec.presence_of_element_located(loc_or_ele))
+
+            elif mode == 'display':
+                WebDriverWait(ele_or_driver, timeout).until(ec.visibility_of_element_located(loc_or_ele))
+
+            elif mode == 'hidden':
+                WebDriverWait(ele_or_driver, timeout).until_not(ec.visibility_of_element_located(loc_or_ele))
+
+            return True
+
+        except Exception:
+            return False

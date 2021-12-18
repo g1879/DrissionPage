@@ -7,15 +7,15 @@
 from os import popen
 from pathlib import Path
 from pprint import pprint
-from re import search as RE_SEARCH
+from re import search as RE_SEARCH, sub
 from typing import Union
 
 from selenium import webdriver
 
-from DrissionPage.config import OptionsManager, DriverOptions
-from DrissionPage.drission import Drission
-from DrissionPage.session_page import SessionPage
 from .common import unzip
+from .config import OptionsManager, DriverOptions
+from .drission import Drission
+from .session_page import SessionPage
 
 
 def show_settings(ini_path: str = None) -> None:
@@ -261,7 +261,8 @@ def _get_chrome_path(ini_path: str = None,
         path = None
 
     if path and Path(path).is_file():
-        print('ini文件中', end='')
+        if show_msg:
+            print('ini文件中', end='')
         return str(path)
 
     # -----------从注册表中获取--------------
@@ -322,7 +323,7 @@ def _get_chrome_version(path: str) -> Union[str, None]:
     try:
         return (popen(f'wmic datafile where "name=\'{path}\'" get version').read()
                 .lower().split('\n')[2].replace(' ', ''))
-    except:
+    except Exception:
         return None
 
 
@@ -345,17 +346,23 @@ def _download_driver(version: str, save_path: str = None, show_msg: bool = True)
     except ValueError:
         return None
 
-    for i in page.eles('xpath://pre/a'):
-        remote_main = i.text.split('.')[0]
+    remote_versions = page.eles(f'xpath://pre/a[starts-with(text(),"{loc_main}.")]')
+    remote_versions = [v for v in remote_versions if v.text and v.text[-1] == '/']
+    remote_versions.sort(key=lambda x: x.text)
 
+    for i in remote_versions:
         try:
-            remote_num = int(i.text.replace('.', '').replace('/', ''))
+            remote_num = int(sub(r'[./]', '', i.text))
         except ValueError:
             continue
 
-        if remote_main == loc_main and remote_num >= loc_num:
+        if remote_num >= loc_num:
             remote_ver = i.text
             break
+
+    # 没有匹配到，则取大版本的最后一个号
+    if remote_versions and not remote_ver:
+        remote_ver = remote_versions[-1].text
 
     if remote_ver:
         url = f'https://cdn.npm.taobao.org/dist/chromedriver/{remote_ver}chromedriver_win32.zip'

@@ -23,6 +23,8 @@ class OptionsManager(object):
         :param path: ini文件的路径，默认读取模块文件夹下的
         """
         self.ini_path = str(Path(__file__).parent / 'configs.ini') if path == 'default' or path is None else path
+        if not Path(self.ini_path).exists():
+            raise FileNotFoundError('ini文件不存在。')
         self._conf = RawConfigParser()
         self._conf.read(self.ini_path, encoding='utf-8')
 
@@ -93,7 +95,7 @@ class OptionsManager(object):
         for j in items:
             try:
                 option[j[0]] = eval(self._conf.get(section, j[0]).replace('\\', '\\\\'))
-            except:
+            except Exception:
                 option[j[0]] = self._conf.get(section, j[0])
 
         return option
@@ -268,7 +270,7 @@ class SessionOptions(object):
         :param headers: 参数值
         :return: None
         """
-        self._headers = {key.lower(): headers[key] for key in headers}
+        self.set_headers(headers)
 
     @cookies.setter
     def cookies(self, cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None:
@@ -292,7 +294,7 @@ class SessionOptions(object):
         :param proxies: 参数值
         :return: None
         """
-        self._proxies = proxies
+        self.set_proxies(proxies)
 
     @hooks.setter
     def hooks(self, hooks: dict) -> None:
@@ -358,6 +360,14 @@ class SessionOptions(object):
         """
         self._max_redirects = max_redirects
 
+    def set_headers(self, headers: dict):
+        """设置headers参数           \n
+        :param headers: 参数值
+        :return: 返回当前对象
+        """
+        self._headers = {key.lower(): headers[key] for key in headers}
+        return self
+
     def set_a_header(self, attr: str, value: str):
         """设置headers中一个项          \n
         :param attr: 设置名称
@@ -382,6 +392,16 @@ class SessionOptions(object):
         if attr in self._headers:
             self._headers.pop(attr)
 
+        return self
+
+    def set_proxies(self, proxies: dict):
+        """设置proxies参数           \n
+        {'http': 'http://xx.xx.xx.xx:xxxx',
+         'https': 'http://xx.xx.xx.xx:xxxx'}
+        :param proxies: 参数值
+        :return: None
+        """
+        self._proxies = proxies
         return self
 
     def save(self, path: str = None):
@@ -592,27 +612,23 @@ class DriverOptions(Options):
         :param cache_path: 缓存路径
         :return: 当前对象
         """
-
-        def format_path(path: str) -> str:
-            return path.replace('/', '\\')
-
         if driver_path is not None:
-            self._driver_path = format_path(driver_path)
+            self._driver_path = driver_path
 
         if chrome_path is not None:
-            self.binary_location = format_path(chrome_path)
+            self.binary_location = chrome_path
 
         if debugger_address is not None:
             self.debugger_address = debugger_address
 
         if download_path is not None:
-            self.experimental_options['prefs']['download.default_directory'] = format_path(download_path)
+            self.experimental_options['prefs']['download.default_directory'] = download_path
 
         if user_data_path is not None:
-            self.set_argument('--user-data-dir', format_path(user_data_path))
+            self.set_argument('--user-data-dir', user_data_path)
 
         if cache_path is not None:
-            self.set_argument('--disk-cache-dir', format_path(cache_path))
+            self.set_argument('--disk-cache-dir', cache_path)
 
         return self
 
@@ -639,7 +655,7 @@ def _dict_to_chrome_options(options: dict) -> Options:
         # 启动参数
         if options.get('arguments', None):
             if not isinstance(options['arguments'], list):
-                raise Exception(f"Arguments need list，not {type(options['arguments'])}.")
+                raise Exception(f"参数必须为list，现在是：{type(options['arguments'])}。")
 
             for arg in options['arguments']:
                 chrome_options.add_argument(arg)
@@ -647,7 +663,7 @@ def _dict_to_chrome_options(options: dict) -> Options:
         # 加载插件
         if options.get('extension_files', None):
             if not isinstance(options['extension_files'], list):
-                raise Exception(f'Extension files need list，not {type(options["extension_files"])}.')
+                raise Exception(f'extension_files必须是list，现在是：{type(options["extension_files"])}。')
 
             for arg in options['extension_files']:
                 chrome_options.add_extension(arg)
@@ -655,7 +671,7 @@ def _dict_to_chrome_options(options: dict) -> Options:
         # 扩展设置
         if options.get('extensions', None):
             if not isinstance(options['extensions'], list):
-                raise Exception(f'Extensions need list，not {type(options["extensions"])}.')
+                raise Exception(f'extensions必须是list，现在是：{type(options["extensions"])}。')
 
             for arg in options['extensions']:
                 chrome_options.add_encoded_extension(arg)
@@ -663,7 +679,7 @@ def _dict_to_chrome_options(options: dict) -> Options:
         # 实验性质的设置参数
         if options.get('experimental_options', None):
             if not isinstance(options['experimental_options'], dict):
-                raise Exception(f'Experimental options need dict，not {type(options["experimental_options"])}.')
+                raise Exception(f'experimental_options必须是dict，现在是：{type(options["experimental_options"])}。')
 
             for i in options['experimental_options']:
                 chrome_options.add_experimental_option(i, options['experimental_options'][i])
@@ -671,12 +687,15 @@ def _dict_to_chrome_options(options: dict) -> Options:
     return chrome_options
 
 
-def _chrome_options_to_dict(options: Union[dict, DriverOptions, Options, None]) -> Union[dict, None]:
+def _chrome_options_to_dict(options: Union[dict, DriverOptions, Options, None, bool]) -> Union[dict, None]:
     """把chrome配置对象转换为字典                             \n
     :param options: chrome配置对象，字典或DriverOptions对象
     :return: 配置字典
     """
-    if isinstance(options, (dict, type(None))):
+    if options in (False, None):
+        return DriverOptions(read_file=False).as_dict()
+
+    if isinstance(options, dict):
         return options
 
     re_dict = dict()
@@ -694,7 +713,10 @@ def _session_options_to_dict(options: Union[dict, SessionOptions, None]) -> Unio
     :param options: session配置对象或字典
     :return: 配置字典
     """
-    if isinstance(options, (dict, type(None))):
+    if options in (False, None):
+        return SessionOptions(read_file=False).as_dict()
+
+    if isinstance(options, dict):
         return options
 
     re_dict = dict()
@@ -710,7 +732,7 @@ def _session_options_to_dict(options: Union[dict, SessionOptions, None]) -> Unio
         if val is not None:
             re_dict[attr] = val
 
-    # cert属性默认值为None，未免无法区分是否被设置，故主动赋值
+    # cert属性默认值为None，为免无法区分是否被设置，故主动赋值
     re_dict['cert'] = options.__getattribute__('_cert')
     re_dict['auth'] = options.__getattribute__('_auth')
 
@@ -739,7 +761,6 @@ def _cookie_to_dict(cookie: Union[Cookie, str, dict]) -> dict:
             attr_val = attr.lstrip().split('=')
 
             if key == 0:
-                # TODO: 检查
                 cookie_dict['name'] = attr_val[0]
                 cookie_dict['value'] = attr_val[1] if len(attr_val) == 2 else ''
             else:
@@ -748,7 +769,7 @@ def _cookie_to_dict(cookie: Union[Cookie, str, dict]) -> dict:
         return cookie_dict
 
     else:
-        raise TypeError
+        raise TypeError('cookie参数必须为Cookie、str或dict类型。')
 
     return cookie_dict
 
@@ -768,6 +789,6 @@ def _cookies_to_tuple(cookies: Union[RequestsCookieJar, list, tuple, str, dict])
         cookies = tuple({'name': cookie, 'value': cookies[cookie]} for cookie in cookies)
 
     else:
-        raise TypeError
+        raise TypeError('cookies参数必须为RequestsCookieJar、list、tuple、str或dict类型。')
 
     return cookies
