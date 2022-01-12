@@ -7,7 +7,7 @@
 from glob import glob
 from os import sep
 from pathlib import Path
-from time import sleep
+from time import sleep, perf_counter
 from typing import Union, List, Any, Tuple
 from urllib.parse import quote
 
@@ -95,9 +95,9 @@ class DriverPage(BasePage):
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, DriverElement, WebElement],
             timeout: float = None) -> Union[DriverElement, List[DriverElement], str, None]:
-        """返回页面中符合条件的第一个元素                                                           \n
+        """返回页面中符合条件的第一个元素                                          \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与页面等待时间一致
         :return: DriverElement对象或属性、文本
         """
         return self._ele(loc_or_ele, timeout)
@@ -105,21 +105,24 @@ class DriverPage(BasePage):
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
              timeout: float = None) -> List[DriverElement]:
-        """返回页面中所有符合条件的元素                                                                     \n
+        """返回页面中所有符合条件的元素                                     \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与页面等待时间一致
         :return: DriverElement对象或属性、文本组成的列表
         """
         return self._ele(loc_or_str, timeout, single=False)
 
-    def s_ele(self, loc_or_ele):
+    def s_ele(self, loc_or_ele: Union[Tuple[str, str], str, DriverElement] = None):
         """查找第一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高       \n
         :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
-        return make_session_ele(self, loc_or_ele)
+        if isinstance(loc_or_ele, DriverElement):
+            return make_session_ele(loc_or_ele)
+        else:
+            return make_session_ele(self, loc_or_ele)
 
-    def s_eles(self, loc_or_str: Union[Tuple[str, str], str]):
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None):
         """查找所有符合条件的元素以SessionElement列表形式返回                       \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象组成的列表
@@ -170,11 +173,18 @@ class DriverPage(BasePage):
         self._timeout = second
         self._wait_object = None
 
+    @property
+    def timeouts(self) -> dict:
+        """返回三种超时时间，selenium4以上版本可用"""
+        return {'implicit': self.timeout,
+                'pageLoad': self.driver.timeouts.page_load,
+                'script': self.driver.timeouts.script}
+
     def _try_to_connect(self,
                         to_url: str,
                         times: int = 0,
                         interval: float = 1,
-                        show_errmsg: bool = False, ):
+                        show_errmsg: bool = False):
         """尝试连接，重试若干次                            \n
         :param to_url: 要访问的url
         :param times: 重试次数
@@ -248,6 +258,22 @@ class DriverPage(BasePage):
         """返回当前焦点所在元素"""
         return DriverElement(self.driver.switch_to.active_element, self)
 
+    def set_timeouts(self, implicit: float = None, pageLoad: float = None, script: float = None) -> None:
+        """设置超时时间，单位为秒，selenium4以上版本有效       \n
+        :param implicit: 查找元素超时时间
+        :param pageLoad: 页面加载超时时间
+        :param script: 脚本运行超时时间
+        :return: None
+        """
+        if implicit is not None:
+            self.timeout = implicit
+
+        if pageLoad is not None:
+            self.driver.set_page_load_timeout(pageLoad)
+
+        if script is not None:
+            self.driver.set_script_timeout(script)
+
     def wait_ele(self,
                  loc_or_ele: Union[str, tuple, DriverElement, WebElement],
                  mode: str,
@@ -274,8 +300,16 @@ class DriverPage(BasePage):
         """
         return self.driver.execute_script(script, *args)
 
+    def run_async_script(self, script: str, *args) -> Any:
+        """以异步方式执行js代码                 \n
+        :param script: js文本
+        :param args: 传入的参数
+        :return: js执行结果
+        """
+        return self.driver.execute_async_script(script, *args)
+
     def create_tab(self, url: str = '') -> None:
-        """新建并定位到一个标签页,该标签页在最后面  \n
+        """新建并定位到一个标签页,该标签页在最后面       \n
         :param url: 新标签页跳转到的网址
         :return: None
         """
@@ -283,47 +317,39 @@ class DriverPage(BasePage):
             self.driver.switch_to.new_window('tab')
             if url:
                 self.get(url)
+
         except Exception:
             self.to_tab(-1)
             self.run_script(f'window.open("{url}");')
             self.to_tab(-1)
 
-    def close_current_tab(self) -> None:
-        """关闭当前标签页"""
-        self.driver.close()
-
-        if self.tabs_count:
-            self.to_tab(0)
-
-    def close_other_tabs(self, num_or_handles: Union[int, str, list, tuple] = None) -> None:
-        """关闭传入的标签页以外标签页，默认保留当前页。可传入列表或元组                                \n
-        :param num_or_handles: 要保留的标签页序号或handle，可传入handle组成的列表或元组
+    def close_tabs(self, num_or_handles: Union[int, str, list, tuple] = None) -> None:
+        """关闭传入的标签页，默认关闭当前页。可传入多个                                                     \n
+        注意：当程序使用的是截关的浏览器，获取到的 handle 顺序和视觉效果不一致，不能按序号关闭。
+        :param num_or_handles:要关闭的标签页序号或handle，可传入handle和序号组成的列表或元组，为None时关闭当前页
         :return: None
         """
-        try:
-            tab = int(num_or_handles)
-        except (ValueError, TypeError):
-            tab = num_or_handles
+        tabs = (self.current_tab_handle,) if num_or_handles is None else _get_handles(self.tab_handles, num_or_handles)
+        for i in tabs:
+            self.driver.switch_to.window(i)
+            self.driver.close()
 
-        tabs = self.driver.window_handles
+        self.to_tab(0)
 
-        if tab is None:
-            page_handle = (self.current_tab_handle,)
-        elif isinstance(tab, int):
-            page_handle = (tabs[tab],)
-        elif isinstance(tab, str):
-            page_handle = (tab,)
-        elif isinstance(tab, (list, tuple)):
-            page_handle = tab
-        else:
-            raise TypeError('num_or_handle参数只能是int、str、list 或 tuple类型。')
+    def close_other_tabs(self, num_or_handles: Union[int, str, list, tuple] = None) -> None:
+        """关闭传入的标签页以外标签页，默认保留当前页。可传入多个                                              \n
+        注意：当程序使用的是截关的浏览器，获取到的 handle 顺序和视觉效果不一致，不能按序号关闭。
+        :param num_or_handles: 要保留的标签页序号或handle，可传入handle和序号组成的列表或元组，为None时保存当前页
+        :return: None
+        """
+        all_tabs = self.driver.window_handles
+        reserve_tabs = (self.current_tab_handle,) if num_or_handles is None else _get_handles(all_tabs, num_or_handles)
 
-        for i in tabs:  # 遍历所有标签页，关闭非保留的
-            if i not in page_handle:
-                self.driver.switch_to.window(i)
-                self.driver.close()
+        for i in set(all_tabs) - reserve_tabs:
+            self.driver.switch_to.window(i)
+            self.driver.close()
 
-        self.driver.switch_to.window(page_handle[0])  # 把权柄定位回保留的页面
+        self.to_tab(0)
 
     def to_tab(self, num_or_handle: Union[int, str] = 0) -> None:
         """跳转到标签页                                                         \n
@@ -340,16 +366,16 @@ class DriverPage(BasePage):
 
     def to_frame(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> 'DriverPage':
         """跳转到frame                                                                       \n
-        可接收frame序号(0开始)、id或name、查询字符串、loc元组、WebElement对象、DriverElement对象，  \n
-        传入 'main' 跳到最高层，传入 'parent' 跳到上一层                                             \n
+        可接收frame序号(0开始)、id或name、查询字符串、loc元组、WebElement对象、DriverElement对象，     \n
+        传入 'main' 跳到最高层，传入 'parent' 跳到上一层                                           \n
         示例：                                                                                \n
-            to_frame('tag:iframe')    - 通过传入frame的查询字符串定位                            \n
+            to_frame('tag:iframe')    - 通过传入frame的查询字符串定位                             \n
             to_frame('iframe_id')     - 通过frame的id属性定位                                   \n
             to_frame('iframe_name')   - 通过frame的name属性定位                                 \n
             to_frame(iframe_element)  - 通过传入元素对象定位                                     \n
             to_frame(0)               - 通过frame的序号定位                                     \n
-            to_frame('main')          - 跳到最高层                                              \n
-            to_frame('parent')        - 跳到上一层                                              \n
+            to_frame('main')          - 跳到最高层                                             \n
+            to_frame('parent')        - 跳到上一层                                             \n
         :param loc_or_ele: iframe的定位信息
         :return: 返回自己，用于链式操作
         """
@@ -434,13 +460,15 @@ class DriverPage(BasePage):
             self.driver.execute_script("window.scrollTo(0,document.documentElement.scrollTop);")
 
         elif mode == 'up':
-            self.driver.execute_script(f"window.scrollBy(0,-{pixel});")
+            pixel = pixel if pixel >= 0 else -pixel
+            self.driver.execute_script(f"window.scrollBy(0,{pixel});")
 
         elif mode == 'down':
             self.driver.execute_script(f"window.scrollBy(0,{pixel});")
 
         elif mode == 'left':
-            self.driver.execute_script(f"window.scrollBy(-{pixel},0);")
+            pixel = pixel if pixel >= 0 else -pixel
+            self.driver.execute_script(f"window.scrollBy({pixel},0);")
 
         elif mode == 'right':
             self.driver.execute_script(f"window.scrollBy({pixel},0);")
@@ -454,27 +482,31 @@ class DriverPage(BasePage):
         self.driver.refresh()
 
     def back(self) -> None:
-        """浏览器后退"""
+        """在浏览历史中后退一步"""
         self.driver.back()
 
-    def set_window_size(self, x: int = None, y: int = None) -> None:
+    def forward(self) -> None:
+        """在浏览历史中前进一步"""
+        self.driver.forward()
+
+    def set_window_size(self, width: int = None, height: int = None) -> None:
         """设置浏览器窗口大小，默认最大化，任一参数为0最小化  \n
-        :param x: 浏览器窗口高
-        :param y: 浏览器窗口宽
+        :param width: 浏览器窗口高
+        :param height: 浏览器窗口宽
         :return: None
         """
-        if x is None and y is None:
+        if width is None and height is None:
             self.driver.maximize_window()
 
-        elif x == 0 or y == 0:
+        elif width == 0 or height == 0:
             self.driver.minimize_window()
 
         else:
-            if x < 0 or y < 0:
+            if width < 0 or height < 0:
                 raise ValueError('x 和 y参数必须大于0。')
 
-            new_x = x or self.driver.get_window_size()['width']
-            new_y = y or self.driver.get_window_size()['height']
+            new_x = width or self.driver.get_window_size()['width']
+            new_y = height or self.driver.get_window_size()['height']
             self.driver.set_window_size(new_x, new_y)
 
     def chrome_downloading(self, download_path: str) -> list:
@@ -489,18 +521,20 @@ class DriverPage(BasePage):
         :param mode: 'ok' 或 'cancel'，若输入其它值，不会按按钮但依然返回文本值
         :param text: 处理prompt提示框时可输入文本
         :param timeout: 等待提示框出现的超时时间
-        :return: 提示框内容文本
+        :return: 提示框内容文本，未等到提示框则返回None
         """
-        timeout = timeout if timeout is not None else self.timeout
-        from time import perf_counter
-        alert = None
-        t1 = perf_counter()
-        while perf_counter() - t1 <= timeout:
+
+        def do_it():
             try:
-                alert = self.driver.switch_to.alert
-                break
+                return self.driver.switch_to.alert
             except NoAlertPresentException:
-                pass
+                return False
+
+        timeout = timeout if timeout is not None else self.timeout
+        t1 = perf_counter()
+        alert = do_it()
+        while not alert and perf_counter() - t1 <= timeout:
+            alert = do_it()
 
         if not alert:
             return None
@@ -516,3 +550,17 @@ class DriverPage(BasePage):
             alert.accept()
 
         return text
+
+
+def _get_handles(handles: list, num_or_handles: Union[int, str, list, tuple]) -> set:
+    """返回指定标签页组成的set
+    :param handles: handles列表
+    :param num_or_handles: 指定的标签页，可以是多个
+    :return: 指定标签页组成的set
+    """
+    if isinstance(num_or_handles, (int, str)):
+        num_or_handles = (num_or_handles,)
+    elif not isinstance(num_or_handles, (list, tuple)):
+        raise TypeError('num_or_handle参数只能是int、str、list 或 tuple类型。')
+
+    return set(i if isinstance(i, str) else handles[i] for i in num_or_handles)

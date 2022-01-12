@@ -4,12 +4,13 @@
 @Contact :   g1879@qq.com
 @File    :   shadow_root_element.py
 """
-from re import split as re_SPLIT
+from time import perf_counter
 from typing import Union, Any, Tuple, List
 
 from selenium.webdriver.remote.webelement import WebElement
 
 from .base import BaseElement
+from .common import get_loc
 from .driver_element import make_driver_ele, DriverElement
 from .session_element import make_session_ele
 
@@ -42,36 +43,63 @@ class ShadowRootElement(BaseElement):
 
     @property
     def html(self) -> str:
-        """返回内部的html文本"""
-        return self.inner_ele.get_attribute('innerHTML')
+        return f'<shadow_root>{self.inner_html}</shadow_root>'
 
     @property
-    def parent(self) -> DriverElement:
-        """shadow-root所依赖的父元素"""
-        return self.parent_ele
+    def inner_html(self) -> str:
+        """返回内部的html文本"""
+        shadow_root = WebElement(self.page.driver, self.inner_ele._id)
+        return shadow_root.get_attribute('innerHTML')
 
-    def parents(self, num: int = 1) -> DriverElement:
-        """返回上面第num级父元素              \n
-        :param num: 第几级父元素
+    def parent(self, level_or_loc: Union[str, int] = 1) -> DriverElement:
+        """返回上面某一级父元素，可指定层数或用查询语法定位              \n
+        :param level_or_loc: 第几级父元素，或定位符
         :return: DriverElement对象
         """
-        loc = 'xpath', f'.{"/.." * (num - 1)}'
-        return self.parent_ele.ele(loc, timeout=0.1)
+        if isinstance(level_or_loc, int):
+            loc = f'xpath:./ancestor-or-self::*[{level_or_loc}]'
 
-    def nexts(self, num: int = 1) -> DriverElement:
-        """返回后面第num个兄弟元素      \n
-        :param num: 后面第几个兄弟元素
+        elif isinstance(level_or_loc, (tuple, str)):
+            loc = get_loc(level_or_loc, True)
+
+            if loc[0] == 'css selector':
+                raise ValueError('此css selector语法不受支持，请换成xpath。')
+
+            loc = f'xpath:./ancestor-or-self::{loc[1].lstrip(". / ")}'
+
+        else:
+            raise TypeError('level_or_loc参数只能是tuple、int或str。')
+
+        return self.parent_ele.ele(loc, timeout=0)
+
+    def next(self, index: int = 1, filter_loc: Union[tuple, str] = '') -> DriverElement:
+        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
+        :param index: 第几个查询结果元素
+        :param filter_loc: 用于筛选元素的查询语法
         :return: DriverElement对象
         """
-        loc = 'css selector', f':nth-child({num})'
-        return self.parent_ele.ele(loc, timeout=0.1)
+        nodes = self.nexts(filter_loc=filter_loc)
+        return nodes[index - 1] if nodes else None
+
+    def nexts(self, filter_loc: Union[tuple, str] = '') -> List[DriverElement]:
+        """返回后面所有兄弟元素或节点组成的列表        \n
+        :param filter_loc: 用于筛选元素的查询语法
+        :return: DriverElement对象组成的列表
+        """
+        loc = get_loc(filter_loc, True)
+        if loc[0] == 'css selector':
+            raise ValueError('此css selector语法不受支持，请换成xpath。')
+
+        loc = loc[1].lstrip('./')
+        xpath = f'xpath:./{loc}'
+        return self.parent_ele.eles(xpath, timeout=0.1)
 
     def ele(self,
             loc_or_str: Union[Tuple[str, str], str],
             timeout: float = None) -> Union[DriverElement, List[DriverElement]]:
         """返回当前元素下级符合条件的第一个元素，默认返回                                   \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
         :return: DriverElement对象或属性、文本
         """
         return self._ele(loc_or_str, timeout)
@@ -81,7 +109,7 @@ class ShadowRootElement(BaseElement):
              timeout: float = None) -> List[DriverElement]:
         """返回当前元素下级所有符合条件的子元素                                              \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
         :return: DriverElement对象或属性、文本组成的列表
         """
         return self._ele(loc_or_str, timeout=timeout, single=False)
@@ -110,18 +138,26 @@ class ShadowRootElement(BaseElement):
         :param single: True则返回第一个，False则返回全部
         :return: DriverElement对象
         """
-        if isinstance(loc_or_str, str):
-            loc_or_str = str_to_css_loc(loc_or_str)
-        elif isinstance(loc_or_str, tuple) and len(loc_or_str) == 2:
-            if loc_or_str[0] == 'xpath':
-                raise ValueError('不支持xpath。')
-        else:
-            raise ValueError('loc_or_str参数只能是tuple或str类型。')
+        # 先转换为sessionElement，再获取所有元素，获取它们的css selector路径，再用路径在页面上执行查找
+        loc = get_loc(loc_or_str)
+        if loc[0] == 'css selector' and str(loc[1]).startswith(':root'):
+            loc = loc[0], loc[1][5:]
 
-        if loc_or_str[0] == 'css selector':
-            return make_driver_ele(self, loc_or_str, single, timeout)
-        elif loc_or_str[0] == 'text':
-            return self._find_eles_by_text(loc_or_str[1], loc_or_str[2], loc_or_str[3], single)
+        timeout = timeout if timeout is not None else self.page.timeout
+        t1 = perf_counter()
+        eles = make_session_ele(self.html).eles(loc)
+        while not eles and perf_counter() - t1 <= timeout:
+            eles = make_session_ele(self.html).eles(loc)
+
+        if not eles:
+            return None if single else eles
+
+        css_paths = [i.css_path[47:] for i in eles]
+
+        if single:
+            return make_driver_ele(self, f'css:{css_paths[0]}', single, timeout)
+        else:
+            return [make_driver_ele(self, f'css:{css}', True, timeout) for css in css_paths]
 
     def run_script(self, script: str, *args) -> Any:
         """执行js代码，传入自己为第一个参数  \n
@@ -129,7 +165,8 @@ class ShadowRootElement(BaseElement):
         :param args: 传入的参数
         :return: js执行结果
         """
-        return self.inner_ele.parent.execute_script(script, self.inner_ele, *args)
+        shadow_root = WebElement(self.page.driver, self.inner_ele._id)
+        return shadow_root.parent.execute_script(script, shadow_root, *args)
 
     def is_enabled(self) -> bool:
         """是否可用"""
@@ -140,6 +177,7 @@ class ShadowRootElement(BaseElement):
         try:
             self.is_enabled()
             return True
+
         except Exception:
             return False
 
@@ -188,76 +226,3 @@ class ShadowRootElement(BaseElement):
                         results.append(DriverElement(ele, self.page))
 
         return None if single else results
-
-
-def str_to_css_loc(loc: str) -> tuple:
-    """处理元素查找语句                                                                              \n
-    查找方式：属性、tag name及属性、文本、css selector                                              \n
-    @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串           \n
-    """
-    loc_by = 'css selector'
-
-    # .和#替换为class和id查找
-    if loc.startswith('.'):
-        if loc.startswith(('.=', '.:',)):
-            loc = loc.replace('.', '@class', 1)
-        else:
-            loc = loc.replace('.', '@class=', 1)
-
-    elif loc.startswith('#'):
-        if loc.startswith(('#=', '#:',)):
-            loc = loc.replace('#', '@id', 1)
-        else:
-            loc = loc.replace('#', '@id=', 1)
-
-    elif loc.startswith(('t:', 't=')):
-        loc = f'tag:{loc[2:]}'
-
-    elif loc.startswith(('tx:', 'tx=')):
-        loc = f'text{loc[2:]}'
-
-    elif loc.startswith(('x:', 'x=', 'xpath:', 'xpath=')):
-        raise ValueError('不支持xpath。')
-
-    # 根据属性查找
-    if loc.startswith('@'):
-        r = re_SPLIT(r'([:=])', loc[1:], maxsplit=1)
-
-        if len(r) == 3:
-            mode = '=' if r[1] == '=' else '*='
-            loc_str = f'*[{r[0]}{mode}{r[2]}]'
-        else:
-            loc_str = f'*[{loc[1:]}]'
-
-    # 根据tag name查找
-    elif loc.startswith(('tag=', 'tag:')):
-        if '@' not in loc[4:]:
-            loc_str = f'{loc[4:]}'
-
-        else:
-            at_lst = loc[4:].split('@', maxsplit=1)
-            r = re_SPLIT(r'([:=])', at_lst[1], maxsplit=1)
-
-            if len(r) == 3:
-                if r[0] in ('text()', 'tx()'):
-                    match = 'exact' if r[1] == '=' else 'fuzzy'
-                    return 'text', r[2], at_lst[0], match
-                mode = '=' if r[1] == '=' else '*='
-                loc_str = f'{at_lst[0]}[{r[0]}{mode}"{r[2]}"]'
-            else:
-                loc_str = f'{at_lst[0]}[{r[0]}]'
-
-    # 用css selector查找
-    elif loc.startswith(('css=', 'css:')):
-        loc_str = loc[4:]
-
-    # 根据文本查找
-    elif loc.startswith(('text=', 'text:')):
-        match = 'exact' if loc[4] == '=' else 'fuzzy'
-        return 'text', loc[5:], '', match
-
-    # 根据文本模糊查找
-    else:
-        return 'text', loc, '', 'fuzzy'
-
-    return loc_by, loc_str

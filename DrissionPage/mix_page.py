@@ -8,6 +8,7 @@ from typing import Union, List, Tuple
 
 from requests import Response, Session
 from requests.cookies import RequestsCookieJar
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
@@ -31,22 +32,36 @@ class MixPage(SessionPage, DriverPage, BasePage):
     def __init__(self,
                  mode: str = 'd',
                  drission: Union[Drission, str] = None,
-                 timeout: float = 10,
-                 driver_options: Union[dict, DriverOptions] = None,
-                 session_options: Union[dict, SessionOptions] = None) -> None:
-        """初始化函数                                                                         \n
+                 timeout: float = None,
+                 driver_options: Union[Options, DriverOptions, bool] = None,
+                 session_options: Union[dict, SessionOptions, bool] = None) -> None:
+        """初始化函数                                                                                            \n
         :param mode: 'd' 或 's'，即driver模式和session模式
         :param drission: Drission对象，不传入时会自动创建
-        :param timeout: 超时时间，d模式时为寻找元素时间，s模式时为连接时间
-        :param driver_options: 浏览器设置，没有传入drission参数时会用这个设置新建Drission对象
-        :param session_options: requests设置，没有传入drission参数时会用这个设置新建Drission对象
+        :param timeout: 超时时间，d模式时为寻找元素时间，s模式时为连接时间，默认10秒
+        :param driver_options: 浏览器设置，没传入drission参数时会用这个设置新建Drission对象中的WebDriver对象，传入False则不创建
+        :param session_options: requests设置，没传入drission参数时会用这个设置新建Drission对象中的Session对象，传入False则不创建
         """
-        super(DriverPage, self).__init__(timeout)  # BasePage的__init__()
         self._mode = mode.lower()
+        if self._mode not in ('s', 'd'):
+            raise ValueError('mode参数只能是s或d。')
+
+        super(DriverPage, self).__init__(timeout)
         self._driver, self._session = (None, True) if self._mode == 's' else (True, None)
         self._drission = drission or Drission(driver_options, session_options)
         self._wait_object = None
         self._response = None
+
+        if self._mode == 'd':
+            self._drission.driver  # 接管或创建浏览器
+
+        try:
+            timeouts = self.drission.driver_options.timeouts
+            t = timeout if timeout is not None else timeouts['implicit'] / 1000
+            self.set_timeouts(t, timeouts['pageLoad'] / 1000, timeouts['script'] / 1000)
+
+        except Exception:
+            self.timeout = timeout if timeout is not None else 10
 
     def __call__(self,
                  loc_or_str: Union[Tuple[str, str], str, DriverElement, SessionElement, WebElement],
@@ -104,7 +119,6 @@ class MixPage(SessionPage, DriverPage, BasePage):
             interval: float = None,
             **kwargs) -> Union[bool, None]:
         """跳转到一个url                                         \n
-        跳转前先同步cookies，跳转后判断目标url是否可用
         :param url: 目标url
         :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
@@ -122,9 +136,9 @@ class MixPage(SessionPage, DriverPage, BasePage):
             loc_or_ele: Union[Tuple[str, str], str, DriverElement, SessionElement, WebElement],
             timeout: float = None) \
             -> Union[DriverElement, SessionElement, str, List[SessionElement], List[DriverElement]]:
-        """返回第一个符合条件的元素、属性或节点文本                                               \n
+        """返回第一个符合条件的元素、属性或节点文本                               \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与页面等待时间一致
         :return: 元素对象或属性、文本节点文本
         """
         if self._mode == 's':
@@ -137,7 +151,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
              timeout: float = None) -> Union[List[DriverElement], List[SessionElement], List[str]]:
         """返回页面中所有符合条件的元素、属性或节点文本                                \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与页面等待时间一致
         :return: 元素对象或属性、文本组成的列表
         """
         if self._mode == 's':
@@ -145,7 +159,8 @@ class MixPage(SessionPage, DriverPage, BasePage):
         elif self._mode == 'd':
             return super(SessionPage, self).eles(loc_or_str, timeout=timeout)
 
-    def s_ele(self, loc_or_ele=None) -> Union[SessionElement, List[SessionElement], List[str]]:
+    def s_ele(self, loc_or_ele: Union[Tuple[str, str], str, DriverElement, SessionElement] = None) \
+            -> Union[SessionElement, List[SessionElement], List[str]]:
         """查找第一个符合条件的元素以SessionElement形式返回，d模式处理复杂页面时效率很高                 \n
         :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
@@ -155,20 +170,20 @@ class MixPage(SessionPage, DriverPage, BasePage):
         elif self._mode == 'd':
             return super(SessionPage, self).s_ele(loc_or_ele)
 
-    def s_eles(self, loc_or_ele) -> Union[SessionElement, List[SessionElement], List[str]]:
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None) \
+            -> Union[SessionElement, List[SessionElement], List[str]]:
         """查找所有符合条件的元素以SessionElement形式返回，d模式处理复杂页面时效率很高                 \n
-        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本组成的列表
         """
         if self._mode == 's':
-            return super().s_eles(loc_or_ele)
+            return super().s_eles(loc_or_str)
         elif self._mode == 'd':
-            return super(SessionPage, self).s_eles(loc_or_ele)
+            return super(SessionPage, self).s_eles(loc_or_str)
 
     def _ele(self,
              loc_or_ele: Union[Tuple[str, str], str, DriverElement, SessionElement, WebElement],
-             timeout: float = None,
-             single: bool = True) \
+             timeout: float = None, single: bool = True) \
             -> Union[DriverElement, SessionElement, str, List[SessionElement], List[DriverElement]]:
         """返回页面中符合条件的元素、属性或节点文本，默认返回第一个                                               \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
@@ -303,7 +318,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
         """
         self._drission.cookies_to_session(copy_user_agent)
 
-    def cookies_to_driver(self, url=None) -> None:
+    def cookies_to_driver(self, url: str = None) -> None:
         """从session复制cookies到driver  \n
         chrome需要指定域才能接收cookies   \n
         :param url: 目标域
@@ -330,7 +345,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
     def close_driver(self) -> None:
         """关闭driver及浏览器"""
         self._driver = None
-        self.drission.close_driver()
+        self.drission.close_driver(True)
 
     def close_session(self) -> None:
         """关闭session"""
@@ -341,7 +356,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
     # ----------------重写SessionPage的函数-----------------------
     def post(self,
              url: str,
-             data: dict = None,
+             data: Union[dict, str] = None,
              go_anyway: bool = False,
              show_errmsg: bool = False,
              retry: int = None,
@@ -362,7 +377,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
 
     def download(self,
                  file_url: str,
-                 goal_path: str = None,
+                 goal_path: str,
                  rename: str = None,
                  file_exists: str = 'rename',
                  post_data: Union[str, dict] = None,
@@ -374,7 +389,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
         """下载一个文件                                                                      \n
         d模式下下载前先同步cookies                                                            \n
         :param file_url: 文件url
-        :param goal_path: 存放路径，默认为ini文件中指定的临时文件夹
+        :param goal_path: 存放路径
         :param rename: 重命名文件，可不写扩展名
         :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
         :param post_data: post方式的数据，这个参数不为None时自动转成post方式
@@ -392,14 +407,13 @@ class MixPage(SessionPage, DriverPage, BasePage):
                                 interval, **kwargs)
 
     # ----------------重写DriverPage的函数-----------------------
-    def chrome_downloading(self, download_path: str = None) -> list:
+    def chrome_downloading(self, path: str = None) -> list:
         """返回浏览器下载中的文件列表                             \n
-        :param download_path: 下载文件夹路径，默认读取配置信息
+        :param path: 下载文件夹路径，默认读取配置信息
         :return: 正在下载的文件列表
         """
         try:
-            path = download_path or self._drission.driver_options['experimental_options']['prefs'][
-                'download.default_directory']
+            path = path or self._drission.driver_options.experimental_options['prefs']['download.default_directory']
             if not path:
                 raise ValueError('未指定下载路径。')
         except Exception:

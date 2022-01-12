@@ -31,6 +31,7 @@ def show_settings(ini_path: str = None) -> None:
 
 def set_paths(driver_path: str = None,
               chrome_path: str = None,
+              local_port: Union[int, str] = None,
               debugger_address: str = None,
               tmp_path: str = None,
               download_path: str = None,
@@ -41,6 +42,7 @@ def set_paths(driver_path: str = None,
     """快捷的路径设置函数                                          \n
     :param driver_path: chromedriver.exe路径
     :param chrome_path: chrome.exe路径
+    :param local_port: 本地端口号
     :param debugger_address: 调试浏览器地址，例：127.0.0.1:9222
     :param download_path: 下载文件路径
     :param tmp_path: 临时文件夹路径
@@ -53,13 +55,16 @@ def set_paths(driver_path: str = None,
     om = OptionsManager(ini_path)
 
     def format_path(path: str) -> str:
-        return '' if not path else str(path).replace('/', '\\')
+        return path or ''
 
     if driver_path is not None:
         om.set_item('paths', 'chromedriver_path', format_path(driver_path))
 
     if chrome_path is not None:
         om.set_item('chrome_options', 'binary_location', format_path(chrome_path))
+
+    if local_port is not None:
+        om.set_item('chrome_options', 'debugger_address', format_path(f'127.0.0.1:{local_port}'))
 
     if debugger_address is not None:
         om.set_item('chrome_options', 'debugger_address', format_path(debugger_address))

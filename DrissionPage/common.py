@@ -18,9 +18,9 @@ def get_ele_txt(e) -> str:
     :return: 元素内所有文本
     """
     # 前面无须换行的元素
-    nowrap_list = ('br', 'sub', 'em', 'strong', 'a', 'font', 'b', 'span', 's', 'i', 'del', 'ins', 'img', 'td', 'th',
-                   'abbr', 'bdi', 'bdo', 'cite', 'code', 'data', 'dfn', 'kbd', 'mark', 'q', 'rp', 'rt', 'ruby',
-                   'samp', 'small', 'sub', 'time', 'u', 'var', 'wbr', 'button', 'slot', 'content')
+    nowrap_list = ('br', 'sub', 'sup', 'em', 'strong', 'a', 'font', 'b', 'span', 's', 'i', 'del', 'ins', 'img', 'td',
+                   'th', 'abbr', 'bdi', 'bdo', 'cite', 'code', 'data', 'dfn', 'kbd', 'mark', 'q', 'rp', 'rt', 'ruby',
+                   'samp', 'small', 'time', 'u', 'var', 'wbr', 'button', 'slot', 'content')
     # 后面添加换行的元素
     wrap_after_list = ('p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ol', 'li', 'blockquote', 'header',
                        'footer', 'address' 'article', 'aside', 'main', 'nav', 'section', 'figcaption', 'summary')
@@ -77,6 +77,33 @@ def get_ele_txt(e) -> str:
         re_str.pop()
     re_str = ''.join([i if i is not True else '\n' for i in re_str])
     return format_html(re_str)
+
+
+def get_loc(loc: Union[tuple, str], translate_css: bool = False) -> tuple:
+    """接收selenium定位元组或本库定位语法，转换为标准定位元组，可翻译css selector为xpath  \n
+    :param loc: selenium定位元组或本库定位语法
+    :param translate_css: 是否翻译css selector为xpath
+    :return: DrissionPage定位元组
+    """
+    if isinstance(loc, tuple):
+        loc = translate_loc(loc)
+
+    elif isinstance(loc, str):
+        loc = str_to_loc(loc)
+
+    else:
+        raise TypeError('loc参数只能是tuple或str。')
+
+    if loc[0] == 'css selector' and translate_css:
+        from lxml.cssselect import CSSSelector, ExpressionError
+        try:
+            path = str(CSSSelector(loc[1], translator='html').path)
+            path = path[20:] if path.startswith('descendant-or-self::') else path
+            loc = 'xpath', path
+        except ExpressionError:
+            pass
+
+    return loc
 
 
 def str_to_loc(loc: str) -> tuple:

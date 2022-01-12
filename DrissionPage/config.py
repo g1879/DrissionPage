@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any, Union
 
 from requests.cookies import RequestsCookieJar
-from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 
@@ -31,12 +30,6 @@ class OptionsManager(object):
         self._paths = None
         self._chrome_options = None
         self._session_options = None
-
-        if 'tmp_path' not in self.paths or not self.get_value('paths', 'tmp_path'):
-            tmp_path = str((Path(__file__).parent / 'tmp').absolute())
-            Path(tmp_path).mkdir(parents=True, exist_ok=True)
-            self.set_item('paths', 'tmp_path', tmp_path)
-            self.save(self.ini_path)
 
     def __text__(self) -> str:
         """打印ini文件内容"""
@@ -94,7 +87,7 @@ class OptionsManager(object):
 
         for j in items:
             try:
-                option[j[0]] = eval(self._conf.get(section, j[0]).replace('\\', '\\\\'))
+                option[j[0]] = eval(self._conf.get(section, j[0]))
             except Exception:
                 option[j[0]] = self._conf.get(section, j[0])
 
@@ -111,13 +104,14 @@ class OptionsManager(object):
         self.__setattr__(f'_{section}', None)
         return self
 
-    def save(self, path: str = None):
+    def save(self, path: str = None) -> str:
         """保存配置文件                                               \n
         :param path: ini文件的路径，传入 'default' 保存到默认ini文件
-        :return: 当前对象
+        :return: 保存路径
         """
+        default_path = (Path(__file__).parent / 'configs.ini').absolute()
         if path == 'default':
-            path = (Path(__file__).parent / 'configs.ini').absolute()
+            path = default_path
         elif path is None:
             path = Path(self.ini_path).absolute()
         else:
@@ -125,9 +119,14 @@ class OptionsManager(object):
 
         path = path / 'config.ini' if path.is_dir() else path
 
-        self._conf.write(open(str(path), 'w', encoding='utf-8'))
+        path = str(path)
+        self._conf.write(open(path, 'w', encoding='utf-8'))
 
-        return self
+        print(f'配置已保存到文件：{path}')
+        if path == str(default_path):
+            print('以后程序可自动从文件加载配置。')
+
+        return path
 
 
 class SessionOptions(object):
@@ -360,7 +359,7 @@ class SessionOptions(object):
         """
         self._max_redirects = max_redirects
 
-    def set_headers(self, headers: dict):
+    def set_headers(self, headers: dict) -> 'SessionOptions':
         """设置headers参数           \n
         :param headers: 参数值
         :return: 返回当前对象
@@ -368,7 +367,7 @@ class SessionOptions(object):
         self._headers = {key.lower(): headers[key] for key in headers}
         return self
 
-    def set_a_header(self, attr: str, value: str):
+    def set_a_header(self, attr: str, value: str) -> 'SessionOptions':
         """设置headers中一个项          \n
         :param attr: 设置名称
         :param value: 设置值
@@ -380,7 +379,7 @@ class SessionOptions(object):
         self._headers[attr.lower()] = value
         return self
 
-    def remove_a_header(self, attr: str):
+    def remove_a_header(self, attr: str) -> 'SessionOptions':
         """从headers中删除一个设置     \n
         :param attr: 要删除的设置
         :return: 返回当前对象
@@ -394,7 +393,7 @@ class SessionOptions(object):
 
         return self
 
-    def set_proxies(self, proxies: dict):
+    def set_proxies(self, proxies: dict) -> 'SessionOptions':
         """设置proxies参数           \n
         {'http': 'http://xx.xx.xx.xx:xxxx',
          'https': 'http://xx.xx.xx.xx:xxxx'}
@@ -404,10 +403,10 @@ class SessionOptions(object):
         self._proxies = proxies
         return self
 
-    def save(self, path: str = None):
+    def save(self, path: str = None) -> str:
         """保存设置到文件                                              \n
         :param path: ini文件的路径，传入 'default' 保存到默认ini文件
-        :return: 返回当前对象
+        :return: 保存文件的绝对路径
         """
         if path == 'default':
             path = (Path(__file__).parent / 'configs.ini').absolute()
@@ -428,9 +427,10 @@ class SessionOptions(object):
         for i in options:
             om.set_item('session_options', i, options[i])
 
-        om.save(str(path))
+        path = str(path)
+        om.save(path)
 
-        return self
+        return path
 
     def as_dict(self) -> dict:
         """以字典形式返回本对象"""
@@ -449,19 +449,25 @@ class DriverOptions(Options):
         """
         super().__init__()
         self._driver_path = None
-        self.ini_path = None
+        self.ini_path = ini_path or str(Path(__file__).parent / 'configs.ini')
 
         if read_file:
-            self.ini_path = ini_path or str(Path(__file__).parent / 'configs.ini')
             om = OptionsManager(self.ini_path)
             options_dict = om.chrome_options
 
+            self._driver_path = om.paths.get('chromedriver_path', None)
             self._binary_location = options_dict.get('binary_location', '')
             self._arguments = options_dict.get('arguments', [])
             self._extensions = options_dict.get('extensions', [])
             self._experimental_options = options_dict.get('experimental_options', {})
             self._debugger_address = options_dict.get('debugger_address', None)
-            self._driver_path = om.paths.get('chromedriver_path', None)
+            self.set_window_rect = options_dict.get('set_window_rect', None)
+            self.page_load_strategy = options_dict.get('page_load_strategy', 'normal')
+
+            self.timeouts = options_dict.get('timeouts', {'implicit': 10, 'pageLoad': 30, 'script': 30})
+            self.timeouts['implicit'] *= 1000
+            self.timeouts['pageLoad'] *= 1000
+            self.timeouts['script'] *= 1000
 
     @property
     def driver_path(self) -> str:
@@ -471,10 +477,10 @@ class DriverOptions(Options):
     def chrome_path(self) -> str:
         return self.binary_location
 
-    def save(self, path: str = None):
+    def save(self, path: str = None) -> str:
         """保存设置到文件                                              \n
         :param path: ini文件的路径，传入 'default' 保存到默认ini文件
-        :return: 当前对象
+        :return: 保存文件的绝对路径
         """
         if path == 'default':
             path = (Path(__file__).parent / 'configs.ini').absolute()
@@ -498,11 +504,12 @@ class DriverOptions(Options):
             else:
                 om.set_item('chrome_options', i, options[i])
 
-        om.save(str(path))
+        path = str(path)
+        om.save(path)
 
-        return self
+        return path
 
-    def remove_argument(self, value: str):
+    def remove_argument(self, value: str) -> 'DriverOptions':
         """移除一个argument项                                    \n
         :param value: 设置项名，有值的设置项传入设置名称即可
         :return: 当前对象
@@ -518,7 +525,7 @@ class DriverOptions(Options):
 
         return self
 
-    def remove_experimental_option(self, key: str):
+    def remove_experimental_option(self, key: str) -> 'DriverOptions':
         """移除一个实验设置，传入key值删除  \n
         :param key: 实验设置的名称
         :return: 当前对象
@@ -528,7 +535,7 @@ class DriverOptions(Options):
 
         return self
 
-    def remove_all_extensions(self):
+    def remove_all_extensions(self) -> 'DriverOptions':
         """移除所有插件             \n
         :return: 当前对象
         """
@@ -536,7 +543,7 @@ class DriverOptions(Options):
         self._extensions = []
         return self
 
-    def set_argument(self, arg: str, value: Union[bool, str]):
+    def set_argument(self, arg: str, value: Union[bool, str]) -> 'DriverOptions':
         """设置浏览器配置的argument属性                          \n
         :param arg: 属性名
         :param value: 属性值，有值的属性传入值，没有的传入bool
@@ -550,7 +557,25 @@ class DriverOptions(Options):
 
         return self
 
-    def set_headless(self, on_off: bool = True):
+    def set_timeouts(self, implicit: float = None, pageLoad: float = None, script: float = None) -> 'DriverOptions':
+        """设置超时时间，设置单位为秒，selenium4以上版本有效       \n
+        :param implicit: 查找元素超时时间
+        :param pageLoad: 页面加载超时时间
+        :param script: 脚本运行超时时间
+        :return: 当前对象
+        """
+        timeouts = self._caps.get('timeouts', {'implicit': 10, 'pageLoad': 3000, 'script': 3000})
+        if implicit is not None:
+            timeouts['implicit'] = implicit
+        if pageLoad is not None:
+            timeouts['pageLoad'] = pageLoad * 1000
+        if script is not None:
+            timeouts['script'] = script * 1000
+        self.timeouts = timeouts
+
+        return self
+
+    def set_headless(self, on_off: bool = True) -> 'DriverOptions':
         """设置是否隐藏浏览器界面   \n
         :param on_off: 开或关
         :return: 当前对象
@@ -558,7 +583,7 @@ class DriverOptions(Options):
         on_off = True if on_off else False
         return self.set_argument('--headless', on_off)
 
-    def set_no_imgs(self, on_off: bool = True):
+    def set_no_imgs(self, on_off: bool = True) -> 'DriverOptions':
         """设置是否加载图片           \n
         :param on_off: 开或关
         :return: 当前对象
@@ -566,7 +591,7 @@ class DriverOptions(Options):
         on_off = True if on_off else False
         return self.set_argument('--blink-settings=imagesEnabled=false', on_off)
 
-    def set_no_js(self, on_off: bool = True):
+    def set_no_js(self, on_off: bool = True) -> 'DriverOptions':
         """设置是否禁用js       \n
         :param on_off: 开或关
         :return: 当前对象
@@ -574,7 +599,7 @@ class DriverOptions(Options):
         on_off = True if on_off else False
         return self.set_argument('--disable-javascript', on_off)
 
-    def set_mute(self, on_off: bool = True):
+    def set_mute(self, on_off: bool = True) -> 'DriverOptions':
         """设置是否静音            \n
         :param on_off: 开或关
         :return: 当前对象
@@ -582,30 +607,44 @@ class DriverOptions(Options):
         on_off = True if on_off else False
         return self.set_argument('--mute-audio', on_off)
 
-    def set_user_agent(self, user_agent: str):
+    def set_user_agent(self, user_agent: str) -> 'DriverOptions':
         """设置user agent                  \n
         :param user_agent: user agent文本
         :return: 当前对象
         """
         return self.set_argument('user-agent', user_agent)
 
-    def set_proxy(self, proxy: str):
+    def set_proxy(self, proxy: str) -> 'DriverOptions':
         """设置代理                    \n
         :param proxy: 代理url和端口
         :return: 当前对象
         """
         return self.set_argument('--proxy-server', proxy)
 
+    def set_page_load_strategy(self, value: str) -> 'DriverOptions':
+        """设置page_load_strategy，可接收 'normal', 'eager', 'none'                    \n
+        selenium4以上版本才支持此功能
+        normal：默认情况下使用, 等待所有资源下载完成
+        eager：DOM访问已准备就绪, 但其他资源 (如图像) 可能仍在加载中
+        none：完全不阻塞WebDriver
+        :param value: 可接收 'normal', 'eager', 'none'
+        :return: 当前对象
+        """
+        self.page_load_strategy = value.lower()
+        return self
+
     def set_paths(self,
                   driver_path: str = None,
                   chrome_path: str = None,
+                  local_port: Union[int, str] = None,
                   debugger_address: str = None,
                   download_path: str = None,
                   user_data_path: str = None,
-                  cache_path: str = None):
+                  cache_path: str = None) -> 'DriverOptions':
         """快捷的路径设置函数                                             \n
         :param driver_path: chromedriver.exe路径
         :param chrome_path: chrome.exe路径
+        :param local_port: 本地端口号
         :param debugger_address: 调试浏览器地址，例：127.0.0.1:9222
         :param download_path: 下载文件路径
         :param user_data_path: 用户数据路径
@@ -617,6 +656,9 @@ class DriverOptions(Options):
 
         if chrome_path is not None:
             self.binary_location = chrome_path
+
+        if local_port is not None:
+            self.debugger_address = f'127.0.0.1:{local_port}'
 
         if debugger_address is not None:
             self.debugger_address = debugger_address
@@ -636,57 +678,6 @@ class DriverOptions(Options):
         return _chrome_options_to_dict(self)
 
 
-def _dict_to_chrome_options(options: dict) -> Options:
-    """从传入的字典获取浏览器设置，返回ChromeOptions对象  \n
-    :param options: 配置信息字典
-    :return: 保存浏览器配置的ChromeOptions对象
-    """
-    chrome_options = webdriver.ChromeOptions()
-    # 已打开的浏览器路径
-    if options.get('debugger_address', None):
-        chrome_options.debugger_address = options['debugger_address']
-
-    # 创建新的浏览器
-    else:
-        # 浏览器的exe文件路径
-        if options.get('binary_location', None):
-            chrome_options.binary_location = options['binary_location']
-
-        # 启动参数
-        if options.get('arguments', None):
-            if not isinstance(options['arguments'], list):
-                raise Exception(f"参数必须为list，现在是：{type(options['arguments'])}。")
-
-            for arg in options['arguments']:
-                chrome_options.add_argument(arg)
-
-        # 加载插件
-        if options.get('extension_files', None):
-            if not isinstance(options['extension_files'], list):
-                raise Exception(f'extension_files必须是list，现在是：{type(options["extension_files"])}。')
-
-            for arg in options['extension_files']:
-                chrome_options.add_extension(arg)
-
-        # 扩展设置
-        if options.get('extensions', None):
-            if not isinstance(options['extensions'], list):
-                raise Exception(f'extensions必须是list，现在是：{type(options["extensions"])}。')
-
-            for arg in options['extensions']:
-                chrome_options.add_encoded_extension(arg)
-
-        # 实验性质的设置参数
-        if options.get('experimental_options', None):
-            if not isinstance(options['experimental_options'], dict):
-                raise Exception(f'experimental_options必须是dict，现在是：{type(options["experimental_options"])}。')
-
-            for i in options['experimental_options']:
-                chrome_options.add_experimental_option(i, options['experimental_options'][i])
-
-    return chrome_options
-
-
 def _chrome_options_to_dict(options: Union[dict, DriverOptions, Options, None, bool]) -> Union[dict, None]:
     """把chrome配置对象转换为字典                             \n
     :param options: chrome配置对象，字典或DriverOptions对象
@@ -699,11 +690,21 @@ def _chrome_options_to_dict(options: Union[dict, DriverOptions, Options, None, b
         return options
 
     re_dict = dict()
-    attrs = ['debugger_address', 'binary_location', 'arguments', 'extensions', 'experimental_options', 'driver_path']
+    attrs = ['debugger_address', 'binary_location', 'arguments', 'extensions', 'experimental_options', 'driver_path',
+             'set_window_rect', 'page_load_strategy']
 
     options_dir = options.__dir__()
     for attr in attrs:
-        re_dict[attr] = options.__getattribute__(f'_{attr}') if attr in options_dir else None
+        try:
+            re_dict[attr] = options.__getattribute__(f'{attr}') if attr in options_dir else None
+        except Exception:
+            pass
+
+    if 'timeouts' in options_dir and 'timeouts' in options._caps:
+        timeouts = options.__getattribute__('timeouts')
+        timeouts['pageLoad'] /= 1000
+        timeouts['script'] /= 1000
+        re_dict['timeouts'] = timeouts
 
     return re_dict
 

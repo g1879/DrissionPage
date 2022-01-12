@@ -16,7 +16,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
 from .base import DrissionElement, BaseElement
-from .common import str_to_loc, get_usable_path, translate_loc, format_html, get_ele_txt
+from .common import str_to_loc, get_usable_path, format_html, get_ele_txt, get_loc
 from .session_element import make_session_ele
 
 
@@ -91,19 +91,6 @@ class DriverElement(DrissionElement):
         """返回未格式化处理的元素内文本"""
         return self.inner_ele.get_attribute('innerText')
 
-    @property
-    def parent(self):
-        """返回父级元素"""
-        return self.parents()
-
-    def parents(self, num: int = 1):
-        """返回上面第num级父元素              \n
-        :param num: 第几级父元素
-        :return: DriverElement对象
-        """
-        loc = 'xpath', f'.{"/.." * num}'
-        return self.ele(loc, timeout=0)
-
     def attr(self, attr: str) -> str:
         """获取attribute属性值            \n
         :param attr: 属性名
@@ -123,9 +110,9 @@ class DriverElement(DrissionElement):
     def ele(self,
             loc_or_str: Union[Tuple[str, str], str],
             timeout: float = None):
-        """返回当前元素下级符合条件的第一个元素、属性或节点文本                                      \n
+        """返回当前元素下级符合条件的第一个元素、属性或节点文本                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
         :return: DriverElement对象或属性、文本
         """
         return self._ele(loc_or_str, timeout)
@@ -133,21 +120,21 @@ class DriverElement(DrissionElement):
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
              timeout: float = None):
-        """返回当前元素下级所有符合条件的子元素、属性或节点文本                                                   \n
+        """返回当前元素下级所有符合条件的子元素、属性或节点文本                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 查找元素超时时间
+        :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
         :return: DriverElement对象或属性、文本组成的列表
         """
         return self._ele(loc_or_str, timeout=timeout, single=False)
 
-    def s_ele(self, loc_or_ele=None):
+    def s_ele(self, loc_or_str: Union[Tuple[str, str], str] = None):
         """查找第一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高        \n
-        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
-        return make_session_ele(self, loc_or_ele)
+        return make_session_ele(self, loc_or_str)
 
-    def s_eles(self, loc_or_str: Union[Tuple[str, str], str]):
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None):
         """查找所有符合条件的元素以SessionElement列表形式返回                         \n
         :param loc_or_str: 定位符
         :return: SessionElement或属性、文本组成的列表
@@ -205,7 +192,8 @@ class DriverElement(DrissionElement):
         }
         return e(arguments[0]);
         '''
-        return self.run_script(js)
+        res_txt = self.run_script(js)
+        return f':root{res_txt}' if mode == 'css' else res_txt
 
     # -----------------driver独有属性和方法-------------------
     @property
@@ -232,12 +220,12 @@ class DriverElement(DrissionElement):
         return self.shadow_root
 
     @property
-    def before(self) -> str:
+    def pseudo_before(self) -> str:
         """返回当前元素的::before伪元素内容"""
         return self.style('content', 'before')
 
     @property
-    def after(self) -> str:
+    def pseudo_after(self) -> str:
         """返回当前元素的::after伪元素内容"""
         return self.style('content', 'after')
 
@@ -252,90 +240,85 @@ class DriverElement(DrissionElement):
 
         return self._select
 
-    def left(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
-        """获取网页上显示在当前元素左边的某个元素，可设置选取条件                          \n
-        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+    def left(self, index: int = 1, filter_loc: Union[tuple, str] = '') -> 'DriverElement':
+        """获取网页上显示在当前元素左边的某个元素，可设置选取条件，可指定结果中第几个               \n
         :param index: 获取第几个
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
         :return: DriverElement对象
         """
-        return self._get_relative_eles('left', filter_loc, 1, index)[0]
+        eles = self._get_relative_eles('left', filter_loc)
+        return eles[index - 1] if index <= len(eles) else None
 
-    def right(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
-        """获取网页上显示在当前元素右边的某个元素，可设置选取条件                          \n
-        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+    def right(self, index: int = 1, filter_loc: Union[tuple, str] = '') -> 'DriverElement':
+        """获取网页上显示在当前元素右边的某个元素，可设置选取条件，可指定结果中第几个               \n
         :param index: 获取第几个
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
         :return: DriverElement对象
         """
-        return self._get_relative_eles('right', filter_loc, 1, index)[0]
+        eles = self._get_relative_eles('right', filter_loc)
+        return eles[index - 1] if index <= len(eles) else None
 
-    def above(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
-        """获取网页上显示在当前元素上边的某个元素，可设置选取条件                          \n
-        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+    def above(self, index: int = 1, filter_loc: Union[tuple, str] = '') -> 'DriverElement':
+        """获取网页上显示在当前元素上边的某个元素，可设置选取条件，可指定结果中第几个               \n
         :param index: 获取第几个
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
         :return: DriverElement对象
         """
-        return self._get_relative_eles('left', filter_loc, 1, index)[0]
+        eles = self._get_relative_eles('left', filter_loc)
+        return eles[index - 1] if index <= len(eles) else None
 
-    def below(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
-        """获取网页上显示在当前元素下边的某个元素，可设置选取条件                          \n
-        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+    def below(self, index: int = 1, filter_loc: Union[tuple, str] = '') -> 'DriverElement':
+        """获取网页上显示在当前元素下边的某个元素，可设置选取条件，可指定结果中第几个               \n
         :param index: 获取第几个
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
         :return: DriverElement对象
         """
-        return self._get_relative_eles('left', filter_loc, 1, index)[0]
+        eles = self._get_relative_eles('left', filter_loc)
+        return eles[index - 1] if index <= len(eles) else None
 
-    def near(self, filter_loc: Union[tuple, str] = '', index: int = 1) -> 'DriverElement':
-        """获取网页上显示在当前元素最近的某个元素，可设置选取条件                          \n
-        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
+    def near(self, index: int = 1, filter_loc: Union[tuple, str] = '') -> 'DriverElement':
+        """获取网页上显示在当前元素最近的某个元素，可设置选取条件，可指定结果中第几个               \n
         :param index: 获取第几个
+        :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
         :return: DriverElement对象
         """
-        return self._get_relative_eles('near', filter_loc, 1, index)[0]
+        eles = self._get_relative_eles('near', filter_loc)
+        return eles[index - 1] if index <= len(eles) else None
 
-    def lefts(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
-        """获取网页上显示在当前元素左边的某个元素，可设置选取条件                          \n
+    def lefts(self, filter_loc: Union[tuple, str] = '') -> List['DriverElement']:
+        """获取网页上显示在当前元素左边的所有元素，可设置选取条件，从近到远排列                    \n
         :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
-        :param total: 获取多少个
-        :param begin: 从第几个开始返回
         :return: DriverElement对象组成的列表
         """
-        return self._get_relative_eles('left', filter_loc, total, begin)
+        return self._get_relative_eles('left', filter_loc)
 
-    def rights(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
-        """获取网页上显示在当前元素右边的某个元素，可设置选取条件                          \n
+    def rights(self, filter_loc: Union[tuple, str] = '') -> List['DriverElement']:
+        """获取网页上显示在当前元素右边的所有元，可设置选取条件，从近到远排列                    \n
         :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
-        :param total: 获取多少个
-        :param begin: 从第几个开始返回
         :return: DriverElement对象组成的列表
         """
-        return self._get_relative_eles('right', filter_loc, total, begin)
+        return self._get_relative_eles('right', filter_loc)
 
-    def aboves(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
-        """获取网页上显示在当前元素上边的某个元素，可设置选取条件                          \n
+    def aboves(self, filter_loc: Union[tuple, str] = '') -> List['DriverElement']:
+        """获取网页上显示在当前元素上边的所有元素，可设置选取条件，从近到远排列                    \n
         :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
-        :param total: 获取多少个
-        :param begin: 从第几个开始返回
         :return: DriverElement对象组成的列表
         """
-        return self._get_relative_eles('left', filter_loc, total, begin)
+        return self._get_relative_eles('left', filter_loc)
 
-    def belows(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
-        """获取网页上显示在当前元素下边的某个元素，可设置选取条件                          \n
+    def belows(self, filter_loc: Union[tuple, str] = '') -> List['DriverElement']:
+        """获取网页上显示在当前元素下边的所有元素，可设置选取条件，从近到远排列                    \n
         :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
-        :param total: 获取多少个
-        :param begin: 从第几个开始返回
         :return: DriverElement对象组成的列表
         """
-        return self._get_relative_eles('left', filter_loc, total, begin)
+        return self._get_relative_eles('left', filter_loc)
 
-    def nears(self, filter_loc: Union[tuple, str] = '', total: int = None, begin: int = 1) -> List['DriverElement']:
-        """获取网页上显示在当前元素最近的某个元素，可设置选取条件                          \n
+    def nears(self, filter_loc: Union[tuple, str] = '') -> List['DriverElement']:
+        """获取网页上显示在当前元素附近元素，可设置选取条件，从近到远排列                    \n
         :param filter_loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
-        :param begin: 从第几个开始返回
-        :param total: 获取多少个
         :return: DriverElement对象组成的列表
         """
-        return self._get_relative_eles('near', filter_loc, total, begin)
+        return self._get_relative_eles('near', filter_loc)
 
     def wait_ele(self,
                  loc_or_ele: Union[str, tuple, DrissionElement, WebElement],
@@ -368,15 +351,23 @@ class DriverElement(DrissionElement):
         :param timeout: 尝试点击的超时时间，不指定则使用父页面的超时时间
         :return: 是否点击成功
         """
+
+        def do_it() -> bool:
+            try:
+                self.inner_ele.click()
+                return True
+            except Exception:
+                return False
+
         if not by_js:
             timeout = timeout if timeout is not None else self.page.timeout
             t1 = perf_counter()
-            while perf_counter() - t1 <= timeout:
-                try:
-                    self.inner_ele.click()
-                    return True
-                except Exception:
-                    pass
+            click = do_it()
+            while not click and perf_counter() - t1 <= timeout:
+                click = do_it()
+
+            if click:
+                return True
 
         # 若点击失败，用js方式点击
         if by_js is not False:
@@ -433,16 +424,16 @@ class DriverElement(DrissionElement):
     def input(self,
               vals: Union[str, tuple],
               clear: bool = True,
-              insure_input: bool = True,
+              insure: bool = True,
               timeout: float = None) -> bool:
         """输入文本或组合键，也可用于输入文件路径到input元素（文件间用\n间隔）                          \n
         :param vals: 文本值或按键组合
         :param clear: 输入前是否清空文本框
-        :param insure_input: 确保输入正确，解决文本框有时输入失效的问题，不能用于输入组合键
+        :param insure: 确保输入正确，解决文本框有时输入失效的问题，不能用于输入组合键
         :param timeout: 尝试输入的超时时间，不指定则使用父页面的超时时间，只在insure_input为True时生效
         :return: bool
         """
-        if not insure_input:  # 普通输入
+        if not insure or self.tag != 'input' or self.prop('type') != 'text':  # 普通输入
             if clear:
                 self.inner_ele.clear()
 
@@ -479,12 +470,51 @@ class DriverElement(DrissionElement):
                     return True
 
     def run_script(self, script: str, *args) -> Any:
-        """执行js代码，传入自己为第一个参数  \n
+        """执行js代码，代码中用arguments[0]表示自己    \n
         :param script: js文本
         :param args: 传入的参数
         :return: js执行结果
         """
         return self.inner_ele.parent.execute_script(script, self.inner_ele, *args)
+
+    def scroll_to(self, mode: str = 'bottom', pixel: int = 300) -> None:
+        """按参数指示方式滚动元素                                                                                    \n
+        :param mode: 可选滚动方向：'top', 'bottom', 'half', 'rightmost', 'leftmost', 'up', 'down', 'left', 'right'
+        :param pixel: 滚动的像素
+        :return: None
+        """
+        if mode == 'top':
+            self.run_script("arguments[0].scrollTo(arguments[0].scrollLeft,0);")
+
+        elif mode == 'bottom':
+            self.run_script("arguments[0].scrollTo(arguments[0].scrollLeft,arguments[0].scrollHeight);")
+
+        elif mode == 'half':
+            self.run_script("arguments[0].scrollTo(arguments[0].scrollLeft,arguments[0].scrollHeight/2);")
+
+        elif mode == 'rightmost':
+            self.run_script("arguments[0].scrollTo(arguments[0].scrollWidth,arguments[0].scrollTop);")
+
+        elif mode == 'leftmost':
+            self.run_script("arguments[0].scrollTo(0,arguments[0].scrollTop);")
+
+        elif mode == 'up':
+            pixel = pixel if pixel >= 0 else -pixel
+            self.run_script(f"arguments[0].scrollBy(0,{pixel});")
+
+        elif mode == 'down':
+            self.run_script(f"arguments[0].scrollBy(0,{pixel});")
+
+        elif mode == 'left':
+            pixel = pixel if pixel >= 0 else -pixel
+            self.run_script(f"arguments[0].scrollBy({pixel},0);")
+
+        elif mode == 'right':
+            self.run_script(f"arguments[0].scrollBy({pixel},0);")
+
+        else:
+            raise ValueError("mode参数只能是'top', 'bottom', 'half', 'rightmost', "
+                             "'leftmost', 'up', 'down', 'left', 'right'。")
 
     def submit(self) -> Union[bool, None]:
         """提交表单"""
@@ -667,19 +697,12 @@ class DriverElement(DrissionElement):
 
     def _get_relative_eles(self,
                            mode: str,
-                           loc: Union[tuple, str] = '',
-                           total: int = 1,
-                           begin: int = 1) -> Union[List['DriverElement'], 'DriverElement']:
+                           loc: Union[tuple, str] = '') -> Union[List['DriverElement'], 'DriverElement']:
         """获取网页上相对于当前元素周围的某个元素，可设置选取条件                          \n
         :param mode: 可选：'left', 'right', 'above', 'below', 'near'
         :param loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
-        :param total: 一共获取几个
-        :param begin: 从第几个开始获取
         :return: DriverElement对象
         """
-        if not isinstance(begin, int) or begin < 1 or not isinstance(total, int) or total < 1:
-            raise ValueError('begin和total参数只能是大于0的整数。')
-
         try:
             from selenium.webdriver.support.relative_locator import RelativeBy
         except ImportError:
@@ -700,8 +723,7 @@ class DriverElement(DrissionElement):
             else:  # 'near'
                 eles = self.page.driver.find_elements(RelativeBy({loc[0]: loc[1]}).near(self.inner_ele))
 
-            end = None if not total or total >= len(eles) else begin + total - 1
-            return [self.page.ele(e) for e in eles[begin - 1:end]]
+            return [self.page.ele(e) for e in eles]
 
         except IndexError:
             raise ValueError('未找到元素，请检查浏览器版本，低版本的浏览器无法使用此方法。')
@@ -720,12 +742,17 @@ def make_driver_ele(page_or_ele,
     :return: 返回DriverElement元素或它们组成的列表
     """
     # ---------------处理定位符---------------
-    if isinstance(loc, str):
-        loc = str_to_loc(loc)
-    elif isinstance(loc, tuple):
-        loc = translate_loc(loc)
+    if isinstance(loc, (str, tuple)):
+        loc = get_loc(loc)
+
+    elif str(type(loc)).endswith('RelativeBy'):
+        page = page_or_ele.page if isinstance(page_or_ele, BaseElement) else page_or_ele
+        driver = page.driver
+        eles = driver.find_elements(loc)
+        return DriverElement(eles[0], page) if single else [DriverElement(ele, page) for ele in eles]
+
     else:
-        raise ValueError("定位符必须为str或长度为2的tuple。")
+        raise ValueError("定位符必须为str、长度为2的tuple、或RelativeBy对象。")
 
     # ---------------设置 page 和 driver---------------
     if isinstance(page_or_ele, BaseElement):  # 传入DriverElement 或 ShadowRootElement

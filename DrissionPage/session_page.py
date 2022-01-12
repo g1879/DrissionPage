@@ -97,7 +97,7 @@ class SessionPage(BasePage):
 
         return self._url_available
 
-    def ele(self, loc_or_ele: Union[Tuple[str, str], str, SessionElement], timeout=None) \
+    def ele(self, loc_or_ele: Union[Tuple[str, str], str, SessionElement], timeout: float = None) \
             -> Union[SessionElement, List[SessionElement], str, None]:
         """返回页面中符合条件的第一个元素、属性或节点文本                            \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
@@ -106,7 +106,7 @@ class SessionPage(BasePage):
         """
         return self._ele(loc_or_ele)
 
-    def eles(self, loc_or_str: Union[Tuple[str, str], str], timeout=None) -> List[SessionElement]:
+    def eles(self, loc_or_str: Union[Tuple[str, str], str], timeout: float = None) -> List[SessionElement]:
         """返回页面中所有符合条件的元素、属性或节点文本                          \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
@@ -114,14 +114,14 @@ class SessionPage(BasePage):
         """
         return self._ele(loc_or_str, single=False)
 
-    def s_ele(self, loc_or_str: Union[Tuple[str, str], str]):
+    def s_ele(self, loc_or_ele: Union[Tuple[str, str], str, SessionElement] = None):
         """返回页面中符合条件的第一个元素、属性或节点文本                          \n
-        :param loc_or_str: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
+        :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
-        return self._ele(loc_or_str)
+        return make_session_ele(self.html) if loc_or_ele is None else self._ele(loc_or_ele)
 
-    def s_eles(self, loc_or_str: Union[Tuple[str, str], str]):
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None):
         """返回页面中符合条件的所有元素、属性或节点文本                              \n
         :param loc_or_str: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
@@ -369,7 +369,7 @@ class SessionPage(BasePage):
                             if show_msg and file_size:
                                 downloaded_size += 1024
                                 rate = downloaded_size / file_size if downloaded_size < file_size else 1
-                                print('\r {:.0%} '.format(rate), end="")
+                                print('\r{:.0%} '.format(rate), end="")
 
             except Exception as e:
                 if show_errmsg:

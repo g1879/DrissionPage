@@ -12,7 +12,7 @@ from lxml.etree import tostring
 from lxml.html import HtmlElement, fromstring
 
 from .base import DrissionElement, BasePage, BaseElement
-from .common import str_to_loc, translate_loc, get_ele_txt
+from .common import get_ele_txt, get_loc
 
 
 class SessionElement(DrissionElement):
@@ -70,18 +70,6 @@ class SessionElement(DrissionElement):
         """返回未格式化处理的元素内文本"""
         return str(self._inner_ele.text_content())
 
-    @property
-    def parent(self):
-        """返回父级元素"""
-        return self.parents()
-
-    def parents(self, num: int = 1):
-        """返回上面第num级父元素                                         \n
-        :param num: 第几级父元素
-        :return: SessionElement对象
-        """
-        return self.ele(f'xpath:..{"/.." * (num - 1)}')
-
     def attr(self, attr: str) -> Union[str, None]:
         """返回attribute属性值                           \n
         :param attr: 属性名
@@ -138,7 +126,7 @@ class SessionElement(DrissionElement):
         """
         return self._ele(loc_or_str)
 
-    def s_eles(self, loc_or_str: Union[Tuple[str, str], str]):
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None):
         """返回当前元素下级所有符合条件的子元素、属性或节点文本                       \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本组成的列表
@@ -170,9 +158,9 @@ class SessionElement(DrissionElement):
                 brothers = len(ele.eles(f'xpath:./preceding-sibling::{ele.tag}'))
                 path_str = f'/{ele.tag}[{brothers + 1}]{path_str}' if brothers > 0 else f'/{ele.tag}{path_str}'
 
-            ele = ele.parent
+            ele = ele.parent()
 
-        return path_str[1:] if mode == 'css' else path_str
+        return f':root{path_str[1:]}' if mode == 'css' else path_str
 
     # ----------------session独有方法-----------------------
     def _make_absolute(self, link) -> str:
@@ -212,13 +200,13 @@ def make_session_ele(html_or_ele: Union[str, BaseElement, BasePage],
     # ---------------处理定位符---------------
     if not loc:
         if isinstance(html_or_ele, SessionElement):
-            return html_or_ele
+            return html_or_ele if single else [html_or_ele]
+
         loc = ('xpath', '.')
-        single = True
-    elif isinstance(loc, str):
-        loc = str_to_loc(loc)
-    elif isinstance(loc, tuple):
-        loc = translate_loc(loc)
+
+    elif isinstance(loc, (str, tuple)):
+        loc = get_loc(loc)
+
     else:
         raise ValueError("定位符必须为str或长度为2的tuple。")
 
