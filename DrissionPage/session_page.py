@@ -30,8 +30,9 @@ class SessionPage(BasePage):
         self._session = session
         self._response = None
 
-    def __call__(self, loc_or_str: Union[Tuple[str, str], str, SessionElement], timeout=None) \
-            -> Union[SessionElement, List[SessionElement], str]:
+    def __call__(self,
+                 loc_or_str: Union[Tuple[str, str], str, SessionElement],
+                 timeout=None) -> Union[SessionElement, str, None]:
         """在内部查找元素                                                  \n
         例：ele2 = ele1('@id=ele_id')                                     \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
@@ -97,8 +98,9 @@ class SessionPage(BasePage):
 
         return self._url_available
 
-    def ele(self, loc_or_ele: Union[Tuple[str, str], str, SessionElement], timeout: float = None) \
-            -> Union[SessionElement, List[SessionElement], str, None]:
+    def ele(self,
+            loc_or_ele: Union[Tuple[str, str], str, SessionElement],
+            timeout: float = None) -> Union[SessionElement, str, None]:
         """返回页面中符合条件的第一个元素、属性或节点文本                            \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
@@ -106,7 +108,9 @@ class SessionPage(BasePage):
         """
         return self._ele(loc_or_ele)
 
-    def eles(self, loc_or_str: Union[Tuple[str, str], str], timeout: float = None) -> List[SessionElement]:
+    def eles(self,
+             loc_or_str: Union[Tuple[str, str], str],
+             timeout: float = None) -> List[Union[SessionElement, str]]:
         """返回页面中所有符合条件的元素、属性或节点文本                          \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
@@ -114,14 +118,14 @@ class SessionPage(BasePage):
         """
         return self._ele(loc_or_str, single=False)
 
-    def s_ele(self, loc_or_ele: Union[Tuple[str, str], str, SessionElement] = None):
+    def s_ele(self, loc_or_ele: Union[Tuple[str, str], str, SessionElement] = None) -> Union[SessionElement, str, None]:
         """返回页面中符合条件的第一个元素、属性或节点文本                          \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
         return make_session_ele(self.html) if loc_or_ele is None else self._ele(loc_or_ele)
 
-    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None):
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None) -> List[Union[SessionElement, str]]:
         """返回页面中符合条件的所有元素、属性或节点文本                              \n
         :param loc_or_str: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
@@ -131,7 +135,7 @@ class SessionPage(BasePage):
     def _ele(self,
              loc_or_ele: Union[Tuple[str, str], str, SessionElement],
              timeout: float = None,
-             single: bool = True) -> Union[SessionElement, List[SessionElement], str, None]:
+             single: bool = True) -> Union[SessionElement, str, None, List[Union[SessionElement, str]]]:
         """返回页面中符合条件的元素、属性或节点文本，默认返回第一个                                           \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和父类对应
@@ -168,7 +172,7 @@ class SessionPage(BasePage):
                         mode: str = 'get',
                         data: Union[dict, str] = None,
                         show_errmsg: bool = False,
-                        **kwargs) -> Response:
+                        **kwargs) -> Union[Response, None]:
         """尝试连接，重试若干次                            \n
         :param to_url: 要访问的url
         :param times: 重试次数
@@ -261,7 +265,7 @@ class SessionPage(BasePage):
                  file_exists: str = 'rename',
                  post_data: Union[str, dict] = None,
                  show_msg: bool = False,
-                 show_errmsg: bool = False,
+                 show_errmsg: bool = True,
                  retry: int = None,
                  interval: float = None,
                  **kwargs) -> tuple:

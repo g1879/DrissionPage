@@ -18,8 +18,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from .base import BasePage
 from .common import get_usable_path
-from .driver_element import DriverElement, make_driver_ele, _wait_ele
-from .session_element import make_session_ele
+from .driver_element import DriverElement, make_driver_ele, Scroll, ElementWaiter
+from .session_element import make_session_ele, SessionElement
 
 
 class DriverPage(BasePage):
@@ -30,9 +30,10 @@ class DriverPage(BasePage):
         super().__init__(timeout)
         self._driver = driver
         self._wait_object = None
+        self._scroll = None
 
     def __call__(self, loc_or_str: Union[Tuple[str, str], str, DriverElement, WebElement],
-                 timeout: float = None) -> Union[DriverElement, List[DriverElement], str]:
+                 timeout: float = None) -> Union[DriverElement, str, None]:
         """在内部查找元素                                           \n
         例：ele = page('@id=ele_id')                              \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
@@ -94,7 +95,7 @@ class DriverPage(BasePage):
 
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, DriverElement, WebElement],
-            timeout: float = None) -> Union[DriverElement, List[DriverElement], str, None]:
+            timeout: float = None) -> Union[DriverElement, str, None]:
         """返回页面中符合条件的第一个元素                                          \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param timeout: 查找元素超时时间，默认与页面等待时间一致
@@ -104,7 +105,7 @@ class DriverPage(BasePage):
 
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None) -> List[DriverElement]:
+             timeout: float = None) -> List[Union[DriverElement, str]]:
         """返回页面中所有符合条件的元素                                     \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间，默认与页面等待时间一致
@@ -112,7 +113,7 @@ class DriverPage(BasePage):
         """
         return self._ele(loc_or_str, timeout, single=False)
 
-    def s_ele(self, loc_or_ele: Union[Tuple[str, str], str, DriverElement] = None):
+    def s_ele(self, loc_or_ele: Union[Tuple[str, str], str, DriverElement] = None) -> Union[SessionElement, str, None]:
         """查找第一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高       \n
         :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
@@ -122,7 +123,7 @@ class DriverPage(BasePage):
         else:
             return make_session_ele(self, loc_or_ele)
 
-    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None):
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None) -> List[Union[SessionElement, str]]:
         """查找所有符合条件的元素以SessionElement列表形式返回                       \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象组成的列表
@@ -132,7 +133,7 @@ class DriverPage(BasePage):
     def _ele(self,
              loc_or_ele: Union[Tuple[str, str], str, DriverElement, WebElement],
              timeout: float = None,
-             single: bool = True) -> Union[DriverElement, List[DriverElement], str, None]:
+             single: bool = True) -> Union[DriverElement, str, None, List[Union[DriverElement, str]]]:
         """返回页面中符合条件的元素，默认返回第一个                                   \n
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param timeout: 查找元素超时时间
@@ -172,13 +173,6 @@ class DriverPage(BasePage):
         """设置查找元素时等待的秒数"""
         self._timeout = second
         self._wait_object = None
-
-    @property
-    def timeouts(self) -> dict:
-        """返回三种超时时间，selenium4以上版本可用"""
-        return {'implicit': self.timeout,
-                'pageLoad': self.driver.timeouts.page_load,
-                'script': self.driver.timeouts.script}
 
     def _try_to_connect(self,
                         to_url: str,
@@ -231,6 +225,13 @@ class DriverPage(BasePage):
         return self._wait_object
 
     @property
+    def timeouts(self) -> dict:
+        """返回三种超时时间，selenium4以上版本可用"""
+        return {'implicit': self.timeout,
+                'pageLoad': self.driver.timeouts.page_load,
+                'script': self.driver.timeouts.script}
+
+    @property
     def tabs_count(self) -> int:
         """返回标签页数量"""
         try:
@@ -258,6 +259,28 @@ class DriverPage(BasePage):
         """返回当前焦点所在元素"""
         return DriverElement(self.driver.switch_to.active_element, self)
 
+    @property
+    def scroll(self) -> Scroll:
+        """用于滚动滚动条的对象"""
+        if self._scroll is None:
+            self._scroll = Scroll(self)
+        return self._scroll
+
+    @property
+    def to_frame(self) -> 'ToFrame':
+        """用于跳转到frame的对象，调用其方法实现跳转                                             \n
+        示例：                                                                               \n
+            page.to_frame.by_loc('tag:iframe')               - 通过传入frame的查询字符串定位   \n
+            page.to_frame.by_loc((By.TAG_NAME, 'iframe'))    - 通过传入定位符定位             \n
+            page.to_frame.by_id('iframe_id')                 - 通过frame的id属性定位          \n
+            page.to_frame('iframe_name')                     - 通过frame的name属性定位        \n
+            page.to_frame(iframe_element)                    - 通过传入元素对象定位            \n
+            page.to_frame(0)                                 - 通过frame的序号定位            \n
+            page.to_frame.main()                             - 跳到最顶层                    \n
+            page.to_frame.parent()                           - 跳到上一层
+        """
+        return ToFrame(self)
+
     def set_timeouts(self, implicit: float = None, pageLoad: float = None, script: float = None) -> None:
         """设置超时时间，单位为秒，selenium4以上版本有效       \n
         :param implicit: 查找元素超时时间
@@ -276,15 +299,13 @@ class DriverPage(BasePage):
 
     def wait_ele(self,
                  loc_or_ele: Union[str, tuple, DriverElement, WebElement],
-                 mode: str,
-                 timeout: float = None) -> bool:
+                 timeout: float = None) -> 'ElementWaiter':
         """等待元素从dom删除、显示、隐藏                             \n
         :param loc_or_ele: 可以是元素、查询字符串、loc元组
-        :param mode: 等待方式，可选：'del', 'display', 'hidden'
         :param timeout: 等待超时时间
         :return: 等待是否成功
         """
-        return _wait_ele(self, loc_or_ele, mode, timeout)
+        return ElementWaiter(self, loc_or_ele, timeout)
 
     def check_page(self) -> Union[bool, None]:
         """检查页面是否符合预期            \n
@@ -364,55 +385,6 @@ class DriverPage(BasePage):
         tab = self.driver.window_handles[tab] if isinstance(tab, int) else tab
         self.driver.switch_to.window(tab)
 
-    def to_frame(self, loc_or_ele: Union[int, str, tuple, WebElement, DriverElement] = 'main') -> 'DriverPage':
-        """跳转到frame                                                                       \n
-        可接收frame序号(0开始)、id或name、查询字符串、loc元组、WebElement对象、DriverElement对象，     \n
-        传入 'main' 跳到最高层，传入 'parent' 跳到上一层                                           \n
-        示例：                                                                                \n
-            to_frame('tag:iframe')    - 通过传入frame的查询字符串定位                             \n
-            to_frame('iframe_id')     - 通过frame的id属性定位                                   \n
-            to_frame('iframe_name')   - 通过frame的name属性定位                                 \n
-            to_frame(iframe_element)  - 通过传入元素对象定位                                     \n
-            to_frame(0)               - 通过frame的序号定位                                     \n
-            to_frame('main')          - 跳到最高层                                             \n
-            to_frame('parent')        - 跳到上一层                                             \n
-        :param loc_or_ele: iframe的定位信息
-        :return: 返回自己，用于链式操作
-        """
-        # 根据序号跳转
-        if isinstance(loc_or_ele, int):
-            self.driver.switch_to.frame(loc_or_ele)
-
-        elif isinstance(loc_or_ele, str):
-            # 跳转到最上级
-            if loc_or_ele == 'main':
-                self.driver.switch_to.default_content()
-
-            # 跳转到上一层
-            elif loc_or_ele == 'parent':
-                self.driver.switch_to.parent_frame()
-
-            # 传入id或name
-            elif ':' not in loc_or_ele and '=' not in loc_or_ele and not loc_or_ele.startswith(('#', '.')):
-                self.driver.switch_to.frame(loc_or_ele)
-
-            # 传入控制字符串
-            else:
-                ele = self.ele(loc_or_ele)
-                self.driver.switch_to.frame(ele.inner_ele)
-
-        elif isinstance(loc_or_ele, WebElement):
-            self.driver.switch_to.frame(loc_or_ele)
-
-        elif isinstance(loc_or_ele, DriverElement):
-            self.driver.switch_to.frame(loc_or_ele.inner_ele)
-
-        elif isinstance(loc_or_ele, tuple):
-            ele = self.ele(loc_or_ele)
-            self.driver.switch_to.frame(ele.inner_ele)
-
-        return self
-
     def screenshot(self, path: str, filename: str = None) -> str:
         """截取页面可见范围截图                                  \n
         :param path: 保存路径
@@ -442,36 +414,34 @@ class DriverPage(BasePage):
         :param pixel: 滚动的像素
         :return: None
         """
+        from warnings import warn
+        warn("此方法下个版本将停用，请用scroll属性代替。", DeprecationWarning, stacklevel=2)
         if mode == 'top':
-            self.driver.execute_script("window.scrollTo(document.documentElement.scrollLeft,0);")
+            self.scroll.to_top()
 
         elif mode == 'bottom':
-            self.driver.execute_script(
-                "window.scrollTo(document.documentElement.scrollLeft,document.body.scrollHeight);")
+            self.scroll.to_bottom()
 
         elif mode == 'half':
-            self.driver.execute_script(
-                "window.scrollTo(document.documentElement.scrollLeft,document.body.scrollHeight/2);")
+            self.scroll.to_half()
 
         elif mode == 'rightmost':
-            self.driver.execute_script("window.scrollTo(document.body.scrollWidth,document.documentElement.scrollTop);")
+            self.scroll.to_rightmost()
 
         elif mode == 'leftmost':
-            self.driver.execute_script("window.scrollTo(0,document.documentElement.scrollTop);")
+            self.scroll.to_leftmost()
 
         elif mode == 'up':
-            pixel = pixel if pixel >= 0 else -pixel
-            self.driver.execute_script(f"window.scrollBy(0,{pixel});")
+            self.scroll.up(pixel)
 
         elif mode == 'down':
-            self.driver.execute_script(f"window.scrollBy(0,{pixel});")
+            self.scroll.down(pixel)
 
         elif mode == 'left':
-            pixel = pixel if pixel >= 0 else -pixel
-            self.driver.execute_script(f"window.scrollBy({pixel},0);")
+            self.scroll.left(pixel)
 
         elif mode == 'right':
-            self.driver.execute_script(f"window.scrollBy({pixel},0);")
+            self.scroll.right(pixel)
 
         else:
             raise ValueError("mode参数只能是'top', 'bottom', 'half', 'rightmost', "
@@ -550,6 +520,87 @@ class DriverPage(BasePage):
             alert.accept()
 
         return text
+
+
+class ToFrame(object):
+    """用于处理焦点跳转到页面框架的类"""
+
+    def __init__(self, page: DriverPage):
+        self.page = page
+
+    def __call__(self, condition: Union[int, str, tuple, WebElement, DriverElement] = 'main'):
+        """跳转到(i)frame，可传入id、name、序号、元素对象、定位符                  \n
+        :param condition: (i)frame，可传入id、name、序号、元素对象、定位符
+        :return: 当前页面对象
+        """
+        if isinstance(condition, (DriverElement, WebElement)):
+            self.by_ele(condition)
+        elif isinstance(condition, int):
+            self.by_index(condition)
+        elif ':' not in condition and '=' not in condition and not condition.startswith(('#', '.', '@')):
+            self.by_id(condition)
+        else:
+            self.by_loc(condition)
+
+        return self.page
+
+    def main(self) -> DriverPage:
+        """焦点跳转到最高层级框架"""
+        self.page.driver.switch_to.default_content()
+        return self.page
+
+    def parent(self, level: int = 1) -> DriverPage:
+        """焦点跳转到上级框架，可指定上级层数       \n
+        :param level: 上面第几层框架
+        :return: 框架所在页面对象
+        """
+        if level < 1:
+            raise ValueError('level参数须是大于0的整数。')
+        for _ in range(level):
+            self.page.driver.switch_to.parent_frame()
+        return self.page
+
+    def by_id(self, id_: str) -> DriverPage:
+        """焦点跳转到id为该值的(i)frame              \n
+        :param id_: (i)frame的id属性值
+        :return: 框架所在页面对象
+        """
+        self.page.driver.switch_to.frame(id_)
+        return self.page
+
+    def by_name(self, name: str) -> DriverPage:
+        """焦点跳转到name为该值的(i)frame              \n
+        :param name: (i)frame的name属性值
+        :return: 框架所在页面对象
+        """
+        self.page.driver.switch_to.frame(name)
+        return self.page
+
+    def by_index(self, index: int) -> DriverPage:
+        """焦点跳转到页面中第几个(i)frame              \n
+        :param index: 页面中第几个(i)frame
+        :return: 框架所在页面对象
+        """
+        self.page.driver.switch_to.frame(index)
+        return self.page
+
+    def by_loc(self, loc: Union[str, tuple]) -> DriverPage:
+        """焦点跳转到根据定位符获取到的(i)frame                   \n
+        :param loc: 定位符，支持selenium原生和DriverPage定位符
+        :return: 框架所在页面对象
+        """
+        self.page.driver.switch_to.frame(self.page(loc).inner_ele)
+        return self.page
+
+    def by_ele(self, ele: Union[DriverElement, WebElement]) -> DriverPage:
+        """焦点跳转到传入的(i)frame元素对象              \n
+        :param ele: (i)frame元素对象
+        :return: 框架所在页面对象
+        """
+        if isinstance(ele, DriverElement):
+            ele = ele.inner_ele
+        self.page.driver.switch_to.frame(ele)
+        return self.page
 
 
 def _get_handles(handles: list, num_or_handles: Union[int, str, list, tuple]) -> set:

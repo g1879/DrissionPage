@@ -69,10 +69,10 @@ class BaseElement(BaseParser):
     def parent(self, level_or_loc: Union[tuple, str, int] = 1):
         pass
 
-    def prev(self, index: int = 1):
+    def prev(self, index: int = 1) -> None:
         return None  # ShadowRootElement直接继承
 
-    def prevs(self):
+    def prevs(self) -> None:
         return None  # ShadowRootElement直接继承
 
     def next(self, index: int = 1):
@@ -117,10 +117,10 @@ class DrissionElement(BaseElement):
 
         return [format_html(x.strip(' ').rstrip('\n')) for x in texts if x and sub('[\r\n\t ]', '', x) != '']
 
-    def parent(self, level_or_loc: Union[tuple, str, int] = 1) -> 'DrissionElement':
+    def parent(self, level_or_loc: Union[tuple, str, int] = 1) -> Union['DrissionElement', None]:
         """返回上面某一级父元素，可指定层数或用查询语法定位              \n
         :param level_or_loc: 第几级父元素，或定位符
-        :return: DriverElement对象
+        :return: 上级元素对象
         """
         if isinstance(level_or_loc, int):
             loc = f'xpath:./ancestor::*[{level_or_loc}]'
@@ -138,43 +138,36 @@ class DrissionElement(BaseElement):
 
         return self.ele(loc, timeout=0)
 
-    def prev(self, index: int = 1, filter_loc: Union[tuple, str] = '', timeout: float = 0):
+    def prev(self,
+             index: int = 1,
+             filter_loc: Union[tuple, str] = '',
+             timeout: float = 0) -> Union['DrissionElement', str, None]:
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
+        :return: 兄弟元素
         """
         nodes = self._get_brothers(index, filter_loc, 'preceding', timeout=timeout)
         return nodes[-1] if nodes else None
 
-    def next(self, index: int = 1, filter_loc: Union[tuple, str] = '', timeout: float = 0):
+    def next(self,
+             index: int = 1,
+             filter_loc: Union[tuple, str] = '',
+             timeout: float = 0) -> Union['DrissionElement', str, None]:
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
+        :return: 兄弟元素
         """
         nodes = self._get_brothers(index, filter_loc, 'following', timeout=timeout)
         return nodes[0] if nodes else None
 
-    def nexts(self, filter_loc: Union[tuple, str] = '', timeout: float = 0):
-        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
-        """
-        return self._get_brothers(filter_loc=filter_loc, direction='following', timeout=timeout)
-
-    def prevs(self, filter_loc: Union[tuple, str] = '', timeout: float = 0):
-        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
-        """
-        return self._get_brothers(filter_loc=filter_loc, direction='preceding', timeout=timeout)
-
-    def before(self, index: int = 1, filter_loc: Union[tuple, str] = '', timeout: float = None):
+    def before(self,
+               index: int = 1,
+               filter_loc: Union[tuple, str] = '',
+               timeout: float = None) -> Union['DrissionElement', str, None]:
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -184,7 +177,10 @@ class DrissionElement(BaseElement):
         nodes = self._get_brothers(index, filter_loc, 'preceding', False, timeout=timeout)
         return nodes[-1] if nodes else None
 
-    def after(self, index: int = 1, filter_loc: Union[tuple, str] = '', timeout: float = None):
+    def after(self,
+              index: int = 1,
+              filter_loc: Union[tuple, str] = '',
+              timeout: float = None) -> Union['DrissionElement', str, None]:
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -194,7 +190,29 @@ class DrissionElement(BaseElement):
         nodes = self._get_brothers(index, filter_loc, 'following', False, timeout)
         return nodes[0] if nodes else None
 
-    def befores(self, filter_loc: Union[tuple, str] = '', timeout: float = None):
+    def prevs(self,
+              filter_loc: Union[tuple, str] = '',
+              timeout: float = 0) -> List[Union['DrissionElement', str]]:
+        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 兄弟元素或节点文本组成的列表
+        """
+        return self._get_brothers(filter_loc=filter_loc, direction='preceding', timeout=timeout)
+
+    def nexts(self,
+              filter_loc: Union[tuple, str] = '',
+              timeout: float = 0) -> List[Union['DrissionElement', str]]:
+        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 兄弟元素或节点文本组成的列表
+        """
+        return self._get_brothers(filter_loc=filter_loc, direction='following', timeout=timeout)
+
+    def befores(self,
+                filter_loc: Union[tuple, str] = '',
+                timeout: float = None) -> List[Union['DrissionElement', str]]:
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -202,7 +220,9 @@ class DrissionElement(BaseElement):
         """
         return self._get_brothers(filter_loc=filter_loc, direction='preceding', brother=False, timeout=timeout)
 
-    def afters(self, filter_loc: Union[tuple, str] = '', timeout: float = None):
+    def afters(self,
+               filter_loc: Union[tuple, str] = '',
+               timeout: float = None) -> List[Union['DrissionElement', str]]:
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -215,7 +235,7 @@ class DrissionElement(BaseElement):
                       filter_loc: Union[tuple, str] = '',
                       direction: str = 'following',
                       brother: bool = True,
-                      timeout: float = .5) -> List['DrissionElement']:
+                      timeout: float = .5) -> List[Union['DrissionElement', str]]:
         """按要求返回兄弟元素或节点组成的列表                            \n
         :param index: 获取第几个，该参数不为None时只获取该编号的元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -238,15 +258,18 @@ class DrissionElement(BaseElement):
                 raise ValueError('此css selector语法不受支持，请换成xpath。')
             loc = loc[1].lstrip('./')
 
-        if index:
-            loc = f'xpath:./{direction}{brother}::{loc}[{index}]'
-        else:
-            loc = f'xpath:./{direction}{brother}::{loc}'
+        loc = f'xpath:./{direction}{brother}::{loc}'
 
         nodes = self._ele(loc, timeout=timeout, single=False)
         nodes = [e for e in nodes if not (isinstance(e, str) and sub('[ \n\t\r]', '', e) == '')]
 
-        return nodes
+        if nodes and index is not None:
+            try:
+                return [nodes[index - 1]]
+            except IndexError:
+                return []
+        else:
+            return nodes
 
     # ----------------以下属性或方法由后代实现----------------
     @property

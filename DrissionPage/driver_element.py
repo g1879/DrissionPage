@@ -17,7 +17,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from .base import DrissionElement, BaseElement
 from .common import str_to_loc, get_usable_path, format_html, get_ele_txt, get_loc
-from .session_element import make_session_ele
+from .session_element import make_session_ele, SessionElement
 
 
 class DriverElement(DrissionElement):
@@ -30,6 +30,7 @@ class DriverElement(DrissionElement):
         """
         super().__init__(ele, page)
         self._select = None
+        self._scroll = None
 
     def __repr__(self) -> str:
         attrs = [f"{attr}='{self.attrs[attr]}'" for attr in self.attrs]
@@ -37,7 +38,7 @@ class DriverElement(DrissionElement):
 
     def __call__(self,
                  loc_or_str: Union[Tuple[str, str], str],
-                 timeout: float = None):
+                 timeout: float = None) -> Union['DriverElement', str, None]:
         """在内部查找元素                                             \n
         例：ele2 = ele1('@id=ele_id')                               \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
@@ -109,7 +110,7 @@ class DriverElement(DrissionElement):
 
     def ele(self,
             loc_or_str: Union[Tuple[str, str], str],
-            timeout: float = None):
+            timeout: float = None) -> Union['DriverElement', str, None]:
         """返回当前元素下级符合条件的第一个元素、属性或节点文本                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
@@ -119,7 +120,7 @@ class DriverElement(DrissionElement):
 
     def eles(self,
              loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None):
+             timeout: float = None) -> List[Union['DriverElement', str]]:
         """返回当前元素下级所有符合条件的子元素、属性或节点文本                 \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
@@ -127,14 +128,14 @@ class DriverElement(DrissionElement):
         """
         return self._ele(loc_or_str, timeout=timeout, single=False)
 
-    def s_ele(self, loc_or_str: Union[Tuple[str, str], str] = None):
+    def s_ele(self, loc_or_str: Union[Tuple[str, str], str] = None) -> Union[SessionElement, str, None]:
         """查找第一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高        \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
         return make_session_ele(self, loc_or_str)
 
-    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None):
+    def s_eles(self, loc_or_str: Union[Tuple[str, str], str] = None) -> List[Union[SessionElement, str]]:
         """查找所有符合条件的元素以SessionElement列表形式返回                         \n
         :param loc_or_str: 定位符
         :return: SessionElement或属性、文本组成的列表
@@ -144,7 +145,7 @@ class DriverElement(DrissionElement):
     def _ele(self,
              loc_or_str: Union[Tuple[str, str], str],
              timeout: float = None,
-             single: bool = True):
+             single: bool = True) -> Union['DriverElement', str, None, List[Union['DriverElement', str]]]:
         """返回当前元素下级符合条件的子元素、属性或节点文本，默认返回第一个                                      \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间
@@ -240,6 +241,108 @@ class DriverElement(DrissionElement):
 
         return self._select
 
+    @property
+    def scroll(self) -> 'Scroll':
+        """用于滚动滚动条的对象"""
+        if self._scroll is None:
+            self._scroll = Scroll(self)
+        return self._scroll
+
+    def parent(self, level_or_loc: Union[tuple, str, int] = 1) -> Union['DriverElement', None]:
+        """返回上面某一级父元素，可指定层数或用查询语法定位              \n
+        :param level_or_loc: 第几级父元素，或定位符
+        :return: 上级元素对象
+        """
+        return super().parent(level_or_loc)
+
+    def prev(self,
+             index: int = 1,
+             filter_loc: Union[tuple, str] = '',
+             timeout: float = 0) -> Union['DriverElement', str, None]:
+        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
+        :param index: 前面第几个查询结果元素
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 兄弟元素
+        """
+        return super().prev(index, filter_loc, timeout)
+
+    def next(self,
+             index: int = 1,
+             filter_loc: Union[tuple, str] = '',
+             timeout: float = 0) -> Union['DriverElement', str, None]:
+        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
+        :param index: 后面第几个查询结果元素
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 兄弟元素
+        """
+        return super().next(index, filter_loc, timeout)
+
+    def before(self,
+               index: int = 1,
+               filter_loc: Union[tuple, str] = '',
+               timeout: float = None) -> Union['DriverElement', str, None]:
+        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
+        :param index: 前面第几个查询结果元素
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 本元素前面的某个元素或节点
+        """
+        return super().before(index, filter_loc, timeout)
+
+    def after(self,
+              index: int = 1,
+              filter_loc: Union[tuple, str] = '',
+              timeout: float = None) -> Union['DriverElement', str, None]:
+        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
+        :param index: 后面第几个查询结果元素
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 本元素后面的某个元素或节点
+        """
+        return super().after(index, filter_loc, timeout)
+
+    def prevs(self,
+              filter_loc: Union[tuple, str] = '',
+              timeout: float = 0) -> List[Union['DriverElement', str]]:
+        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 兄弟元素或节点文本组成的列表
+        """
+        return super().prevs(filter_loc, timeout)
+
+    def nexts(self,
+              filter_loc: Union[tuple, str] = '',
+              timeout: float = 0) -> List[Union['DriverElement', str]]:
+        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 兄弟元素或节点文本组成的列表
+        """
+        return super().nexts(filter_loc, timeout)
+
+    def befores(self,
+                filter_loc: Union[tuple, str] = '',
+                timeout: float = None) -> List[Union['DriverElement', str]]:
+        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 本元素前面的元素或节点组成的列表
+        """
+        return super().befores(filter_loc, timeout)
+
+    def afters(self,
+               filter_loc: Union[tuple, str] = '',
+               timeout: float = None) -> List[Union['DriverElement', str]]:
+        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        :param filter_loc: 用于筛选元素的查询语法
+        :param timeout: 查找元素的超时时间
+        :return: 本元素后面的元素或节点组成的列表
+        """
+        return super().afters(filter_loc, timeout)
+
     def left(self, index: int = 1, filter_loc: Union[tuple, str] = '') -> 'DriverElement':
         """获取网页上显示在当前元素左边的某个元素，可设置选取条件，可指定结果中第几个               \n
         :param index: 获取第几个
@@ -322,15 +425,13 @@ class DriverElement(DrissionElement):
 
     def wait_ele(self,
                  loc_or_ele: Union[str, tuple, DrissionElement, WebElement],
-                 mode: str,
-                 timeout: float = None) -> bool:
+                 timeout: float = None) -> 'ElementWaiter':
         """等待子元素从dom删除、显示、隐藏                             \n
         :param loc_or_ele: 可以是元素、查询字符串、loc元组
-        :param mode: 等待方式，可选：'del', 'display', 'hidden'
         :param timeout: 等待超时时间
         :return: 等待是否成功
         """
-        return _wait_ele(self, loc_or_ele, mode, timeout)
+        return ElementWaiter(self, loc_or_ele, timeout)
 
     def style(self, style: str, pseudo_ele: str = '') -> str:
         """返回元素样式属性值，可获取伪元素属性值                \n
@@ -430,7 +531,7 @@ class DriverElement(DrissionElement):
         :param vals: 文本值或按键组合
         :param clear: 输入前是否清空文本框
         :param insure: 确保输入正确，解决文本框有时输入失效的问题，不能用于输入组合键
-        :param timeout: 尝试输入的超时时间，不指定则使用父页面的超时时间，只在insure_input为True时生效
+        :param timeout: 尝试输入的超时时间，不指定则使用父页面的超时时间，只在insure为True时生效
         :return: bool
         """
         if not insure or self.tag != 'input' or self.prop('type') != 'text':  # 普通输入
@@ -442,7 +543,7 @@ class DriverElement(DrissionElement):
 
         else:  # 确保输入正确
             if not isinstance(vals, str):
-                raise TypeError('insure_input参数生效时vals只能接收str数据。')
+                raise TypeError('insure参数生效时vals只能接收str数据。')
             enter = '\n' if vals.endswith('\n') else None
             full_txt = vals if clear else f'{self.attr("value")}{vals}'
             full_txt = full_txt.rstrip('\n')
@@ -483,34 +584,34 @@ class DriverElement(DrissionElement):
         :param pixel: 滚动的像素
         :return: None
         """
+        from warnings import warn
+        warn("此方法下个版本将停用，请用scroll属性代替。", DeprecationWarning, stacklevel=2)
         if mode == 'top':
-            self.run_script("arguments[0].scrollTo(arguments[0].scrollLeft,0);")
+            self.scroll.to_top()
 
         elif mode == 'bottom':
-            self.run_script("arguments[0].scrollTo(arguments[0].scrollLeft,arguments[0].scrollHeight);")
+            self.scroll.to_bottom()
 
         elif mode == 'half':
-            self.run_script("arguments[0].scrollTo(arguments[0].scrollLeft,arguments[0].scrollHeight/2);")
+            self.scroll.to_half()
 
         elif mode == 'rightmost':
-            self.run_script("arguments[0].scrollTo(arguments[0].scrollWidth,arguments[0].scrollTop);")
+            self.scroll.to_rightmost()
 
         elif mode == 'leftmost':
-            self.run_script("arguments[0].scrollTo(0,arguments[0].scrollTop);")
+            self.scroll.to_leftmost()
 
         elif mode == 'up':
-            pixel = pixel if pixel >= 0 else -pixel
-            self.run_script(f"arguments[0].scrollBy(0,{pixel});")
+            self.scroll.up(pixel)
 
         elif mode == 'down':
-            self.run_script(f"arguments[0].scrollBy(0,{pixel});")
+            self.scroll.down(pixel)
 
         elif mode == 'left':
-            pixel = pixel if pixel >= 0 else -pixel
-            self.run_script(f"arguments[0].scrollBy({pixel},0);")
+            self.scroll.left(pixel)
 
         elif mode == 'right':
-            self.run_script(f"arguments[0].scrollBy({pixel},0);")
+            self.scroll.right(pixel)
 
         else:
             raise ValueError("mode参数只能是'top', 'bottom', 'half', 'rightmost', "
@@ -732,7 +833,7 @@ class DriverElement(DrissionElement):
 def make_driver_ele(page_or_ele,
                     loc: Union[str, Tuple[str, str]],
                     single: bool = True,
-                    timeout: float = None) -> Union[DriverElement, List[DriverElement], str, None]:
+                    timeout: float = None) -> Union[DriverElement, str, None, List[Union[DriverElement, str]]]:
     """执行driver模式元素的查找                               \n
     页面查找元素及元素查找下级元素皆使用此方法                   \n
     :param page_or_ele: DriverPage对象或DriverElement对象
@@ -910,17 +1011,12 @@ class Select(object):
         self.inner_ele = ele
         self.select_ele = Select(ele.inner_ele)
 
-    def __call__(self,
-                 text_value_index: Union[str, int, list, tuple] = None,
-                 para_type: str = 'text',
-                 deselect: bool = False) -> bool:
-        """选定或取消选定下拉列表中子元素                                                             \n
-        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
-        :param para_type: 参数类型，可选 'text'、'value'、'index'
-        :param deselect: 是否取消选择
-        :return: 是否选择成功
+    def __call__(self, text_or_index: Union[str, int, list, tuple]) -> bool:
+        """选定下拉列表中子元素                                                             \n
+        :param text_or_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :return: None
         """
-        return self.select(text_value_index, para_type, deselect)
+        return self.select(text_or_index)
 
     @property
     def is_multi(self) -> bool:
@@ -951,10 +1047,48 @@ class Select(object):
         """清除所有已选项"""
         self.select_ele.deselect_all()
 
-    def select(self,
-               text_value_index: Union[str, int, list, tuple] = None,
-               para_type: str = 'text',
-               deselect: bool = False) -> bool:
+    def select(self, text_or_index: Union[str, int, list, tuple]) -> bool:
+        """选定下拉列表中子元素                                                             \n
+        :param text_or_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :return: 是否选择成功
+        """
+        i = 'index' if isinstance(text_or_index, int) else 'text'
+        return self._select(text_or_index, i, False)
+
+    def select_by_value(self, value: Union[str, list, tuple]) -> bool:
+        """此方法用于根据value值选择项。当元素是多选列表时，可以接收list或tuple  \n
+        :param value: value属性值，传入list或tuple可选择多项
+        :return: None
+        """
+        return self._select(value, 'value', False)
+
+    def deselect(self, text_or_index: Union[str, int, list, tuple]) -> bool:
+        """取消选定下拉列表中子元素                                                             \n
+        :param text_or_index: 根据文本或序号取消择选项，若允许多选，传入list或tuple可取消多项
+        :return: None
+        """
+        i = 'index' if isinstance(text_or_index, int) else 'text'
+        return self._select(text_or_index, i, True)
+
+    def deselect_by_value(self, value: Union[str, list, tuple]) -> bool:
+        """此方法用于根据value值取消选择项。当元素是多选列表时，可以接收list或tuple  \n
+        :param value: value属性值，传入list或tuple可取消多项
+        :return: None
+        """
+        return self._select(value, 'value', True)
+
+    def invert(self) -> None:
+        """反选"""
+        if not self.is_multi:
+            raise NotImplementedError("只能对多项选框执行反选。")
+
+        for i in self.options:
+            i.click(by_js=True)
+
+    def _select(self,
+                text_value_index: Union[str, int, list, tuple] = None,
+                para_type: str = 'text',
+                deselect: bool = False) -> bool:
         """选定或取消选定下拉列表中子元素                                                             \n
         :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
         :param para_type: 参数类型，可选 'text'、'value'、'index'
@@ -989,15 +1123,15 @@ class Select(object):
                 return False
 
         elif isinstance(text_value_index, (list, tuple)):
-            self.select_multi(text_value_index, para_type, deselect)
+            return self._select_multi(text_value_index, para_type, deselect)
 
         else:
             raise TypeError('只能传入str、int、list和tuple类型。')
 
-    def select_multi(self,
-                     text_value_index: Union[list, tuple] = None,
-                     para_type: str = 'text',
-                     deselect: bool = False) -> Union[bool, list]:
+    def _select_multi(self,
+                      text_value_index: Union[list, tuple] = None,
+                      para_type: str = 'text',
+                      deselect: bool = False) -> bool:
         """选定或取消选定下拉列表中多个子元素                                                             \n
         :param text_value_index: 根据文本、值选或序号择选多项
         :param para_type: 参数类型，可选 'text'、'value'、'index'
@@ -1007,121 +1141,176 @@ class Select(object):
         if para_type not in ('text', 'value', 'index'):
             raise ValueError('para_type参数只能传入“text”、“value”或“index”')
 
-        if isinstance(text_value_index, (list, tuple)):
-            fail_list = []
-            for i in text_value_index:
-                if not isinstance(i, (int, str)):
-                    raise TypeError('列表只能由str或int组成')
-
-                if not self.select(i, para_type, deselect):
-                    fail_list.append(i)
-
-            return fail_list or True
-
-        else:
+        if not isinstance(text_value_index, (list, tuple)):
             raise TypeError('只能传入list或tuple类型。')
 
-    def deselect(self,
-                 text_value_index: Union[str, int, list, tuple] = None,
-                 para_type: str = 'text') -> bool:
-        """取消选定下拉列表中子元素                                                             \n
-        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
-        :param para_type: 参数类型，可选 'text'、'value'、'index'
-        :return: 是否选择成功
+        success = True
+        for i in text_value_index:
+            if not isinstance(i, (int, str)):
+                raise TypeError('列表只能由str或int组成')
+
+            p = 'index' if isinstance(i, int) else para_type
+            if not self._select(i, p, deselect):
+                success = False
+
+        return success
+
+
+class ElementWaiter(object):
+    """等待元素在dom中某种状态，如删除、显示、隐藏"""
+
+    def __init__(self,
+                 page_or_ele,
+                 loc_or_ele: Union[str, tuple, DriverElement, WebElement],
+                 timeout: float = None):
+        """等待元素在dom中某种状态，如删除、显示、隐藏                         \n
+        :param page_or_ele: 页面或父元素
+        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
+        :param timeout: 超时时间，默认读取页面超时时间
         """
-        return self.select(text_value_index, para_type, True)
+        if isinstance(page_or_ele, DriverElement):
+            page = page_or_ele.page
+            self.driver = page_or_ele.inner_ele
+        else:
+            page = page_or_ele
+            self.driver = page_or_ele.driver
 
-    def deselect_multi(self,
-                       text_value_index: Union[list, tuple] = None,
-                       para_type: str = 'text') -> Union[bool, list]:
-        """取消选定下拉列表中多个子元素                                                             \n
-        :param text_value_index: 根据文本、值选或序号取消择选多项
-        :param para_type: 参数类型，可选 'text'、'value'、'index'
-        :return: 是否选择成功
+        if isinstance(loc_or_ele, DriverElement):
+            self.target = loc_or_ele.inner_ele
+
+        elif isinstance(loc_or_ele, WebElement):
+            self.target = loc_or_ele
+
+        elif isinstance(loc_or_ele, str):
+            self.target = str_to_loc(loc_or_ele)
+
+        elif isinstance(loc_or_ele, tuple):
+            self.target = loc_or_ele
+
+        else:
+            raise TypeError('loc_or_ele参数只能是str、tuple、DriverElement 或 WebElement类型。')
+
+        self.timeout = timeout if timeout is not None else page.timeout
+
+    def delete(self) -> bool:
+        """等待元素从dom删除"""
+        return self._wait_ele('del')
+
+    def display(self) -> bool:
+        """等待元素从dom显示"""
+        return self._wait_ele('display')
+
+    def hidden(self) -> bool:
+        """等待元素从dom隐藏"""
+        return self._wait_ele('hidden')
+
+    def _wait_ele(self, mode: str) -> bool:
+        """执行等待
+        :param mode: 等待模式
+        :return: 是否等待成功
         """
-        return self.select_multi(text_value_index, para_type, True)
+        if isinstance(self.target, WebElement):
+            end_time = time() + self.timeout
+            while time() < end_time:
+                if mode == 'del':
+                    try:
+                        self.target.is_enabled()
+                    except Exception:
+                        return True
 
-    def invert(self) -> None:
-        """反选"""
-        if not self.is_multi:
-            raise NotImplementedError("只能对多项选框执行反选。")
-
-        for i in self.options:
-            i.click()
-
-
-def _wait_ele(page_or_ele,
-              loc_or_ele: Union[str, tuple, DriverElement, WebElement],
-              mode: str,
-              timeout: float = None) -> bool:
-    """等待元素从dom删除、显示、隐藏                             \n
-    :param page_or_ele: 要等待子元素的页面或元素
-    :param loc_or_ele: 可以是元素、查询字符串、loc元组
-    :param mode: 等待方式，可选：'del', 'display', 'hidden'
-    :param timeout: 等待超时时间
-    :return: 等待是否成功
-    """
-    if mode.lower() not in ('del', 'display', 'hidden'):
-        raise ValueError('mode参数只能是"del"、"display"或"hidden"。')
-
-    if isinstance(page_or_ele, BaseElement):
-        page = page_or_ele.page
-        ele_or_driver = page_or_ele.inner_ele
-    else:
-        page = page_or_ele
-        ele_or_driver = page_or_ele.driver
-
-    timeout = timeout or page.timeout
-    is_ele = False
-
-    if isinstance(loc_or_ele, DriverElement):
-        loc_or_ele = loc_or_ele.inner_ele
-        is_ele = True
-
-    elif isinstance(loc_or_ele, WebElement):
-        is_ele = True
-
-    elif isinstance(loc_or_ele, str):
-        loc_or_ele = str_to_loc(loc_or_ele)
-
-    elif isinstance(loc_or_ele, tuple):
-        pass
-
-    else:
-        raise TypeError('loc_or_ele参数只能是str、tuple、DriverElement 或 WebElement类型')
-
-    # 当传入参数是元素对象时
-    if is_ele:
-        end_time = time() + timeout
-
-        while time() < end_time:
-            if mode == 'del':
-                try:
-                    loc_or_ele.is_enabled()
-                except Exception:
+                elif mode == 'display' and self.target.is_displayed():
                     return True
 
-            elif mode == 'display' and loc_or_ele.is_displayed():
-                return True
+                elif mode == 'hidden' and not self.target.is_displayed():
+                    return True
 
-            elif mode == 'hidden' and not loc_or_ele.is_displayed():
-                return True
-
-        return False
-
-    # 当传入参数是控制字符串或元组时
-    else:
-        try:
-            if mode == 'del':
-                WebDriverWait(ele_or_driver, timeout).until_not(ec.presence_of_element_located(loc_or_ele))
-
-            elif mode == 'display':
-                WebDriverWait(ele_or_driver, timeout).until(ec.visibility_of_element_located(loc_or_ele))
-
-            elif mode == 'hidden':
-                WebDriverWait(ele_or_driver, timeout).until_not(ec.visibility_of_element_located(loc_or_ele))
-
-            return True
-
-        except Exception:
             return False
+
+        else:
+            try:
+                if mode == 'del':
+                    WebDriverWait(self.driver, self.timeout).until_not(ec.presence_of_element_located(self.target))
+
+                elif mode == 'display':
+                    WebDriverWait(self.driver, self.timeout).until(ec.visibility_of_element_located(self.target))
+
+                elif mode == 'hidden':
+                    WebDriverWait(self.driver, self.timeout).until_not(ec.visibility_of_element_located(self.target))
+
+                return True
+
+            except Exception:
+                return False
+
+
+class Scroll(object):
+    """用于滚动的对象"""
+
+    def __init__(self, page_or_ele):
+        """
+        :param page_or_ele: DriverPage或DriverElement
+        """
+        self.driver = page_or_ele
+        if isinstance(page_or_ele, DriverElement):
+            self.t1 = self.t2 = 'arguments[0]'
+        else:
+            self.t1 = 'window'
+            self.t2 = 'document.documentElement'
+
+    def to_top(self) -> None:
+        """滚动到顶端，水平位置不变"""
+        self.driver.run_script(f'{self.t1}.scrollTo({self.t2}.scrollLeft,0);')
+
+    def to_bottom(self) -> None:
+        """滚动到底端，水平位置不变"""
+        self.driver.run_script(f'{self.t1}.scrollTo({self.t2}.scrollLeft,{self.t2}.scrollHeight);')
+
+    def to_half(self) -> None:
+        """滚动到垂直中间位置，水平位置不变"""
+        self.driver.run_script(f'{self.t1}.scrollTo({self.t2}.scrollLeft,{self.t2}.scrollHeight/2);')
+
+    def to_rightmost(self) -> None:
+        """滚动到最右边，垂直位置不变"""
+        self.driver.run_script(f'{self.t1}.scrollTo({self.t2}.scrollWidth,{self.t2}.scrollTop);')
+
+    def to_leftmost(self) -> None:
+        """滚动到最左边，垂直位置不变"""
+        self.driver.run_script(f'{self.t1}.scrollTo(0,{self.t2}.scrollTop);')
+
+    def to_location(self, x: int, y: int) -> None:
+        """滚动到指定位置                 \n
+        :param x: 水平距离
+        :param y: 垂直距离
+        :return: None
+        """
+        self.driver.run_script(f'{self.t1}.scrollTo({x},{y});')
+
+    def up(self, pixel: int = 300) -> None:
+        """向上滚动若干像素，水平位置不变    \n
+        :param pixel: 滚动的像素
+        :return: None
+        """
+        pixel = -pixel
+        self.driver.run_script(f'{self.t1}.scrollBy(0,{pixel});')
+
+    def down(self, pixel: int = 300) -> None:
+        """向下滚动若干像素，水平位置不变    \n
+        :param pixel: 滚动的像素
+        :return: None
+        """
+        self.driver.run_script(f'{self.t1}.scrollBy(0,{pixel});')
+
+    def left(self, pixel: int = 300) -> None:
+        """向左滚动若干像素，垂直位置不变    \n
+        :param pixel: 滚动的像素
+        :return: None
+        """
+        pixel = -pixel
+        self.driver.run_script(f'{self.t1}.scrollBy({pixel},0);')
+
+    def right(self, pixel: int = 300) -> None:
+        """向右滚动若干像素，垂直位置不变    \n
+        :param pixel: 滚动的像素
+        :return: None
+        """
+        self.driver.run_script(f'{self.t1}.scrollBy({pixel},0);')

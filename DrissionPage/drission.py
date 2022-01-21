@@ -26,9 +26,9 @@ class Drission(object):
                  session_or_options: Union[Session, dict, SessionOptions, bool] = None,
                  ini_path: str = None,
                  proxy: dict = None):
-        """初始化，可接收现成的WebDriver和Session对象，或接收它们的配置信息生成对象       \n
-        :param driver_or_options: driver对象或chrome设置，Options类或设置字典
-        :param session_or_options: Session对象或设置
+        """初始化，可接收现成的WebDriver和Session对象，或接收它们的配置信息生成对象                     \n
+        :param driver_or_options: driver对象或DriverOptions、Options类，传入False则创建空配置对象
+        :param session_or_options: Session对象或设置字典，传入False则创建空配置对象
         :param ini_path: ini文件路径
         :param proxy: 代理设置
         """
@@ -331,7 +331,7 @@ class Drission(object):
         :return: None
         """
         if copy_user_agent:
-            self.user_agent_to_session(self.driver, self.session)
+            user_agent_to_session(self.driver, self.session)
 
         self.set_cookies(self.driver.get_cookies(), set_session=True)
 
@@ -358,17 +358,6 @@ class Drission(object):
 
         self.set_cookies(cookies, set_driver=True)
 
-    def user_agent_to_session(self, driver: WebDriver = None, session: Session = None) -> None:
-        """把driver的user-agent复制到session    \n
-        :param driver: 来源driver对象
-        :param session: 目标session对象
-        :return: None
-        """
-        driver = driver or self.driver
-        session = session or self.session
-        selenium_user_agent = driver.execute_script("return navigator.userAgent;")
-        session.headers.update({"User-Agent": selenium_user_agent})
-
     def close_driver(self, kill: bool = False) -> None:
         """关闭driver和浏览器"""
         if self._driver:
@@ -392,6 +381,18 @@ class Drission(object):
 
         if self._session:
             self.close_session()
+
+
+def user_agent_to_session(driver: WebDriver, session: Session) -> None:
+    """把driver的user-agent复制到session    \n
+    :param driver: 来源driver对象
+    :param session: 目标session对象
+    :return: None
+    """
+    driver = driver
+    session = session
+    selenium_user_agent = driver.execute_script("return navigator.userAgent;")
+    session.headers.update({"User-Agent": selenium_user_agent})
 
 
 def _check_port(debugger_address: str) -> Union[bool, None]:
