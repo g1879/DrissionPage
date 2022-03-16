@@ -44,7 +44,7 @@ class Drission(object):
             self._session_options = SessionOptions(ini_path=ini_path).as_dict()
 
         elif session_or_options is False:
-            self._driver_options = SessionOptions(read_file=False).as_dict()
+            self._session_options = SessionOptions(read_file=False).as_dict()
 
         elif isinstance(session_or_options, Session):
             self._session = session_or_options

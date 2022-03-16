@@ -4,19 +4,18 @@
 @Contact :   g1879@qq.com
 @File    :   session_page.py
 """
-from os import path as os_PATH, sep
-from pathlib import Path
+from os import path as os_PATH
 from random import randint
-from re import search, sub
+from re import search
 from time import time, sleep
 from typing import Union, List, Tuple
 from urllib.parse import urlparse, quote, unquote
 
 from requests import Session, Response
 from tldextract import extract
+from DownloadKit import DownloadKit
 
 from .base import BasePage
-from .common import get_usable_path, make_valid_name
 from .config import _cookie_to_dict
 from .session_element import SessionElement, make_session_ele
 
@@ -29,6 +28,7 @@ class SessionPage(BasePage):
         super().__init__(timeout)
         self._session = session
         self._response = None
+        self._download_kit = None
 
     def __call__(self,
                  loc_or_str: Union[Tuple[str, str], str, SessionElement],
@@ -59,14 +59,12 @@ class SessionPage(BasePage):
 
     def get(self,
             url: str,
-            go_anyway: bool = False,
             show_errmsg: bool = False,
             retry: int = None,
             interval: float = None,
-            **kwargs) -> Union[bool, None]:
+            **kwargs) -> bool:
         """用get方式跳转到url                                 \n
         :param url: 目标url
-        :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数
         :param interval: 重试间隔（秒）
@@ -74,11 +72,11 @@ class SessionPage(BasePage):
         :return: url是否可用
         """
         to_url = quote(url, safe='/:&?=%;#@+!')
-        retry = int(retry) if retry is not None else int(self.retry_times)
-        interval = int(interval) if interval is not None else int(self.retry_interval)
+        retry = retry if retry is not None else self.retry_times
+        interval = interval if interval is not None else self.retry_interval
 
-        if not url or (not go_anyway and self.url == to_url):
-            return
+        if not url:
+            raise ValueError('没有传入url。')
 
         self._url = to_url
         self._response = self._try_to_connect(to_url, times=retry, interval=interval, show_errmsg=show_errmsg, **kwargs)
@@ -198,10 +196,11 @@ class SessionPage(BasePage):
 
             if _ < times:
                 sleep(interval)
-                print(f'重试 {to_url}')
+                if show_errmsg:
+                    print(f'重试 {to_url}')
 
         if not r and show_errmsg:
-            raise err if err is not None else ConnectionError('连接异常。')
+            raise err if err is not None else ConnectionError(f'连接异常。{r.status_code if r is not None else ""}')
 
         return r
 
@@ -216,18 +215,25 @@ class SessionPage(BasePage):
         """返回访问url得到的response对象"""
         return self._response
 
+    @property
+    def download(self) -> DownloadKit:
+        if self._download_kit is None:
+            self._download_kit = DownloadKit(session=self.session, timeout=self.timeout)
+            self._download_kit.retry = self.retry_times
+            self._download_kit.interval = self.retry_interval
+
+        return self._download_kit
+
     def post(self,
              url: str,
              data: Union[dict, str] = None,
-             go_anyway: bool = True,
              show_errmsg: bool = False,
              retry: int = None,
              interval: float = None,
-             **kwargs) -> Union[bool, None]:
+             **kwargs) -> bool:
         """用post方式跳转到url                                 \n
         :param url: 目标url
         :param data: 提交的数据
-        :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数
         :param interval: 重试间隔（秒）
@@ -235,11 +241,11 @@ class SessionPage(BasePage):
         :return: url是否可用
         """
         to_url = quote(url, safe='/:&?=%;#@+!')
-        retry = int(retry) if retry is not None else int(self.retry_times)
-        interval = int(interval) if interval is not None else int(self.retry_interval)
+        retry = retry if retry is not None else self.retry_times
+        interval = interval if interval is not None else self.retry_interval
 
-        if not url or (not go_anyway and self._url == to_url):
-            return
+        if not url:
+            raise ValueError('没有传入url。')
 
         self._url = to_url
         self._response = self._try_to_connect(to_url, retry, interval, 'post', data, show_errmsg, **kwargs)
@@ -257,165 +263,6 @@ class SessionPage(BasePage):
                 self._url_available = False
 
         return self._url_available
-
-    def download(self,
-                 file_url: str,
-                 goal_path: str,
-                 rename: str = None,
-                 file_exists: str = 'rename',
-                 post_data: Union[str, dict] = None,
-                 show_msg: bool = False,
-                 show_errmsg: bool = True,
-                 retry: int = None,
-                 interval: float = None,
-                 **kwargs) -> tuple:
-        """下载一个文件                                                                   \n
-        :param file_url: 文件url
-        :param goal_path: 存放路径
-        :param rename: 重命名文件，可不写扩展名
-        :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
-        :param post_data: post方式的数据，这个参数不为None时自动转成post方式
-        :param show_msg: 是否显示下载信息
-        :param show_errmsg: 是否抛出和显示异常
-        :param retry: 重试次数
-        :param interval: 重试间隔时间
-        :param kwargs: 连接参数
-        :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组，跳过时第一位为None
-        """
-        if file_exists == 'skip' and Path(f'{goal_path}{sep}{rename}').exists():
-            if show_msg:
-                print(f'{file_url}\n{goal_path}{sep}{rename}\n存在同名文件，已跳过。\n')
-            return None, '已跳过，因存在同名文件。'
-
-        def do() -> tuple:
-            kwargs['stream'] = True
-            if 'timeout' not in kwargs:
-                kwargs['timeout'] = 20
-
-            # 生成临时的response
-            mode = 'post' if post_data is not None else 'get'
-            r, info = self._make_response(file_url, mode=mode, data=post_data, show_errmsg=show_errmsg, **kwargs)
-
-            if r is None:
-                if show_msg:
-                    print(info)
-                return False, info
-
-            if not r.ok:
-                if show_errmsg:
-                    raise ConnectionError(f'连接状态码：{r.status_code}')
-                return False, f'状态码：{r.status_code}'
-
-            # -------------------获取文件名-------------------
-            file_name = _get_download_file_name(file_url, r)
-
-            # -------------------重命名，不改变扩展名-------------------
-            if rename:
-                ext_name = file_name.split('.')[-1]
-                if '.' in rename or ext_name == file_name:  # 新文件名带后缀或原文件名没有后缀
-                    full_name = rename
-                else:
-                    full_name = f'{rename}.{ext_name}'
-            else:
-                full_name = file_name
-
-            full_name = make_valid_name(full_name)
-
-            # -------------------生成路径-------------------
-            goal_Path = Path(goal_path)
-            skip = False
-
-            # 按windows规则去除路径中的非法字符
-            goal = goal_Path.anchor + sub(r'[*:|<>?"]', '', goal_path.lstrip(goal_Path.anchor)).strip()
-            Path(goal).absolute().mkdir(parents=True, exist_ok=True)
-            full_path = Path(f'{goal}{sep}{full_name}')
-
-            if full_path.exists():
-                if file_exists == 'rename':
-                    full_path = get_usable_path(f'{goal}{sep}{full_name}')
-                    full_name = full_path.name
-
-                elif file_exists == 'skip':
-                    skip = True
-
-                elif file_exists == 'overwrite':
-                    pass
-
-                else:
-                    raise ValueError("file_exists参数只能是'skip'、'overwrite' 或 'rename'。")
-
-            # -------------------打印要下载的文件-------------------
-            if show_msg:
-                print(file_url)
-                print(full_name if file_name == full_name else f'{file_name} -> {full_name}')
-                print(f'正在下载到：{goal}')
-                if skip:
-                    print('存在同名文件，已跳过。\n')
-
-            # -------------------开始下载-------------------
-            if skip:
-                return None, '已跳过，因存在同名文件。'
-
-            # 获取远程文件大小
-            content_length = r.headers.get('content-length')
-            file_size = int(content_length) if content_length else None
-
-            # 已下载文件大小和下载状态
-            downloaded_size, download_status = 0, False
-
-            try:
-                with open(str(full_path), 'wb') as tmpFile:
-                    for chunk in r.iter_content(chunk_size=1024):
-                        if chunk:
-                            tmpFile.write(chunk)
-
-                            # 如表头有返回文件大小，显示进度
-                            if show_msg and file_size:
-                                downloaded_size += 1024
-                                rate = downloaded_size / file_size if downloaded_size < file_size else 1
-                                print('\r{:.0%} '.format(rate), end="")
-
-            except Exception as e:
-                if show_errmsg:
-                    raise ConnectionError(e)
-                download_status, info = False, f'下载失败。\n{e}'
-
-            else:
-                if full_path.stat().st_size == 0:
-                    if show_errmsg:
-                        raise ValueError('文件大小为0。')
-                    download_status, info = False, '文件大小为0。'
-
-                else:
-                    download_status, info = True, str(full_path)
-
-            finally:
-                if download_status is False and full_path.exists():
-                    full_path.unlink()  # 删除下载出错文件
-                r.close()
-
-            # -------------------显示并返回值-------------------
-            if show_msg:
-                print(info, '\n')
-
-            info = f'{goal}{sep}{full_name}' if download_status else info
-            return download_status, info
-
-        retry_times = retry or self.retry_times
-        retry_interval = interval or self.retry_interval
-        result = do()
-
-        if result[0] is False:  # 第一位为None表示跳过的情况
-            for i in range(retry_times):
-                sleep(retry_interval)
-                if show_msg:
-                    print(f'\n重试 {file_url}')
-
-                result = do()
-                if result[0] is not False:
-                    break
-
-        return result
 
     def _make_response(self,
                        url: str,

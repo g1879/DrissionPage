@@ -6,6 +6,7 @@
 """
 from typing import Union, List, Tuple
 
+from DownloadKit import DownloadKit
 from requests import Response, Session
 from requests.cookies import RequestsCookieJar
 from selenium.webdriver.chrome.options import Options
@@ -37,7 +38,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
                  session_options: Union[dict, SessionOptions, bool] = None) -> None:
         """初始化函数                                                                                            \n
         :param mode: 'd' 或 's'，即driver模式和session模式
-        :param drission: Drission对象，不传入时会自动创建
+        :param drission: Drission对象，不传入时会自动创建，有传入时driver_options和session_options参数无效
         :param timeout: 超时时间，d模式时为寻找元素时间，s模式时为连接时间，默认10秒
         :param driver_options: 浏览器设置，没传入drission参数时会用这个设置新建Drission对象中的WebDriver对象，传入False则不创建
         :param session_options: requests设置，没传入drission参数时会用这个设置新建Drission对象中的Session对象，传入False则不创建
@@ -52,6 +53,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
         self._wait_object = None
         self._response = None
         self._scroll = None
+        self._download_kit = None
 
         if self._mode == 'd':
             try:
@@ -111,24 +113,22 @@ class MixPage(SessionPage, DriverPage, BasePage):
 
     def get(self,
             url: str,
-            go_anyway=False,
             show_errmsg: bool = False,
             retry: int = None,
             interval: float = None,
             **kwargs) -> Union[bool, None]:
         """跳转到一个url                                         \n
         :param url: 目标url
-        :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数
         :param interval: 重试间隔（秒）
         :param kwargs: 连接参数，s模式专用
-        :return: url是否可用
+        :return: url是否可用，d模式返回None时表示不确定
         """
         if self._mode == 'd':
-            return super(SessionPage, self).get(url, go_anyway, show_errmsg, retry, interval)
+            return super(SessionPage, self).get(url, show_errmsg, retry, interval)
         elif self._mode == 's':
-            return super().get(url, go_anyway, show_errmsg, retry, interval, **kwargs)
+            return super().get(url, show_errmsg, retry, interval, **kwargs)
 
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, DriverElement, SessionElement, WebElement],
@@ -218,7 +218,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
         :param interval: 重试间隔（秒）
         :param show_errmsg: 是否抛出异常
         :param kwargs: 连接参数
-        :return: s模式为Response对象，d模式为bool
+        :return: s模式为Response对象，d模式为bool或None
         """
         if self._mode == 'd':
             return super(SessionPage, self)._try_to_connect(to_url, times, interval, show_errmsg)
@@ -354,15 +354,13 @@ class MixPage(SessionPage, DriverPage, BasePage):
     def post(self,
              url: str,
              data: Union[dict, str] = None,
-             go_anyway: bool = False,
              show_errmsg: bool = False,
              retry: int = None,
              interval: float = None,
-             **kwargs) -> Union[bool, None]:
+             **kwargs) -> bool:
         """用post方式跳转到url，会切换到s模式                        \n
         :param url: 目标url
         :param data: post方式时提交的数据
-        :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数
         :param interval: 重试间隔（秒）
@@ -370,40 +368,14 @@ class MixPage(SessionPage, DriverPage, BasePage):
         :return: url是否可用
         """
         self.change_mode('s', go=False)
-        return super().post(url, data, go_anyway, show_errmsg, retry, interval, **kwargs)
+        return super().post(url, data, show_errmsg, retry, interval, **kwargs)
 
-    def download(self,
-                 file_url: str,
-                 goal_path: str,
-                 rename: str = None,
-                 file_exists: str = 'rename',
-                 post_data: Union[str, dict] = None,
-                 show_msg: bool = True,
-                 show_errmsg: bool = False,
-                 retry: int = None,
-                 interval: float = None,
-                 **kwargs) -> Tuple[bool, str]:
-        """下载一个文件                                                                      \n
-        d模式下下载前先同步cookies                                                            \n
-        :param file_url: 文件url
-        :param goal_path: 存放路径
-        :param rename: 重命名文件，可不写扩展名
-        :param file_exists: 若存在同名文件，可选择 'rename', 'overwrite', 'skip' 方式处理
-        :param post_data: post方式的数据，这个参数不为None时自动转成post方式
-        :param show_msg: 是否显示下载信息
-        :param show_errmsg: 是否显示和抛出异常
-        :param retry: 重试次数
-        :param interval: 重试间隔时间
-        :param kwargs: 连接参数
-        :return: 下载是否成功（bool）和状态信息（成功时信息为文件路径）的元组，跳过时第一位返回None
-        """
+    @property
+    def download(self) -> DownloadKit:
         if self.mode == 'd':
             self.cookies_to_session()
+        return super().download
 
-        return super().download(file_url, goal_path, rename, file_exists, post_data, show_msg, show_errmsg, retry,
-                                interval, **kwargs)
-
-    # ----------------重写DriverPage的函数-----------------------
     def chrome_downloading(self, path: str = None) -> list:
         """返回浏览器下载中的文件列表                             \n
         :param path: 下载文件夹路径，默认读取配置信息

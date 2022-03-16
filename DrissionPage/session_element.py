@@ -279,12 +279,12 @@ class SessionElement(DrissionElement):
 
         parsed = urlparse(link)._asdict()
 
-        # 相对路径，与页面url拼接并返回
-        if not parsed['netloc']:  # 相对路径，与
-            return urljoin(self.page.url, link)
+        # 是相对路径，与页面url拼接并返回
+        if not parsed['netloc']:
+            return urljoin(self.page.url, link) if self.page else link
 
-        # 绝对路径但缺少协议，从页面url获取协议并修复
-        if not parsed['scheme']:
+        # 是绝对路径但缺少协议，从页面url获取协议并修复
+        if not parsed['scheme'] and self.page:
             parsed['scheme'] = urlparse(self.page.url).scheme
             parsed = tuple(v for v in parsed.values())
             return urlunparse(parsed)

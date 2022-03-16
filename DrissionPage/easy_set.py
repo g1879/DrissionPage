@@ -7,7 +7,7 @@
 from os import popen
 from pathlib import Path
 from pprint import pprint
-from re import search as RE_SEARCH, sub
+from re import search
 from typing import Union
 
 from selenium import webdriver
@@ -189,7 +189,7 @@ def check_driver_version(driver_path: str = None, chrome_path: str = None) -> bo
 
     except Exception as e:
         print(f'出现异常：\n{e}\n可执行easy_set.get_match_driver()自动下载匹配的版本。\n'
-              f'或自行从以下网址下载：https://chromedriver.chromium.org/downloads')
+              f'或自行从以下网址下载：http://npm.taobao.org/mirrors/chromedriver/')
 
         return False
 
@@ -276,6 +276,7 @@ def _get_chrome_path(ini_path: str = None,
         try:
             key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
                                  r'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe',
+                                 # r'HKEY_CURRENT_USER\Software\Google\Chrome\BLBeacon\version',
                                  reserved=0, access=winreg.KEY_READ)
             k = winreg.EnumValue(key, 0)
             winreg.CloseKey(key)
@@ -291,7 +292,7 @@ def _get_chrome_path(ini_path: str = None,
     # -----------从系统变量中获取--------------
     if from_system_path:
         paths = popen('set path').read().lower()
-        r = RE_SEARCH(r'[^;]*chrome[^;]*', paths)
+        r = search(r'[^;]*chrome[^;]*', paths)
 
         if r:
             path = Path(r.group(0)) if 'chrome.exe' in r.group(0) else Path(r.group(0)) / 'chrome.exe'
@@ -340,38 +341,24 @@ def _download_driver(version: str, save_path: str = None, show_msg: bool = True)
     if not version:
         return
 
-    page = SessionPage(Drission().session)
-    page.get('http://npm.taobao.org/mirrors/chromedriver')
-
+    main_ver = version.split('.')[0]
     remote_ver = None
-    loc_main = version.split('.')[0]
 
-    try:
-        loc_num = int(version.replace('.', ''))
-    except ValueError:
-        return None
+    page = SessionPage(Drission().session)
+    page.get('https://registry.npmmirror.com/-/binary/chromedriver/')
 
-    remote_versions = page.eles(f'xpath://pre/a[starts-with(text(),"{loc_main}.")]')
-    remote_versions = [v for v in remote_versions if v.text and v.text[-1] == '/']
-    remote_versions.sort(key=lambda x: x.text)
-
-    for i in remote_versions:
-        try:
-            remote_num = int(sub(r'[./]', '', i.text))
-        except ValueError:
+    for version in page.json:
+        # 遍历所有版本，跳过大版本不一致的，如果有完全匹配的，获取url，如果没有，获取最后一个版本的url
+        if not version['name'].startswith(f'{main_ver}.'):
             continue
 
-        if remote_num >= loc_num:
-            remote_ver = i.text
+        remote_ver = version['name']
+        if version['name'] == f'{version}/':
             break
 
-    # 没有匹配到，则取大版本的最后一个号
-    if remote_versions and not remote_ver:
-        remote_ver = remote_versions[-1].text
-
     if remote_ver:
-        url = f'https://cdn.npm.taobao.org/dist/chromedriver/{remote_ver}chromedriver_win32.zip'
-        save_path = save_path or Path(__file__).parent
+        url = f'https://cdn.npmmirror.com/binaries/chromedriver/{remote_ver}chromedriver_win32.zip'
+        save_path = save_path or str(Path(__file__).parent)
         result = page.download(url, save_path, file_exists='overwrite', show_msg=show_msg)
 
         if result[0]:

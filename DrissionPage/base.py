@@ -264,8 +264,9 @@ class DrissionElement(BaseElement):
         nodes = [e for e in nodes if not (isinstance(e, str) and sub('[ \n\t\r]', '', e) == '')]
 
         if nodes and index is not None:
+            index = index - 1 if direction == 'following' else -index
             try:
-                return [nodes[index - 1]]
+                return [nodes[index]]
             except IndexError:
                 return []
         else:
@@ -345,7 +346,6 @@ class BasePage(BaseParser):
     @abstractmethod
     def get(self,
             url: str,
-            go_anyway: bool = False,
             show_errmsg: bool = False,
             retry: int = None,
             interval: float = None):

@@ -283,30 +283,31 @@ def translate_loc(loc: tuple) -> tuple:
         raise ValueError('定位符长度必须为2。')
 
     loc_by = 'xpath'
+    loc_0 = loc[0].lower()
 
-    if loc[0] == 'xpath':
+    if loc_0 == 'xpath':
         loc_str = loc[1]
 
-    elif loc[0] == 'css selector':
-        loc_by = 'css selector'
+    elif loc_0 == 'css selector':
+        loc_by = loc_0
         loc_str = loc[1]
 
-    elif loc[0] == 'id':
+    elif loc_0 == 'id':
         loc_str = f'//*[@id="{loc[1]}"]'
 
-    elif loc[0] == 'class name':
+    elif loc_0 == 'class name':
         loc_str = f'//*[@class="{loc[1]}"]'
 
-    elif loc[0] == 'link text':
+    elif loc_0 == 'link text':
         loc_str = f'//a[text()="{loc[1]}"]'
 
-    elif loc[0] == 'name':
+    elif loc_0 == 'name':
         loc_str = f'//*[@name="{loc[1]}"]'
 
-    elif loc[0] == 'tag name':
+    elif loc_0 == 'tag name':
         loc_str = f'//{loc[1]}'
 
-    elif loc[0] == 'partial link text':
+    elif loc_0 == 'partial link text':
         loc_str = f'//a[contains(text(),"{loc[1]}")]'
 
     else:

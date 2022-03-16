@@ -64,24 +64,22 @@ class DriverPage(BasePage):
 
     def get(self,
             url: str,
-            go_anyway: bool = False,
             show_errmsg: bool = False,
             retry: int = None,
             interval: float = None) -> Union[None, bool]:
         """访问url                                            \n
         :param url: 目标url
-        :param go_anyway: 若目标url与当前url一致，是否强制跳转
         :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数
         :param interval: 重试间隔（秒）
-        :return: 目标url是否可用
+        :return: 目标url是否可用，返回None表示不确定
         """
         to_url = quote(url, safe='/:&?=%;#@+!')
-        retry = int(retry) if retry is not None else int(self.retry_times)
-        interval = int(interval) if interval is not None else int(self.retry_interval)
+        retry = retry if retry is not None else self.retry_times
+        interval = interval if interval is not None else self.retry_interval
 
-        if not url or (not go_anyway and self.url == to_url):
-            return
+        if not url:
+            raise ValueError('没有传入url。')
 
         self._url = to_url
         self._url_available = self._try_to_connect(to_url, times=retry, interval=interval, show_errmsg=show_errmsg)
@@ -178,13 +176,13 @@ class DriverPage(BasePage):
                         to_url: str,
                         times: int = 0,
                         interval: float = 1,
-                        show_errmsg: bool = False):
+                        show_errmsg: bool = False) -> Union[bool, None]:
         """尝试连接，重试若干次                            \n
         :param to_url: 要访问的url
         :param times: 重试次数
         :param interval: 重试间隔（秒）
         :param show_errmsg: 是否抛出异常
-        :return: 是否成功
+        :return: 是否成功，返回None表示不确定
         """
         err = None
         is_ok = False
@@ -204,7 +202,8 @@ class DriverPage(BasePage):
 
             if _ < times:
                 sleep(interval)
-                print(f'重试 {to_url}')
+                if show_errmsg:
+                    print(f'重试 {to_url}')
 
         if is_ok is False and show_errmsg:
             raise err if err is not None else ConnectionError('连接异常。')
@@ -329,6 +328,14 @@ class DriverPage(BasePage):
         """
         return self.driver.execute_async_script(script, *args)
 
+    def run_cdp(self, cmd: str, cmd_args: dict) -> Any:
+        """执行Chrome DevTools Protocol语句
+        :param cmd: 协议项目
+        :param cmd_args: 参数
+        :return: 执行的结果
+        """
+        return self.driver.execute_cdp_cmd(cmd, cmd_args)
+
     def create_tab(self, url: str = '') -> None:
         """新建并定位到一个标签页,该标签页在最后面       \n
         :param url: 新标签页跳转到的网址
@@ -346,7 +353,7 @@ class DriverPage(BasePage):
 
     def close_tabs(self, num_or_handles: Union[int, str, list, tuple] = None) -> None:
         """关闭传入的标签页，默认关闭当前页。可传入多个                                                     \n
-        注意：当程序使用的是截关的浏览器，获取到的 handle 顺序和视觉效果不一致，不能按序号关闭。
+        注意：当程序使用的是接管的浏览器，获取到的 handle 顺序和视觉效果不一致，不能按序号关闭。                 \n
         :param num_or_handles:要关闭的标签页序号或handle，可传入handle和序号组成的列表或元组，为None时关闭当前页
         :return: None
         """
@@ -359,12 +366,12 @@ class DriverPage(BasePage):
 
     def close_other_tabs(self, num_or_handles: Union[int, str, list, tuple] = None) -> None:
         """关闭传入的标签页以外标签页，默认保留当前页。可传入多个                                              \n
-        注意：当程序使用的是截关的浏览器，获取到的 handle 顺序和视觉效果不一致，不能按序号关闭。
+        注意：当程序使用的是接管的浏览器，获取到的 handle 顺序和视觉效果不一致，不能按序号关闭。                   \n
         :param num_or_handles: 要保留的标签页序号或handle，可传入handle和序号组成的列表或元组，为None时保存当前页
         :return: None
         """
         all_tabs = self.driver.window_handles
-        reserve_tabs = (self.current_tab_handle,) if num_or_handles is None else _get_handles(all_tabs, num_or_handles)
+        reserve_tabs = {self.current_tab_handle} if num_or_handles is None else _get_handles(all_tabs, num_or_handles)
 
         for i in set(all_tabs) - reserve_tabs:
             self.driver.switch_to.window(i)
@@ -374,6 +381,7 @@ class DriverPage(BasePage):
 
     def to_tab(self, num_or_handle: Union[int, str] = 0) -> None:
         """跳转到标签页                                                         \n
+        注意：当程序使用的是接管的浏览器，获取到的 handle 顺序和视觉效果不一致         \n
         :param num_or_handle: 标签页序号或handle字符串，序号第一个为0，最后为-1
         :return: None
         """
@@ -384,6 +392,13 @@ class DriverPage(BasePage):
 
         tab = self.driver.window_handles[tab] if isinstance(tab, int) else tab
         self.driver.switch_to.window(tab)
+
+    def set_ua_to_tab(self, ua: str) -> None:
+        """为当前tab设置user agent，只在当前tab有效          \n
+        :param ua: user agent字符串
+        :return: None
+        """
+        self.driver.execute_cdp_cmd("Network.setUserAgentOverride", {"userAgent": ua})
 
     def screenshot(self, path: str, filename: str = None) -> str:
         """截取页面可见范围截图                                  \n
@@ -407,45 +422,6 @@ class DriverPage(BasePage):
         """
         ele = self.ele(loc_or_ele)
         ele.run_script("arguments[0].scrollIntoView();")
-
-    def scroll_to(self, mode: str = 'bottom', pixel: int = 300) -> None:
-        """按参数指示方式滚动页面                                                                                    \n
-        :param mode: 可选滚动方向：'top', 'bottom', 'half', 'rightmost', 'leftmost', 'up', 'down', 'left', 'right'
-        :param pixel: 滚动的像素
-        :return: None
-        """
-        from warnings import warn
-        warn("此方法下个版本将停用，请用scroll属性代替。", DeprecationWarning, stacklevel=2)
-        if mode == 'top':
-            self.scroll.to_top()
-
-        elif mode == 'bottom':
-            self.scroll.to_bottom()
-
-        elif mode == 'half':
-            self.scroll.to_half()
-
-        elif mode == 'rightmost':
-            self.scroll.to_rightmost()
-
-        elif mode == 'leftmost':
-            self.scroll.to_leftmost()
-
-        elif mode == 'up':
-            self.scroll.up(pixel)
-
-        elif mode == 'down':
-            self.scroll.down(pixel)
-
-        elif mode == 'left':
-            self.scroll.left(pixel)
-
-        elif mode == 'right':
-            self.scroll.right(pixel)
-
-        else:
-            raise ValueError("mode参数只能是'top', 'bottom', 'half', 'rightmost', "
-                             "'leftmost', 'up', 'down', 'left', 'right'。")
 
     def refresh(self) -> None:
         """刷新当前页面"""
@@ -486,10 +462,10 @@ class DriverPage(BasePage):
         """
         return glob(f'{download_path}{sep}*.crdownload')
 
-    def process_alert(self, mode: str = 'ok', text: str = None, timeout: float = None) -> Union[str, None]:
+    def process_alert(self, ok: bool = True, send: str = None, timeout: float = None) -> Union[str, None]:
         """处理提示框                                                            \n
-        :param mode: 'ok' 或 'cancel'，若输入其它值，不会按按钮但依然返回文本值
-        :param text: 处理prompt提示框时可输入文本
+        :param ok: True表示确认，False表示取消，其它值不会按按钮但依然返回文本值
+        :param send: 处理prompt提示框时可输入文本
         :param timeout: 等待提示框出现的超时时间
         :return: 提示框内容文本，未等到提示框则返回None
         """
@@ -503,23 +479,23 @@ class DriverPage(BasePage):
         timeout = timeout if timeout is not None else self.timeout
         t1 = perf_counter()
         alert = do_it()
-        while not alert and perf_counter() - t1 <= timeout:
+        while alert is False and perf_counter() - t1 <= timeout:
             alert = do_it()
 
-        if not alert:
+        if alert is False:
             return None
 
-        if text:
-            alert.send_keys(text)
+        res_text = alert.text
 
-        text = alert.text
+        if send is not None:
+            alert.send_keys(send)
 
-        if mode == 'cancel':
-            alert.dismiss()
-        elif mode == 'ok':
+        if ok is True:
             alert.accept()
+        elif ok is False:
+            alert.dismiss()
 
-        return text
+        return res_text
 
 
 class ToFrame(object):

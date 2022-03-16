@@ -683,7 +683,7 @@ class DriverOptions(Options):
             self.binary_location = chrome_path
 
         if local_port is not None:
-            self.debugger_address = f'127.0.0.1:{local_port}'
+            self.debugger_address = '' if local_port == '' else f'127.0.0.1:{local_port}'
 
         if debugger_address is not None:
             self.debugger_address = debugger_address
