@@ -13,6 +13,7 @@ from selenium import webdriver
 from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from tldextract import extract
 
 from .config import _session_options_to_dict, SessionOptions, DriverOptions, _cookies_to_tuple
@@ -22,7 +23,7 @@ class Drission(object):
     """Drission类用于管理WebDriver对象和Session对象，是驱动器的角色"""
 
     def __init__(self,
-                 driver_or_options: Union[WebDriver, Options, DriverOptions, bool] = None,
+                 driver_or_options: Union[RemoteWebDriver, Options, DriverOptions, bool] = None,
                  session_or_options: Union[Session, dict, SessionOptions, bool] = None,
                  ini_path: str = None,
                  proxy: dict = None):
@@ -65,7 +66,7 @@ class Drission(object):
         elif driver_or_options is False:
             self._driver_options = DriverOptions(read_file=False)
 
-        elif isinstance(driver_or_options, WebDriver):
+        elif isinstance(driver_or_options, RemoteWebDriver):
             self._driver = driver_or_options
 
         elif isinstance(driver_or_options, (Options, DriverOptions)):
@@ -383,7 +384,7 @@ class Drission(object):
             self.close_session()
 
 
-def user_agent_to_session(driver: WebDriver, session: Session) -> None:
+def user_agent_to_session(driver: RemoteWebDriver, session: Session) -> None:
     """把driver的user-agent复制到session    \n
     :param driver: 来源driver对象
     :param session: 目标session对象

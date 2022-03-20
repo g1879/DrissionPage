@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -25,7 +26,7 @@ from .session_element import make_session_ele, SessionElement
 class DriverPage(BasePage):
     """DriverPage封装了页面操作的常用功能，使用selenium来获取、解析、操作网页"""
 
-    def __init__(self, driver: WebDriver, timeout: float = 10) -> None:
+    def __init__(self, driver: RemoteWebDriver, timeout: float = 10) -> None:
         """初始化函数，接收一个WebDriver对象，用来操作网页"""
         super().__init__(timeout)
         self._driver = driver
@@ -302,7 +303,7 @@ class DriverPage(BasePage):
         """等待元素从dom删除、显示、隐藏                             \n
         :param loc_or_ele: 可以是元素、查询字符串、loc元组
         :param timeout: 等待超时时间
-        :return: 等待是否成功
+        :return: 用于等待的ElementWaiter对象
         """
         return ElementWaiter(self, loc_or_ele, timeout)
 

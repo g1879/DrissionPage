@@ -6,11 +6,13 @@
 """
 from os import sep
 from pathlib import Path
-from time import time, perf_counter
+from time import time, perf_counter, sleep
 from typing import Union, List, Any, Tuple
 
-from selenium.common.exceptions import TimeoutException, JavascriptException, InvalidElementStateException
-from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.common.exceptions import TimeoutException, JavascriptException, InvalidElementStateException, \
+    NoSuchElementException
+# from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
@@ -872,7 +874,7 @@ class ElementsByXpath(object):
         self.single = single
         self.timeout = timeout
 
-    def __call__(self, ele_or_driver: Union[WebDriver, WebElement]) \
+    def __call__(self, ele_or_driver: Union[RemoteWebDriver, WebElement]) \
             -> Union[str, DriverElement, None, List[str or DriverElement]]:
 
         def get_nodes(node=None, xpath_txt=None, type_txt='7'):
@@ -921,7 +923,7 @@ class ElementsByXpath(object):
                 """
             return driver.execute_script(js, node, xpath_txt)
 
-        if isinstance(ele_or_driver, WebDriver):
+        if isinstance(ele_or_driver, RemoteWebDriver):
             driver, the_node = ele_or_driver, 'document'
         else:
             driver, the_node = ele_or_driver.parent, ele_or_driver
@@ -969,12 +971,14 @@ class Select(object):
         self.inner_ele = ele
         self.select_ele = Select(ele.inner_ele)
 
-    def __call__(self, text_or_index: Union[str, int, list, tuple]) -> bool:
+    def __call__(self, text_or_index: Union[str, int, list, tuple], timeout=None) -> bool:
         """选定下拉列表中子元素                                                             \n
         :param text_or_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: None
         """
-        return self.select(text_or_index)
+        timeout = timeout if timeout is not None else self.inner_ele.page.timeout
+        return self.select(text_or_index, timeout=timeout)
 
     @property
     def is_multi(self) -> bool:
@@ -1005,35 +1009,43 @@ class Select(object):
         """清除所有已选项"""
         self.select_ele.deselect_all()
 
-    def select(self, text_or_index: Union[str, int, list, tuple]) -> bool:
+    def select(self, text_or_index: Union[str, int, list, tuple], timeout=None) -> bool:
         """选定下拉列表中子元素                                                             \n
         :param text_or_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
+        :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: 是否选择成功
         """
         i = 'index' if isinstance(text_or_index, int) else 'text'
-        return self._select(text_or_index, i, False)
+        timeout = timeout if timeout is not None else self.inner_ele.page.timeout
+        return self._select(text_or_index, i, False, timeout)
 
-    def select_by_value(self, value: Union[str, list, tuple]) -> bool:
+    def select_by_value(self, value: Union[str, list, tuple], timeout=None) -> bool:
         """此方法用于根据value值选择项。当元素是多选列表时，可以接收list或tuple  \n
         :param value: value属性值，传入list或tuple可选择多项
+        :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: None
         """
-        return self._select(value, 'value', False)
+        timeout = timeout if timeout is not None else self.inner_ele.page.timeout
+        return self._select(value, 'value', False, timeout)
 
-    def deselect(self, text_or_index: Union[str, int, list, tuple]) -> bool:
+    def deselect(self, text_or_index: Union[str, int, list, tuple], timeout=None) -> bool:
         """取消选定下拉列表中子元素                                                             \n
         :param text_or_index: 根据文本或序号取消择选项，若允许多选，传入list或tuple可取消多项
+        :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: None
         """
         i = 'index' if isinstance(text_or_index, int) else 'text'
-        return self._select(text_or_index, i, True)
+        timeout = timeout if timeout is not None else self.inner_ele.page.timeout
+        return self._select(text_or_index, i, True, timeout)
 
-    def deselect_by_value(self, value: Union[str, list, tuple]) -> bool:
+    def deselect_by_value(self, value: Union[str, list, tuple], timeout=None) -> bool:
         """此方法用于根据value值取消选择项。当元素是多选列表时，可以接收list或tuple  \n
         :param value: value属性值，传入list或tuple可取消多项
+        :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: None
         """
-        return self._select(value, 'value', True)
+        timeout = timeout if timeout is not None else self.inner_ele.page.timeout
+        return self._select(value, 'value', True, timeout)
 
     def invert(self) -> None:
         """反选"""
@@ -1046,7 +1058,8 @@ class Select(object):
     def _select(self,
                 text_value_index: Union[str, int, list, tuple] = None,
                 para_type: str = 'text',
-                deselect: bool = False) -> bool:
+                deselect: bool = False,
+                timeout=None) -> bool:
         """选定或取消选定下拉列表中子元素                                                             \n
         :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
         :param para_type: 参数类型，可选 'text'、'value'、'index'
@@ -1056,7 +1069,7 @@ class Select(object):
         if not self.is_multi and isinstance(text_value_index, (list, tuple)):
             raise TypeError('单选下拉列表不能传入list和tuple')
 
-        if isinstance(text_value_index, (str, int)):
+        def do_select():
             try:
                 if para_type == 'text':
                     if deselect:
@@ -1075,10 +1088,19 @@ class Select(object):
                         self.select_ele.select_by_index(int(text_value_index))
                 else:
                     raise ValueError('para_type参数只能传入"text"、"value"或"index"。')
+
                 return True
 
-            except Exception:
+            except NoSuchElementException:
                 return False
+
+        if isinstance(text_value_index, (str, int)):
+            t1 = perf_counter()
+            ok = do_select()
+            while not ok and perf_counter() - t1 < timeout:
+                sleep(.2)
+                ok = do_select()
+            return ok
 
         elif isinstance(text_value_index, (list, tuple)):
             return self._select_multi(text_value_index, para_type, deselect)

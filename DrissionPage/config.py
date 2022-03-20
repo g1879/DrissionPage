@@ -8,7 +8,7 @@
 from configparser import RawConfigParser, NoSectionError, NoOptionError
 from http.cookiejar import Cookie
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Union, List
 
 from requests.cookies import RequestsCookieJar
 from selenium.webdriver.chrome.options import Options
@@ -492,6 +492,51 @@ class DriverOptions(Options):
     def chrome_path(self) -> str:
         """浏览器启动文件路径"""
         return self.binary_location
+
+    # -------------重写父类方法，实现链式操作-------------
+    def add_argument(self, argument) -> 'DriverOptions':
+        """添加一个配置项               \n
+        :param argument: 配置项内容
+        :return: 当前对象
+        """
+        super().add_argument(argument)
+        return self
+
+    def set_capability(self, name, value) -> 'DriverOptions':
+        """设置一个capability          \n
+        :param name: capability名称
+        :param value: capability值
+        :return: 当前对象
+        """
+        super().set_capability(name, value)
+        return self
+
+    def add_extension(self, extension: str) -> 'DriverOptions':
+        """添加插件                           \n
+        :param extension: crx文件路径
+        :return: 当前对象
+        """
+        super().add_extension(extension)
+        return self
+
+    def add_encoded_extension(self, extension: str) -> 'DriverOptions':
+        """将带有扩展数据的 Base64 编码字符串添加到将用于将其提取到 ChromeDriver 的列表中  \n
+        :param extension: 带有扩展数据的 Base64 编码字符串
+        :return: 当前对象
+        """
+        super().add_encoded_extension(extension)
+        return self
+
+    def add_experimental_option(self, name: str, value: Union[str, int, dict, List[str]]) -> 'DriverOptions':
+        """添加一个实验选项到浏览器  \n
+        :param name: 选项名称
+        :param value: 选项值
+        :return: 当前对象
+        """
+        super().add_experimental_option(name, value)
+        return self
+
+    # -------------重写父类方法结束-------------
 
     def save(self, path: str = None) -> str:
         """保存设置到文件                                                                        \n
