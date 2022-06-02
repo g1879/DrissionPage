@@ -483,6 +483,9 @@ class DriverOptions(Options):
             self.timeouts['pageLoad'] *= 1000
             self.timeouts['script'] *= 1000
 
+        if '--no-sandbox' not in self._arguments:
+            self._arguments.append('--no-sandbox')
+
     @property
     def driver_path(self) -> str:
         """chromedriver文件路径"""
@@ -682,7 +685,7 @@ class DriverOptions(Options):
         :param user_agent: user agent文本
         :return: 当前对象
         """
-        return self.set_argument('user-agent', user_agent)
+        return self.set_argument('--user-agent', user_agent)
 
     def set_proxy(self, proxy: str) -> 'DriverOptions':
         """设置代理                    \n

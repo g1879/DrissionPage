@@ -9,6 +9,7 @@ from typing import Union
 
 from requests import Session
 from requests.cookies import RequestsCookieJar
+from requests.structures import CaseInsensitiveDict
 from selenium import webdriver
 from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 from selenium.webdriver.chrome.options import Options
@@ -116,6 +117,11 @@ class Drission(object):
 
             # -----------创建WebDriver对象-----------
             self._driver = _create_driver(chrome_path, driver_path, self.driver_options)
+
+            # -----------解决接管新版浏览器不能定位到正确的标签页的问题-----------
+            active_tab = self._driver.window_handles[0]
+            if active_tab != self._driver.current_window_handle:
+                self._driver.switch_to.window(active_tab)
 
             # 反反爬设置
             try:
@@ -316,12 +322,13 @@ class Drission(object):
         if self._session is None:
             self._session = Session()
 
-        attrs = ['headers', 'auth', 'proxies', 'hooks', 'params', 'verify',
-                 'cert', 'stream', 'trust_env', 'max_redirects']  # , 'adapters'
-
+        if 'headers' in data:
+            self._session.headers = CaseInsensitiveDict(data['headers'])
         if 'cookies' in data:
             self.set_cookies(data['cookies'], set_session=True)
 
+        attrs = ['auth', 'proxies', 'hooks', 'params', 'verify',
+                 'cert', 'stream', 'trust_env', 'max_redirects']  # , 'adapters'
         for i in attrs:
             if i in data:
                 self._session.__setattr__(i, data[i])
@@ -436,6 +443,8 @@ def _create_chrome(chrome_path: str, port: str, args: list, proxy: dict) -> tupl
         if arg.startswith(('--user-data-dir', '--disk-cache-dir')):
             index = arg.find('=') + 1
             args1.append(f'{arg[:index]}"{arg[index:].strip()}"')
+        elif arg.startswith('--user-agent='):
+            args1.append(f'--user-agent="{arg[13:]}"')
         else:
             args1.append(arg)
 
@@ -446,7 +455,7 @@ def _create_chrome(chrome_path: str, port: str, args: list, proxy: dict) -> tupl
 
     # ----------创建浏览器进程----------
     try:
-        debugger = Popen(f'{chrome_path} --remote-debugging-port={port} {args}', shell=False)
+        debugger = Popen(f'"{chrome_path}" --remote-debugging-port={port} {args}', shell=False)
 
         if chrome_path == 'chrome.exe':
             from .common import get_exe_path_from_port

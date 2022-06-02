@@ -4,14 +4,13 @@
 @Contact :   g1879@qq.com
 @File    :   session_page.py
 """
-from os import path as os_PATH
-from random import randint
 from re import search
-from time import time, sleep
+from time import sleep
 from typing import Union, List, Tuple
-from urllib.parse import urlparse, quote, unquote
+from urllib.parse import urlparse
 
 from requests import Session, Response
+from requests.structures import CaseInsensitiveDict
 from tldextract import extract
 from DownloadKit import DownloadKit
 
@@ -71,30 +70,7 @@ class SessionPage(BasePage):
         :param kwargs: 连接参数
         :return: url是否可用
         """
-        to_url = quote(url, safe='/:&?=%;#@+!')
-        retry = retry if retry is not None else self.retry_times
-        interval = interval if interval is not None else self.retry_interval
-
-        if not url:
-            raise ValueError('没有传入url。')
-
-        self._url = to_url
-        self._response = self._try_to_connect(to_url, times=retry, interval=interval, show_errmsg=show_errmsg, **kwargs)
-
-        if self._response is None:
-            self._url_available = False
-
-        else:
-            if self._response.ok:
-                self._url_available = True
-
-            else:
-                if show_errmsg:
-                    raise ConnectionError(f'{to_url}\n连接状态码：{self._response.status_code}.')
-
-                self._url_available = False
-
-        return self._url_available
+        return self._s_connect(url, 'get', None, show_errmsg, retry, interval, **kwargs)
 
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, SessionElement],
@@ -163,47 +139,6 @@ class SessionPage(BasePage):
         else:
             return [_cookie_to_dict(cookie) for cookie in cookies]
 
-    def _try_to_connect(self,
-                        to_url: str,
-                        times: int = 0,
-                        interval: float = 1,
-                        mode: str = 'get',
-                        data: Union[dict, str] = None,
-                        show_errmsg: bool = False,
-                        **kwargs) -> Union[Response, None]:
-        """尝试连接，重试若干次                            \n
-        :param to_url: 要访问的url
-        :param times: 重试次数
-        :param interval: 重试间隔（秒）
-        :param mode: 连接方式，'get' 或 'post'
-        :param data: post方式提交的数据
-        :param show_errmsg: 是否抛出异常
-        :param kwargs: 连接参数
-        :return: HTMLResponse对象
-        """
-        err = None
-        r = None
-
-        for _ in range(times + 1):
-            try:
-                r = self._make_response(to_url, mode=mode, data=data, show_errmsg=True, **kwargs)[0]
-            except Exception as e:
-                err = e
-                r = None
-
-            if r and (r.content != b'' or r.status_code in (403, 404)):
-                break
-
-            if _ < times:
-                sleep(interval)
-                if show_errmsg:
-                    print(f'重试 {to_url}')
-
-        if not r and show_errmsg:
-            raise err if err is not None else ConnectionError(f'连接异常。{r.status_code if r is not None else ""}')
-
-        return r
-
     # ----------------session独有属性和方法-----------------------
     @property
     def session(self) -> Session:
@@ -218,9 +153,7 @@ class SessionPage(BasePage):
     @property
     def download(self) -> DownloadKit:
         if self._download_kit is None:
-            self._download_kit = DownloadKit(session=self.session, timeout=self.timeout)
-            self._download_kit.retry = self.retry_times
-            self._download_kit.interval = self.retry_interval
+            self._download_kit = DownloadKit(session=self)
 
         return self._download_kit
 
@@ -240,15 +173,28 @@ class SessionPage(BasePage):
         :param kwargs: 连接参数
         :return: url是否可用
         """
-        to_url = quote(url, safe='/:&?=%;#@+!')
-        retry = retry if retry is not None else self.retry_times
-        interval = interval if interval is not None else self.retry_interval
+        return self._s_connect(url, 'post', data, show_errmsg, retry, interval, **kwargs)
 
-        if not url:
-            raise ValueError('没有传入url。')
-
-        self._url = to_url
-        self._response = self._try_to_connect(to_url, retry, interval, 'post', data, show_errmsg, **kwargs)
+    def _s_connect(self,
+                   url: str,
+                   mode: str,
+                   data: Union[dict, str] = None,
+                   show_errmsg: bool = False,
+                   retry: int = None,
+                   interval: float = None,
+                   **kwargs) -> bool:
+        """执行get或post连接                                 \n
+        :param url: 目标url
+        :param mode: 'get' 或 'post'
+        :param data: 提交的数据
+        :param show_errmsg: 是否显示和抛出异常
+        :param retry: 重试次数
+        :param interval: 重试间隔（秒）
+        :param kwargs: 连接参数
+        :return: url是否可用
+        """
+        retry, interval = self._before_connect(url, retry, interval)
+        self._response, info = self._make_response(self._url, mode, data, retry, interval, show_errmsg, **kwargs)
 
         if self._response is None:
             self._url_available = False
@@ -259,7 +205,7 @@ class SessionPage(BasePage):
 
             else:
                 if show_errmsg:
-                    raise ConnectionError(f'连接状态码：{self._response.status_code}.')
+                    raise ConnectionError(f'状态码：{self._response.status_code}.')
                 self._url_available = False
 
         return self._url_available
@@ -268,124 +214,97 @@ class SessionPage(BasePage):
                        url: str,
                        mode: str = 'get',
                        data: Union[dict, str] = None,
+                       retry: int = None,
+                       interval: float = None,
                        show_errmsg: bool = False,
                        **kwargs) -> tuple:
-        """生成response对象                     \n
+        """生成Response对象                                                    \n
         :param url: 目标url
-        :param mode: 'get', 'post' 中选择
+        :param mode: 'get' 或 'post'
         :param data: post方式要提交的数据
         :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 其它参数
         :return: tuple，第一位为Response或None，第二位为出错信息或'Success'
         """
-        if not url:
-            if show_errmsg:
-                raise ValueError('URL为空。')
-            return None, 'URL为空。'
-
-        if mode not in ('get', 'post'):
-            raise ValueError("mode参数只能是'get'或'post'。")
-
-        url = quote(url, safe='/:&?=%;#@+!')
+        kwargs = CaseInsensitiveDict(kwargs)
+        if 'headers' not in kwargs:
+            kwargs['headers'] = {}
+        else:
+            kwargs['headers'] = CaseInsensitiveDict(kwargs['headers'])
 
         # 设置referer和host值
-        kwargs_set = set(x.lower() for x in kwargs)
+        parsed_url = urlparse(url)
+        hostname = parsed_url.hostname
+        scheme = parsed_url.scheme
+        if not _check_headers(kwargs, self.session.headers, 'Referer'):
+            kwargs['headers']['Referer'] = self.url if self.url else f'{scheme}://{hostname}'
+        if 'Host' not in kwargs['headers']:
+            kwargs['headers']['Host'] = hostname
 
-        if 'headers' in kwargs_set:
-            header_set = set(x.lower() for x in kwargs['headers'])
-
-            if self.url and 'referer' not in header_set:
-                kwargs['headers']['Referer'] = self.url
-
-            if 'host' not in header_set:
-                kwargs['headers']['Host'] = urlparse(url).hostname
-
-        else:
-            kwargs['headers'] = self.session.headers
-            kwargs['headers']['Host'] = urlparse(url).hostname
-
-            if self.url:
-                kwargs['headers']['Referer'] = self.url
-
-        if 'timeout' not in kwargs_set:
+        if not _check_headers(kwargs, self.session.headers, 'timeout'):
             kwargs['timeout'] = self.timeout
 
-        try:
-            r = None
+        r = err = None
+        retry = retry if retry is not None else self.retry_times
+        interval = interval if interval is not None else self.retry_interval
+        for i in range(retry + 1):
+            try:
+                if mode == 'get':
+                    r = self.session.get(url, **kwargs)
+                elif mode == 'post':
+                    r = self.session.post(url, data=data, **kwargs)
 
-            if mode == 'get':
-                r = self.session.get(url, **kwargs)
-            elif mode == 'post':
-                r = self.session.post(url, data=data, **kwargs)
+                if r:
+                    return _set_charset(r), 'Success'
 
-        except Exception as e:
+            except Exception as e:
+                err = e
+
+            # if r and r.status_code in (403, 404):
+            #     break
+
+            if i < retry:
+                sleep(interval)
+                if show_errmsg:
+                    print(f'重试 {url}')
+
+        if r is None:
             if show_errmsg:
-                raise e
-
-            return None, e
-
-        else:
-            # ----------------获取并设置编码开始-----------------
-            # 在headers中获取编码
-            content_type = r.headers.get('content-type', '').lower()
-            charset = search(r'charset[=: ]*(.*)?[;]', content_type)
-
-            if charset:
-                r.encoding = charset.group(1)
-
-            # 在headers中获取不到编码，且如果是网页
-            elif content_type.replace(' ', '').startswith('text/html'):
-                re_result = search(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', r.content)
-
-                if re_result:
-                    charset = re_result.group(1).decode()
+                if err:
+                    raise err
                 else:
-                    charset = r.apparent_encoding
+                    raise ConnectionError('连接失败')
+            return None, '连接失败' if err is None else err
 
-                r.encoding = charset
-            # ----------------获取并设置编码结束-----------------
+        if not r.ok:
+            if show_errmsg:
+                raise ConnectionError(f'状态码：{r.status_code}')
+            return r, f'状态码：{r.status_code}'
 
-            return r, 'Success'
+
+def _check_headers(kwargs, headers: Union[dict, CaseInsensitiveDict], arg: str) -> bool:
+    """检查kwargs或headers中是否有arg所示属性"""
+    return arg in kwargs['headers'] or arg in headers
 
 
-def _get_download_file_name(url, response) -> str:
-    """从headers或url中获取文件名，如果获取不到，生成一个随机文件名
-    :param url: 文件url
-    :param response: 返回的response
-    :return: 下载文件的文件名
-    """
-    file_name = ''
-    charset = ''
-    content_disposition = response.headers.get('content-disposition', '').replace(' ', '')
+def _set_charset(response) -> Response:
+    """设置Response对象的编码"""
+    # 在headers中获取编码
+    content_type = response.headers.get('content-type', '').lower()
+    charset = search(r'charset[=: ]*(.*)?[;]', content_type)
 
-    # 使用header里的文件名
-    if content_disposition:
-        txt = search(r'filename\*="?([^";]+)', content_disposition)
-        if txt:  # 文件名自带编码方式
-            txt = txt.group(1).split("''", 1)
-            if len(txt) == 2:
-                charset, file_name = txt
-            else:
-                file_name = txt[0]
+    if charset:
+        response.encoding = charset.group(1)
 
-        else:  # 文件名没带编码方式
-            txt = search(r'filename="?([^";]+)', content_disposition)
-            if txt:
-                file_name = txt.group(1)
+    # 在headers中获取不到编码，且如果是网页
+    elif content_type.replace(' ', '').startswith('text/html'):
+        re_result = search(b'<meta.*?charset=[ \\\'"]*([^"\\\' />]+).*?>', response.content)
 
-                # 获取编码（如有）
-                charset = response.encoding
+        if re_result:
+            charset = re_result.group(1).decode()
+        else:
+            charset = response.apparent_encoding
 
-        file_name = file_name.strip("'")
+        response.encoding = charset
 
-    # 在url里获取文件名
-    if not file_name and os_PATH.basename(url):
-        file_name = os_PATH.basename(url).split("?")[0]
-
-    # 找不到则用时间和随机数生成文件名
-    if not file_name:
-        file_name = f'untitled_{time()}_{randint(0, 100)}'
-
-    # 去除非法字符
-    charset = charset or 'utf-8'
-    return unquote(file_name, charset)
+    return response

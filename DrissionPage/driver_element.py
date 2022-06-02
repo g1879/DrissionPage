@@ -285,7 +285,7 @@ class DriverElement(DrissionElement):
                index: int = 1,
                filter_loc: Union[tuple, str] = '',
                timeout: float = None) -> Union['DriverElement', str, None]:
-        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
+        """返回当前元素前面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元，而是整个DOM文档        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -297,7 +297,7 @@ class DriverElement(DrissionElement):
               index: int = 1,
               filter_loc: Union[tuple, str] = '',
               timeout: float = None) -> Union['DriverElement', str, None]:
-        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
+        """返回当前元素后面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元，而是整个DOM文档        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -328,7 +328,7 @@ class DriverElement(DrissionElement):
     def befores(self,
                 filter_loc: Union[tuple, str] = '',
                 timeout: float = None) -> List[Union['DriverElement', str]]:
-        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        """返回当前元素后面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元，而是整个DOM文档        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
         :return: 本元素前面的元素或节点组成的列表
@@ -338,7 +338,7 @@ class DriverElement(DrissionElement):
     def afters(self,
                filter_loc: Union[tuple, str] = '',
                timeout: float = None) -> List[Union['DriverElement', str]]:
-        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
+        """返回当前元素前面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元，而是整个DOM文档        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
         :return: 本元素后面的元素或节点组成的列表
@@ -764,10 +764,7 @@ class DriverElement(DrissionElement):
         :param loc: 筛选条件，可用selenium的(By, str)，也可用本库定位语法
         :return: DriverElement对象
         """
-        try:
-            from selenium.webdriver.support.relative_locator import RelativeBy
-        except ImportError:
-            raise ImportError('该方法只支持selenium4及以上版本。')
+        from selenium.webdriver.support.relative_locator import RelativeBy
 
         if isinstance(loc, str):
             loc = str_to_loc(loc)

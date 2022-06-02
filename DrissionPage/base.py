@@ -7,6 +7,7 @@
 from abc import abstractmethod
 from re import sub
 from typing import Union, Tuple, List
+from urllib.parse import quote
 
 from lxml.html import HtmlElement
 from selenium.webdriver.remote.webelement import WebElement
@@ -330,6 +331,18 @@ class BasePage(BaseParser):
         """返回当前访问的url有效性"""
         return self._url_available
 
+    def _before_connect(self, url: str, retry: int, interval: float) -> tuple:
+        """连接前的准备                    \n
+        :param url: 要访问的url
+        :param retry: 重试次数
+        :param interval: 重试间隔
+        :return: 重试次数和间隔组成的tuple
+        """
+        self._url = quote(url, safe='/:&?=%;#@+!')
+        retry = retry if retry is not None else self.retry_times
+        interval = interval if interval is not None else self.retry_interval
+        return retry, interval
+
     # ----------------以下属性或方法由后代实现----------------
     @property
     def url(self):
@@ -349,12 +362,4 @@ class BasePage(BaseParser):
             show_errmsg: bool = False,
             retry: int = None,
             interval: float = None):
-        pass
-
-    @abstractmethod
-    def _try_to_connect(self,
-                        to_url: str,
-                        times: int = 0,
-                        interval: float = 1,
-                        show_errmsg: bool = False, ):
         pass

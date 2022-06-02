@@ -204,27 +204,6 @@ class MixPage(SessionPage, DriverPage, BasePage):
         elif self._mode == 'd':
             return super(SessionPage, self).get_cookies(as_dict)
 
-    def _try_to_connect(self,
-                        to_url: str,
-                        times: int = 0,
-                        interval: float = 1,
-                        mode: str = 'get',
-                        data: dict = None,
-                        show_errmsg: bool = False,
-                        **kwargs):
-        """尝试连接，重试若干次                            \n
-        :param to_url: 要访问的url
-        :param times: 重试次数
-        :param interval: 重试间隔（秒）
-        :param show_errmsg: 是否抛出异常
-        :param kwargs: 连接参数
-        :return: s模式为Response对象，d模式为bool或None
-        """
-        if self._mode == 'd':
-            return super(SessionPage, self)._try_to_connect(to_url, times, interval, show_errmsg)
-        elif self._mode == 's':
-            return super()._try_to_connect(to_url, times, interval, mode, data, show_errmsg, **kwargs)
-
     # ----------------MixPage独有属性和方法-----------------------
     @property
     def drission(self) -> Drission:
@@ -336,7 +315,7 @@ class MixPage(SessionPage, DriverPage, BasePage):
         # 使用requests访问url并判断可用性
         if by_requests:
             self.cookies_to_session()
-            r = self._make_response(self.url, **{'timeout': 3})[0]
+            r = self._make_response(self.url, retry=0)[0]
             return r.ok if r else False
 
     def close_driver(self) -> None:
