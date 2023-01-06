@@ -2,14 +2,20 @@
 """
 @Author  :   g1879
 @Contact :   g1879@qq.com
-@File    :   common.py
 """
 from html import unescape
 from pathlib import Path
+from platform import system
 from re import split, search, sub
 from shutil import rmtree
+from subprocess import Popen
+from time import perf_counter, sleep
 from typing import Union
 from zipfile import ZipFile
+from urllib.parse import urlparse, urljoin, urlunparse
+from requests import get as requests_get
+
+from .config import DriverOptions
 
 
 def get_ele_txt(e) -> str:
@@ -107,8 +113,8 @@ def get_loc(loc: Union[tuple, str], translate_css: bool = False) -> tuple:
 
 
 def str_to_loc(loc: str) -> tuple:
-    """处理元素查找语句                                                                    \n
-    查找方式：属性、tag name及属性、文本、xpath、css selector、id、class                      \n
+    """处理元素查找语句                                                                 \n
+    查找方式：属性、tag name及属性、文本、xpath、css selector、id、class                    \n
     @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串    \n
     """
     loc_by = 'xpath'
@@ -153,7 +159,7 @@ def str_to_loc(loc: str) -> tuple:
 
     # 根据文本查找
     elif loc.startswith('text='):
-        loc_str = f'//*[.={_make_search_str(loc[5:])}]'
+        loc_str = f'//*[text()={_make_search_str(loc[5:])}]'
     elif loc.startswith('text:') and loc != 'text:':
         loc_str = f'//*/text()[contains(., {_make_search_str(loc[5:])})]/..'
 
@@ -356,20 +362,38 @@ def get_exe_path_from_port(port: Union[str, int]) -> Union[str, None]:
     :return: 可执行文件的绝对路径
     """
     from os import popen
-    from time import perf_counter
-    process = popen(f'netstat -ano |findstr {port}').read().split('\n')[0]
-    t = perf_counter()
 
-    while not process and perf_counter() - t < 10:
-        process = popen(f'netstat -ano |findstr {port}').read().split('\n')[0]
-
-    processid = process.split(' ')[-1]
-
-    if not processid:
+    pid = get_pid_from_port(port)
+    if not pid:
         return
     else:
-        file_lst = popen(f'wmic process where processid={processid} get executablepath').read().split('\n')
+        file_lst = popen(f'wmic process where processid={pid} get executablepath').read().split('\n')
         return file_lst[2].strip() if len(file_lst) > 2 else None
+
+
+def get_pid_from_port(port: Union[str, int]) -> Union[str, None]:
+    """获取端口号第一条进程的pid           \n
+    :param port: 端口号
+    :return: 进程id
+    """
+    from platform import system
+    if system().lower() != 'windows' or port is None:
+        return None
+
+    from os import popen
+    from time import perf_counter
+
+    try:  # 避免Anaconda中可能产生的报错
+        process = popen(f'netstat -ano |findstr {port}').read().split('\n')[0]
+
+        t = perf_counter()
+        while not process and perf_counter() - t < 5:
+            process = popen(f'netstat -ano |findstr {port}').read().split('\n')[0]
+
+        return process.split(' ')[-1] or None
+
+    except AttributeError:
+        return None
 
 
 def get_usable_path(path: Union[str, Path]) -> Path:
@@ -433,3 +457,219 @@ def get_long(txt) -> int:
     """
     txt_len = len(txt)
     return int((len(txt.encode('utf-8')) - txt_len) / 2 + txt_len)
+
+
+def make_absolute_link(link, page=None) -> str:
+    """获取绝对url
+    :param link: 超链接
+    :param page: 页面对象
+    :return: 绝对链接
+    """
+    if not link:
+        return link
+
+    parsed = urlparse(link)._asdict()
+
+    # 是相对路径，与页面url拼接并返回
+    if not parsed['netloc']:
+        return urljoin(page.url, link) if page else link
+
+    # 是绝对路径但缺少协议，从页面url获取协议并修复
+    if not parsed['scheme'] and page:
+        parsed['scheme'] = urlparse(page.url).scheme
+        parsed = tuple(v for v in parsed.values())
+        return urlunparse(parsed)
+
+    # 绝对路径且不缺协议，直接返回
+    return link
+
+
+def is_js_func(func: str) -> bool:
+    """检查文本是否js函数"""
+    func = func.strip()
+    if func.startswith('function') or func.startswith('async '):
+        return True
+    elif '=>' in func:
+        return True
+    return False
+
+
+def _port_is_using(ip: str, port: str) -> Union[bool, None]:
+    """检查端口是否被占用               \n
+    :param ip: 浏览器地址
+    :param port: 浏览器端口
+    :return: bool
+    """
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    try:
+        s.connect((ip, int(port)))
+        s.shutdown(2)
+        return True
+    except socket.error:
+        return False
+    finally:
+        if s:
+            s.close()
+
+
+def connect_chrome(option: DriverOptions) -> tuple:
+    """连接或启动chrome                           \n
+    :param option: DriverOptions对象
+    :return: chrome 路径和进程对象组成的元组
+    """
+    system_type = system().lower()
+    debugger_address = option.debugger_address
+    chrome_path = option.chrome_path
+
+    debugger_address = debugger_address[7:] if debugger_address.startswith('http://') else debugger_address
+    ip, port = debugger_address.split(':')
+    if ip not in ('127.0.0.1', 'localhost'):
+        return None, None
+
+    if _port_is_using(ip, port):
+        chrome_path = get_exe_path_from_port(port) if chrome_path == 'chrome' and system_type == 'windows' \
+            else chrome_path
+        return chrome_path, None
+
+    args = _get_running_args(option)
+
+    # ----------创建浏览器进程----------
+    try:
+        debugger = _run_browser(port, chrome_path, args)
+        if chrome_path == 'chrome' and system_type == 'windows':
+            chrome_path = get_exe_path_from_port(port)
+
+    # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
+    except FileNotFoundError:
+        from DrissionPage.easy_set import _get_chrome_path
+        chrome_path = _get_chrome_path(show_msg=False)
+
+        if not chrome_path:
+            raise FileNotFoundError('无法找到chrome路径，请手动配置。')
+
+        debugger = _run_browser(port, chrome_path, args)
+
+    return chrome_path, debugger
+
+
+def _run_browser(port, path: str, args) -> Popen:
+    """创建chrome进程          \n
+    :param port: 端口号
+    :param path: 浏览器地址
+    :param args: 启动参数
+    :return: 进程对象
+    """
+    sys = system().lower()
+    if sys == 'windows':
+        args = ' '.join(args)
+        debugger = Popen(f'"{path}" --remote-debugging-port={port} {args}', shell=False)
+    else:
+        arguments = [path, f'--remote-debugging-port={port}'] + list(args)
+        debugger = Popen(arguments, shell=False)
+
+    t1 = perf_counter()
+    while perf_counter() - t1 < 10:
+        try:
+            tabs = requests_get(f'http://127.0.0.1:{port}/json').json()
+            for tab in tabs:
+                if tab['type'] == 'page':
+                    return debugger
+        except Exception:
+            sleep(.2)
+
+    raise ConnectionError('无法连接浏览器。')
+
+
+def _get_running_args(opt: DriverOptions) -> list:
+    """从DriverOptions获取命令行启动参数"""
+    sys = system().lower()
+    result = []
+
+    # ----------处理arguments-----------
+    args = opt.arguments
+    for arg in args:
+        if arg.startswith(('--user-data-dir', '--disk-cache-dir', '--user-agent')) and sys == 'windows':
+            index = arg.find('=') + 1
+            result.append(f'{arg[:index]}"{arg[index:].strip()}"')
+        else:
+            result.append(arg)
+
+    # ----------处理extensions-------------
+    ext = opt._extension_files
+    if ext:
+        ext = set(ext)
+        if sys == 'windows':
+            ext = '","'.join(ext)
+            ext = f'"{ext}"'
+        else:
+            ext = ','.join(ext)
+        ext = f'--load-extension={ext}'
+        result.append(ext)
+
+    # ----------处理experimental_options-------------
+    prefs = opt.experimental_options.get('prefs', None)
+    if prefs and opt.user_data_path:
+        prefs_file = Path(opt.user_data_path) / 'Default' / 'Preferences'
+        if not prefs_file.exists():
+            return result
+
+        from json import load, dump
+        with open(prefs_file, "r", encoding='utf-8') as f:
+            j = load(f)
+
+            for pref in prefs:
+                value = prefs[pref]
+                pref = pref.split('.')
+                _make_leave_in_dict(j, pref, 0, len(pref))
+                _set_value_to_dict(j, pref, value)
+
+        with open(prefs_file, 'w', encoding='utf-8') as f:
+            dump(j, f)
+
+    return result
+
+
+def _make_leave_in_dict(target_dict: dict, src: list, num: int, end: int) -> None:
+    """把prefs中a.b.c形式的属性转为a['b']['c']形式
+    :param target_dict: 要处理的dict
+    :param src: 属性层级列表[a, b, c]
+    :param num: 当前处理第几个
+    :param end: src长度
+    :return: None
+    """
+    if num == end:
+        return
+    if src[num] not in target_dict:
+        target_dict[src[num]] = {}
+    num += 1
+    _make_leave_in_dict(target_dict[src[num - 1]], src, num, end)
+
+
+def _set_value_to_dict(target_dict: dict, src: list, value) -> None:
+    """把a.b.c形式的属性的值赋值到a['b']['c']形式的字典中
+    :param target_dict: 要处理的dict
+    :param src: 属性层级列表[a, b, c]
+    :param value: 属性值
+    :return: None
+    """
+    src = "']['".join(src)
+    src = f"target_dict['{src}']=value"
+    exec(src)
+
+
+def _location_in_viewport(page, loc_x: int, loc_y: int) -> bool:
+    """判断给定的坐标是否在视口中          |n
+    :param page: ChromePage对象
+    :param loc_x: 页面绝对坐标x
+    :param loc_y: 页面绝对坐标y
+    :return:
+    """
+    js = f'''function(){{var x = {loc_x};var y = {loc_y};
+    const vWidth = window.innerWidth || document.documentElement.clientWidth
+    const vHeight = window.innerHeight || document.documentElement.clientHeight
+    if (x< document.documentElement.scrollLeft || y < document.documentElement.scrollTop 
+    || x > vWidth || y > vHeight){{return false;}}
+    return true;}}'''
+    return page.run_script(js)

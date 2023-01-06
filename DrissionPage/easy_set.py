@@ -2,7 +2,6 @@
 """
 @Author  :   g1879
 @Contact :   g1879@qq.com
-@File    :   driver_page.py
 """
 from os import popen
 from pathlib import Path
@@ -38,7 +37,7 @@ def set_paths(driver_path: str = None,
               user_data_path: str = None,
               cache_path: str = None,
               ini_path: str = None,
-              check_version: bool = True) -> None:
+              check_version: bool = False) -> None:
     """快捷的路径设置函数                                          \n
     :param driver_path: chromedriver.exe路径
     :param chrome_path: chrome.exe路径
@@ -270,6 +269,10 @@ def _get_chrome_path(ini_path: str = None,
             print('ini文件中', end='')
         return str(path)
 
+    from platform import system
+    if system().lower() != 'windows':
+        return None
+
     # -----------从注册表中获取--------------
     if from_regedit:
         import winreg
@@ -291,7 +294,7 @@ def _get_chrome_path(ini_path: str = None,
 
     # -----------从系统变量中获取--------------
     if from_system_path:
-        paths = popen('set path').read().lower()
+        paths = popen('set path').read().encode('gbk').decode('utf-8').lower()
         r = search(r'[^;]*chrome[^;]*', paths)
 
         if r:

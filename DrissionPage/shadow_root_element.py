@@ -2,32 +2,34 @@
 """
 @Author  :   g1879
 @Contact :   g1879@qq.com
-@File    :   shadow_root_element.py
 """
 from time import perf_counter
-from typing import Union, Any, Tuple, List
+from typing import Union
 
 from selenium.webdriver.remote.webelement import WebElement
 
 from .base import BaseElement
 from .common import get_loc
-from .driver_element import make_driver_ele, DriverElement
+from .driver_element import make_driver_ele
 from .session_element import make_session_ele, SessionElement
 
 
 class ShadowRootElement(BaseElement):
     """ShadowRootElement是用于处理ShadowRoot的类，使用方法和DriverElement基本一致"""
 
-    def __init__(self, inner_ele: WebElement, parent_ele: DriverElement):
-        super().__init__(inner_ele, parent_ele.page)
+    def __init__(self, inner_ele, parent_ele):
+        super().__init__(parent_ele.page)
         self.parent_ele = parent_ele
+        self._inner_ele = inner_ele
 
-    def __repr__(self) -> str:
+    @property
+    def inner_ele(self):
+        return self._inner_ele
+
+    def __repr__(self):
         return f'<ShadowRootElement in {self.parent_ele} >'
 
-    def __call__(self,
-                 loc_or_str: Union[Tuple[str, str], str],
-                 timeout: float = None) -> Union[DriverElement, str, None]:
+    def __call__(self, loc_or_str, timeout=None):
         """在内部查找元素                                            \n
         例：ele2 = ele1('@id=ele_id')                               \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
@@ -37,21 +39,21 @@ class ShadowRootElement(BaseElement):
         return self.ele(loc_or_str, timeout)
 
     @property
-    def tag(self) -> str:
+    def tag(self):
         """元素标签名"""
         return 'shadow-root'
 
     @property
-    def html(self) -> str:
+    def html(self):
         return f'<shadow_root>{self.inner_html}</shadow_root>'
 
     @property
-    def inner_html(self) -> str:
+    def inner_html(self):
         """返回内部的html文本"""
         shadow_root = WebElement(self.page.driver, self.inner_ele._id)
         return shadow_root.get_attribute('innerHTML')
 
-    def parent(self, level_or_loc: Union[str, int] = 1) -> DriverElement:
+    def parent(self, level_or_loc=1):
         """返回上面某一级父元素，可指定层数或用查询语法定位              \n
         :param level_or_loc: 第几级父元素，或定位符
         :return: DriverElement对象
@@ -72,9 +74,7 @@ class ShadowRootElement(BaseElement):
 
         return self.parent_ele.ele(loc, timeout=0)
 
-    def next(self,
-             index: int = 1,
-             filter_loc: Union[tuple, str] = '') -> Union[DriverElement, str, None]:
+    def next(self, index=1, filter_loc=''):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -83,9 +83,7 @@ class ShadowRootElement(BaseElement):
         nodes = self.nexts(filter_loc=filter_loc)
         return nodes[index - 1] if nodes else None
 
-    def before(self,
-               index: int = 1,
-               filter_loc: Union[tuple, str] = '') -> Union[DriverElement, str, None]:
+    def before(self, index=1, filter_loc=''):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -94,8 +92,7 @@ class ShadowRootElement(BaseElement):
         nodes = self.befores(filter_loc=filter_loc)
         return nodes[index - 1] if nodes else None
 
-    def after(self, index: int = 1,
-              filter_loc: Union[tuple, str] = '') -> Union[DriverElement, str, None]:
+    def after(self, index=1, filter_loc=''):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -104,7 +101,7 @@ class ShadowRootElement(BaseElement):
         nodes = self.afters(filter_loc=filter_loc)
         return nodes[index - 1] if nodes else None
 
-    def nexts(self, filter_loc: Union[tuple, str] = '') -> List[Union[DriverElement, str]]:
+    def nexts(self, filter_loc=''):
         """返回后面所有兄弟元素或节点组成的列表        \n
         :param filter_loc: 用于筛选元素的查询语法
         :return: DriverElement对象组成的列表
@@ -117,7 +114,7 @@ class ShadowRootElement(BaseElement):
         xpath = f'xpath:./{loc}'
         return self.parent_ele.eles(xpath, timeout=0.1)
 
-    def befores(self, filter_loc: Union[tuple, str] = '') -> List[Union[DriverElement, str]]:
+    def befores(self, filter_loc=''):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :return: 本元素前面的元素或节点组成的列表
@@ -130,7 +127,7 @@ class ShadowRootElement(BaseElement):
         xpath = f'xpath:./preceding::{loc}'
         return self.parent_ele.eles(xpath, timeout=0.1)
 
-    def afters(self, filter_loc: Union[tuple, str] = '') -> List[Union[DriverElement, str]]:
+    def afters(self, filter_loc=''):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :return: 本元素后面的元素或节点组成的列表
@@ -140,9 +137,7 @@ class ShadowRootElement(BaseElement):
         xpath = f'xpath:./following::{loc}'
         return eles1 + self.parent_ele.eles(xpath, timeout=0.1)
 
-    def ele(self,
-            loc_or_str: Union[Tuple[str, str], str],
-            timeout: float = None) -> Union[DriverElement, str, None]:
+    def ele(self, loc_or_str, timeout=None):
         """返回当前元素下级符合条件的第一个元素，默认返回                                   \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
@@ -150,9 +145,7 @@ class ShadowRootElement(BaseElement):
         """
         return self._ele(loc_or_str, timeout)
 
-    def eles(self,
-             loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None) -> List[Union[DriverElement, str]]:
+    def eles(self, loc_or_str, timeout=None):
         """返回当前元素下级所有符合条件的子元素                                              \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间，默认与元素所在页面等待时间一致
@@ -160,28 +153,26 @@ class ShadowRootElement(BaseElement):
         """
         return self._ele(loc_or_str, timeout=timeout, single=False)
 
-    def s_ele(self, loc_or_ele=None) -> Union[SessionElement, str, None]:
+    def s_ele(self, loc_or_str=None) -> Union[SessionElement, str, None]:
         """查找第一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高                 \n
-        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
-        return make_session_ele(self, loc_or_ele)
+        return make_session_ele(self, loc_or_str)
 
-    def s_eles(self, loc_or_ele) -> List[Union[SessionElement, str]]:
+    def s_eles(self, loc_or_str):
         """查找所有符合条件的元素以SessionElement列表形式返回，处理复杂页面时效率很高                 \n
-        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
-        return make_session_ele(self, loc_or_ele, single=False)
+        return make_session_ele(self, loc_or_str, single=False)
 
-    def _ele(self,
-             loc_or_str: Union[Tuple[str, str], str],
-             timeout: float = None,
-             single: bool = True) -> Union[DriverElement, str, None, List[Union[DriverElement, str]]]:
+    def _ele(self, loc_or_str, timeout=None, single=True, relative=False):
         """返回当前元素下级符合条件的子元素，默认返回第一个                                                    \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间
         :param single: True则返回第一个，False则返回全部
+        :param relative: WebPage用的表示是否相对定位的参数
         :return: DriverElement对象
         """
         # 先转换为sessionElement，再获取所有元素，获取它们的css selector路径，再用路径在页面上执行查找
@@ -205,7 +196,7 @@ class ShadowRootElement(BaseElement):
         else:
             return [make_driver_ele(self, f'css:{css}', True, timeout) for css in css_paths]
 
-    def run_script(self, script: str, *args) -> Any:
+    def run_script(self, script, *args):
         """执行js代码，传入自己为第一个参数  \n
         :param script: js文本
         :param args: 传入的参数
@@ -214,11 +205,11 @@ class ShadowRootElement(BaseElement):
         shadow_root = WebElement(self.page.driver, self.inner_ele._id)
         return shadow_root.parent.execute_script(script, shadow_root, *args)
 
-    def is_enabled(self) -> bool:
+    def is_enabled(self):
         """是否可用"""
         return self.inner_ele.is_enabled()
 
-    def is_valid(self) -> bool:
+    def is_valid(self):
         """用于判断元素是否还能用，应对页面跳转元素不能用的情况"""
         try:
             self.is_enabled()

@@ -2,15 +2,10 @@
 """
 @Author  :   g1879
 @Contact :   g1879@qq.com
-@File    :   base.py
 """
 from abc import abstractmethod
 from re import sub
-from typing import Union, Tuple, List
 from urllib.parse import quote
-
-from lxml.html import HtmlElement
-from selenium.webdriver.remote.webelement import WebElement
 
 from .common import format_html, get_loc
 
@@ -24,12 +19,12 @@ class BaseParser(object):
     def ele(self, loc_or_ele, timeout=None):
         return self._ele(loc_or_ele, timeout, True)
 
-    def eles(self, loc_or_str: Union[Tuple[str, str], str], timeout=None):
+    def eles(self, loc_or_str, timeout=None):
         return self._ele(loc_or_str, timeout, False)
 
     # ----------------以下属性或方法待后代实现----------------
     @property
-    def html(self) -> str:
+    def html(self):
         return ''
 
     def s_ele(self, loc_or_ele):
@@ -46,37 +41,28 @@ class BaseParser(object):
 class BaseElement(BaseParser):
     """各元素类的基类"""
 
-    def __init__(self, ele: Union[WebElement, HtmlElement], page=None):
-        self._inner_ele = ele
+    def __init__(self, page=None):
         self.page = page
-
-    @property
-    def inner_ele(self) -> Union[WebElement, HtmlElement]:
-        return self._inner_ele
 
     # ----------------以下属性或方法由后代实现----------------
     @property
     def tag(self):
         return
 
-    @property
-    def is_valid(self):
-        return True
-
     @abstractmethod
-    def _ele(self, loc_or_ele, timeout=None, single=True):
+    def _ele(self, loc_or_str, timeout=None, single=True, relative=False):
         pass
 
-    def parent(self, level_or_loc: Union[tuple, str, int] = 1):
+    def parent(self, level_or_loc=1):
         pass
 
-    def prev(self, index: int = 1) -> None:
+    def prev(self, index=1):
         return None  # ShadowRootElement直接继承
 
     def prevs(self) -> None:
         return None  # ShadowRootElement直接继承
 
-    def next(self, index: int = 1):
+    def next(self, index=1):
         pass
 
     def nexts(self):
@@ -84,29 +70,30 @@ class BaseElement(BaseParser):
 
 
 class DrissionElement(BaseElement):
-    """DriverElement 和 SessionElement的基类，但不是ShadowRootElement的基类"""
+    """DriverElement、ChromiumElement 和 SessionElement的基类
+    但不是ShadowRootElement的基类"""
 
     @property
-    def link(self) -> str:
+    def link(self):
         """返回href或src绝对url"""
         return self.attr('href') or self.attr('src')
 
     @property
-    def css_path(self) -> str:
+    def css_path(self):
         """返回css path路径"""
         return self._get_ele_path('css')
 
     @property
-    def xpath(self) -> str:
+    def xpath(self):
         """返回xpath路径"""
         return self._get_ele_path('xpath')
 
     @property
-    def comments(self) -> list:
+    def comments(self):
         """返回元素注释文本组成的列表"""
         return self.eles('xpath:.//comment()')
 
-    def texts(self, text_node_only: bool = False) -> list:
+    def texts(self, text_node_only=False):
         """返回元素内所有直接子节点的文本，包括元素和文本节点   \n
         :param text_node_only: 是否只返回文本节点
         :return: 文本列表
@@ -118,7 +105,7 @@ class DrissionElement(BaseElement):
 
         return [format_html(x.strip(' ').rstrip('\n')) for x in texts if x and sub('[\r\n\t ]', '', x) != '']
 
-    def parent(self, level_or_loc: Union[tuple, str, int] = 1) -> Union['DrissionElement', None]:
+    def parent(self, level_or_loc=1):
         """返回上面某一级父元素，可指定层数或用查询语法定位              \n
         :param level_or_loc: 第几级父元素，或定位符
         :return: 上级元素对象
@@ -137,12 +124,9 @@ class DrissionElement(BaseElement):
         else:
             raise TypeError('level_or_loc参数只能是tuple、int或str。')
 
-        return self.ele(loc, timeout=0)
+        return self._ele(loc, timeout=0, relative=True)
 
-    def prev(self,
-             index: int = 1,
-             filter_loc: Union[tuple, str] = '',
-             timeout: float = 0) -> Union['DrissionElement', str, None]:
+    def prev(self, index=1, filter_loc='', timeout=0):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -152,10 +136,7 @@ class DrissionElement(BaseElement):
         nodes = self._get_brothers(index, filter_loc, 'preceding', timeout=timeout)
         return nodes[-1] if nodes else None
 
-    def next(self,
-             index: int = 1,
-             filter_loc: Union[tuple, str] = '',
-             timeout: float = 0) -> Union['DrissionElement', str, None]:
+    def next(self, index=1, filter_loc='', timeout=0):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -165,10 +146,7 @@ class DrissionElement(BaseElement):
         nodes = self._get_brothers(index, filter_loc, 'following', timeout=timeout)
         return nodes[0] if nodes else None
 
-    def before(self,
-               index: int = 1,
-               filter_loc: Union[tuple, str] = '',
-               timeout: float = None) -> Union['DrissionElement', str, None]:
+    def before(self, index=1, filter_loc='', timeout=None):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -178,10 +156,7 @@ class DrissionElement(BaseElement):
         nodes = self._get_brothers(index, filter_loc, 'preceding', False, timeout=timeout)
         return nodes[-1] if nodes else None
 
-    def after(self,
-              index: int = 1,
-              filter_loc: Union[tuple, str] = '',
-              timeout: float = None) -> Union['DrissionElement', str, None]:
+    def after(self, index=1, filter_loc='', timeout=None):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -191,9 +166,7 @@ class DrissionElement(BaseElement):
         nodes = self._get_brothers(index, filter_loc, 'following', False, timeout)
         return nodes[0] if nodes else None
 
-    def prevs(self,
-              filter_loc: Union[tuple, str] = '',
-              timeout: float = 0) -> List[Union['DrissionElement', str]]:
+    def prevs(self, filter_loc='', timeout=0):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -201,9 +174,7 @@ class DrissionElement(BaseElement):
         """
         return self._get_brothers(filter_loc=filter_loc, direction='preceding', timeout=timeout)
 
-    def nexts(self,
-              filter_loc: Union[tuple, str] = '',
-              timeout: float = 0) -> List[Union['DrissionElement', str]]:
+    def nexts(self, filter_loc='', timeout=0):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -211,9 +182,7 @@ class DrissionElement(BaseElement):
         """
         return self._get_brothers(filter_loc=filter_loc, direction='following', timeout=timeout)
 
-    def befores(self,
-                filter_loc: Union[tuple, str] = '',
-                timeout: float = None) -> List[Union['DrissionElement', str]]:
+    def befores(self, filter_loc='', timeout=None):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -221,9 +190,7 @@ class DrissionElement(BaseElement):
         """
         return self._get_brothers(filter_loc=filter_loc, direction='preceding', brother=False, timeout=timeout)
 
-    def afters(self,
-               filter_loc: Union[tuple, str] = '',
-               timeout: float = None) -> List[Union['DrissionElement', str]]:
+    def afters(self, filter_loc, timeout=None):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -231,12 +198,7 @@ class DrissionElement(BaseElement):
         """
         return self._get_brothers(filter_loc=filter_loc, direction='following', brother=False, timeout=timeout)
 
-    def _get_brothers(self,
-                      index: int = None,
-                      filter_loc: Union[tuple, str] = '',
-                      direction: str = 'following',
-                      brother: bool = True,
-                      timeout: float = .5) -> List[Union['DrissionElement', str]]:
+    def _get_brothers(self, index=None, filter_loc='', direction='following', brother=True, timeout=.5):
         """按要求返回兄弟元素或节点组成的列表                            \n
         :param index: 获取第几个，该参数不为None时只获取该编号的元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -261,7 +223,7 @@ class DrissionElement(BaseElement):
 
         loc = f'xpath:./{direction}{brother}::{loc}'
 
-        nodes = self._ele(loc, timeout=timeout, single=False)
+        nodes = self._ele(loc, timeout=timeout, single=False, relative=True)
         nodes = [e for e in nodes if not (isinstance(e, str) and sub('[ \n\t\r]', '', e) == '')]
 
         if nodes and index is not None:
@@ -297,41 +259,41 @@ class DrissionElement(BaseElement):
 class BasePage(BaseParser):
     """页面类的基类"""
 
-    def __init__(self, timeout: float = 10):
+    def __init__(self, timeout=None):
         """初始化函数"""
         self._url = None
-        self.timeout = timeout
+        self.timeout = timeout if timeout is not None else 10
         self.retry_times = 3
         self.retry_interval = 2
         self._url_available = None
 
     @property
-    def title(self) -> Union[str, None]:
+    def title(self):
         """返回网页title"""
         ele = self.ele('xpath://title')
         return ele.text if ele else None
 
     @property
-    def timeout(self) -> float:
+    def timeout(self):
         """返回查找元素时等待的秒数"""
         return self._timeout
 
     @timeout.setter
-    def timeout(self, second: float) -> None:
+    def timeout(self, second):
         """设置查找元素时等待的秒数"""
         self._timeout = second
 
     @property
-    def cookies(self) -> dict:
+    def cookies(self):
         """返回cookies"""
         return self.get_cookies(True)
 
     @property
-    def url_available(self) -> bool:
+    def url_available(self):
         """返回当前访问的url有效性"""
         return self._url_available
 
-    def _before_connect(self, url: str, retry: int, interval: float) -> tuple:
+    def _before_connect(self, url, retry, interval):
         """连接前的准备                    \n
         :param url: 要访问的url
         :param retry: 重试次数
@@ -353,13 +315,9 @@ class BasePage(BaseParser):
         return
 
     @abstractmethod
-    def get_cookies(self, as_dict: bool = False):
+    def get_cookies(self, as_dict=False):
         return {}
 
     @abstractmethod
-    def get(self,
-            url: str,
-            show_errmsg: bool = False,
-            retry: int = None,
-            interval: float = None):
+    def get(self, url, show_errmsg=False, retry=None, interval=None):
         pass

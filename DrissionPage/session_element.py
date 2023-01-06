@@ -2,36 +2,37 @@
 """
 @Author  :   g1879
 @Contact :   g1879@qq.com
-@File    :   session_element.py
 """
+from html import unescape
 from re import match, DOTALL
-from typing import Union, List, Tuple
-from urllib.parse import urlparse, urljoin, urlunparse
 
 from lxml.etree import tostring
 from lxml.html import HtmlElement, fromstring
 
 from .base import DrissionElement, BasePage, BaseElement
-from .common import get_ele_txt, get_loc
+from .common import get_ele_txt, get_loc, make_absolute_link
 
 
 class SessionElement(DrissionElement):
     """session模式的元素对象，包装了一个lxml的Element对象，并封装了常用功能"""
 
-    def __init__(self, ele: HtmlElement, page=None):
+    def __init__(self, ele, page=None):
         """初始化对象                                                          \n
         :param ele: 被包装的HtmlElement元素
         :param page: 元素所在页面对象，如果是从 html 文本生成的元素，则为 None
         """
-        super().__init__(ele, page)
+        super().__init__(page)
+        self._inner_ele = ele
 
-    def __repr__(self) -> str:
+    @property
+    def inner_ele(self):
+        return self._inner_ele
+
+    def __repr__(self):
         attrs = [f"{attr}='{self.attrs[attr]}'" for attr in self.attrs]
         return f'<SessionElement {self.tag} {" ".join(attrs)}>'
 
-    def __call__(self,
-                 loc_or_str: Union[Tuple[str, str], str],
-                 timeout=None) -> Union['SessionElement', str, None]:
+    def __call__(self, loc_or_str, timeout=None):
         """在内部查找元素                                                  \n
         例：ele2 = ele1('@id=ele_id')                                    \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
@@ -41,48 +42,45 @@ class SessionElement(DrissionElement):
         return self.ele(loc_or_str)
 
     @property
-    def tag(self) -> str:
+    def tag(self):
         """返回元素类型"""
         return self._inner_ele.tag
 
     @property
-    def html(self) -> str:
+    def html(self):
         """返回outerHTML文本"""
         html = tostring(self._inner_ele, method="html").decode()
-        return html[:html.rfind('>') + 1]  # tostring()会把跟紧元素的文本节点也带上，因此要去掉
+        return unescape(html[:html.rfind('>') + 1])  # tostring()会把跟紧元素的文本节点也带上，因此要去掉
 
     @property
-    def inner_html(self) -> str:
+    def inner_html(self):
         """返回元素innerHTML文本"""
         r = match(r'<.*?>(.*)</.*?>', self.html, flags=DOTALL)
         return '' if not r else r.group(1)
 
     @property
-    def attrs(self) -> dict:
+    def attrs(self):
         """返回元素所有属性及值"""
         return {attr: self.attr(attr) for attr, val in self.inner_ele.items()}
 
     @property
-    def text(self) -> str:
+    def text(self):
         """返回元素内所有文本"""
         return get_ele_txt(self)
 
     @property
-    def raw_text(self) -> str:
+    def raw_text(self):
         """返回未格式化处理的元素内文本"""
         return str(self._inner_ele.text_content())
 
-    def parent(self, level_or_loc: Union[tuple, str, int] = 1) -> Union['SessionElement', None]:
+    def parent(self, level_or_loc=1):
         """返回上面某一级父元素，可指定层数或用查询语法定位              \n
         :param level_or_loc: 第几级父元素，或定位符
         :return: 上级元素对象
         """
         return super().parent(level_or_loc)
 
-    def prev(self,
-             index: int = 1,
-             filter_loc: Union[tuple, str] = '',
-             timeout: float = 0) -> Union['SessionElement', str, None]:
+    def prev(self, index=1, filter_loc='', timeout=0):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -91,10 +89,7 @@ class SessionElement(DrissionElement):
         """
         return super().prev(index, filter_loc, timeout)
 
-    def next(self,
-             index: int = 1,
-             filter_loc: Union[tuple, str] = '',
-             timeout: float = 0) -> Union['SessionElement', str, None]:
+    def next(self, index=1, filter_loc='', timeout=0):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -103,10 +98,7 @@ class SessionElement(DrissionElement):
         """
         return super().next(index, filter_loc, timeout)
 
-    def before(self,
-               index: int = 1,
-               filter_loc: Union[tuple, str] = '',
-               timeout: float = None) -> Union['SessionElement', str, None]:
+    def before(self, index=1, filter_loc='', timeout=None):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 前面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -115,10 +107,7 @@ class SessionElement(DrissionElement):
         """
         return super().before(index, filter_loc, timeout)
 
-    def after(self,
-              index: int = 1,
-              filter_loc: Union[tuple, str] = '',
-              timeout: float = None) -> Union['SessionElement', str, None]:
+    def after(self, index=1, filter_loc='', timeout=None):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个        \n
         :param index: 后面第几个查询结果元素
         :param filter_loc: 用于筛选元素的查询语法
@@ -127,9 +116,7 @@ class SessionElement(DrissionElement):
         """
         return super().after(index, filter_loc, timeout)
 
-    def prevs(self,
-              filter_loc: Union[tuple, str] = '',
-              timeout: float = 0) -> List[Union['SessionElement', str]]:
+    def prevs(self, filter_loc='', timeout=0):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -137,9 +124,7 @@ class SessionElement(DrissionElement):
         """
         return super().prevs(filter_loc, timeout)
 
-    def nexts(self,
-              filter_loc: Union[tuple, str] = '',
-              timeout: float = 0) -> List[Union['SessionElement', str]]:
+    def nexts(self, filter_loc='', timeout=0):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -147,9 +132,7 @@ class SessionElement(DrissionElement):
         """
         return super().nexts(filter_loc, timeout)
 
-    def befores(self,
-                filter_loc: Union[tuple, str] = '',
-                timeout: float = None) -> List[Union['SessionElement', str]]:
+    def befores(self, filter_loc='', timeout=None):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -157,9 +140,7 @@ class SessionElement(DrissionElement):
         """
         return super().befores(filter_loc, timeout)
 
-    def afters(self,
-               filter_loc: Union[tuple, str] = '',
-               timeout: float = None) -> List[Union['SessionElement', str]]:
+    def afters(self, filter_loc='', timeout=None):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选        \n
         :param filter_loc: 用于筛选元素的查询语法
         :param timeout: 查找元素的超时时间
@@ -167,7 +148,7 @@ class SessionElement(DrissionElement):
         """
         return super().afters(filter_loc, timeout)
 
-    def attr(self, attr: str) -> Union[str, None]:
+    def attr(self, attr):
         """返回attribute属性值                           \n
         :param attr: 属性名
         :return: 属性值文本，没有该属性返回None
@@ -180,10 +161,10 @@ class SessionElement(DrissionElement):
                 return link
 
             else:  # 其它情况直接返回绝对url
-                return self._make_absolute(link)
+                return make_absolute_link(link, self.page)
 
         elif attr == 'src':
-            return self._make_absolute(self.inner_ele.get('src'))
+            return make_absolute_link(self.inner_ele.get('src'), self.page)
 
         elif attr == 'text':
             return self.text
@@ -200,9 +181,7 @@ class SessionElement(DrissionElement):
         else:
             return self.inner_ele.get(attr)
 
-    def ele(self,
-            loc_or_str: Union[Tuple[str, str], str],
-            timeout=None) -> Union['SessionElement', str, None]:
+    def ele(self, loc_or_str, timeout=None):
         """返回当前元素下级符合条件的第一个元素、属性或节点文本                      \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
@@ -210,9 +189,7 @@ class SessionElement(DrissionElement):
         """
         return self._ele(loc_or_str)
 
-    def eles(self,
-             loc_or_str: Union[Tuple[str, str], str],
-             timeout=None) -> List[Union['SessionElement', str]]:
+    def eles(self, loc_or_str, timeout=None):
         """返回当前元素下级所有符合条件的子元素、属性或节点文本                       \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
@@ -220,35 +197,31 @@ class SessionElement(DrissionElement):
         """
         return self._ele(loc_or_str, single=False)
 
-    def s_ele(self,
-              loc_or_str: Union[Tuple[str, str], str] = None) -> Union['SessionElement', str, None]:
+    def s_ele(self, loc_or_str=None):
         """返回当前元素下级符合条件的第一个元素、属性或节点文本                       \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
         return self._ele(loc_or_str)
 
-    def s_eles(self,
-               loc_or_str: Union[Tuple[str, str], str] = None) -> List[Union['SessionElement', str]]:
+    def s_eles(self, loc_or_str=None):
         """返回当前元素下级所有符合条件的子元素、属性或节点文本                       \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本组成的列表
         """
         return self._ele(loc_or_str, single=False)
 
-    def _ele(self,
-             loc_or_str: Union[Tuple[str, str], str],
-             timeout=None,
-             single: bool = True) -> Union['SessionElement', str, None, List[Union['SessionElement', str]]]:
+    def _ele(self, loc_or_str, timeout=None, single=True, relative=False):
         """返回当前元素下级符合条件的子元素、属性或节点文本，默认返回第一个           \n
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和父类对应
         :param single: True则返回第一个，False则返回全部
+        :param relative: WebPage用的表示是否相对定位的参数
         :return: SessionElement对象
         """
         return make_session_ele(self, loc_or_str, single)
 
-    def _get_ele_path(self, mode) -> str:
+    def _get_ele_path(self, mode):
         """获取css路径或xpath路径
         :param mode: 'css' 或 'xpath'
         :return: css路径或xpath路径
@@ -268,34 +241,8 @@ class SessionElement(DrissionElement):
 
         return f':root{path_str[1:]}' if mode == 'css' else path_str
 
-    # ----------------session独有方法-----------------------
-    def _make_absolute(self, link) -> str:
-        """获取绝对url
-        :param link: 超链接
-        :return: 绝对链接
-        """
-        if not link:
-            return link
 
-        parsed = urlparse(link)._asdict()
-
-        # 是相对路径，与页面url拼接并返回
-        if not parsed['netloc']:
-            return urljoin(self.page.url, link) if self.page else link
-
-        # 是绝对路径但缺少协议，从页面url获取协议并修复
-        if not parsed['scheme'] and self.page:
-            parsed['scheme'] = urlparse(self.page.url).scheme
-            parsed = tuple(v for v in parsed.values())
-            return urlunparse(parsed)
-
-        # 绝对路径且不缺协议，直接返回
-        return link
-
-
-def make_session_ele(html_or_ele: Union[str, BaseElement, BasePage],
-                     loc: Union[str, Tuple[str, str]] = None,
-                     single: bool = True) -> Union[SessionElement, str, None, List[Union[SessionElement, str]]]:
+def make_session_ele(html_or_ele, loc=None, single=True):
     """从接收到的对象或html文本中查找元素，返回SessionElement对象                 \n
     如要直接从html生成SessionElement而不在下级查找，loc输入None即可               \n
     :param html_or_ele: html文本、BaseParser对象
@@ -317,7 +264,9 @@ def make_session_ele(html_or_ele: Union[str, BaseElement, BasePage],
         raise ValueError("定位符必须为str或长度为2的tuple。")
 
     # ---------------根据传入对象类型获取页面对象和lxml元素对象---------------
-    if isinstance(html_or_ele, SessionElement):  # SessionElement
+    the_type = str(type(html_or_ele))
+    # SessionElement
+    if the_type.endswith(".SessionElement'>"):
         page = html_or_ele.page
 
         loc_str = loc[1]
@@ -338,7 +287,8 @@ def make_session_ele(html_or_ele: Union[str, BaseElement, BasePage],
 
         loc = loc[0], loc_str
 
-    elif isinstance(html_or_ele, DrissionElement):  # DriverElement
+    # ChromiumElement, DriverElement
+    elif the_type.endswith((".ChromiumElement'>", ".DriverElement'>")):
         loc_str = loc[1]
         if loc[0] == 'xpath' and loc[1].lstrip().startswith('/'):
             loc_str = f'.{loc[1]}'
@@ -349,18 +299,25 @@ def make_session_ele(html_or_ele: Union[str, BaseElement, BasePage],
         # 获取整个页面html再定位到当前元素，以实现查找上级元素
         page = html_or_ele.page
         xpath = html_or_ele.xpath
-        html_or_ele = fromstring(html_or_ele.page.html)
+        if hasattr(html_or_ele, 'doc_id'):  # ChromiumElement，兼容传入的元素在iframe内的情况
+            html = html_or_ele.page.run_cdp('DOM.getOuterHTML', objectId=html_or_ele.doc_id)['outerHTML']
+        else:
+            html = html_or_ele.page.html
+        html_or_ele = fromstring(html)
         html_or_ele = html_or_ele.xpath(xpath)[0]
 
-    elif isinstance(html_or_ele, BasePage):  # MixPage, DriverPage 或 SessionPage
+    # 各种页面对象
+    elif isinstance(html_or_ele, BasePage):
         page = html_or_ele
         html_or_ele = fromstring(html_or_ele.html)
 
-    elif isinstance(html_or_ele, str):  # 直接传入html文本
+    # 直接传入html文本
+    elif isinstance(html_or_ele, str):
         page = None
         html_or_ele = fromstring(html_or_ele)
 
-    elif isinstance(html_or_ele, BaseElement):  # ShadowRootElement
+    # ShadowRootElement, ChromiumShadowRootElement, ChromiumFrame
+    elif isinstance(html_or_ele, BaseElement) or the_type.endswith(".ChromiumFrame'>"):
         page = html_or_ele.page
         html_or_ele = fromstring(html_or_ele.html)
 
