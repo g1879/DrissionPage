@@ -6,10 +6,10 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setup(
     name="DrissionPage",
-    version="2.4.2",
+    version="3.2.2",
     author="g1879",
     author_email="g1879@qq.com",
-    description="A module that integrates selenium and requests session, encapsulates common page operations.",
+    description="Python based web automation tool. It can control the browser and send and receive data packets.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     license="BSD",
@@ -17,11 +17,15 @@ setup(
     url="https://gitee.com/g1879/DrissionPage",
     include_package_data=True,
     packages=find_packages(),
+    zip_safe=False,
     install_requires=[
-        "selenium",
         "lxml",
         "tldextract",
-        "requests"
+        "requests",
+        "DownloadKit>=0.5.3",
+        "FlowViewer",
+        "websocket-client",
+        'click~=8.1.3'
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",
@@ -29,5 +33,10 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
     ],
-    python_requires='>=3.6'
+    python_requires='>=3.6',
+    entry_points={
+        'console_scripts': [
+            'dp = DrissionPage.commons.cli:main',
+        ],
+    },
 )

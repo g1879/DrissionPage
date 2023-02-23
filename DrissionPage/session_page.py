@@ -6,6 +6,7 @@
 from re import search
 from time import sleep
 from urllib.parse import urlparse
+from warnings import warn
 
 from DownloadKit import DownloadKit
 from requests import Session, Response
@@ -13,85 +14,68 @@ from requests.structures import CaseInsensitiveDict
 from tldextract import extract
 
 from .base import BasePage
-from .config import SessionOptions, cookies_to_tuple, cookie_to_dict
+from .commons.web import cookie_to_dict, set_session_cookies
+from .configs.session_options import SessionOptions
 from .session_element import SessionElement, make_session_ele
 
 
 class SessionPage(BasePage):
     """SessionPage封装了页面操作的常用功能，使用requests来获取、解析网页"""
 
-    def __init__(self, session_or_options=None, timeout=10):
-        """初始化                                                     \n
+    def __init__(self, session_or_options=None, timeout=None):
+        """
         :param session_or_options: Session对象或SessionOptions对象
-        :param timeout: 连接超时时间
+        :param timeout: 连接超时时间，为None时从ini文件读取
         """
-        super().__init__(timeout)
         self._response = None
-        self._create_session(session_or_options)
+        self._download_set = None
+        self._session = None
+        self._set = None
+        self._set_start_options(session_or_options, None)
+        self._set_runtime_settings()
+        self._create_session()
+        timeout = timeout if timeout is not None else self.timeout
+        super().__init__(timeout)
 
-    def _create_session(self, Session_or_Options):
-        """创建内建Session对象
-        :param Session_or_Options: Session对象或SessionOptions对象
+    def _set_start_options(self, session_or_options, none):
+        """启动配置
+        :param session_or_options: Session、SessionOptions
+        :param none: 用于后代继承
         :return: None
         """
-        if Session_or_Options is None or isinstance(Session_or_Options, SessionOptions):
-            options = Session_or_Options or SessionOptions()
-            self._set_session(options.as_dict())
-        elif isinstance(Session_or_Options, Session):
-            self._session = Session_or_Options
+        if not session_or_options or isinstance(session_or_options, SessionOptions):
+            self._session_options = session_or_options or SessionOptions(session_or_options)
 
-    def _set_session(self, data):
-        """根据传入字典对session进行设置    \n
-        :param data: session配置字典
-        :return: None
-        """
-        self._session = Session()
+        elif isinstance(session_or_options, Session):
+            self._session_options = SessionOptions()
+            self._session = session_or_options
 
-        if 'headers' in data:
-            self._session.headers = CaseInsensitiveDict(data['headers'])
-        if 'cookies' in data:
-            self.set_cookies(data['cookies'])
+    def _set_runtime_settings(self):
+        """设置运行时用到的属性"""
+        self._timeout = self._session_options.timeout
+        self._download_path = self._session_options.download_path
 
-        attrs = ['auth', 'proxies', 'hooks', 'params', 'verify',
-                 'cert', 'stream', 'trust_env', 'max_redirects']  # , 'adapters'
-        for i in attrs:
-            if i in data:
-                self._session.__setattr__(i, data[i])
-
-    def set_cookies(self, cookies):
-        cookies = cookies_to_tuple(cookies)
-        for cookie in cookies:
-            if cookie['value'] is None:
-                cookie['value'] = ''
-
-            kwargs = {x: cookie[x] for x in cookie
-                      if x.lower() in ('version', 'port', 'domain', 'path', 'secure',
-                                       'expires', 'discard', 'comment', 'comment_url', 'rest')}
-
-            if 'expiry' in cookie:
-                kwargs['expires'] = cookie['expiry']
-
-            self.session.cookies.set(cookie['name'], cookie['value'], **kwargs)
-
-    def set_headers(self, headers):
-        """设置通用的headers，设置的headers值回逐个覆盖原有的，不会清理原来的        \n
-        :param headers: dict形式的headers
-        :return: None
-        """
-        headers = CaseInsensitiveDict(headers)
-        for i in headers:
-            self.session.headers[i] = headers[i]
+    def _create_session(self):
+        """创建内建Session对象"""
+        if not self._session:
+            self._session = self._session_options.make_session()
 
     def __call__(self, loc_or_str, timeout=None):
-        """在内部查找元素                                                  \n
-        例：ele2 = ele1('@id=ele_id')                                     \n
+        """在内部查找元素
+        例：ele2 = ele1('@id=ele_id')
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
+        :param timeout: 不起实际作用，用于和ChromiumElement对应，便于无差别调用
         :return: SessionElement对象或属性文本
         """
         return self.ele(loc_or_str)
 
     # -----------------共有属性和方法-------------------
+    @property
+    def title(self):
+        """返回网页title"""
+        ele = self._ele('xpath://title', raise_err=False)
+        return ele.text if ele else None
+
     @property
     def url(self):
         """返回当前访问url"""
@@ -110,8 +94,42 @@ class SessionPage(BasePage):
         except Exception:
             return None
 
+    @property
+    def download_path(self):
+        """返回下载路径"""
+        return self._download_path
+
+    @property
+    def download_set(self):
+        """返回用于设置下载参数的对象"""
+        if self._download_set is None:
+            self._download_set = DownloadSetter(self)
+        return self._download_set
+
+    @property
+    def download(self):
+        """返回下载器对象"""
+        return self.download_set.DownloadKit
+
+    @property
+    def session(self):
+        """返回session对象"""
+        return self._session
+
+    @property
+    def response(self):
+        """返回访问url得到的response对象"""
+        return self._response
+
+    @property
+    def set(self):
+        """返回用于等待的对象"""
+        if self._set is None:
+            self._set = SessionPageSetter(self)
+        return self._set
+
     def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, **kwargs):
-        """用get方式跳转到url                                 \n
+        """用get方式跳转到url
         :param url: 目标url
         :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数
@@ -123,46 +141,47 @@ class SessionPage(BasePage):
         return self._s_connect(url, 'get', None, show_errmsg, retry, interval, **kwargs)
 
     def ele(self, loc_or_ele, timeout=None):
-        """返回页面中符合条件的第一个元素、属性或节点文本                            \n
+        """返回页面中符合条件的第一个元素、属性或节点文本
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
-        :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
+        :param timeout: 不起实际作用，用于和ChromiumElement对应，便于无差别调用
         :return: SessionElement对象或属性、文本
         """
         return self._ele(loc_or_ele)
 
     def eles(self, loc_or_str, timeout=None):
-        """返回页面中所有符合条件的元素、属性或节点文本                          \n
+        """返回页面中所有符合条件的元素、属性或节点文本
         :param loc_or_str: 元素的定位信息，可以是loc元组，或查询字符串
-        :param timeout: 不起实际作用，用于和DriverElement对应，便于无差别调用
+        :param timeout: 不起实际作用，用于和ChromiumElement对应，便于无差别调用
         :return: SessionElement对象或属性、文本组成的列表
         """
         return self._ele(loc_or_str, single=False)
 
     def s_ele(self, loc_or_ele=None):
-        """返回页面中符合条件的第一个元素、属性或节点文本                          \n
+        """返回页面中符合条件的第一个元素、属性或节点文本
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
         return make_session_ele(self.html) if loc_or_ele is None else self._ele(loc_or_ele)
 
-    def s_eles(self, loc_or_str=None):
-        """返回页面中符合条件的所有元素、属性或节点文本                              \n
+    def s_eles(self, loc_or_str):
+        """返回页面中符合条件的所有元素、属性或节点文本
         :param loc_or_str: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
         """
         return self._ele(loc_or_str, single=False)
 
-    def _ele(self, loc_or_ele, timeout=None, single=True):
-        """返回页面中符合条件的元素、属性或节点文本，默认返回第一个                                           \n
+    def _find_elements(self, loc_or_ele, timeout=None, single=True, raise_err=None):
+        """返回页面中符合条件的元素、属性或节点文本，默认返回第一个
         :param loc_or_ele: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :param timeout: 不起实际作用，用于和父类对应
         :param single: True则返回第一个，False则返回全部
+        :param raise_err: 找不到元素是是否抛出异常，为None时根据全局设置
         :return: SessionElement对象
         """
         return loc_or_ele if isinstance(loc_or_ele, SessionElement) else make_session_ele(self, loc_or_ele, single)
 
     def get_cookies(self, as_dict=False, all_domains=False):
-        """返回cookies                               \n
+        """返回cookies
         :param as_dict: 是否以字典方式返回
         :param all_domains: 是否返回所有域的cookies
         :return: cookies信息
@@ -182,27 +201,8 @@ class SessionPage(BasePage):
         else:
             return [cookie_to_dict(cookie) for cookie in cookies]
 
-    # ----------------session独有属性和方法-----------------------
-    @property
-    def session(self):
-        """返回session对象"""
-        return self._session
-
-    @property
-    def response(self):
-        """返回访问url得到的response对象"""
-        return self._response
-
-    @property
-    def download(self):
-        """返回下载器对象"""
-        if not hasattr(self, '_download_kit'):
-            self._download_kit = DownloadKit(session=self)
-
-        return self._download_kit
-
     def post(self, url, data=None, show_errmsg=False, retry=None, interval=None, **kwargs):
-        """用post方式跳转到url                                 \n
+        """用post方式跳转到url
         :param url: 目标url
         :param data: 提交的数据
         :param show_errmsg: 是否显示和抛出异常
@@ -214,7 +214,7 @@ class SessionPage(BasePage):
         return self._s_connect(url, 'post', data, show_errmsg, retry, interval, **kwargs)
 
     def _s_connect(self, url, mode, data=None, show_errmsg=False, retry=None, interval=None, **kwargs):
-        """执行get或post连接                                 \n
+        """执行get或post连接
         :param url: 目标url
         :param mode: 'get' 或 'post'
         :param data: 提交的数据
@@ -242,7 +242,7 @@ class SessionPage(BasePage):
         return self._url_available
 
     def _make_response(self, url, mode='get', data=None, retry=None, interval=None, show_errmsg=False, **kwargs):
-        """生成Response对象                                                    \n
+        """生成Response对象
         :param url: 目标url
         :param mode: 'get' 或 'post'
         :param data: post方式要提交的数据
@@ -308,6 +308,204 @@ class SessionPage(BasePage):
                 raise ConnectionError(f'状态码：{r.status_code}')
             return r, f'状态码：{r.status_code}'
 
+    # --------------准备废弃----------------
+    def set_cookies(self, cookies):
+        """为Session对象设置cookies
+        :param cookies: cookies信息
+        :return: None
+        """
+        warn("set_cookies()方法即将弃用，请用set.cookies()方法代替。", DeprecationWarning)
+        self.set.cookies(cookies)
+
+    def set_headers(self, headers):
+        """设置通用的headers，设置的headers值回逐个覆盖原有的，不会清理原来的
+        :param headers: dict形式的headers
+        :return: None
+        """
+        warn("set_headers()方法即将弃用，请用set.headers()方法代替。", DeprecationWarning)
+        self.set.headers(headers)
+
+    def set_user_agent(self, ua):
+        """设置user agent"""
+        warn("set_user_agent()方法即将弃用，请用set.user_agent()方法代替。", DeprecationWarning)
+        self.set.user_agent(ua)
+
+
+class SessionPageSetter(object):
+    def __init__(self, page):
+        self._page = page
+
+    def timeout(self, second):
+        """设置连接超时时间
+        :param second: 秒数
+        :return: None
+        """
+        self._page.timeout = second
+
+    def cookies(self, cookies):
+        """为Session对象设置cookies
+        :param cookies: cookies信息
+        :return: None
+        """
+        set_session_cookies(self._page.session, cookies)
+
+    def headers(self, headers):
+        """设置通用的headers
+        :param headers: dict形式的headers
+        :return: None
+        """
+        self._page.session.headers = CaseInsensitiveDict(headers)
+
+    def header(self, attr, value):
+        """设置headers中一个项
+        :param attr: 设置名称
+        :param value: 设置值
+        :return: None
+        """
+        self._page.session.headers[attr.lower()] = value
+
+    def user_agent(self, ua):
+        """设置user agent
+        :param ua: user agent
+        :return: None
+        """
+        self._page.session.headers['user-agent'] = ua
+
+    def proxies(self, http, https=None):
+        """设置proxies参数
+        :param http: http代理地址
+        :param https: https代理地址
+        :return: None
+        """
+        proxies = None if http == https is None else {'http': http, 'https': https or http}
+        self._page.session.proxies = proxies
+
+    def auth(self, auth):
+        """设置认证元组或对象
+        :param auth: 认证元组或对象
+        :return: None
+        """
+        self._page.session.auth = auth
+
+    def hooks(self, hooks):
+        """设置回调方法
+        :param hooks: 回调方法
+        :return: None
+        """
+        self._page.session.hooks = hooks
+
+    def params(self, params):
+        """设置查询参数字典
+        :param params: 查询参数字典
+        :return: None
+        """
+        self._page.session.params = params
+
+    def verify(self, on_off):
+        """设置是否验证SSL证书
+        :param on_off: 是否验证 SSL 证书
+        :return: None
+        """
+        self._page.session.verify = on_off
+
+    def cert(self, cert):
+        """SSL客户端证书文件的路径(.pem格式)，或(‘cert’, ‘key’)元组
+        :param cert: 证书路径或元组
+        :return: None
+        """
+        self._page.session.cert = cert
+
+    def stream(self, on_off):
+        """设置是否使用流式响应内容
+        :param on_off: 是否使用流式响应内容
+        :return: None
+        """
+        self._page.session.stream = on_off
+
+    def trust_env(self, on_off):
+        """设置是否信任环境
+        :param on_off: 是否信任环境
+        :return: None
+        """
+        self._page.session.trust_env = on_off
+
+    def max_redirects(self, times):
+        """设置最大重定向次数
+        :param times: 最大重定向次数
+        :return: None
+        """
+        self._page.session.max_redirects = times
+
+    def add_adapter(self, url, adapter):
+        """添加适配器
+        :param url: 适配器对应url
+        :param adapter: 适配器对象
+        :return: None
+        """
+        self._page.session.mount(url, adapter)
+
+
+class DownloadSetter(object):
+    """用于设置下载参数的类"""
+
+    def __init__(self, page):
+        self._page = page
+        self._DownloadKit = None
+
+    @property
+    def DownloadKit(self):
+        if self._DownloadKit is None:
+            self._DownloadKit = DownloadKit(session=self._page, goal_path=self._page.download_path)
+        return self._DownloadKit
+
+    @property
+    def if_file_exists(self):
+        """返回用于设置存在同名文件时处理方法的对象"""
+        return FileExists(self)
+
+    def split(self, on_off):
+        """设置是否允许拆分大文件用多线程下载
+        :param on_off: 是否启用多线程下载大文件
+        :return: None
+        """
+        self.DownloadKit.split = on_off
+
+    def save_path(self, path):
+        """设置下载保存路径
+        :param path: 下载保存路径
+        :return: None
+        """
+        path = path if path is None else str(path)
+        self._page._download_path = path
+        self.DownloadKit.goal_path = path
+
+
+class FileExists(object):
+    """用于设置存在同名文件时处理方法"""
+
+    def __init__(self, setter):
+        """
+        :param setter: DownloadSetter对象
+        """
+        self._setter = setter
+
+    def __call__(self, mode):
+        if mode not in ('skip', 'rename', 'overwrite'):
+            raise ValueError("mode参数只能是'skip', 'rename', 'overwrite'")
+        self._setter.DownloadKit.file_exists = mode
+
+    def skip(self):
+        """设为跳过"""
+        self._setter.DownloadKit.file_exists = 'skip'
+
+    def rename(self):
+        """设为重命名，文件名后加序号"""
+        self._setter.DownloadKit._file_exists = 'rename'
+
+    def overwrite(self):
+        """设为覆盖"""
+        self._setter.DownloadKit._file_exists = 'overwrite'
+
 
 def check_headers(kwargs, headers, arg) -> bool:
     """检查kwargs或headers中是否有arg所示属性"""
@@ -318,7 +516,7 @@ def set_charset(response) -> Response:
     """设置Response对象的编码"""
     # 在headers中获取编码
     content_type = response.headers.get('content-type', '').lower()
-    charset = search(r'charset[=: ]*(.*)?[;]', content_type)
+    charset = search(r'charset[=: ]*(.*)?;', content_type)
 
     if charset:
         response.encoding = charset.group(1)

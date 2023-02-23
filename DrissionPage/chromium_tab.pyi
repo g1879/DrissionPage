@@ -9,7 +9,7 @@ from .chromium_page import ChromiumPage
 
 class ChromiumTab(ChromiumBase):
 
-    def __init__(self, page:ChromiumPage, tab_id: str = ...):
+    def __init__(self, page: ChromiumPage, tab_id: str = None):
         self.page: ChromiumPage = ...
 
-    def _set_options(self) -> None: ...
+    def _set_runtime_settings(self) -> None: ...
