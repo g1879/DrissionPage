@@ -4,6 +4,7 @@
 @Contact :   g1879@qq.com
 """
 from re import split
+from .by import By
 
 
 def get_loc(loc, translate_css=False):
@@ -219,32 +220,32 @@ def translate_loc(loc):
     if len(loc) != 2:
         raise ValueError('定位符长度必须为2。')
 
-    loc_by = 'xpath'
+    loc_by = By.XPATH
     loc_0 = loc[0].lower()
 
-    if loc_0 == 'xpath':
+    if loc_0 == By.XPATH:
         loc_str = loc[1]
 
-    elif loc_0 == 'css selector':
+    elif loc_0 == By.CSS_SELECTOR:
         loc_by = loc_0
         loc_str = loc[1]
 
-    elif loc_0 == 'id':
+    elif loc_0 == By.ID:
         loc_str = f'//*[@id="{loc[1]}"]'
 
-    elif loc_0 == 'class name':
+    elif loc_0 == By.CLASS_NAME:
         loc_str = f'//*[@class="{loc[1]}"]'
 
-    elif loc_0 == 'link text':
+    elif loc_0 == By.PARTIAL_LINK_TEXT:
         loc_str = f'//a[text()="{loc[1]}"]'
 
-    elif loc_0 == 'name':
+    elif loc_0 == By.NAME:
         loc_str = f'//*[@name="{loc[1]}"]'
 
-    elif loc_0 == 'tag name':
-        loc_str = f'//{loc[1]}'
+    elif loc_0 == By.TAG_NAME:
+        loc_str = f'//*[name()="{loc[1]}"]'
 
-    elif loc_0 == 'partial link text':
+    elif loc_0 == By.PARTIAL_LINK_TEXT:
         loc_str = f'//a[contains(text(),"{loc[1]}")]'
 
     else:
