@@ -31,6 +31,9 @@ def set_paths(driver_path: Union[str, Path] = None,
 def use_auto_port(on_off: bool = True, ini_path: Union[str, Path] = None) -> None: ...
 
 
+def use_system_user_path(on_off: bool = True, ini_path: Union[str, Path] = None) -> None: ...
+
+
 def set_argument(arg: str, value: Union[bool, str] = None, ini_path: Union[str, Path] = None) -> None: ...
 
 

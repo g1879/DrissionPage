@@ -13,6 +13,7 @@ from .base import BasePage
 from .chromium_base import ChromiumBase, Timeout
 from .chromium_driver import ChromiumDriver
 from .chromium_page import ChromiumPage, ChromiumDownloadSetter, ChromiumPageSetter
+from .chromium_tab import WebPageTab
 from .configs.chromium_options import ChromiumOptions
 from .configs.session_options import SessionOptions
 from .errors import CallMethodError
@@ -46,6 +47,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
         self._response = None
         self._download_set = None
         self._set = None
+        self._screencast = None
 
         self._set_start_options(driver_or_options, session_or_options)
         self._set_runtime_settings()
@@ -326,7 +328,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
             if self._session_url:
                 if copy_cookies:
-                    self.cookies_to_driver()
+                    self.cookies_to_browser()
 
                 if go:
                     self.get(self._session_url)
@@ -356,8 +358,8 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
         self.set.cookies(self._get_driver_cookies(as_dict=True), set_session=True)
 
-    def cookies_to_driver(self):
-        """把session对象的cookies复制到driver对象"""
+    def cookies_to_browser(self):
+        """把session对象的cookies复制到浏览器"""
         ex_url = extract(self._session_url)
         domain = f'{ex_url.domain}.{ex_url.suffix}'
         cookies = []
@@ -379,6 +381,14 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
             return super().get_cookies(as_dict, all_domains)
         elif self._mode == 'd':
             return self._get_driver_cookies(as_dict)
+
+    def get_tab(self, tab_id=None):
+        """获取一个标签页对象
+        :param tab_id: 要获取的标签页id，为None时获取当前tab
+        :return: 标签页对象
+        """
+        tab_id = tab_id or self.tab_id
+        return WebPageTab(self, tab_id)
 
     def _get_driver_cookies(self, as_dict=False):
         """获取浏览器cookies
@@ -424,7 +434,8 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
         if self._mode == 's':
             return super()._find_elements(loc_or_ele, single=single)
         elif self._mode == 'd':
-            return super(SessionPage, self)._find_elements(loc_or_ele, timeout=timeout, single=single, relative=relative)
+            return super(SessionPage, self)._find_elements(loc_or_ele, timeout=timeout, single=single,
+                                                           relative=relative)
 
     def quit(self):
         """关闭浏览器，关闭session"""

@@ -15,7 +15,7 @@ from .commons.keys import keys_to_typing, keyDescriptionForString, keyDefinition
 from .commons.locator import get_loc
 from .commons.web import make_absolute_link, get_ele_txt, format_html, is_js_func, location_in_viewport, offset_scroll
 from .errors import ContextLossError, ElementLossError, JavaScriptError, NoRectError, ElementNotFoundError, \
-    CallMethodError
+    CallMethodError, NoResourceError
 from .session_element import make_session_ele
 
 
@@ -186,7 +186,7 @@ class ChromiumElement(DrissionElement):
     def wait(self):
         """返回用于等待的对象"""
         if self._wait is None:
-            self._wait = ChromiumWaiter(self)
+            self._wait = ChromiumElementWaiter(self.page, self)
         return self._wait
 
     @property
@@ -401,26 +401,39 @@ class ChromiumElement(DrissionElement):
         js = f'return window.getComputedStyle(this{pseudo_ele}).getPropertyValue("{style}");'
         return self.run_js(js)
 
-    def get_src(self):
-        """返回元素src资源，base64的会转为bytes返回，其它返回str"""
-        src = self.attr('src')
+    def get_src(self, timeout=None):
+        """返回元素src资源，base64的会转为bytes返回，其它返回str
+        :param timeout: 等待资源加载的超时时间
+        :return: 资源内容
+        """
+        src = self.prop('currentSrc')
         if not src:
             return None
+
+        timeout = self.page.timeout if timeout is None else timeout
 
         if self.tag == 'img':  # 等待图片加载完成
             js = ('return this.complete && typeof this.naturalWidth != "undefined" '
                   '&& this.naturalWidth > 0 && typeof this.naturalHeight != "undefined" '
                   '&& this.naturalHeight > 0')
-            end_time = perf_counter() + self.page.timeout
+            end_time = perf_counter() + timeout
             while not self.run_js(js) and perf_counter() < end_time:
                 sleep(.1)
 
         node = self.page.run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
         frame = node.get('frameId', None)
         frame = frame or self.page.tab_id
-        try:
-            result = self.page.run_cdp('Page.getResourceContent', frameId=frame, url=src)
-        except Exception:
+
+        result = None
+        end_time = perf_counter() + timeout
+        while perf_counter() < end_time:
+            try:
+                result = self.page.run_cdp('Page.getResourceContent', frameId=frame, url=src)
+            except CallMethodError:
+                pass
+            sleep(.1)
+
+        if not result:
             return None
 
         if result['base64Encoded']:
@@ -430,18 +443,19 @@ class ChromiumElement(DrissionElement):
             data = result['content']
         return data
 
-    def save(self, path=None, rename=None):
+    def save(self, path=None, rename=None, timeout=None):
         """保存图片或其它有src属性的元素的资源
         :param path: 文件保存路径，为None时保存到当前文件夹
         :param rename: 文件名称，为None时从资源url获取
+        :param timeout: 等待资源加载的超时时间
         :return: None
         """
-        data = self.get_src()
+        data = self.get_src(timeout=timeout)
         if not data:
-            raise TypeError('该元素无可保存的内容或保存失败。')
+            raise NoResourceError
 
         path = path or '.'
-        rename = rename or basename(self.attr('src'))
+        rename = rename or basename(self.prop('currentSrc'))
         write_type = 'wb' if isinstance(data, bytes) else 'w'
 
         Path(path).mkdir(parents=True, exist_ok=True)
@@ -653,14 +667,6 @@ class ChromiumElement(DrissionElement):
         self.page.run_cdp('DOM.setFileInputFiles', files=files, backendNodeId=self._backend_id)
 
     # ---------------准备废弃-----------------
-    def wait_ele(self, loc_or_ele, timeout=None):
-        """返回用于等待子元素到达某个状态的等待器对象
-        :param loc_or_ele: 可以是元素、查询字符串、loc元组
-        :param timeout: 等待超时时间
-        :return: 用于等待的ElementWaiter对象
-        """
-        warn("wait_ele()方法即将弃用，请用wait.ele_xxxx()方法代替。", DeprecationWarning)
-        return ChromiumElementWaiter(self, loc_or_ele, timeout)
 
     def click_at(self, offset_x=None, offset_y=None, button='left'):
         """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素左上角可接受点击的点
@@ -1465,6 +1471,20 @@ class ChromiumElementStates(object):
         x, y = self._ele.locations.click_point
         return location_in_viewport(self._ele.page, x, y) if x else False
 
+    @property
+    def is_covered(self):
+        """返回元素是否被覆盖，与是否在视口中无关"""
+        lx, ly = self._ele.locations.click_point
+        try:
+            r = self._ele.page.run_cdp('DOM.getNodeForLocation', x=lx, y=ly)
+        except CallMethodError:
+            return False
+
+        if r.get('backendNodeId') != self._ele.ids.backend_id:
+            return True
+
+        return False
+
 
 class ShadowRootStates(object):
     def __init__(self, ele):
@@ -1609,61 +1629,30 @@ class Click(object):
         """
         self._ele = ele
 
-    def __call__(self, by_js=None, retry=False, timeout=.2, wait_loading=0):
+    def __call__(self, by_js=None, wait_loading=0):
         """点击元素
-        如果遇到遮挡，会重新尝试点击直到超时，若都失败就改用js点击
-        :param by_js: 是否用js点击，为True时直接用js点击，为False时重试失败也不会改用js
-        :param retry: 遇到其它元素遮挡时，是否重试
-        :param timeout: 尝试点击的超时时间，不指定则使用父页面的超时时间，retry为True时才生效
+        如果遇到遮挡，可选择是否用js点击
+        :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
         :param wait_loading: 等待页面进入加载状态超时时间
         :return: 是否点击成功
         """
-        return self.left(by_js, retry, timeout, wait_loading)
+        return self.left(by_js, wait_loading)
 
-    def left(self, by_js=None, retry=False, timeout=.2, wait_loading=0):
+    def left(self, by_js=None, wait_loading=0):
         """点击元素
-        如果遇到遮挡，会重新尝试点击直到超时，若都失败就改用js点击
-        :param by_js: 是否用js点击，为True时直接用js点击，为False时重试失败也不会改用js
-        :param retry: 遇到其它元素遮挡时，是否重试
-        :param timeout: 尝试点击的超时时间，不指定则使用父页面的超时时间，retry为True时才生效
+        如果遇到遮挡，可选择是否用js点击
+        :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
         :param wait_loading: 等待页面进入加载状态超时时间
         :return: 是否点击成功
         """
-
-        def do_it(cx, cy, lx, ly):
-            """无遮挡返回True，有遮挡返回False，无元素返回None"""
-            try:
-                r = self._ele.page.run_cdp('DOM.getNodeForLocation', x=lx, y=ly)
-            except Exception:
-                return None
-
-            if retry and r.get('nodeId') != self._ele.ids.node_id:
-                return False
-
-            self._click(cx, cy)
-            return True
-
         if not by_js:
             try:
                 self._ele.page.scroll.to_see(self._ele)
-                if self._ele.states.is_in_viewport:
+                if self._ele.states.is_in_viewport and not self._ele.states.is_covered:
                     client_x, client_y = self._ele.locations.viewport_click_point
-                    if client_x:
-                        loc_x, loc_y = self._ele.locations.click_point
-
-                        click = do_it(client_x, client_y, loc_x, loc_y)
-                        if click:
-                            self._ele.page.wait.load_start(wait_loading)
-                            return True
-
-                        timeout = timeout if timeout is not None else self._ele.page.timeout
-                        end_time = perf_counter() + timeout
-                        while click is False and perf_counter() < end_time:
-                            click = do_it(client_x, client_y, loc_x, loc_y)
-
-                        if click is not None:
-                            self._ele.page.wait.load_start(wait_loading)
-                            return True
+                    self._click(client_x, client_y)
+                    self._ele.page.wait.load_start(wait_loading)
+                    return True
 
             except NoRectError:
                 by_js = True
@@ -1686,22 +1675,6 @@ class Click(object):
         self._ele.page.scroll.to_see(self._ele)
         x, y = self._ele.locations.viewport_click_point
         self._click(x, y, 'middle')
-
-    def left_at(self, offset_x=None, offset_y=None):
-        """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素左上角可接受点击的点
-        :param offset_x: 相对元素左上角坐标的x轴偏移量
-        :param offset_y: 相对元素左上角坐标的y轴偏移量
-        :return: None
-        """
-        self.at(offset_x, offset_y, button='left')
-
-    def right_at(self, offset_x=None, offset_y=None):
-        """带偏移量右键单击本元素，相对于左上角坐标。不传入x或y值时点击元素中点
-        :param offset_x: 相对元素左上角坐标的x轴偏移量
-        :param offset_y: 相对元素左上角坐标的y轴偏移量
-        :return: None
-        """
-        self.at(offset_x, offset_y, button='right')
 
     def at(self, offset_x=None, offset_y=None, button='left'):
         """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素click_point
@@ -1989,100 +1962,111 @@ class ChromiumSelect(object):
         return success
 
 
-class ChromiumWaiter(object):
-    def __init__(self, page_or_ele):
-        """
-        :param page_or_ele: 页面对象或元素对象
-        """
-        self._driver = page_or_ele
-
-    def ele_delete(self, loc_or_ele, timeout=None):
-        """等待元素从DOM中删除
-        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
-        :return: 是否等待成功
-        """
-        return ChromiumElementWaiter(self._driver, loc_or_ele, timeout).delete()
-
-    def ele_display(self, loc_or_ele, timeout=None):
-        """等待元素变成显示状态
-        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
-        :return: 是否等待成功
-        """
-        return ChromiumElementWaiter(self._driver, loc_or_ele, timeout).display()
-
-    def ele_hidden(self, loc_or_ele, timeout=None):
-        """等待元素变成隐藏状态
-        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
-        :return: 是否等待成功
-        """
-        return ChromiumElementWaiter(self._driver, loc_or_ele, timeout).hidden()
-
-
 class ChromiumElementWaiter(object):
     """等待元素在dom中某种状态，如删除、显示、隐藏"""
 
-    def __init__(self, page_or_ele, loc_or_ele, timeout=None):
+    def __init__(self, page_or_ele, loc_or_ele):
         """等待元素在dom中某种状态，如删除、显示、隐藏
         :param page_or_ele: 页面或父元素
         :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
         """
         if not isinstance(loc_or_ele, (str, tuple, ChromiumElement)):
             raise TypeError('loc_or_ele只能接收定位符或元素对象。')
 
-        self.driver = page_or_ele
-        self.loc_or_ele = loc_or_ele
-        if timeout is not None:
-            self.timeout = timeout
-        else:
-            self.timeout = page_or_ele.page.timeout if isinstance(page_or_ele, ChromiumElement) else page_or_ele.timeout
+        self._driver = page_or_ele
+        self._loc_or_ele = loc_or_ele
 
-    def delete(self):
-        """等待元素从dom删除"""
-        if isinstance(self.loc_or_ele, ChromiumElement):
-            end_time = perf_counter() + self.timeout
+    def delete(self, timeout=None):
+        """等待元素从dom删除
+        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :return: 是否等待成功
+        """
+        if timeout is None:
+            timeout = self._driver.page.timeout if isinstance(self._driver, ChromiumElement) else self._driver.timeout
+
+        if isinstance(self._loc_or_ele, ChromiumElement):
+            end_time = perf_counter() + timeout
             while perf_counter() < end_time:
-                if not self.loc_or_ele.states.is_alive:
+                if not self._loc_or_ele.states.is_alive:
                     return True
 
-        ele = self.driver._ele(self.loc_or_ele, timeout=.5, raise_err=False)
+        ele = self._driver._ele(self._loc_or_ele, timeout=.5, raise_err=False)
         if not ele:
             return True
 
-        end_time = perf_counter() + self.timeout
+        end_time = perf_counter() + timeout
         while perf_counter() < end_time:
             if not ele.states.is_alive:
                 return True
 
         return False
 
-    def display(self):
-        """等待元素从dom显示"""
-        return self._wait_ele('display')
-
-    def hidden(self):
-        """等待元素从dom隐藏"""
-        return self._wait_ele('hidden')
-
-    def _wait_ele(self, mode):
-        """执行等待
-        :param mode: 等待模式
+    def display(self, timeout=None):
+        """等待元素从dom显示
+        :param timeout: 超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
-        target = self.driver._ele(self.loc_or_ele, raise_err=False)
+        return self._wait_ele('display', timeout)
+
+    def hidden(self, timeout=None):
+        """等待元素从dom隐藏
+        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :return: 是否等待成功
+        """
+        return self._wait_ele('hidden', timeout)
+
+    def covered(self, timeout=None):
+        """等待当前元素被遮盖
+        :param timeout:超时时间，为None使用元素所在页面timeout属性
+        :return: 是否等待成功
+        """
+        return self._covered(True, timeout)
+
+    def not_covered(self, timeout=None):
+        """等待当前元素被遮盖
+        :param timeout:超时时间，为None使用元素所在页面timeout属性
+        :return: 是否等待成功
+        """
+        return self._covered(False, timeout)
+
+    def _covered(self, mode=False, timeout=None):
+        """等待当前元素被遮盖
+        :param mode: True表示被遮盖，False表示不被遮盖
+        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :return: 是否等待成功
+        """
+        if timeout is None:
+            timeout = self._driver.page.timeout if isinstance(self._driver, ChromiumElement) else self._driver.timeout
+        end_time = perf_counter() + timeout
+        while perf_counter() < end_time:
+            if self._loc_or_ele.states.is_covered == mode:
+                return True
+            sleep(.05)
+
+        return False
+
+    def _wait_ele(self, mode, timeout=None):
+        """执行等待
+        :param mode: 等待模式
+        :param timeout: 超时时间
+        :return: 是否等待成功
+        """
+        if timeout is None:
+            timeout = self._driver.page.timeout if isinstance(self._driver, ChromiumElement) else self._driver.timeout
+
+        target = self._driver._ele(self._loc_or_ele, raise_err=False)
         if not target:
             return None
 
-        end_time = perf_counter() + self.timeout
+        end_time = perf_counter() + timeout
         while perf_counter() < end_time:
             if mode == 'display' and target.states.is_displayed:
                 return True
 
             elif mode == 'hidden' and not target.states.is_displayed:
                 return True
+
+            sleep(.05)
 
         return False
 

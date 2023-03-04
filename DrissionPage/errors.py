@@ -42,3 +42,11 @@ class JavaScriptError(BaseError):
 
 class NoRectError(BaseError):
     _info = '该元素没有位置及大小。'
+
+
+class BrowserConnectError(BaseError):
+    _info = '浏览器连接失败。'
+
+
+class NoResourceError(BaseError):
+    _info = '该元素无可保存的内容或保存失败。'
