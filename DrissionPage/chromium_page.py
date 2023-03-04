@@ -17,7 +17,7 @@ from .chromium_tab import ChromiumTab
 from .commons.browser import connect_browser
 from .commons.web import set_session_cookies
 from .configs.chromium_options import ChromiumOptions
-from .errors import CallMethodError
+from .errors import CallMethodError, BrowserConnectError
 from .session_page import DownloadSetter
 
 
@@ -73,42 +73,45 @@ class ChromiumPage(ChromiumBase):
         :param tab_id: 要控制的标签页id，不指定默认为激活的
         :return: None
         """
-        self._chromium_init()  # todo: 传递驱动器时是否须要
-        if self._tab_obj:
-            self.process = None
+        self._chromium_init()
 
-        else:
-            self.process = connect_browser(self._driver_options)[1]
+        if not self._tab_obj:  # 不是传入driver的情况
+            connect_browser(self._driver_options)
             if not tab_id:
                 json = self._control_session.get(f'http://{self.address}/json').json()
-                tab_id = [i['id'] for i in json if i['type'] == 'page'][0]
+                tab_id = [i['id'] for i in json if i['type'] == 'page']
+                if not tab_id:
+                    raise BrowserConnectError('浏览器连接失败，可能是浏览器版本原因。')
+                tab_id = tab_id[0]
 
             self._driver_init(tab_id)
-            self._get_document()
-            self._first_run = False
 
-    def _chromium_init(self):
-        """添加ChromiumPage独有的运行配置"""
-        super()._chromium_init()
-        self._alert = Alert()
-        self._rect = None
+        self._page_init()
+        self._get_document()
+        self._first_run = False
 
-    def _driver_init(self, tab_id):
-        """新建页面、页面刷新、切换标签页后要进行的cdp参数初始化
-        :param tab_id: 要跳转到的标签页id
-        :return: None
-        """
-        super()._driver_init(tab_id)
+    def _page_init(self):
+        """页面相关设置"""
         ws = self._control_session.get(f'http://{self.address}/json/version').json()['webSocketDebuggerUrl']
         self._browser_driver = ChromiumDriver(ws.split('/')[-1], 'browser', self.address)
         self._browser_driver.start()
+
+        self._alert = Alert()
         self._tab_obj.Page.javascriptDialogOpening = self._on_alert_open
         self._tab_obj.Page.javascriptDialogClosed = self._on_alert_close
+
+        self._rect = None
         self._main_tab = self.tab_id
         try:
             self.download_set.by_browser()
-        except RuntimeError:
+        except CallMethodError:
             pass
+
+        self._process_id = None
+        for i in self.browser_driver.SystemInfo.getProcessInfo()['processInfo']:
+            if i['type'] == 'browser':
+                self._process_id = i['id']
+                break
 
     @property
     def browser_driver(self):
@@ -138,14 +141,7 @@ class ChromiumPage(ChromiumBase):
     @property
     def process_id(self):
         """返回浏览器进程id"""
-        if self.process:
-            return self.process.pid
-
-        r = self.browser_driver.SystemInfo.getProcessInfo()['processInfo']
-        for i in r:
-            if i['type'] == 'browser':
-                return i['id']
-        return None
+        return self._process_id
 
     @property
     def set(self):
@@ -193,10 +189,6 @@ class ChromiumPage(ChromiumBase):
         tab_id = tab_id or self.tab_id
         return ChromiumTab(self, tab_id)
 
-    def to_front(self):
-        """激活当前标签页使其处于最前面"""
-        self._control_session.get(f'http://{self.address}/json/activate/{self.tab_id}')
-
     def new_tab(self, url=None, switch_to=True):
         """新建一个标签页,该标签页在最后面
         :param url: 新标签页跳转到的网址
@@ -228,26 +220,31 @@ class ChromiumPage(ChromiumBase):
         """跳转到主标签页"""
         self.to_tab(self._main_tab)
 
-    def to_tab(self, tab_id=None, activate=True):
+    def to_tab(self, tab_or_id=None, activate=True):
         """跳转到标签页
-        :param tab_id: 标签页id字符串，默认跳转到main_tab
+        :param tab_or_id: 标签页对象或id，默认跳转到main_tab
         :param activate: 切换后是否变为活动状态
         :return: None
         """
-        self._to_tab(tab_id, activate)
+        self._to_tab(tab_or_id, activate)
 
-    def _to_tab(self, tab_id=None, activate=True, read_doc=True):
+    def _to_tab(self, tab_or_id=None, activate=True, read_doc=True):
         """跳转到标签页
-        :param tab_id: 标签页id字符串，默认跳转到main_tab
+        :param tab_or_id: 标签页对象或id，默认跳转到main_tab
         :param activate: 切换后是否变为活动状态
         :param read_doc: 切换后是否读取文档
         :return: None
         """
         tabs = self.tabs
-        if not tab_id:
+        if not tab_or_id:
             tab_id = self._main_tab
+        elif isinstance(tab_or_id, ChromiumTab):
+            tab_id = tab_or_id.tab_id
+        else:
+            tab_id = tab_or_id
+
         if tab_id not in tabs:
-            tab_id = tabs[0]
+            tab_id = self.latest_tab
 
         if activate:
             self._control_session.get(f'http://{self.address}/json/activate/{tab_id}')
@@ -260,19 +257,23 @@ class ChromiumPage(ChromiumBase):
         if read_doc and self.ready_state == 'complete':
             self._get_document()
 
-    def close_tabs(self, tab_ids=None, others=False):
+    def close_tabs(self, tabs_or_ids=None, others=False):
         """关闭传入的标签页，默认关闭当前页。可传入多个
-        :param tab_ids: 要关闭的标签页id，可传入id组成的列表或元组，为None时关闭当前页
+        :param tabs_or_ids: 要关闭的标签页对象或id，可传入列表或元组，为None时关闭当前页
         :param others: 是否关闭指定标签页之外的
         :return: None
         """
         all_tabs = set(self.tabs)
-        if isinstance(tab_ids, str):
-            tabs = {tab_ids}
-        elif tab_ids is None:
+        if isinstance(tabs_or_ids, str):
+            tabs = {tabs_or_ids}
+        elif isinstance(tabs_or_ids, ChromiumTab):
+            tabs = {tabs_or_ids.tab_id}
+        elif tabs_or_ids is None:
             tabs = {self.tab_id}
+        elif isinstance(tabs_or_ids, (list, tuple)):
+            tabs = set(i.tab_id if isinstance(i, ChromiumTab) else i for i in tabs_or_ids)
         else:
-            tabs = set(tab_ids)
+            raise TypeError('tabs_or_ids参数只能传入标签页对象或id。')
 
         if others:
             tabs = all_tabs - tabs
@@ -295,12 +296,12 @@ class ChromiumPage(ChromiumBase):
 
         self.to_tab()
 
-    def close_other_tabs(self, tab_ids=None):
+    def close_other_tabs(self, tabs_or_ids=None):
         """关闭传入的标签页以外标签页，默认保留当前页。可传入多个
-        :param tab_ids: 要保留的标签页id，可传入id组成的列表或元组，为None时保存当前页
+        :param tabs_or_ids: 要保留的标签页对象或id，可传入列表或元组，为None时保存当前页
         :return: None
         """
-        self.close_tabs(tab_ids, True)
+        self.close_tabs(tabs_or_ids, True)
 
     def handle_alert(self, accept=True, send=None, timeout=None):
         """处理提示框，可以自动等待提示框出现
@@ -323,14 +324,6 @@ class ChromiumPage(ChromiumBase):
         else:
             self.driver.Page.handleJavaScriptDialog(accept=accept)
         return res_text
-
-    def hide_browser(self):
-        """隐藏浏览器窗口，只在Windows系统可用"""
-        show_or_hide_browser(self, hide=True)
-
-    def show_browser(self):
-        """显示浏览器窗口，只在Windows系统可用"""
-        show_or_hide_browser(self, hide=False)
 
     def quit(self):
         """关闭浏览器"""
@@ -380,6 +373,21 @@ class ChromiumPage(ChromiumBase):
         warn("wait_download_begin()方法即将弃用，请用wait.download_begin()方法代替。", DeprecationWarning)
         return self.download_set.wait_download_begin(timeout)
 
+    def hide_browser(self):
+        """隐藏浏览器窗口，只在Windows系统可用"""
+        warn("hide_browser()方法即将弃用，请用set.hide()方法代替。", DeprecationWarning)
+        show_or_hide_browser(self, hide=True)
+
+    def show_browser(self):
+        """显示浏览器窗口，只在Windows系统可用"""
+        warn("show_browser()方法即将弃用，请用set.show()方法代替。", DeprecationWarning)
+        show_or_hide_browser(self, hide=False)
+
+    def to_front(self):
+        """激活当前标签页使其处于最前面"""
+        warn("to_front()方法即将弃用，请用set.tab_to_front()方法代替。", DeprecationWarning)
+        self.set.tab_to_front()
+
 
 class ChromiumPageWaiter(ChromiumBaseWaiter):
     def download_begin(self, timeout=None):
@@ -396,7 +404,7 @@ class ChromiumTabRect(object):
 
     @property
     def browser_location(self):
-        """返回浏览器在屏幕上的坐标"""
+        """返回浏览器在屏幕上的坐标，左上角为(0, 0)"""
         r = self._get_browser_rect()
         if r['windowState'] in ('maximized', 'fullscreen'):
             return 0, 0
@@ -655,6 +663,14 @@ class WindowSetter(object):
             y = y if y is not None else info['top']
             self._perform({'left': x - 8, 'top': y})
 
+    def hide(self):
+        """隐藏浏览器窗口，只在Windows系统可用"""
+        show_or_hide_browser(self._page, hide=True)
+
+    def show(self):
+        """显示浏览器窗口，只在Windows系统可用"""
+        show_or_hide_browser(self._page, hide=False)
+
     def _get_info(self):
         """获取窗口位置及大小信息"""
         return self._page.run_cdp('Browser.getWindowForTarget')
@@ -680,6 +696,17 @@ class ChromiumPageSetter(ChromiumBaseSetter):
         """返回用于设置浏览器窗口的对象"""
         return WindowSetter(self._page)
 
+    def tab_to_front(self, tab_or_id=None):
+        """激活标签页使其处于最前面
+        :param tab_or_id: 标签页对象或id，为None表示当前标签页
+        :return: None
+        """
+        if not tab_or_id:
+            tab_or_id = self._page.tab_id
+        elif isinstance(tab_or_id, ChromiumTab):
+            tab_or_id = tab_or_id.tab_id
+        self._page._control_session.get(f'http://{self._page.address}/json/activate/{tab_or_id}')
+
 
 def show_or_hide_browser(page, hide=True):
     """执行显示或隐藏浏览器窗口
@@ -699,7 +726,7 @@ def show_or_hide_browser(page, hide=True):
     except ImportError:
         raise ImportError('请先安装：pip install pypiwin32')
 
-    pid = page.process_id or get_browser_progress_id(page.process, page.address)
+    pid = page.process_id
     if not pid:
         return None
     hds = get_chrome_hwnds_from_pid(pid, page.title)

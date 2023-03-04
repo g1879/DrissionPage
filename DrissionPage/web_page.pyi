@@ -13,6 +13,7 @@ from .chromium_driver import ChromiumDriver
 from .chromium_element import ChromiumElement
 from .chromium_frame import ChromiumFrame
 from .chromium_page import ChromiumPage, ChromiumDownloadSetter, ChromiumPageSetter
+from .chromium_tab import WebPageTab
 from .configs.chromium_options import ChromiumOptions
 from .configs.driver_options import DriverOptions
 from .configs.session_options import SessionOptions
@@ -118,9 +119,11 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     def cookies_to_session(self, copy_user_agent: bool = True) -> None: ...
 
-    def cookies_to_driver(self) -> None: ...
+    def cookies_to_browser(self) -> None: ...
 
     def get_cookies(self, as_dict: bool = False, all_domains: bool = False) -> Union[dict, list]: ...
+
+    def get_tab(self, tab_id: str = None) -> WebPageTab: ...
 
     def _get_driver_cookies(self, as_dict: bool = False) -> dict: ...
 
@@ -156,7 +159,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     def set(self) -> WebPageSetter: ...
 
     def _find_elements(self, loc_or_ele: Union[Tuple[str, str], str, ChromiumElement, SessionElement, ChromiumFrame],
-             timeout: float = None, single: bool = True, relative: bool = False, raise_err: bool =None) \
+                       timeout: float = None, single: bool = True, relative: bool = False, raise_err: bool = None) \
             -> Union[ChromiumElement, SessionElement, ChromiumFrame, str, None, List[Union[SessionElement, str]], List[
                 Union[ChromiumElement, str, ChromiumFrame]]]: ...
 

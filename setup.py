@@ -6,7 +6,7 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setup(
     name="DrissionPage",
-    version="3.2.2",
+    version="3.2.10",
     author="g1879",
     author_email="g1879@qq.com",
     description="Python based web automation tool. It can control the browser and send and receive data packets.",

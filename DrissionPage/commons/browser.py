@@ -7,11 +7,13 @@ from json import load, dump
 from pathlib import Path
 from platform import system
 from subprocess import Popen
+from tempfile import gettempdir
 from time import perf_counter, sleep
 
 from requests import get as requests_get
 
 from DrissionPage.configs.chromium_options import ChromiumOptions
+from DrissionPage.errors import BrowserConnectError
 from .tools import port_is_using, get_exe_from_port
 
 
@@ -27,10 +29,12 @@ def connect_browser(option):
     debugger_address = debugger_address[7:] if debugger_address.startswith('http://') else debugger_address
     ip, port = debugger_address.split(':')
     if ip not in ('127.0.0.1', 'localhost'):
+        test_connect(ip, port)
         return None, None
 
     if port_is_using(ip, port):
         chrome_path = get_exe_from_port(port) if chrome_path == 'chrome' and system_type == 'windows' else chrome_path
+        test_connect(ip, port)
         return chrome_path, None
 
     args = get_launch_args(option)
@@ -52,6 +56,7 @@ def connect_browser(option):
 
         debugger = _run_browser(port, chrome_path, args)
 
+    test_connect(ip, port)
     return chrome_path, debugger
 
 
@@ -61,7 +66,23 @@ def get_launch_args(opt):
     :return: 启动参数列表
     """
     # ----------处理arguments-----------
-    result = set(i for i in opt.arguments if not i.startswith(('--load-extension=', '--remote-debugging-port=')))
+    result = set()
+    has_user_path = False
+    for i in opt.arguments:
+        if i.startswith(('--load-extension=', '--remote-debugging-port=')):
+            continue
+        elif i.startswith('--user-data-dir') and not opt.system_user_path:
+            p = Path(i[16:]).absolute()
+            result.add(f'--user-data-dir={p}')
+            has_user_path = True
+        result.add(i)
+
+    if not has_user_path and not opt.system_user_path:
+        port = opt.debugger_address.split(':')[-1] if opt.debugger_address else '0'
+        path = Path(gettempdir()) / 'DrissionPage' / f'userData_{port}'
+        path.mkdir(parents=True, exist_ok=True)
+        result.add(f'--user-data-dir={path}')
+
     result = list(result)
 
     # ----------处理插件extensions-------------
@@ -119,6 +140,28 @@ def set_prefs(opt):
         dump(prefs_dict, f)
 
 
+def test_connect(ip, port):
+    """测试浏览器是否可用
+    :param ip: 浏览器ip
+    :param port: 浏览器端口
+    :return: None
+    """
+    end_time = perf_counter() + 6
+    while perf_counter() < end_time:
+        try:
+            tabs = requests_get(f'http://{ip}:{port}/json', timeout=3).json()
+            for tab in tabs:
+                if tab['type'] == 'page':
+                    return
+        except Exception:
+            sleep(.2)
+
+    if ip in ('127.0.0.1', 'localhost'):
+        raise BrowserConnectError(f'\n连接浏览器失败，可能原因：\n1、{port}端口不是Chromium内核浏览器\n'
+                                  f'2、该浏览器未允许控制\n3、和已打开的浏览器冲突，请关闭')
+    raise BrowserConnectError(f'{ip}:{port}浏览器无法链接。')
+
+
 def _run_browser(port, path: str, args) -> Popen:
     """创建chrome进程
     :param port: 端口号
@@ -128,19 +171,19 @@ def _run_browser(port, path: str, args) -> Popen:
     """
     arguments = [path, f'--remote-debugging-port={port}']
     arguments.extend(args)
-    debugger = Popen(arguments, shell=False)
+    return Popen(arguments, shell=False)
 
-    end_time = perf_counter() + 10
-    while perf_counter() < end_time:
-        try:
-            tabs = requests_get(f'http://127.0.0.1:{port}/json').json()
-            for tab in tabs:
-                if tab['type'] == 'page':
-                    return debugger
-        except Exception:
-            sleep(.2)
-
-    raise ConnectionError('无法连接浏览器。')
+    # end_time = perf_counter() + 10
+    # while perf_counter() < end_time:
+    #     try:
+    #         tabs = requests_get(f'http://127.0.0.1:{port}/json', timeout=2).json()
+    #         for tab in tabs:
+    #             if tab['type'] == 'page':
+    #                 return debugger
+    #     except Exception:
+    #         sleep(.2)
+    #
+    # raise BrowserConnectError
 
 
 def _make_leave_in_dict(target_dict: dict, src: list, num: int, end: int) -> None:
