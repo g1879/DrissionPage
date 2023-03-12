@@ -104,9 +104,8 @@ class SessionPage(BasePage):
                        timeout: float = None, single: bool = True, raise_err: bool = None) \
             -> Union[SessionElement, str, NoneElement, List[Union[SessionElement, str]]]: ...
 
-    def get_cookies(self,
-                    as_dict: bool = False,
-                    all_domains: bool = False) -> Union[dict, list]: ...
+    def get_cookies(self, as_dict: bool = False, all_domains: bool = False,
+                    all_info: bool = False) -> Union[dict, list]: ...
 
     # ----------------session独有属性和方法-----------------------
     @property

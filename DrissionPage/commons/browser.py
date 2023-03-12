@@ -5,7 +5,6 @@
 """
 from json import load, dump
 from pathlib import Path
-from platform import system
 from subprocess import Popen
 from tempfile import gettempdir
 from time import perf_counter, sleep
@@ -14,7 +13,7 @@ from requests import get as requests_get
 
 from DrissionPage.configs.chromium_options import ChromiumOptions
 from DrissionPage.errors import BrowserConnectError
-from .tools import port_is_using, get_exe_from_port
+from .tools import port_is_using
 
 
 def connect_browser(option):
@@ -22,7 +21,6 @@ def connect_browser(option):
     :param option: DriverOptions对象
     :return: chrome 路径和进程对象组成的元组
     """
-    system_type = system().lower()
     debugger_address = option.debugger_address
     chrome_path = option.browser_path
 
@@ -33,9 +31,8 @@ def connect_browser(option):
         return None, None
 
     if port_is_using(ip, port):
-        chrome_path = get_exe_from_port(port) if chrome_path == 'chrome' and system_type == 'windows' else chrome_path
         test_connect(ip, port)
-        return chrome_path, None
+        return None, None
 
     args = get_launch_args(option)
     set_prefs(option)
@@ -43,8 +40,6 @@ def connect_browser(option):
     # ----------创建浏览器进程----------
     try:
         debugger = _run_browser(port, chrome_path, args)
-        if chrome_path == 'chrome' and system_type == 'windows':
-            chrome_path = get_exe_from_port(port)
 
     # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
     except FileNotFoundError:
@@ -104,7 +99,7 @@ def set_prefs(opt):
         prefs = opt.preferences
         del_list = opt._prefs_to_del
     else:
-        prefs = opt.experimental_options.get('prefs', None)
+        prefs = opt.experimental_options.get('prefs', [])
         del_list = []
 
     if not opt.user_data_path:
@@ -172,18 +167,6 @@ def _run_browser(port, path: str, args) -> Popen:
     arguments = [path, f'--remote-debugging-port={port}']
     arguments.extend(args)
     return Popen(arguments, shell=False)
-
-    # end_time = perf_counter() + 10
-    # while perf_counter() < end_time:
-    #     try:
-    #         tabs = requests_get(f'http://127.0.0.1:{port}/json', timeout=2).json()
-    #         for tab in tabs:
-    #             if tab['type'] == 'page':
-    #                 return debugger
-    #     except Exception:
-    #         sleep(.2)
-    #
-    # raise BrowserConnectError
 
 
 def _make_leave_in_dict(target_dict: dict, src: list, num: int, end: int) -> None:

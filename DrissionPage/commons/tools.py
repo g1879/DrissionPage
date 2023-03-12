@@ -45,7 +45,7 @@ def get_pid_from_port(port):
 
         return process.split(' ')[-1] or None
 
-    except AttributeError:
+    except Exception:
         return None
 
 
@@ -120,6 +120,7 @@ def port_is_using(ip, port):
     """
     from socket import socket, AF_INET, SOCK_STREAM
     s = socket(AF_INET, SOCK_STREAM)
+    s.settimeout(.1)
     result = s.connect_ex((ip, int(port)))
     s.close()
     return result == 0

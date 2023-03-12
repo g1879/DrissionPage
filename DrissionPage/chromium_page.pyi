@@ -117,6 +117,9 @@ class ChromiumTabRect(object):
         self._page: ChromiumPage = ...
 
     @property
+    def window_state(self) -> str: ...
+
+    @property
     def browser_location(self) -> Tuple[int, int]: ...
 
     @property

@@ -119,7 +119,7 @@ class ChromiumElement(DrissionElement):
     def size(self):
         """返回元素宽和高组成的元组"""
         model = self.page.run_cdp('DOM.getBoxModel', backendNodeId=self._backend_id)['model']
-        return model['height'], model['width']
+        return model['width'], model['height']
 
     @property
     def set(self):
@@ -172,7 +172,7 @@ class ChromiumElement(DrissionElement):
     def scroll(self):
         """用于滚动滚动条的对象"""
         if self._scroll is None:
-            self._scroll = ChromiumScroll(self)
+            self._scroll = ChromiumElementScroll(self)
         return self._scroll
 
     @property
@@ -429,6 +429,7 @@ class ChromiumElement(DrissionElement):
         while perf_counter() < end_time:
             try:
                 result = self.page.run_cdp('Page.getResourceContent', frameId=frame, url=src)
+                break
             except CallMethodError:
                 pass
             sleep(.1)
@@ -462,10 +463,11 @@ class ChromiumElement(DrissionElement):
         with open(f'{path}{sep}{rename}', write_type) as f:
             f.write(data)
 
-    def get_screenshot(self, path=None, as_bytes=None):
+    def get_screenshot(self, path=None, as_bytes=None, as_base64=None):
         """对当前元素截图，可保存到文件，或以字节方式返回
         :param path: 完整路径，后缀可选 'jpg','jpeg','png','webp'
-        :param as_bytes: 是否已字节形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数无效
+        :param as_bytes: 是否以字节形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数和as_base64参数无效
+        :param as_base64: 是否以base64字符串形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数无效
         :return: 图片完整路径或字节文本
         """
         if self.tag == 'img':  # 等待图片加载完成
@@ -476,16 +478,16 @@ class ChromiumElement(DrissionElement):
             while not self.run_js(js) and perf_counter() < end_time:
                 sleep(.1)
 
-        self.page.scroll.to_see(self)
+        self.scroll.to_see(center=True)
         sleep(1)
         left, top = self.location
-        height, width = self.size
+        width, height = self.size
         left_top = (left, top)
         right_bottom = (left + width, top + height)
         if not path:
             path = f'{self.tag}.jpg'
-        return self.page.get_screenshot(path, as_bytes=as_bytes, full_page=False,
-                                        left_top=left_top, right_bottom=right_bottom)
+        return self.page._get_screenshot(path, as_bytes=as_bytes, as_base64=as_base64, full_page=False,
+                                         left_top=left_top, right_bottom=right_bottom, ele=self)
 
     def input(self, vals, clear=True):
         """输入文本或组合键，也可用于输入文件路径到input元素（路径间用\n间隔）
@@ -496,13 +498,10 @@ class ChromiumElement(DrissionElement):
         if self.tag == 'input' and self.attr('type') == 'file':
             return self._set_file_input(vals)
 
-        try:
-            self.page.run_cdp('DOM.focus', backendNodeId=self._backend_id)
-        except Exception:
-            self.click(by_js=True)
-
         if clear and vals != '\n':
             self.clear(by_js=False)
+        else:
+            self._focus()
 
         # ------------处理字符-------------
         if not isinstance(vals, (tuple, list)):
@@ -529,7 +528,15 @@ class ChromiumElement(DrissionElement):
             self.run_js("this.value='';")
 
         else:
+            self._focus()
             self.input(('\ue009', 'a', '\ue017'), clear=False)
+
+    def _focus(self):
+        """使元素获取焦点"""
+        try:
+            self.page.run_cdp('DOM.focus', backendNodeId=self._backend_id)
+        except Exception:
+            self.run_js('this.focus();')
 
     def hover(self, offset_x=None, offset_y=None):
         """鼠标悬停，可接受偏移量，偏移量相对于元素左上角坐标。不传入x或y值时悬停在元素中点
@@ -1647,7 +1654,7 @@ class Click(object):
         """
         if not by_js:
             try:
-                self._ele.page.scroll.to_see(self._ele)
+                self._ele.scroll.to_see()
                 if self._ele.states.is_in_viewport and not self._ele.states.is_covered:
                     client_x, client_y = self._ele.locations.viewport_click_point
                     self._click(client_x, client_y)
@@ -1710,10 +1717,12 @@ class ChromiumScroll(object):
         """
         self._driver = ele
         self.t1 = self.t2 = 'this'
+        self._wait_complete = False
 
     def _run_js(self, js):
         js = js.format(self.t1, self.t2, self.t2)
         self._driver.run_js(js)
+        self._wait_scrolled()
 
     def to_top(self):
         """滚动到顶端，水平位置不变"""
@@ -1773,6 +1782,36 @@ class ChromiumScroll(object):
         """
         self._run_js(f'{{}}.scrollBy({pixel}, 0);')
 
+    def _wait_scrolled(self):
+        if not self._wait_complete:
+            return
+
+        page = self._driver.page if isinstance(self._driver, ChromiumElement) else self._driver
+        r = page.run_cdp('Page.getLayoutMetrics')
+        x = r['layoutViewport']['pageX']
+        y = r['layoutViewport']['pageY']
+
+        while True:
+            sleep(.1)
+            r = page.run_cdp('Page.getLayoutMetrics')
+            x1 = r['layoutViewport']['pageX']
+            y1 = r['layoutViewport']['pageY']
+
+            if x == x1 and y == y1:
+                break
+
+            x = x1
+            y = y1
+
+
+class ChromiumElementScroll(ChromiumScroll):
+    def to_see(self, center=False):
+        """滚动页面直到元素可见
+        :param center: 是否尽量滚动到页面正中
+        :return: None
+        """
+        self._driver.page.scroll.to_see(self._driver, center=center)
+
 
 class ChromiumSelect(object):
     """ChromiumSelect 类专门用于处理 d 模式下 select 标签"""
@@ -1799,13 +1838,12 @@ class ChromiumSelect(object):
     @property
     def is_multi(self):
         """返回是否多选表单"""
-        multi = self._ele.attr('multiple')
-        return multi and multi.lower() != "false"
+        return self._ele.attr('multiple') is not None
 
     @property
     def options(self):
         """返回所有选项元素组成的列表"""
-        return self._ele.eles('tag:option')
+        return self._ele.eles('xpath://option')
 
     @property
     def selected_option(self):
@@ -1822,40 +1860,56 @@ class ChromiumSelect(object):
         """
         return [x for x in self.options if x.states.is_selected]
 
+    def all(self):
+        """全选"""
+        if not self.is_multi:
+            raise TypeError("只能在多选菜单执行此操作。")
+        return self._by_loc('tag:option', 1, False)
+
+    def invert(self):
+        """反选"""
+        if not self.is_multi:
+            raise TypeError("只能对多项选框执行反选。")
+        for i in self.options:
+            i.click(by_js=True)
+
     def clear(self):
         """清除所有已选项"""
         if not self.is_multi:
-            raise NotImplementedError("只能在多选菜单执行此操作。")
-        for opt in self.options:
-            if opt.states.is_selected:
-                opt.click(by_js=True)
+            raise TypeError("只能在多选菜单执行此操作。")
+        return self._by_loc('tag:option', 1, True)
 
     def by_text(self, text, timeout=None):
         """此方法用于根据text值选择项。当元素是多选列表时，可以接收list或tuple
         :param text: text属性值，传入list或tuple可选择多项
-        :param timeout: 超时时间，不输入默认实用页面超时时间
+        :param timeout: 超时时间，为None默认使用页面超时时间
         :return: 是否选择成功
         """
-        timeout = timeout if timeout is not None else self._ele.page.timeout
         return self._select(text, 'text', False, timeout)
 
     def by_value(self, value, timeout=None):
         """此方法用于根据value值选择项。当元素是多选列表时，可以接收list或tuple
         :param value: value属性值，传入list或tuple可选择多项
-        :param timeout: 超时时间，不输入默认实用页面超时时间
+        :param timeout: 超时时间，为None默认使用页面超时时间
         :return: 是否选择成功
         """
-        timeout = timeout if timeout is not None else self._ele.page.timeout
         return self._select(value, 'value', False, timeout)
 
     def by_index(self, index, timeout=None):
         """此方法用于根据index值选择项。当元素是多选列表时，可以接收list或tuple
         :param index: 序号，0开始，传入list或tuple可选择多项
-        :param timeout: 超时时间，不输入默认实用页面超时时间
+        :param timeout: 超时时间，为None默认使用页面超时时间
         :return: 是否选择成功
         """
-        timeout = timeout if timeout is not None else self._ele.page.timeout
         return self._select(index, 'index', False, timeout)
+
+    def by_loc(self, loc, timeout=None):
+        """用定位符选择指定的项
+        :param loc: 定位符
+        :param timeout: 超时时间
+        :return: 是否选择成功
+        """
+        return self._by_loc(loc, timeout)
 
     def cancel_by_text(self, text, timeout=None):
         """此方法用于根据text值取消选择项。当元素是多选列表时，可以接收list或tuple
@@ -1863,7 +1917,6 @@ class ChromiumSelect(object):
         :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: 是否取消成功
         """
-        timeout = timeout if timeout is not None else self._ele.page.timeout
         return self._select(text, 'text', True, timeout)
 
     def cancel_by_value(self, value, timeout=None):
@@ -1872,7 +1925,6 @@ class ChromiumSelect(object):
         :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: 是否取消成功
         """
-        timeout = timeout if timeout is not None else self._ele.page.timeout
         return self._select(value, 'value', True, timeout)
 
     def cancel_by_index(self, index, timeout=None):
@@ -1881,191 +1933,195 @@ class ChromiumSelect(object):
         :param timeout: 超时时间，不输入默认实用页面超时时间
         :return: 是否取消成功
         """
-        timeout = timeout if timeout is not None else self._ele.page.timeout
         return self._select(index, 'index', True, timeout)
 
-    def invert(self):
-        """反选"""
-        if not self.is_multi:
-            raise NotImplementedError("只能对多项选框执行反选。")
-
-        for i in self.options:
-            i.click(by_js=True)
-
-    def _select(self, text_value_index=None, para_type='text', deselect=False, timeout=None):
-        """选定或取消选定下拉列表中子元素
-        :param text_value_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
-        :param para_type: 参数类型，可选 'text'、'value'、'index'
-        :param deselect: 是否取消选择
+    def cancel_by_loc(self, loc, timeout=None):
+        """用定位符取消选择指定的项
+        :param loc: 定位符
+        :param timeout: 超时时间
         :return: 是否选择成功
         """
-        if not self.is_multi and isinstance(text_value_index, (list, tuple)):
-            raise TypeError('单选下拉列表不能传入list和tuple')
+        return self._by_loc(loc, timeout, True)
 
-        def do_select():
-            if para_type == 'text':
-                ele = self._ele._ele(f'tx={text_value_index}', timeout=0, raise_err=False)
-            elif para_type == 'value':
-                ele = self._ele._ele(f'@value={text_value_index}', timeout=0, raise_err=False)
-            elif para_type == 'index':
-                ele = self._ele._ele(f'x:.//option[{int(text_value_index)}]', timeout=0, raise_err=False)
-            else:
-                raise ValueError('para_type参数只能传入"text"、"value"或"index"。')
+    def _by_loc(self, loc, timeout=None, cancel=False):
+        """用定位符取消选择指定的项
+        :param loc: 定位符
+        :param timeout: 超时时间
+        :param cancel: 是否取消选择
+        :return: 是否选择成功
+        """
+        eles = self._ele.eles(loc, timeout)
+        if not eles:
+            return False
 
-            if not ele:
-                return False
-
-            js = 'false' if deselect else 'true'
-            ele.run_js(f'this.selected={js};')
-
+        mode = 'false' if cancel else 'true'
+        if self.is_multi:
+            for ele in eles:
+                ele.run_js(f'this.selected={mode};')
             return True
 
-        if isinstance(text_value_index, (str, int)):
-            ok = do_select()
-            end_time = perf_counter() + timeout
-            while not ok and perf_counter() < end_time:
-                sleep(.2)
-                ok = do_select()
-            return ok
+        eles[0].run_js(f'this.selected={mode};')
+        return True
 
-        elif isinstance(text_value_index, (list, tuple)):
-            return self._select_multi(text_value_index, para_type, deselect)
-
-        else:
-            raise TypeError('只能传入str、int、list和tuple类型。')
-
-    def _select_multi(self,
-                      text_value_index=None,
-                      para_type='text',
-                      deselect=False):
-        """选定或取消选定下拉列表中多个子元素
-        :param text_value_index: 根据文本、值选或序号择选多项
+    def _select(self, condition, para_type='text', cancel=False, timeout=None):
+        """选定或取消选定下拉列表中子元素
+        :param condition: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
         :param para_type: 参数类型，可选 'text'、'value'、'index'
-        :param deselect: 是否取消选择
+        :param cancel: 是否取消选择
         :return: 是否选择成功
         """
-        if para_type not in ('text', 'value', 'index'):
-            raise ValueError('para_type参数只能传入“text”、“value”或“index”')
+        if not self.is_multi and isinstance(condition, (list, tuple)):
+            raise TypeError('单选列表只能传入str格式。')
 
-        if not isinstance(text_value_index, (list, tuple)):
-            raise TypeError('只能传入list或tuple类型。')
+        mode = 'false' if cancel else 'true'
+        timeout = timeout if timeout is not None else self._ele.page.timeout
+        condition = {condition} if isinstance(condition, str) else set(condition)
 
-        success = True
-        for i in text_value_index:
-            if not isinstance(i, (int, str)):
-                raise TypeError('列表只能由str或int组成')
+        if para_type in ('text', 'value'):
+            return self._text_value(condition, para_type, mode, timeout)
+        elif para_type == 'index':
+            return self._index(condition, mode, timeout)
 
-            p = 'index' if isinstance(i, int) else para_type
-            if not self._select(i, p, deselect):
-                success = False
+    def _text_value(self, condition, para_type, mode, timeout):
+        """执行text和value搜索
+        :param condition: 条件set
+        :param para_type: 参数类型，可选 'text'、'value'
+        :param mode: 'true' 或 'false'
+        :param timeout: 超时时间
+        :return: 是否选择成功
+        """
+        ok = False
+        text_len = len(condition)
+        eles = []
+        end_time = perf_counter() + timeout
+        while perf_counter() < end_time:
+            if para_type == 'text':
+                eles = [i for i in self.options if i.text in condition]
+            elif para_type == 'value':
+                eles = [i for i in self.options if i.attr('value') in condition]
 
-        return success
+            if len(eles) >= text_len:
+                ok = True
+                break
+
+        if ok:
+            for i in eles:
+                i.run_js(f'this.selected={mode};')
+
+        return False
+
+    def _index(self, condition, mode, timeout):
+        """执行index搜索
+        :param condition: 条件set
+        :param mode: 'true' 或 'false'
+        :param timeout: 超时时间
+        :return: 是否选择成功
+        """
+        ok = False
+        condition = [int(i) for i in condition]
+        text_len = max(condition)
+        end_time = perf_counter() + timeout
+        while perf_counter() < end_time:
+            if len(self.options) >= text_len:
+                ok = True
+                break
+
+        if ok:
+            eles = self.options
+            for i in condition:
+                eles[i - 1].run_js(f'this.selected={mode};')
+
+        return False
 
 
 class ChromiumElementWaiter(object):
     """等待元素在dom中某种状态，如删除、显示、隐藏"""
 
-    def __init__(self, page_or_ele, loc_or_ele):
+    def __init__(self, page, ele):
         """等待元素在dom中某种状态，如删除、显示、隐藏
-        :param page_or_ele: 页面或父元素
-        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
+        :param page: 元素所在页面
+        :param ele: 要等待的元素
         """
-        if not isinstance(loc_or_ele, (str, tuple, ChromiumElement)):
-            raise TypeError('loc_or_ele只能接收定位符或元素对象。')
-
-        self._driver = page_or_ele
-        self._loc_or_ele = loc_or_ele
+        self._page = page
+        self._ele = ele
 
     def delete(self, timeout=None):
         """等待元素从dom删除
         :param timeout: 超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
-        if timeout is None:
-            timeout = self._driver.page.timeout if isinstance(self._driver, ChromiumElement) else self._driver.timeout
-
-        if isinstance(self._loc_or_ele, ChromiumElement):
-            end_time = perf_counter() + timeout
-            while perf_counter() < end_time:
-                if not self._loc_or_ele.states.is_alive:
-                    return True
-
-        ele = self._driver._ele(self._loc_or_ele, timeout=.5, raise_err=False)
-        if not ele:
-            return True
-
-        end_time = perf_counter() + timeout
-        while perf_counter() < end_time:
-            if not ele.states.is_alive:
-                return True
-
-        return False
+        return self._wait_state('is_alive', False, timeout)
 
     def display(self, timeout=None):
         """等待元素从dom显示
         :param timeout: 超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
-        return self._wait_ele('display', timeout)
+        return self._wait_state('is_displayed', True, timeout)
 
     def hidden(self, timeout=None):
         """等待元素从dom隐藏
         :param timeout: 超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
-        return self._wait_ele('hidden', timeout)
+        return self._wait_state('is_displayed', False, timeout)
 
     def covered(self, timeout=None):
         """等待当前元素被遮盖
         :param timeout:超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
-        return self._covered(True, timeout)
+        return self._wait_state('is_covered', True, timeout)
 
     def not_covered(self, timeout=None):
         """等待当前元素被遮盖
         :param timeout:超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
-        return self._covered(False, timeout)
+        return self._wait_state('is_covered', False, timeout)
 
-    def _covered(self, mode=False, timeout=None):
-        """等待当前元素被遮盖
-        :param mode: True表示被遮盖，False表示不被遮盖
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+    def enabled(self, timeout=None):
+        """等待当前元素变成可用
+        :param timeout:超时时间，为None使用元素所在页面timeout属性
+        :return: 是否等待成功
+        """
+        return self._wait_state('is_enabled', True, timeout)
+
+    def disabled(self, timeout=None):
+        """等待当前元素变成可用
+        :param timeout:超时时间，为None使用元素所在页面timeout属性
+        :return: 是否等待成功
+        """
+        return self._wait_state('is_enabled', False, timeout)
+
+    def disabled_or_delete(self, timeout=None):
+        """等待当前元素变成不可用或从DOM移除
+        :param timeout:超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
         if timeout is None:
-            timeout = self._driver.page.timeout if isinstance(self._driver, ChromiumElement) else self._driver.timeout
+            timeout = self._page.timeout
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
-            if self._loc_or_ele.states.is_covered == mode:
+            if not self._ele.states.is_enabled or not self._ele.states.is_alive:
                 return True
             sleep(.05)
 
         return False
 
-    def _wait_ele(self, mode, timeout=None):
-        """执行等待
-        :param mode: 等待模式
-        :param timeout: 超时时间
+    def _wait_state(self, attr, mode=False, timeout=None):
+        """等待元素某个bool状态到达指定状态
+        :param attr: 状态名称
+        :param mode: True或False
+        :param timeout: 超时时间，为None使用元素所在页面timeout属性
         :return: 是否等待成功
         """
         if timeout is None:
-            timeout = self._driver.page.timeout if isinstance(self._driver, ChromiumElement) else self._driver.timeout
-
-        target = self._driver._ele(self._loc_or_ele, raise_err=False)
-        if not target:
-            return None
-
+            timeout = self._page.timeout
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
-            if mode == 'display' and target.states.is_displayed:
+            if self._ele.states.__getattribute__(attr) == mode:
                 return True
-
-            elif mode == 'hidden' and not target.states.is_displayed:
-                return True
-
             sleep(.05)
 
         return False

@@ -36,6 +36,7 @@ class DriverOptions(Options):
             self._experimental_options = options_dict.get('experimental_options', {})
             self._debugger_address = options_dict.get('debugger_address', None)
             self.page_load_strategy = options_dict.get('page_load_strategy', 'normal')
+            self.system_user_path = options_dict.get('system_user_path', False)
 
             for arg in self._arguments:
                 if arg.startswith('--user-data-dir='):
@@ -50,6 +51,7 @@ class DriverOptions(Options):
         self.ini_path = None
         self.timeouts = {'implicit': 10, 'pageLoad': 30, 'script': 30}
         self._debugger_address = '127.0.0.1:9222'
+        self.system_user_path = False
 
     @property
     def driver_path(self):

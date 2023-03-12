@@ -11,6 +11,7 @@ from requests.cookies import RequestsCookieJar
 
 from DrissionPage.base import DrissionElement, BasePage
 from DrissionPage.chromium_element import ChromiumElement
+from DrissionPage.chromium_base import ChromiumBase
 
 
 def get_ele_txt(e: DrissionElement) -> str: ...
@@ -38,3 +39,6 @@ def cookies_to_tuple(cookies: Union[RequestsCookieJar, list, tuple, str, dict]) 
 
 
 def set_session_cookies(session: Session, cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None: ...
+
+
+def set_browser_cookies(page: ChromiumBase, cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None: ...

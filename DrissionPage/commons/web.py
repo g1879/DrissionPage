@@ -9,6 +9,7 @@ from re import sub
 from urllib.parse import urlparse, urljoin, urlunparse
 
 from requests.cookies import RequestsCookieJar
+from tldextract import extract
 
 
 def get_ele_txt(e):
@@ -237,3 +238,30 @@ def set_session_cookies(session, cookies):
             kwargs['expires'] = cookie['expiry']
 
         session.cookies.set(cookie['name'], cookie['value'], **kwargs)
+
+
+def set_browser_cookies(page, cookies):
+    """设置cookies值
+    :param page: 页面对象
+    :param cookies: cookies信息
+    :return: None
+    """
+    cookies = cookies_to_tuple(cookies)
+    for cookie in cookies:
+        if 'expiry' in cookie:
+            cookie['expires'] = int(cookie['expiry'])
+            cookie.pop('expiry')
+        if 'expires' in cookie:
+            cookie['expires'] = int(cookie['expires'])
+
+        if not cookie.get('domain', None):
+            ex_url = extract(page._browser_url)
+            cookie['domain'] = f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain
+
+        if cookie['value'] is None:
+            cookie['value'] = ''
+
+        try:
+            page.run_cdp_loaded('Network.setCookie', **cookie)
+        except Exception:
+            pass

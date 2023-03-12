@@ -3,6 +3,7 @@
 @Author  :   g1879
 @Contact :   g1879@qq.com
 """
+from pathlib import Path
 from typing import Union, Tuple, List, Any
 
 from .chromium_base import ChromiumBase, ChromiumPageScroll, ChromiumBaseSetter
@@ -150,8 +151,19 @@ class ChromiumFrame(ChromiumBase):
                filter_loc: Union[tuple, str] = ...,
                timeout: float = ...) -> List[Union[ChromiumElement, ChromiumFrame, str]]: ...
 
+    def get_screenshot(self, path: [str, Path] = None,
+                       as_bytes: [bool, str] = None,
+                       as_base64: [bool, str] = None) -> Union[str, bytes]: ...
+
+    def _get_screenshot(self, path: [str, Path] = None,
+                        as_bytes: [bool, str] = None, as_base64: [bool, str] = None,
+                        full_page: bool = False,
+                        left_top: Tuple[int, int] = None,
+                        right_bottom: Tuple[int, int] = None,
+                        ele: ChromiumElement = None) -> Union[str, bytes]: ...
+
     def _find_elements(self, loc_or_ele: Union[Tuple[str, str], str, ChromiumElement, ChromiumFrame],
-             timeout: float = None, single: bool = True, relative: bool = False, raise_err: bool=None) \
+                       timeout: float = None, single: bool = True, relative: bool = False, raise_err: bool = None) \
             -> Union[ChromiumElement, ChromiumFrame, None, List[Union[ChromiumElement, ChromiumFrame]]]: ...
 
     def _d_connect(self,
@@ -183,6 +195,8 @@ class ChromiumFrameIds(object):
 
 class ChromiumFrameScroll(ChromiumPageScroll):
     def __init__(self, frame: ChromiumFrame) -> None: ...
+
+    def to_see(self, loc_or_ele: Union[str, tuple, ChromiumElement], center: bool = False) -> None: ...
 
 
 class ChromiumFrameSetter(ChromiumBaseSetter):

@@ -349,7 +349,7 @@ class BasePage(BaseParser):
         return
 
     @abstractmethod
-    def get_cookies(self, as_dict=False):
+    def get_cookies(self, as_dict=False, all_info=False):
         return {}
 
     @abstractmethod

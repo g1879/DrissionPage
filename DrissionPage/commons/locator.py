@@ -36,19 +36,19 @@ def get_loc(loc, translate_css=False):
 
 def str_to_loc(loc):
     """处理元素查找语句
-    查找方式：属性、tag name及属性、文本、xpath、css selector、id、class
-    @表示属性，.表示class，#表示id，=表示精确匹配，:表示模糊匹配，无控制字符串时默认搜索该字符串
+    :param loc: 查找语法字符串
+    :return: 匹配符元组
     """
     loc_by = 'xpath'
 
     if loc.startswith('.'):
-        if loc.startswith(('.=', '.:',)):
+        if loc.startswith(('.=', '.:', '.^', '.$')):
             loc = loc.replace('.', '@class', 1)
         else:
             loc = loc.replace('.', '@class=', 1)
 
     elif loc.startswith('#'):
-        if loc.startswith(('#=', '#:',)):
+        if loc.startswith(('#=', '#:', '#^', '#$')):
             loc = loc.replace('#', '@id', 1)
         else:
             loc = loc.replace('#', '@id=', 1)
@@ -56,7 +56,7 @@ def str_to_loc(loc):
     elif loc.startswith(('t:', 't=')):
         loc = f'tag:{loc[2:]}'
 
-    elif loc.startswith(('tx:', 'tx=')):
+    elif loc.startswith(('tx:', 'tx=', 'tx^', 'tx$')):
         loc = f'text{loc[2:]}'
 
     # ------------------------------------------------------------------
@@ -87,8 +87,16 @@ def str_to_loc(loc):
     # 根据文本查找
     elif loc.startswith('text='):
         loc_str = f'//*[text()={_make_search_str(loc[5:])}]'
+
     elif loc.startswith('text:') and loc != 'text:':
         loc_str = f'//*/text()[contains(., {_make_search_str(loc[5:])})]/..'
+
+    elif loc.startswith('text^') and loc != 'text^':
+        loc_str = f'//*/text()[starts-with(., {_make_search_str(loc[5:])})]/..'
+
+    elif loc.startswith('text$') and loc != 'text$':
+        loc_str = f'//*/text()[substring(., string-length(.) - string-length({_make_search_str(loc[5:])}) +1) = ' \
+                  f'{_make_search_str(loc[5:])}]/..'
 
     # 用xpath查找
     elif loc.startswith(('xpath:', 'xpath=')) and loc not in ('xpath:', 'xpath='):
@@ -100,7 +108,7 @@ def str_to_loc(loc):
     elif loc.startswith(('css:', 'css=')) and loc not in ('css:', 'css='):
         loc_by = 'css selector'
         loc_str = loc[4:]
-    elif loc.startswith(('c:', 'c=')) and loc not in ('c:', 'c='):
+    elif loc.startswith(('c:', 'cx=')) and loc not in ('c:', 'cx='):
         loc_by = 'css selector'
         loc_str = loc[2:]
 
@@ -126,23 +134,43 @@ def _make_single_xpath_str(tag: str, text: str) -> str:
         arg_str = 'not(@*)'
 
     else:
-        r = split(r'([:=])', text, maxsplit=1)
+        r = split(r'([:=$^])', text, maxsplit=1)
         len_r = len(r)
         len_r0 = len(r[0])
         if len_r != 3 and len_r0 > 1:
             arg_str = 'normalize-space(text())' if r[0] in ('@text()', '@tx()') else f'{r[0]}'
 
         elif len_r == 3 and len_r0 > 1:
-            if r[1] == '=':  # 精确查找
+            symbol = r[1]
+            if symbol == '=':  # 精确查找
                 arg = '.' if r[0] in ('@text()', '@tx()') else r[0]
                 arg_str = f'{arg}={_make_search_str(r[2])}'
 
-            else:  # 模糊查找
+            elif symbol == '^':  # 开头开头
+                if r[0] in ('@text()', '@tx()'):
+                    txt_str = f'/text()[starts-with(., {_make_search_str(r[2])})]/..'
+                    arg_str = ''
+                else:
+                    arg_str = f"starts-with({r[0]},{_make_search_str(r[2])})"
+
+            elif symbol == '$':  # 匹配结尾
+                if r[0] in ('@text()', '@tx()'):
+                    txt_str = f'/text()[substring(., string-length(.) - string-length({_make_search_str(r[2])}) +1) ' \
+                              f'= {_make_search_str(r[2])}]/..'
+                    arg_str = ''
+                else:
+                    arg_str = f'substring({r[0]}, string-length({r[0]}) - string-length({_make_search_str(r[2])}) +1)' \
+                              f' = {_make_search_str(r[2])}'
+
+            elif symbol == ':':  # 模糊查找
                 if r[0] in ('@text()', '@tx()'):
                     txt_str = f'/text()[contains(., {_make_search_str(r[2])})]/..'
                     arg_str = ''
                 else:
                     arg_str = f"contains({r[0]},{_make_search_str(r[2])})"
+
+            else:
+                raise ValueError(f'符号不正确：{symbol}')
 
     if arg_str:
         arg_list.append(arg_str)
@@ -161,7 +189,7 @@ def _make_multi_xpath_str(tag: str, text: str, _and: bool = True) -> str:
     args = text.split('@@') if _and else text.split('@|')
 
     for arg in args[1:]:
-        r = split(r'([:=])', arg, maxsplit=1)
+        r = split(r'([:=$^])', arg, maxsplit=1)
         arg_str = ''
         len_r = len(r)
 
@@ -176,10 +204,22 @@ def _make_multi_xpath_str(tag: str, text: str, _and: bool = True) -> str:
 
             elif len_r == 3:  # 属性名和内容都有
                 arg = '.' if r[0] in ('text()', 'tx()') else f'@{r[0]}'
-                if r[1] == '=':
+                symbol = r[1]
+                if symbol == '=':
                     arg_str = f'{arg}={_make_search_str(r[2])}'
-                else:
+
+                elif symbol == ':':
                     arg_str = f'contains({arg},{_make_search_str(r[2])})'
+
+                elif symbol == '^':
+                    arg_str = f'starts-with({arg},{_make_search_str(r[2])})'
+
+                elif symbol == '$':
+                    arg_str = f'substring({arg}, string-length({arg}) - string-length({_make_search_str(r[2])}) +1) ' \
+                              f'= {_make_search_str(r[2])}'
+
+                else:
+                    raise ValueError(f'符号不正确：{symbol}')
 
             if arg_str and ignore:
                 arg_str = f'not({arg_str})'

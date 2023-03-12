@@ -81,7 +81,13 @@ class ChromiumBase(BasePage):
     def is_loading(self) -> bool: ...
 
     @property
+    def is_alive(self) -> bool: ...
+
+    @property
     def url(self) -> str: ...
+
+    @property
+    def _browser_url(self) -> str: ...
 
     @property
     def html(self) -> str: ...
@@ -135,7 +141,8 @@ class ChromiumBase(BasePage):
             interval: float = None,
             timeout: float = None) -> Union[None, bool]: ...
 
-    def get_cookies(self, as_dict: bool = False) -> Union[list, dict]: ...
+    def get_cookies(self, as_dict: bool = False, all_domains: bool = False, all_info: bool = False) -> Union[
+        list, dict]: ...
 
     def ele(self,
             loc_or_ele: Union[Tuple[str, str], str, ChromiumElement, ChromiumFrame],
@@ -178,10 +185,17 @@ class ChromiumBase(BasePage):
     def get_local_storage(self, item: str = None) -> Union[str, dict, None]: ...
 
     def get_screenshot(self, path: [str, Path] = None,
-                       as_bytes: [bool, str] = None,
+                       as_bytes: [bool, str] = None, as_base64: [bool, str] = None,
                        full_page: bool = False,
                        left_top: Tuple[int, int] = None,
                        right_bottom: Tuple[int, int] = None) -> Union[str, bytes]: ...
+
+    def _get_screenshot(self, path: [str, Path] = None,
+                        as_bytes: [bool, str] = None, as_base64: [bool, str] = None,
+                        full_page: bool = False,
+                        left_top: Tuple[int, int] = None,
+                        right_bottom: Tuple[int, int] = None,
+                        ele: ChromiumElement = None) -> Union[str, bytes]: ...
 
     def clear_cache(self,
                     session_storage: bool = True,
@@ -234,7 +248,9 @@ class ChromiumBaseWaiter(object):
 class ChromiumPageScroll(ChromiumScroll):
     def __init__(self, page: ChromiumBase): ...
 
-    def to_see(self, loc_or_ele: Union[str, tuple, ChromiumElement]) -> None: ...
+    def to_see(self, loc_or_ele: Union[str, tuple, ChromiumElement], center: bool = False) -> None: ...
+
+    def _to_see(self, ele: ChromiumElement, center: bool) -> None: ...
 
 
 class ChromiumBaseSetter(object):
@@ -243,6 +259,9 @@ class ChromiumBaseSetter(object):
 
     @property
     def load_strategy(self) -> PageLoadStrategy: ...
+
+    @property
+    def scroll(self) -> PageScrollSetter: ...
 
     def timeouts(self, implicit: float = None, page_load: float = None, script: float = None): ...
 
@@ -279,3 +298,12 @@ class PageLoadStrategy(object):
     def eager(self) -> None: ...
 
     def none(self) -> None: ...
+
+
+class PageScrollSetter(object):
+    def __init__(self, scroll: ChromiumPageScroll):
+        self._scroll: ChromiumPageScroll = ...
+
+    def wait_complete(self, on_off: bool = True): ...
+
+    def smooth(self, on_off: bool = True): ...

@@ -14,11 +14,11 @@ from requests import Session
 
 from .base import BasePage
 from .chromium_driver import ChromiumDriver
-from .chromium_element import ChromiumScroll, ChromiumElement, run_js, make_chromium_ele, ChromiumElementWaiter
+from .chromium_element import ChromiumScroll, ChromiumElement, run_js, make_chromium_ele
 from .commons.constants import HANDLE_ALERT_METHOD, ERROR, NoneElement
 from .commons.locator import get_loc
 from .commons.tools import get_usable_path, clean_folder
-from .commons.web import cookies_to_tuple
+from .commons.web import set_browser_cookies
 from .errors import ContextLossError, ElementLossError, AlertExistsError, CallMethodError, TabClosedError, \
     NoRectError, BrowserConnectError
 from .session_element import make_session_ele
@@ -244,6 +244,15 @@ class ChromiumBase(BasePage):
         return self._is_loading
 
     @property
+    def is_alive(self):
+        """返回页面对象是否仍然可用"""
+        try:
+            self.run_cdp('Page.getLayoutMetrics')
+            return True
+        except TabClosedError:
+            return False
+
+    @property
     def title(self):
         """返回当前页面title"""
         return self.run_cdp_loaded('Target.getTargetInfo', targetId=self.tab_id)['targetInfo']['title']
@@ -252,6 +261,11 @@ class ChromiumBase(BasePage):
     def url(self):
         """返回当前页面url"""
         return self.run_cdp_loaded('Target.getTargetInfo', targetId=self.tab_id)['targetInfo']['url']
+
+    @property
+    def _browser_url(self):
+        """用于被WebPage覆盖"""
+        return self.url
 
     @property
     def html(self):
@@ -419,16 +433,23 @@ class ChromiumBase(BasePage):
                                               timeout=timeout)
         return self._url_available
 
-    def get_cookies(self, as_dict=False):
+    def get_cookies(self, as_dict=False, all_domains=False, all_info=False):
         """获取cookies信息
-        :param as_dict: 为True时返回由{name: value}键值对组成的dict
+        :param as_dict: 为True时返回由{name: value}键值对组成的dict，为True时返回list且all_info无效
+        :param all_domains: 是否返回所有域的cookies
+        :param all_info: 是否返回所有信息，为False时只返回name、value、domain
         :return: cookies信息
         """
-        cookies = self.run_cdp_loaded('Network.getCookies')['cookies']
+        txt = 'Storage' if all_domains else 'Network'
+        cookies = self.run_cdp_loaded(f'{txt}.getCookies')['cookies']
+
         if as_dict:
             return {cookie['name']: cookie['value'] for cookie in cookies}
-        else:
+        elif all_info:
             return cookies
+        else:
+            return [{'name': cookie['name'], 'value': cookie['value'], 'domain': cookie['domain']}
+                    for cookie in cookies]
 
     def ele(self, loc_or_ele, timeout=None):
         """获取第一个符合条件的元素对象
@@ -620,58 +641,19 @@ class ChromiumBase(BasePage):
         js = f'localStorage.getItem("{item}");' if item else 'localStorage;'
         return self.run_js_loaded(js, as_expr=True)
 
-    def get_screenshot(self, path=None, as_bytes=None, full_page=False, left_top=None, right_bottom=None):
+    def get_screenshot(self, path=None, as_bytes=None, as_base64=None,
+                       full_page=False, left_top=None, right_bottom=None):
         """对页面进行截图，可对整个网页、可见网页、指定范围截图。对可视范围外截图需要90以上版本浏览器支持
         :param path: 完整路径，后缀可选 'jpg','jpeg','png','webp'
-        :param as_bytes: 是否已字节形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数无效
+        :param as_bytes: 是否以字节形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数和as_base64参数无效
+        :param as_base64: 是否以base64字符串形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数无效
         :param full_page: 是否整页截图，为True截取整个网页，为False截取可视窗口
         :param left_top: 截取范围左上角坐标
         :param right_bottom: 截取范围右下角角坐标
         :return: 图片完整路径或字节文本
         """
-        if as_bytes:
-            if as_bytes is True:
-                pic_type = 'png'
-            else:
-                if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise ValueError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
-                pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
-
-        else:
-            if not path:
-                path = f'{self.title}.jpg'
-            path = get_usable_path(path)
-            pic_type = path.suffix.lower()
-            if pic_type not in ('.jpg', '.jpeg', '.png', '.webp'):
-                raise TypeError(f'不支持的文件格式：{pic_type}。')
-            pic_type = 'jpeg' if pic_type == '.jpg' else pic_type[1:]
-
-        width, height = self.size
-        if full_page:
-            vp = {'x': 0, 'y': 0, 'width': width, 'height': height, 'scale': 1}
-            png = self.run_cdp_loaded('Page.captureScreenshot', format=pic_type,
-                                      captureBeyondViewport=True, clip=vp)['data']
-        else:
-            if left_top and right_bottom:
-                x, y = left_top
-                w = right_bottom[0] - x
-                h = right_bottom[1] - y
-                vp = {'x': x, 'y': y, 'width': w, 'height': h, 'scale': 1}
-                png = self.run_cdp_loaded('Page.captureScreenshot', format=pic_type,
-                                          captureBeyondViewport=False, clip=vp)['data']
-            else:
-                png = self.run_cdp_loaded('Page.captureScreenshot', format=pic_type)['data']
-
-        from base64 import b64decode
-        png = b64decode(png)
-
-        if as_bytes:
-            return png
-
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, 'wb') as f:
-            f.write(png)
-        return str(path.absolute())
+        return self._get_screenshot(path=path, as_bytes=as_bytes, as_base64=as_base64,
+                                    full_page=full_page, left_top=left_top, right_bottom=right_bottom)
 
     def clear_cache(self, session_storage=True, local_storage=True, cache=True, cookies=True):
         """清除缓存，可选要清除的项
@@ -735,6 +717,73 @@ class ChromiumBase(BasePage):
             return False
 
         return True
+
+    def _get_screenshot(self, path=None, as_bytes=None, as_base64=None,
+                        full_page=False, left_top=None, right_bottom=None, ele=None):
+        """对页面进行截图，可对整个网页、可见网页、指定范围截图。对可视范围外截图需要90以上版本浏览器支持
+        :param path: 完整路径，后缀可选 'jpg','jpeg','png','webp'
+        :param as_bytes: 是否以字节形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数和as_base64参数无效
+        :param as_base64: 是否以base64字符串形式返回图片，可选 'jpg','jpeg','png','webp'，生效时path参数无效
+        :param full_page: 是否整页截图，为True截取整个网页，为False截取可视窗口
+        :param left_top: 截取范围左上角坐标
+        :param right_bottom: 截取范围右下角角坐标
+        :param ele: 为异域iframe内元素截图设置
+        :return: 图片完整路径或字节文本
+        """
+        if as_bytes:
+            if as_bytes is True:
+                pic_type = 'png'
+            else:
+                if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
+                    raise ValueError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
+
+        elif as_base64:
+            if as_base64 is True:
+                pic_type = 'png'
+            else:
+                if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
+                    raise ValueError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
+
+        else:
+            if not path:
+                path = f'{self.title}.jpg'
+            path = get_usable_path(path)
+            pic_type = path.suffix.lower()
+            if pic_type not in ('.jpg', '.jpeg', '.png', '.webp'):
+                raise TypeError(f'不支持的文件格式：{pic_type}。')
+            pic_type = 'jpeg' if pic_type == '.jpg' else pic_type[1:]
+
+        width, height = self.size
+        if full_page:
+            vp = {'x': 0, 'y': 0, 'width': width, 'height': height, 'scale': 1}
+            png = self.run_cdp_loaded('Page.captureScreenshot', format=pic_type,
+                                      captureBeyondViewport=True, clip=vp)['data']
+        else:
+            if left_top and right_bottom:
+                x, y = left_top
+                w = right_bottom[0] - x
+                h = right_bottom[1] - y
+                vp = {'x': x, 'y': y, 'width': w, 'height': h, 'scale': 1}
+                png = self.run_cdp_loaded('Page.captureScreenshot', format=pic_type,
+                                          captureBeyondViewport=False, clip=vp)['data']
+            else:
+                png = self.run_cdp_loaded('Page.captureScreenshot', format=pic_type)['data']
+
+        if as_base64:
+            return png
+
+        from base64 import b64decode
+        png = b64decode(png)
+
+        if as_bytes:
+            return png
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'wb') as f:
+            f.write(png)
+        return str(path.absolute())
 
     # ------------------准备废弃----------------------
     def wait_loading(self, timeout=None):
@@ -811,6 +860,276 @@ class ChromiumBase(BasePage):
         """返回用于设置页面加载策略的对象"""
         warn("set_page_load_strategy()方法即将弃用，请用set.load_strategy.xxxx()方法代替。", DeprecationWarning)
         return self.set.load_strategy
+
+
+class ChromiumBaseSetter(object):
+    def __init__(self, page):
+        self._page = page
+
+    @property
+    def load_strategy(self):
+        """返回用于设置页面加载策略的对象"""
+        return PageLoadStrategy(self._page)
+
+    @property
+    def scroll(self):
+        """返回用于设置页面滚动设置的对象"""
+        return PageScrollSetter(self._page.scroll)
+
+    def timeouts(self, implicit=None, page_load=None, script=None):
+        """设置超时时间，单位为秒
+        :param implicit: 查找元素超时时间
+        :param page_load: 页面加载超时时间
+        :param script: 脚本运行超时时间
+        :return: None
+        """
+        if implicit is not None:
+            self._page.timeouts.implicit = implicit
+
+        if page_load is not None:
+            self._page.timeouts.page_load = page_load
+
+        if script is not None:
+            self._page.timeouts.script = script
+
+    def user_agent(self, ua, platform=None):
+        """为当前tab设置user agent，只在当前tab有效
+        :param ua: user agent字符串
+        :param platform: platform字符串
+        :return: None
+        """
+        keys = {'userAgent': ua}
+        if platform:
+            keys['platform'] = platform
+        self._page.run_cdp('Emulation.setUserAgentOverride', **keys)
+
+    def session_storage(self, item, value):
+        """设置或删除某项sessionStorage信息
+        :param item: 要设置的项
+        :param value: 项的值，设置为False时，删除该项
+        :return: None
+        """
+        js = f'sessionStorage.removeItem("{item}");' if item is False else f'sessionStorage.setItem("{item}","{value}");'
+        return self._page.run_js_loaded(js, as_expr=True)
+
+    def local_storage(self, item, value):
+        """设置或删除某项localStorage信息
+        :param item: 要设置的项
+        :param value: 项的值，设置为False时，删除该项
+        :return: None
+        """
+        js = f'localStorage.removeItem("{item}");' if item is False else f'localStorage.setItem("{item}","{value}");'
+        return self._page.run_js_loaded(js, as_expr=True)
+
+    def cookies(self, cookies):
+        """设置cookies值
+        :param cookies: cookies信息
+        :return: None
+        """
+        set_browser_cookies(self._page, cookies)
+
+    def upload_files(self, files):
+        """等待上传的文件路径
+        :param files: 文件路径列表或字符串，字符串时多个文件用回车分隔
+        :return: None
+        """
+        if not self._page._upload_list:
+            self._page.driver.Page.fileChooserOpened = self._page._onFileChooserOpened
+            self._page.run_cdp('Page.setInterceptFileChooserDialog', enabled=True)
+
+        if isinstance(files, str):
+            files = files.split('\n')
+        self._page._upload_list = [str(Path(i).absolute()) for i in files]
+
+    def headers(self, headers: dict) -> None:
+        """设置固定发送的headers
+        :param headers: dict格式的headers数据
+        :return: None
+        """
+        self._page.run_cdp('Network.enable')
+        self._page.run_cdp('Network.setExtraHTTPHeaders', headers=headers)
+
+
+class ChromiumBaseWaiter(object):
+    def __init__(self, page_or_ele):
+        """
+        :param page_or_ele: 页面对象或元素对象
+        """
+        self._driver = page_or_ele
+
+    def ele_delete(self, loc_or_ele, timeout=None):
+        """等待元素从DOM中删除
+        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
+        :param timeout: 超时时间，默认读取页面超时时间
+        :return: 是否等待成功
+        """
+        if isinstance(loc_or_ele, (str, tuple)):
+            ele = self._driver._ele(loc_or_ele, timeout=.3, raise_err=False)
+            return ele.wait.delete(timeout) if ele else True
+        return loc_or_ele.wait.delete(timeout)
+
+    def ele_display(self, loc_or_ele, timeout=None):
+        """等待元素变成显示状态
+        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
+        :param timeout: 超时时间，默认读取页面超时时间
+        :return: 是否等待成功
+        """
+        ele = self._driver._ele(loc_or_ele, raise_err=False)
+        return ele.wait.display(timeout)
+
+    def ele_hidden(self, loc_or_ele, timeout=None):
+        """等待元素变成隐藏状态
+        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
+        :param timeout: 超时时间，默认读取页面超时时间
+        :return: 是否等待成功
+        """
+        ele = self._driver._ele(loc_or_ele, raise_err=False)
+        return ele.wait.hidden(timeout)
+
+    def load_start(self, timeout=None):
+        """等待页面开始加载
+        :param timeout: 超时时间，为None时使用页面timeout属性
+        :return: 是否等待成功
+        """
+        return self._loading(timeout=timeout, gap=.002)
+
+    def load_complete(self, timeout=None):
+        """等待页面开始加载
+        :param timeout: 超时时间，为None时使用页面timeout属性
+        :return: 是否等待成功
+        """
+        return self._loading(timeout=timeout, start=False)
+
+    def upload_paths_inputted(self):
+        """等待自动填写上传文件路径"""
+        while self._driver._upload_list:
+            sleep(.01)
+
+    def _loading(self, timeout=None, start=True, gap=.01):
+        """等待页面开始加载或加载完成
+        :param timeout: 超时时间，为None时使用页面timeout属性
+        :param start: 等待开始还是结束
+        :param gap: 间隔秒数
+        :return: 是否等待成功
+        """
+        if timeout != 0:
+            timeout = self._driver.timeout if timeout in (None, True) else timeout
+            end_time = perf_counter() + timeout
+            while perf_counter() < end_time:
+                if self._driver.is_loading == start:
+                    return True
+                sleep(gap)
+            return False
+
+
+class ChromiumPageScroll(ChromiumScroll):
+    def __init__(self, page):
+        """
+        :param page: 页面对象
+        """
+        super().__init__(page)
+        self.t1 = 'window'
+        self.t2 = 'document.documentElement'
+
+    def to_see(self, loc_or_ele, center=False):
+        """滚动页面直到元素可见
+        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
+        :param center: 是否尽量滚动到页面正中
+        :return: None
+        """
+        ele = self._driver._ele(loc_or_ele)
+        self._to_see(ele, center)
+
+    def _to_see(self, ele, center):
+        """执行滚动页面直到元素可见
+        :param ele: 元素对象
+        :param center: 是否尽量滚动到页面正中
+        :return: None
+        """
+        if center:
+            ele.run_js('this.scrollIntoViewIfNeeded();')
+            self._wait_scrolled()
+            return
+
+        ele.run_js('this.scrollIntoViewIfNeeded(false);')
+        if ele.states.is_covered:
+            ele.run_js('this.scrollIntoViewIfNeeded();')
+        self._wait_scrolled()
+
+
+class Timeout(object):
+    """用于保存d模式timeout信息的类"""
+
+    def __init__(self, page, implicit=None, page_load=None, script=None):
+        """
+        :param page: ChromiumBase页面
+        :param implicit: 默认超时时间
+        :param page_load: 页面加载超时时间
+        :param script: js超时时间
+        """
+        self._page = page
+        self.implicit = 10 if implicit is None else implicit
+        self.page_load = 30 if page_load is None else page_load
+        self.script = 30 if script is None else script
+
+    def __repr__(self):
+        return str({'implicit': self.implicit, 'page_load': self.page_load, 'script': self.script})
+
+
+class PageLoadStrategy(object):
+    """用于设置页面加载策略的类"""
+
+    def __init__(self, page):
+        """
+        :param page: ChromiumBase对象
+        """
+        self._page = page
+
+    def __call__(self, value):
+        """设置加载策略
+        :param value: 可选 'normal', 'eager', 'none'
+        :return: None
+        """
+        if value.lower() not in ('normal', 'eager', 'none'):
+            raise ValueError("只能选择 'normal', 'eager', 'none'。")
+        self._page._page_load_strategy = value
+
+    def normal(self):
+        """设置页面加载策略为normal"""
+        self._page._page_load_strategy = 'normal'
+
+    def eager(self):
+        """设置页面加载策略为eager"""
+        self._page._page_load_strategy = 'eager'
+
+    def none(self):
+        """设置页面加载策略为none"""
+        self._page._page_load_strategy = 'none'
+
+
+class PageScrollSetter(object):
+    def __init__(self, scroll):
+        self._scroll = scroll
+
+    def wait_complete(self, on_off=True):
+        """设置滚动命令后是否等待完成
+        :param on_off: 开或关
+        :return: None
+        """
+        if not isinstance(on_off, bool):
+            raise TypeError('on_off必须为bool。')
+        self._scroll._wait_complete = on_off
+
+    def smooth(self, on_off=True):
+        """设置页面滚动是否平滑滚动
+        :param on_off: 开或关
+        :return: None
+        """
+        if not isinstance(on_off, bool):
+            raise TypeError('on_off必须为bool。')
+        b = 'smooth' if on_off else 'auto'
+        self._scroll._driver.run_js(f'document.documentElement.style.setProperty("scroll-behavior","{b}");')
+        self._scroll._wait_complete = on_off
 
 
 class Screencast(object):
@@ -892,232 +1211,3 @@ class Screencast(object):
         with open(f'{self._path}\\{kwargs["metadata"]["timestamp"]}.jpg', 'wb') as f:
             f.write(b64decode(kwargs['data']))
         self._page.run_cdp('Page.screencastFrameAck', sessionId=kwargs['sessionId'])
-
-
-class ChromiumBaseSetter(object):
-    def __init__(self, page):
-        self._page = page
-
-    @property
-    def load_strategy(self):
-        """返回用于设置页面加载策略的对象"""
-        return PageLoadStrategy(self._page)
-
-    def timeouts(self, implicit=None, page_load=None, script=None):
-        """设置超时时间，单位为秒
-        :param implicit: 查找元素超时时间
-        :param page_load: 页面加载超时时间
-        :param script: 脚本运行超时时间
-        :return: None
-        """
-        if implicit is not None:
-            self._page.timeouts.implicit = implicit
-
-        if page_load is not None:
-            self._page.timeouts.page_load = page_load
-
-        if script is not None:
-            self._page.timeouts.script = script
-
-    def user_agent(self, ua, platform=None):
-        """为当前tab设置user agent，只在当前tab有效
-        :param ua: user agent字符串
-        :param platform: platform字符串
-        :return: None
-        """
-        keys = {'userAgent': ua}
-        if platform:
-            keys['platform'] = platform
-        self._page.run_cdp('Emulation.setUserAgentOverride', **keys)
-
-    def session_storage(self, item, value):
-        """设置或删除某项sessionStorage信息
-        :param item: 要设置的项
-        :param value: 项的值，设置为False时，删除该项
-        :return: None
-        """
-        js = f'sessionStorage.removeItem("{item}");' if item is False else f'sessionStorage.setItem("{item}","{value}");'
-        return self._page.run_js_loaded(js, as_expr=True)
-
-    def local_storage(self, item, value):
-        """设置或删除某项localStorage信息
-        :param item: 要设置的项
-        :param value: 项的值，设置为False时，删除该项
-        :return: None
-        """
-        js = f'localStorage.removeItem("{item}");' if item is False else f'localStorage.setItem("{item}","{value}");'
-        return self._page.run_js_loaded(js, as_expr=True)
-
-    def cookies(self, cookies):
-        """设置cookies值
-        :param cookies: cookies信息
-        :return: None
-        """
-        cookies = cookies_to_tuple(cookies)
-        result_cookies = []
-        for cookie in cookies:
-            if not cookie.get('domain', None):
-                continue
-            c = {'value': '' if cookie['value'] is None else cookie['value'],
-                 'name': cookie['name'],
-                 'domain': cookie['domain']}
-            result_cookies.append(c)
-        self._page.run_cdp_loaded('Network.setCookies', cookies=result_cookies)
-
-    def upload_files(self, files):
-        """等待上传的文件路径
-        :param files: 文件路径列表或字符串，字符串时多个文件用回车分隔
-        :return: None
-        """
-        if not self._page._upload_list:
-            self._page.driver.Page.fileChooserOpened = self._page._onFileChooserOpened
-            self._page.run_cdp('Page.setInterceptFileChooserDialog', enabled=True)
-
-        if isinstance(files, str):
-            files = files.split('\n')
-        self._page._upload_list = [str(Path(i).absolute()) for i in files]
-
-    def headers(self, headers: dict) -> None:
-        """设置固定发送的headers
-        :param headers: dict格式的headers数据
-        :return: None
-        """
-        self._page.run_cdp('Network.setExtraHTTPHeaders', headers=headers)
-
-
-class ChromiumBaseWaiter(object):
-    def __init__(self, page_or_ele):
-        """
-        :param page_or_ele: 页面对象或元素对象
-        """
-        self._driver = page_or_ele
-
-    def ele_delete(self, loc_or_ele, timeout=None):
-        """等待元素从DOM中删除
-        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
-        :return: 是否等待成功
-        """
-        return ChromiumElementWaiter(self._driver, loc_or_ele).delete(timeout)
-
-    def ele_display(self, loc_or_ele, timeout=None):
-        """等待元素变成显示状态
-        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
-        :return: 是否等待成功
-        """
-        return ChromiumElementWaiter(self._driver, loc_or_ele).display(timeout)
-
-    def ele_hidden(self, loc_or_ele, timeout=None):
-        """等待元素变成隐藏状态
-        :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
-        :return: 是否等待成功
-        """
-        return ChromiumElementWaiter(self._driver, loc_or_ele).hidden(timeout)
-
-    def load_start(self, timeout=None):
-        """等待页面开始加载
-        :param timeout: 超时时间，为None时使用页面timeout属性
-        :return: 是否等待成功
-        """
-        return self._loading(timeout=timeout, gap=.002)
-
-    def load_complete(self, timeout=None):
-        """等待页面开始加载
-        :param timeout: 超时时间，为None时使用页面timeout属性
-        :return: 是否等待成功
-        """
-        return self._loading(timeout=timeout, start=False)
-
-    def upload_paths_inputted(self):
-        """等待自动填写上传文件路径"""
-        while self._driver._upload_list:
-            sleep(.01)
-
-    def _loading(self, timeout=None, start=True, gap=.01):
-        """等待页面开始加载或加载完成
-        :param timeout: 超时时间，为None时使用页面timeout属性
-        :param start: 等待开始还是结束
-        :param gap: 间隔秒数
-        :return: 是否等待成功
-        """
-        if timeout != 0:
-            timeout = self._driver.timeout if timeout in (None, True) else timeout
-            end_time = perf_counter() + timeout
-            while perf_counter() < end_time:
-                if self._driver.is_loading == start:
-                    return True
-                sleep(gap)
-            return False
-
-
-class ChromiumPageScroll(ChromiumScroll):
-    def __init__(self, page):
-        """
-        :param page: 页面对象
-        """
-        super().__init__(page)
-        self.t1 = 'window'
-        self.t2 = 'document.documentElement'
-
-    def to_see(self, loc_or_ele):
-        """滚动页面直到元素可见
-        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串
-        :return: None
-        """
-        ele = self._driver._ele(loc_or_ele)
-        ele.run_js('this.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});')
-
-        if ele.states.is_covered:
-            ele.run_js('this.scrollIntoView({behavior: "auto", block: "center", inline: "center"});')
-
-
-class Timeout(object):
-    """用于保存d模式timeout信息的类"""
-
-    def __init__(self, page, implicit=None, page_load=None, script=None):
-        """
-        :param page: ChromiumBase页面
-        :param implicit: 默认超时时间
-        :param page_load: 页面加载超时时间
-        :param script: js超时时间
-        """
-        self._page = page
-        self.implicit = 10 if implicit is None else implicit
-        self.page_load = 30 if page_load is None else page_load
-        self.script = 30 if script is None else script
-
-    def __repr__(self):
-        return str({'implicit': self.implicit, 'page_load': self.page_load, 'script': self.script})
-
-
-class PageLoadStrategy(object):
-    """用于设置页面加载策略的类"""
-
-    def __init__(self, page):
-        """
-        :param page: ChromiumBase对象
-        """
-        self._page = page
-
-    def __call__(self, value):
-        """设置加载策略
-        :param value: 可选 'normal', 'eager', 'none'
-        :return: None
-        """
-        if value.lower() not in ('normal', 'eager', 'none'):
-            raise ValueError("只能选择 'normal', 'eager', 'none'。")
-        self._page._page_load_strategy = value
-
-    def normal(self):
-        """设置页面加载策略为normal"""
-        self._page._page_load_strategy = 'normal'
-
-    def eager(self):
-        """设置页面加载策略为eager"""
-        self._page._page_load_strategy = 'eager'
-
-    def none(self):
-        """设置页面加载策略为none"""
-        self._page._page_load_strategy = 'none'

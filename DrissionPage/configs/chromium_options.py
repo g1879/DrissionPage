@@ -376,7 +376,7 @@ class ChromiumOptions(object):
 
         # 设置chrome_options
         attrs = ('debugger_address', 'binary_location', 'arguments', 'extensions', 'user', 'page_load_strategy',
-                 'auto_port')
+                 'auto_port', 'system_user_path')
         for i in attrs:
             om.set_item('chrome_options', i, self.__getattribute__(f'_{i}'))
         # 设置代理

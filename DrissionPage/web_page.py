@@ -7,13 +7,13 @@ from pathlib import Path
 from warnings import warn
 
 from requests import Session
-from tldextract import extract
 
 from .base import BasePage
 from .chromium_base import ChromiumBase, Timeout
 from .chromium_driver import ChromiumDriver
 from .chromium_page import ChromiumPage, ChromiumDownloadSetter, ChromiumPageSetter
 from .chromium_tab import WebPageTab
+from .commons.web import set_session_cookies, set_browser_cookies
 from .configs.chromium_options import ChromiumOptions
 from .configs.session_options import SessionOptions
 from .errors import CallMethodError
@@ -137,9 +137,14 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     def url(self):
         """返回当前url"""
         if self._mode == 'd':
-            return super(SessionPage, self).url if self._tab_obj else None
+            return self._browser_url
         elif self._mode == 's':
             return self._session_url
+
+    @property
+    def _browser_url(self):
+        """返回浏览器当前url"""
+        return super(SessionPage, self).url if self._tab_obj else None
 
     @property
     def title(self):
@@ -177,10 +182,8 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     @property
     def cookies(self):
-        if self._mode == 's':
-            return super().get_cookies()
-        elif self._mode == 'd':
-            return super(SessionPage, self).get_cookies()
+        """以dict方式返回cookies"""
+        return super().cookies
 
     @property
     def session(self):
@@ -352,35 +355,37 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
         :param copy_user_agent: 是否复制ua信息
         :return: None
         """
+        if not self._has_session:
+            return
+
         if copy_user_agent:
             selenium_user_agent = self.run_cdp('Runtime.evaluate', expression='navigator.userAgent;')['result']['value']
             self.session.headers.update({"User-Agent": selenium_user_agent})
 
-        self.set.cookies(self._get_driver_cookies(as_dict=True), set_session=True)
+        set_session_cookies(self.session, self._get_driver_cookies(as_dict=True))
+        # set_session_cookies(self.session, self._get_driver_cookies(all_domains=True))
+        # set_session_cookies(self.session, self._get_driver_cookies())
 
     def cookies_to_browser(self):
         """把session对象的cookies复制到浏览器"""
-        ex_url = extract(self._session_url)
-        domain = f'{ex_url.domain}.{ex_url.suffix}'
-        cookies = []
-        for cookie in super().get_cookies():
-            if cookie.get('domain', '') == '':
-                cookie['domain'] = domain
+        if not self._has_driver:
+            return
 
-            if domain in cookie['domain']:
-                cookies.append(cookie)
-        self.set.cookies(cookies, set_driver=True)
+        set_browser_cookies(self, super().get_cookies(as_dict=True))
+        # set_browser_cookies(self, super().get_cookies(all_domains=True))
+        # set_browser_cookies(self, super().get_cookies())
 
-    def get_cookies(self, as_dict=False, all_domains=False):
+    def get_cookies(self, as_dict=False, all_domains=False, all_info=False):
         """返回cookies
-        :param as_dict: 是否以字典方式返回
+        :param as_dict: 是否以字典方式返回，False以list形式返回
         :param all_domains: 是否返回所有域的cookies
+        :param all_info: 是否返回所有信息，False则只返回name、value、domain
         :return: cookies信息
         """
         if self._mode == 's':
-            return super().get_cookies(as_dict, all_domains)
+            return super().get_cookies(as_dict, all_domains, all_info)
         elif self._mode == 'd':
-            return self._get_driver_cookies(as_dict)
+            return self._get_driver_cookies(as_dict, all_info)
 
     def get_tab(self, tab_id=None):
         """获取一个标签页对象
@@ -390,16 +395,20 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
         tab_id = tab_id or self.tab_id
         return WebPageTab(self, tab_id)
 
-    def _get_driver_cookies(self, as_dict=False):
+    def _get_driver_cookies(self, as_dict=False, all_info=False):
         """获取浏览器cookies
-        :param as_dict: 以dict形式返回
+        :param as_dict: 是否以dict形式返回，为True时all_info无效
+        :param all_info: 是否返回所有信息
         :return: cookies信息
         """
         cookies = self.run_cdp('Network.getCookies')['cookies']
         if as_dict:
             return {cookie['name']: cookie['value'] for cookie in cookies}
-        else:
+        elif all_info:
             return cookies
+        else:
+            return [{'name': cookie['name'], 'value': cookie['value'], 'domain': cookie['domain']}
+                    for cookie in cookies]
 
     def close_driver(self):
         """关闭driver及浏览器"""
@@ -451,7 +460,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
             self._has_driver = None
 
     # ---------------准备废弃---------------
-    def set_cookies(self, cookies, set_session=False, set_driver=False):
+    def set_cookies(self, cookies, set_session=True, set_driver=True):
         """添加cookies信息到浏览器或session对象
         :param cookies: 可以接收`CookieJar`、`list`、`tuple`、`str`、`dict`格式的`cookies`
         :param set_session: 是否设置到Session对象
@@ -482,16 +491,14 @@ class WebPageSetter(ChromiumPageSetter):
         self._session_setter = SessionPageSetter(self._page)
         self._chromium_setter = ChromiumPageSetter(self._page)
 
-    def cookies(self, cookies, set_session=False, set_driver=False):
+    def cookies(self, cookies):
         """添加cookies信息到浏览器或session对象
         :param cookies: 可以接收`CookieJar`、`list`、`tuple`、`str`、`dict`格式的`cookies`
-        :param set_session: 是否设置到Session对象
-        :param set_driver: 是否设置到浏览器
         :return: None
         """
-        if set_driver and self._page._has_driver:
+        if self._page.mode == 'd' and self._page._has_driver:
             self._chromium_setter.cookies(cookies)
-        if set_session and self._page._has_session:
+        elif self._page.mode == 's' and self._page._has_session:
             self._session_setter.cookies(cookies)
 
     def headers(self, headers) -> None:
@@ -499,16 +506,16 @@ class WebPageSetter(ChromiumPageSetter):
         :param headers: dict格式的headers数据
         :return: None
         """
-        if self._page._has_session:
+        if self._page.mode == 's':
             self._session_setter.headers(headers)
-        if self._page._has_driver:
+        else:
             self._chromium_setter.headers(headers)
 
     def user_agent(self, ua, platform=None):
         """设置user agent，d模式下只有当前tab有效"""
-        if self._page._has_session:
+        if self._page.mode == 's':
             self._session_setter.user_agent(ua)
-        if self._page._has_driver:
+        else:
             self._chromium_setter.user_agent(ua, platform)
 
 
