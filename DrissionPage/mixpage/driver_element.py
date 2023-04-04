@@ -255,9 +255,9 @@ class DriverElement(DrissionElement):
 
     def prev(self, index=1, filter_loc='', timeout=0):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 前面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 前面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素
         """
         index, filter_loc = _exchange_arguments(index, filter_loc)
@@ -265,9 +265,9 @@ class DriverElement(DrissionElement):
 
     def next(self, index=1, filter_loc='', timeout=0):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 后面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 后面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素
         """
         index, filter_loc = _exchange_arguments(index, filter_loc)
@@ -275,9 +275,9 @@ class DriverElement(DrissionElement):
 
     def before(self, index=1, filter_loc='', timeout=None):
         """返回当前元素前面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元，而是整个DOM文档
-        :param index: 前面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 前面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素前面的某个元素或节点
         """
         index, filter_loc = _exchange_arguments(index, filter_loc)
@@ -285,9 +285,9 @@ class DriverElement(DrissionElement):
 
     def after(self, index=1, filter_loc='', timeout=None):
         """返回当前元素后面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元，而是整个DOM文档
-        :param index: 后面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 后面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素后面的某个元素或节点
         """
         index, filter_loc = _exchange_arguments(index, filter_loc)
@@ -295,32 +295,32 @@ class DriverElement(DrissionElement):
 
     def prevs(self, filter_loc='', timeout=0):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素或节点文本组成的列表
         """
         return super().prevs(filter_loc, timeout)
 
     def nexts(self, filter_loc='', timeout=0):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素或节点文本组成的列表
         """
         return super().nexts(filter_loc, timeout)
 
     def befores(self, filter_loc='', timeout=None):
         """返回当前元素后面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素前面的元素或节点组成的列表
         """
         return super().befores(filter_loc, timeout)
 
     def afters(self, filter_loc='', timeout=None):
         """返回当前元素前面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素后面的元素或节点组成的列表
         """
         return super().afters(filter_loc, timeout)

@@ -76,8 +76,8 @@ class ShadowRootElement(BaseElement):
 
     def next(self, index=1, filter_loc=''):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
+        :param index: 第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
         :return: DriverElement对象
         """
         nodes = self.nexts(filter_loc=filter_loc)
@@ -85,8 +85,8 @@ class ShadowRootElement(BaseElement):
 
     def before(self, index=1, filter_loc=''):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 前面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
+        :param index: 前面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
         :return: 本元素前面的某个元素或节点
         """
         nodes = self.befores(filter_loc=filter_loc)
@@ -94,8 +94,8 @@ class ShadowRootElement(BaseElement):
 
     def after(self, index=1, filter_loc=''):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 后面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
+        :param index: 后面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
         :return: 本元素后面的某个元素或节点
         """
         nodes = self.afters(filter_loc=filter_loc)
@@ -103,7 +103,7 @@ class ShadowRootElement(BaseElement):
 
     def nexts(self, filter_loc=''):
         """返回后面所有兄弟元素或节点组成的列表
-        :param filter_loc: 用于筛选元素的查询语法
+        :param filter_loc: 用于筛选的查询语法
         :return: DriverElement对象组成的列表
         """
         loc = get_loc(filter_loc, True)
@@ -116,7 +116,7 @@ class ShadowRootElement(BaseElement):
 
     def befores(self, filter_loc=''):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
+        :param filter_loc: 用于筛选的查询语法
         :return: 本元素前面的元素或节点组成的列表
         """
         loc = get_loc(filter_loc, True)
@@ -129,7 +129,7 @@ class ShadowRootElement(BaseElement):
 
     def afters(self, filter_loc=''):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
+        :param filter_loc: 用于筛选的查询语法
         :return: 本元素后面的元素或节点组成的列表
         """
         eles1 = self.nexts(filter_loc)

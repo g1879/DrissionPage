@@ -129,9 +129,9 @@ class DrissionElement(BaseElement):
 
     def prev(self, index=1, filter_loc='', timeout=0):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 前面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 前面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素
         """
         nodes = self._get_brothers(index, filter_loc, 'preceding', timeout=timeout)
@@ -139,9 +139,9 @@ class DrissionElement(BaseElement):
 
     def next(self, index=1, filter_loc='', timeout=0):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 后面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 后面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素
         """
         nodes = self._get_brothers(index, filter_loc, 'following', timeout=timeout)
@@ -149,9 +149,9 @@ class DrissionElement(BaseElement):
 
     def before(self, index=1, filter_loc='', timeout=None):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 前面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 前面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素前面的某个元素或节点
         """
         nodes = self._get_brothers(index, filter_loc, 'preceding', False, timeout=timeout)
@@ -159,9 +159,9 @@ class DrissionElement(BaseElement):
 
     def after(self, index=1, filter_loc='', timeout=None):
         """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param index: 后面第几个查询结果元素
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param index: 后面第几个查询结果
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素后面的某个元素或节点
         """
         nodes = self._get_brothers(index, filter_loc, 'following', False, timeout)
@@ -169,32 +169,32 @@ class DrissionElement(BaseElement):
 
     def prevs(self, filter_loc='', timeout=0):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素或节点文本组成的列表
         """
         return self._get_brothers(filter_loc=filter_loc, direction='preceding', timeout=timeout)
 
     def nexts(self, filter_loc='', timeout=0):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 兄弟元素或节点文本组成的列表
         """
         return self._get_brothers(filter_loc=filter_loc, direction='following', timeout=timeout)
 
     def befores(self, filter_loc='', timeout=None):
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素前面的元素或节点组成的列表
         """
         return self._get_brothers(filter_loc=filter_loc, direction='preceding', brother=False, timeout=timeout)
 
     def afters(self, filter_loc='', timeout=None):
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
         :return: 本元素后面的元素或节点组成的列表
         """
         return self._get_brothers(filter_loc=filter_loc, direction='following', brother=False, timeout=timeout)
@@ -202,7 +202,7 @@ class DrissionElement(BaseElement):
     def _get_brothers(self, index=None, filter_loc='', direction='following', brother=True, timeout=.5):
         """按要求返回兄弟元素或节点组成的列表
         :param index: 获取第几个，该参数不为None时只获取该编号的元素
-        :param filter_loc: 用于筛选元素的查询语法
+        :param filter_loc: 用于筛选的查询语法
         :param direction: 'following' 或 'preceding'，查找的方向
         :param brother: 查找范围，在同级查找还是整个dom前后查找
         :param timeout: 查找等待时间
