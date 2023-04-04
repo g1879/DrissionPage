@@ -2,7 +2,7 @@ requests
 lxml
 cssselect
 DownloadKit>=0.5.3
-FlowViewer>=0.2.1
+FlowViewer>=0.2.10
 websocket-client
 click
 tldextract
