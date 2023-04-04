@@ -7,9 +7,12 @@ from base64 import b64decode
 from json import loads, JSONDecodeError
 from os import sep
 from pathlib import Path
+from re import search
+from threading import Thread
 from time import perf_counter, sleep, time
 from warnings import warn
 
+from FlowViewer.listener import ResponseData
 from requests import Session
 
 from .base import BasePage
@@ -41,6 +44,9 @@ class ChromiumBase(BasePage):
         self._set = None
         self._screencast = None
 
+        if isinstance(address, int) or (isinstance(address, str) and address.isdigit()):
+            address = f'127.0.0.1:{address}'
+
         self._set_start_options(address, None)
         self._set_runtime_settings()
         self._connect_browser(tab_id)
@@ -53,7 +59,7 @@ class ChromiumBase(BasePage):
         :param none: 用于后代继承
         :return: None
         """
-        self.address = address
+        self.address = address.replace('localhost', '127.0.0.1').lstrip('http://').lstrip('https://')
 
     def _set_runtime_settings(self):
         self._timeouts = Timeout(self)
@@ -118,7 +124,8 @@ class ChromiumBase(BasePage):
             except TabClosedError:
                 return
 
-            while True:
+            end_time = perf_counter() + 10
+            while perf_counter() < end_time:
                 try:
                     b_id = self.run_cdp('DOM.getDocument')['root']['backendNodeId']
                     self._root_id = self.run_cdp('DOM.resolveNode', backendNodeId=b_id)['object']['objectId']
@@ -127,8 +134,15 @@ class ChromiumBase(BasePage):
                     break
 
                 except Exception:
-                    if self._debug_recorder:
-                        self._debug_recorder.add_data((perf_counter(), 'err', '读取root_id出错'))
+                    if self._debug:
+                        print('重试获取document')
+                        if self._debug_recorder:
+                            self._debug_recorder.add_data((perf_counter(), 'err', '读取root_id出错'))
+
+                    sleep(.1)
+
+            else:
+                raise RuntimeError('获取document失败。')
 
             if self._debug:
                 print('获取document结束')
@@ -365,7 +379,7 @@ class ChromiumBase(BasePage):
         if error == 'Cannot find context with specified id':
             raise ContextLossError
         elif error in ('Could not find node with given id', 'Could not find object with given id',
-                       'No node with given id found'):
+                       'No node with given id found', 'Node with given id does not belong to the document'):
             raise ElementLossError
         elif error == 'tab closed':
             raise TabClosedError
@@ -503,8 +517,12 @@ class ChromiumBase(BasePage):
         timeout = timeout if timeout is not None else self.timeout
         end_time = perf_counter() + timeout
 
-        search_result = self.run_cdp_loaded('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True)
-        count = search_result['resultCount']
+        try:
+            search_result = self.run_cdp_loaded('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True)
+            count = search_result['resultCount']
+        except ContextLossError:
+            search_result = None
+            count = 0
 
         while True:
             if count > 0:
@@ -516,7 +534,7 @@ class ChromiumBase(BasePage):
                         ok = True
 
                 except Exception:
-                    sleep(.01)
+                    pass
 
             if ok:
                 try:
@@ -528,11 +546,16 @@ class ChromiumBase(BasePage):
                 except ElementLossError:
                     ok = False
 
-            search_result = self.run_cdp_loaded('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True)
-            count = search_result['resultCount']
+            try:
+                search_result = self.run_cdp_loaded('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True)
+                count = search_result['resultCount']
+            except ContextLossError:
+                pass
 
             if perf_counter() >= end_time:
                 return NoneElement() if single else []
+
+            sleep(.1)
 
     def refresh(self, ignore_cache=False):
         """刷新当前页面
@@ -591,7 +614,7 @@ class ChromiumBase(BasePage):
                 self._debug_recorder.add_data((perf_counter(), '操作', '停止页面加载'))
 
         self.run_cdp('Page.stopLoading')
-        while self.ready_state != 'complete':
+        while self.ready_state not in ('complete', None):
             sleep(.1)
 
     def remove_ele(self, loc_or_ele):
@@ -605,41 +628,92 @@ class ChromiumBase(BasePage):
         if ele:
             self.run_cdp('DOM.removeNode', nodeId=ele.ids.node_id)
 
-    def get_frame(self, loc_ind_ele):
+    def get_frame(self, loc_ind_ele, timeout=None):
         """获取页面中一个frame对象，可传入定位符、iframe序号、ChromiumFrame对象，序号从1开始
         :param loc_ind_ele: 定位符、iframe序号、ChromiumFrame对象
+        :param timeout: 查找元素超时时间
         :return: ChromiumFrame对象
         """
-        if isinstance(loc_ind_ele, (str, tuple)):
-            ele = self._ele(loc_ind_ele)
+        if isinstance(loc_ind_ele, str):
+            if not loc_ind_ele.startswith(('.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$',
+                                           'text:', 'text=', 'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:',
+                                           'css=', 'c:', 'c=')):
+                loc_ind_ele = f'xpath://*[(name()="iframe" or name()="frame") and ' \
+                              f'(@name="{loc_ind_ele}" or @id="{loc_ind_ele}")]'
+            ele = self._ele(loc_ind_ele, timeout=timeout)
             if ele and not str(type(ele)).endswith(".ChromiumFrame'>"):
-                raise RuntimeError('该定位符不是指向frame元素。')
+                raise TypeError('该定位符不是指向frame元素。')
             return ele
+
+        elif isinstance(loc_ind_ele, tuple):
+            ele = self._ele(loc_ind_ele, timeout=timeout)
+            if ele and not str(type(ele)).endswith(".ChromiumFrame'>"):
+                raise TypeError('该定位符不是指向frame元素。')
+            return ele
+
         elif isinstance(loc_ind_ele, int):
             if loc_ind_ele < 1:
                 raise ValueError('序号必须大于0。')
-            xpath = f'x:(//*[name()="frame" or name()="iframe"])[{loc_ind_ele}]'
-            return self._ele(xpath)
+            xpath = f'xpath:(//*[name()="frame" or name()="iframe"])[{loc_ind_ele}]'
+            return self._ele(xpath, timeout=timeout)
+
         elif str(type(loc_ind_ele)).endswith(".ChromiumFrame'>"):
             return loc_ind_ele
+
         else:
-            raise TypeError('必须传入定位符、iframe序号、ChromiumFrame对象其中之一。')
+            raise TypeError('必须传入定位符、iframe序号、id、name、ChromiumFrame对象其中之一。')
+
+    def get_frames(self, loc=None, timeout=None):
+        """获取所有符号条件的frame对象
+        :param loc: 定位符，为None时返回所有
+        :param timeout: 查找超时时间
+        :return: ChromiumFrame对象组成的列表
+        """
+        loc = loc or 'xpath://*[name()="iframe" or name()="frame"]'
+        frames = self._ele(loc, timeout=timeout, single=False, raise_err=False)
+        return [i for i in frames if str(type(i)).endswith(".ChromiumFrame'>")]
 
     def get_session_storage(self, item=None):
         """获取sessionStorage信息，不设置item则获取全部
         :param item: 要获取的项，不设置则返回全部
         :return: sessionStorage一个或所有项内容
         """
-        js = f'sessionStorage.getItem("{item}");' if item else 'sessionStorage;'
-        return self.run_js_loaded(js, as_expr=True)
+        if item:
+            js = f'sessionStorage.getItem("{item}");'
+            return self.run_js_loaded(js, as_expr=True)
+        else:
+            js = '''
+            var dp_ls_len = sessionStorage.length;
+            var dp_ls_arr = new Array();
+            for(var i = 0; i < dp_ls_len; i++) {
+                var getKey = sessionStorage.key(i);
+                var getVal = sessionStorage.getItem(getKey);
+                dp_ls_arr[i] = {'key': getKey, 'val': getVal}
+            }
+            return dp_ls_arr;
+            '''
+            return {i['key']: i['val'] for i in self.run_js_loaded(js)}
 
     def get_local_storage(self, item=None):
         """获取localStorage信息，不设置item则获取全部
         :param item: 要获取的项目，不设置则返回全部
         :return: localStorage一个或所有项内容
         """
-        js = f'localStorage.getItem("{item}");' if item else 'localStorage;'
-        return self.run_js_loaded(js, as_expr=True)
+        if item:
+            js = f'localStorage.getItem("{item}");'
+            return self.run_js_loaded(js, as_expr=True)
+        else:
+            js = '''
+            var dp_ls_len = localStorage.length;
+            var dp_ls_arr = new Array();
+            for(var i = 0; i < dp_ls_len; i++) {
+                var getKey = localStorage.key(i);
+                var getVal = localStorage.getItem(getKey);
+                dp_ls_arr[i] = {'key': getKey, 'val': getVal}
+            }
+            return dp_ls_arr;
+            '''
+            return {i['key']: i['val'] for i in self.run_js_loaded(js)}
 
     def get_screenshot(self, path=None, as_bytes=None, as_base64=None,
                        full_page=False, left_top=None, right_bottom=None):
@@ -704,11 +778,9 @@ class ChromiumBase(BasePage):
 
             if t < times:
                 sleep(interval)
-                while self.ready_state != 'complete':
+                while self.ready_state not in ('complete', None):
                     sleep(.1)
-                if self._debug:
-                    print('重试')
-                if show_errmsg:
+                if self._debug or show_errmsg:
                     print(f'重试 {to_url}')
 
         if err:
@@ -876,6 +948,14 @@ class ChromiumBaseSetter(object):
         """返回用于设置页面滚动设置的对象"""
         return PageScrollSetter(self._page.scroll)
 
+    def retry_times(self, times):
+        """设置连接失败重连次数"""
+        self._page.retry_times = times
+
+    def retry_interval(self, interval):
+        """设置连接失败重连间隔"""
+        self._page.retry_interval = interval
+
     def timeouts(self, implicit=None, page_load=None, script=None):
         """设置超时时间，单位为秒
         :param implicit: 查找元素超时时间
@@ -956,6 +1036,7 @@ class ChromiumBaseWaiter(object):
         :param page_or_ele: 页面对象或元素对象
         """
         self._driver = page_or_ele
+        self._listener = None
 
     def ele_delete(self, loc_or_ele, timeout=None):
         """等待元素从DOM中删除
@@ -1020,6 +1101,130 @@ class ChromiumBaseWaiter(object):
                     return True
                 sleep(gap)
             return False
+
+    def set_targets(self, targets, is_regex=False):
+        """指定要等待的数据包
+        :param targets: 要匹配的数据包url特征，可用list等传入多个
+        :param is_regex: 设置的target是否正则表达式
+        :return: None
+        """
+        if not self._listener:
+            self._listener = NetworkListener(self._driver)
+        self._listener.set_targets(targets, is_regex)
+
+    def data_packets(self, targets=None, timeout=None, any_one=False):
+        """等待指定数据包加载完成
+        :param targets: 要匹配的数据包url特征，可用list等传入多个
+        :param timeout: 超时时间，为None则使用页面对象timeout
+        :param any_one: 多个target时，是否全部监听到才结束，为True时监听到一个目标就结束
+        :return: ResponseData对象或监听结果字典
+        """
+        if not self._listener:
+            self._listener = NetworkListener(self._driver)
+        return self._listener.listen(targets, timeout, any_one)
+
+    def stop_listening(self):
+        """停止监听数据包"""
+        if not self._listener:
+            self._listener = NetworkListener(self._driver)
+        self._listener.stop()
+
+
+class NetworkListener(object):
+    def __init__(self, page):
+        self._page = page
+        self._targets = None
+        self._is_regex = False
+        self._results = {}
+        self._single = False
+        self._requests = {}
+
+    def set_targets(self, targets, is_regex=False):
+        """指定要等待的数据包
+        :param targets: 要匹配的数据包url特征，可用list等传入多个
+        :param is_regex: 设置的target是否正则表达式
+        :return: None
+        """
+        if not isinstance(targets, (str, list, tuple, set)):
+            raise TypeError('targets只能是str、list、tuple、set。')
+        self._is_regex = is_regex
+        if isinstance(targets, str):
+            self._targets = {targets}
+            self._single = True
+        else:
+            self._targets = set(targets)
+            self._single = False
+        self._page.run_cdp('Network.enable')
+        if targets is not None:
+            self._page.driver.Network.requestWillBeSent = self._requestWillBeSent
+            self._page.driver.Network.responseReceived = self._response_received
+            self._page.driver.Network.loadingFinished = self._loading_finished
+        else:
+            self.stop_listening()
+
+    def stop(self):
+        """停止监听数据包"""
+        self._page.run_cdp('Network.disable')
+        self._page.driver.Network.requestWillBeSent = None
+        self._page.driver.Network.responseReceived = None
+        self._page.driver.Network.loadingFinished = None
+
+    def listen(self, targets=None, timeout=None, any_one=False):
+        """等待指定数据包加载完成
+        :param targets: 要匹配的数据包url特征，可用list等传入多个
+        :param timeout: 超时时间，为None则使用页面对象timeout
+        :param any_one: 多个target时，是否全部监听到才结束，为True时监听到一个目标就结束
+        :return: ResponseData对象或监听结果字典
+        """
+        if self._targets is None and targets is None:
+            targets = ''
+        if targets is not None:
+            self.set_targets(targets, is_regex=self._is_regex)
+        self._results = {}
+
+        timeout = timeout if timeout is not None else self._page.timeout
+        end_time = perf_counter() + timeout
+        while perf_counter() < end_time:
+            if self._results and (any_one or set(self._results) == self._targets):
+                break
+            sleep(.1)
+
+        self._requests = {}
+        if not self._results:
+            return False
+        return list(self._results.values())[0] if self._single else self._results
+
+    def _response_received(self, **kwargs):
+        """接收到返回信息时处理方法"""
+        if kwargs['requestId'] in self._requests:
+            self._requests[kwargs['requestId']]['response'] = kwargs['response']
+
+    def _loading_finished(self, **kwargs):
+        """请求完成时处理方法"""
+        request_id = kwargs['requestId']
+        if request_id in self._requests:
+            try:
+                body = self._page.run_cdp('Network.getResponseBody', requestId=request_id)['body']
+            except:
+                body = None
+
+            request = self._requests[request_id]
+            target = request['target']
+            rd = ResponseData(request_id, request['response'],
+                              body, self._page.tab_id, target)
+            rd.postData = request['post_data']
+            rd._requestHeaders = request['request_headers']
+            self._results[target] = rd
+
+    def _requestWillBeSent(self, **kwargs):
+        """接收到请求时的回调函数"""
+        for target in self._targets:
+            if (self._is_regex and search(target, kwargs['request']['url'])) or (
+                    not self._is_regex and target in kwargs['request']['url']):
+                self._requests[kwargs['requestId']] = {'target': target,
+                                                       'post_data': kwargs['request'].get('postData', None),
+                                                       'request_headers': kwargs['request']['headers']}
+                break
 
 
 class ChromiumPageScroll(ChromiumScroll):
@@ -1136,30 +1341,90 @@ class Screencast(object):
     def __init__(self, page):
         self._page = page
         self._path = None
-        self._quality = 100
+        self._running = False
+        self._enable = False
+        self._mode = 'video'
 
-    def start(self, save_path=None, quality=None):
+    @property
+    def set_mode(self):
+        """返回用于设置录屏幕式的对象"""
+        return ScreencastMode(self)
+
+    def start(self, save_path=None):
         """开始录屏
         :param save_path: 录屏保存位置
-        :param quality: 录屏质量
         :return: None
         """
-        self.set(save_path, quality)
+        self.set_save_path(save_path)
         if self._path is None:
             raise ValueError('save_path必须设置。')
         clean_folder(self._path)
-        self._page.driver.Page.screencastFrame = self._onScreencastFrame
-        self._page.run_cdp('Page.startScreencast', everyNthFrame=1, quality=self._quality)
+        if self._mode.startswith('frugal'):
+            self._page.driver.Page.screencastFrame = self._onScreencastFrame
+            self._page.run_cdp('Page.startScreencast', everyNthFrame=1, quality=100)
 
-    def stop(self, to_mp4=False, video_name=None):
+        elif not self._mode.startswith('js'):
+            self._running = True
+            self._enable = True
+            Thread(target=self._run).start()
+
+        else:
+            js = '''
+            async function () {
+                stream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true})
+                mime = MediaRecorder.isTypeSupported("video/webm; codecs=vp9")
+                               ? "video/webm; codecs=vp9"
+                               : "video/webm"
+                mediaRecorder = new MediaRecorder(stream, {mimeType: mime})
+                DrissionPage_Screencast_chunks = []
+                mediaRecorder.addEventListener('dataavailable', function(e) {
+                    DrissionPage_Screencast_blob_ok = false;
+                    DrissionPage_Screencast_chunks.push(e.data);
+                    DrissionPage_Screencast_blob_ok = true;
+                })
+                mediaRecorder.start()
+                
+                mediaRecorder.addEventListener('stop', function(){
+                    while(DrissionPage_Screencast_blob_ok==false){}
+                    DrissionPage_Screencast_blob = new Blob(DrissionPage_Screencast_chunks, 
+                                                            {type: DrissionPage_Screencast_chunks[0].type});
+                })
+              }
+            '''
+            print('请手动选择要录制的目标。')
+            self._page.run_js('var DrissionPage_Screencast_blob;var DrissionPage_Screencast_blob_ok=false;')
+            self._page.run_js(js)
+
+    def stop(self, video_name=None):
         """停止录屏
-        :param to_mp4: 是否合并成MP4格式
         :param video_name: 视频文件名，为None时以当前时间名命
         :return: 文件路径
         """
-        self._page.driver.Page.screencastFrame = None
-        self._page.run_cdp('Page.stopScreencast')
-        if not to_mp4:
+        if video_name and not video_name.endswith('mp4'):
+            video_name = f'{video_name}.mp4'
+        name = f'{time()}.mp4' if not video_name else video_name
+        path = f'{self._path}{sep}{name}'
+
+        if self._mode.startswith('js'):
+            self._page.run_js('mediaRecorder.stop();', as_expr=True)
+            while not self._page.run_js('return DrissionPage_Screencast_blob_ok;'):
+                sleep(.1)
+            blob = self._page.run_js('return DrissionPage_Screencast_blob;')
+            uuid = self._page.run_cdp('IO.resolveBlob', objectId=blob['result']['objectId'])['uuid']
+            data = self._page.run_cdp('IO.read', handle=f'blob:{uuid}')['data']
+            with open(path, 'wb') as f:
+                f.write(b64decode(data))
+            return path
+
+        if self._mode.startswith('frugal'):
+            self._page.driver.Page.screencastFrame = None
+            self._page.run_cdp('Page.stopScreencast')
+        else:
+            self._enable = False
+            while self._running:
+                sleep(.1)
+
+        if self._mode.endswith('imgs'):
             return str(Path(self._path).absolute())
 
         if not str(video_name).isascii() or not str(self._path).isascii():
@@ -1176,11 +1441,10 @@ class Screencast(object):
         imgInfo = img.shape
         size = (imgInfo[1], imgInfo[0])
 
-        if video_name and not video_name.endswith('mp4'):
-            video_name = f'{video_name}.mp4'
-        name = f'{time()}.mp4' if not video_name else video_name
-        fourcc = 14
-        videoWrite = VideoWriter(f'{self._path}{sep}{name}', fourcc, 8, size)
+        # if video_name and not video_name.endswith('mp4'):
+        #     video_name = f'{video_name}.mp4'
+        # name = f'{time()}.mp4' if not video_name else video_name
+        videoWrite = VideoWriter(path, 14, 5, size)
 
         for i in pic_list:
             img = imread(str(i))
@@ -1189,25 +1453,49 @@ class Screencast(object):
         clean_folder(self._path, ignore=(name,))
         return f'{self._path}{sep}{name}'
 
-    def set(self, save_path=None, quality=None):
-        """设置录屏参数
+    def set_save_path(self, save_path=None):
+        """设置保存路径
         :param save_path: 保存路径
-        :param quality: 视频质量，可取值0-100
-        :return:
+        :return: None
         """
         if save_path:
             save_path = Path(save_path)
             if save_path.exists() and save_path.is_file():
                 raise TypeError('save_path必须指定文件夹。')
             save_path.mkdir(parents=True, exist_ok=True)
-            self._path = str(save_path)
+            self._path = save_path
 
-        if quality is not None:
-            if quality < 0 or quality > 100:
-                raise ValueError('quality必须在0-100之间。')
-            self._quality = quality
+    def _run(self):
+        """非节俭模式运行方法"""
+        self._running = True
+        while self._enable:
+            p = self._path / f'{time()}.jpg'
+            self._page.get_screenshot(path=p)
+            sleep(.04)
+        self._running = False
 
     def _onScreencastFrame(self, **kwargs):
+        """节俭模式运行方法"""
         with open(f'{self._path}\\{kwargs["metadata"]["timestamp"]}.jpg', 'wb') as f:
             f.write(b64decode(kwargs['data']))
         self._page.run_cdp('Page.screencastFrameAck', sessionId=kwargs['sessionId'])
+
+
+class ScreencastMode(object):
+    def __init__(self, screencast):
+        self._screencast = screencast
+
+    def video_mode(self):
+        self._screencast._mode = 'video'
+
+    def frugal_video_mode(self):
+        self._screencast._mode = 'frugal_video'
+
+    def js_video_mode(self):
+        self._screencast._mode = 'js_video'
+
+    def frugal_imgs_mode(self):
+        self._screencast._mode = 'frugal_imgs'
+
+    def imgs_mode(self):
+        self._screencast._mode = 'imgs'

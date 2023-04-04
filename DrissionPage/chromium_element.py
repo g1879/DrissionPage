@@ -15,7 +15,7 @@ from .commons.keys import keys_to_typing, keyDescriptionForString, keyDefinition
 from .commons.locator import get_loc
 from .commons.web import make_absolute_link, get_ele_txt, format_html, is_js_func, location_in_viewport, offset_scroll
 from .errors import ContextLossError, ElementLossError, JavaScriptError, NoRectError, ElementNotFoundError, \
-    CallMethodError, NoResourceError
+    CallMethodError, NoResourceError, CanNotClickError
 from .session_element import make_session_ele
 
 
@@ -207,73 +207,104 @@ class ChromiumElement(DrissionElement):
         """
         return super().parent(level_or_loc)
 
-    def prev(self, filter_loc='', index=1, timeout=0):
-        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 前面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素
+    def child(self, filter_loc='', index=1, timeout=0, ele_only=True):
+        """返回当前元素的一个符合条件的直接子元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 直接子元素或节点文本
         """
-        return super().prev(index, filter_loc, timeout)
+        return super().child(index, filter_loc, timeout, ele_only=ele_only)
 
-    def next(self, filter_loc='', index=1, timeout=0):
-        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 后面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素
+    def prev(self, filter_loc='', index=1, timeout=0, ele_only=True):
+        """返回当前元素前面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 前面第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 兄弟元素或节点文本
         """
-        return super().next(index, filter_loc, timeout)
+        return super().prev(index, filter_loc, timeout, ele_only=ele_only)
 
-    def before(self, filter_loc='', index=1, timeout=None):
-        """返回当前元素前面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 前面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
+    def next(self, filter_loc='', index=1, timeout=0, ele_only=True):
+        """返回当前元素后面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 兄弟元素或节点文本
+        """
+        return super().next(index, filter_loc, timeout, ele_only=ele_only)
+
+    def before(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回文档中当前元素前面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 前面第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的某个元素或节点
         """
-        return super().before(index, filter_loc, timeout)
+        return super().before(index, filter_loc, timeout, ele_only=ele_only)
 
-    def after(self, filter_loc='', index=1, timeout=None):
-        """返回当前元素后面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 后面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
+    def after(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回文档中此当前元素后面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素后面的某个元素或节点
         """
-        return super().after(index, filter_loc, timeout)
+        return super().after(index, filter_loc, timeout, ele_only=ele_only)
 
-    def prevs(self, filter_loc='', timeout=0):
-        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+    def children(self, filter_loc='', timeout=0, ele_only=True):
+        """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 直接子元素或节点文本组成的列表
+        """
+        return super().children(filter_loc, timeout, ele_only=ele_only)
+
+    def prevs(self, filter_loc='', timeout=0, ele_only=True):
+        """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 兄弟元素或节点文本组成的列表
         """
-        return super().prevs(filter_loc, timeout)
+        return super().prevs(filter_loc, timeout, ele_only=ele_only)
 
-    def nexts(self, filter_loc='', timeout=0):
-        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+    def nexts(self, filter_loc='', timeout=0, ele_only=True):
+        """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 兄弟元素或节点文本组成的列表
         """
-        return super().nexts(filter_loc, timeout)
+        return super().nexts(filter_loc, timeout, ele_only=ele_only)
 
-    def befores(self, filter_loc='', timeout=None):
-        """返回当前元素后面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+    def befores(self, filter_loc='', timeout=None, ele_only=True):
+        """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的元素或节点组成的列表
         """
-        return super().befores(filter_loc, timeout)
+        return super().befores(filter_loc, timeout, ele_only=ele_only)
 
-    def afters(self, filter_loc='', timeout=None):
-        """返回当前元素后面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
-        :return: 本元素前面的元素或节点组成的列表
+    def afters(self, filter_loc='', timeout=None, ele_only=True):
+        """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 本元素后面的元素或节点组成的列表
         """
-        return super().afters(filter_loc, timeout)
+        return super().afters(filter_loc, timeout, ele_only=ele_only)
 
     def attr(self, attr):
         """返回一个attribute属性值
@@ -324,7 +355,8 @@ class ChromiumElement(DrissionElement):
                 if 'value' not in i or 'value' not in i['value']:
                     return None
 
-                return format_html(i['value']['value'])
+                value = i['value']['value']
+                return format_html(value) if isinstance(value, str) else value
 
     def run_js(self, script, *args, as_expr=False):
         """对本元素执行javascript代码
@@ -406,12 +438,7 @@ class ChromiumElement(DrissionElement):
         :param timeout: 等待资源加载的超时时间
         :return: 资源内容
         """
-        src = self.prop('currentSrc')
-        if not src:
-            return None
-
         timeout = self.page.timeout if timeout is None else timeout
-
         if self.tag == 'img':  # 等待图片加载完成
             js = ('return this.complete && typeof this.naturalWidth != "undefined" '
                   '&& this.naturalWidth > 0 && typeof this.naturalHeight != "undefined" '
@@ -420,19 +447,22 @@ class ChromiumElement(DrissionElement):
             while not self.run_js(js) and perf_counter() < end_time:
                 sleep(.1)
 
-        node = self.page.run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
-        frame = node.get('frameId', None)
-        frame = frame or self.page.tab_id
-
         result = None
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
+            src = self.prop('currentSrc')
+            if not src:
+                continue
+
+            node = self.page.run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
+            frame = node.get('frameId', None)
+            frame = frame or self.page.tab_id
+
             try:
                 result = self.page.run_cdp('Page.getResourceContent', frameId=frame, url=src)
                 break
             except CallMethodError:
-                pass
-            sleep(.1)
+                sleep(.1)
 
         if not result:
             return None
@@ -498,10 +528,10 @@ class ChromiumElement(DrissionElement):
         if self.tag == 'input' and self.attr('type') == 'file':
             return self._set_file_input(vals)
 
-        if clear and vals != '\n':
+        if clear and vals not in ('\n', '\ue007'):
             self.clear(by_js=False)
         else:
-            self._focus()
+            self._input_focus()
 
         # ------------处理字符-------------
         if not isinstance(vals, (tuple, list)):
@@ -513,7 +543,7 @@ class ChromiumElement(DrissionElement):
                 send_key(self, modifier, key)
             return
 
-        if vals.endswith('\n'):
+        if vals.endswith(('\n', '\ue007')):
             self.page.run_cdp('Input.insertText', text=vals[:-1])
             send_key(self, modifier, '\n')
         else:
@@ -528,10 +558,17 @@ class ChromiumElement(DrissionElement):
             self.run_js("this.value='';")
 
         else:
-            self._focus()
+            self._input_focus()
             self.input(('\ue009', 'a', '\ue017'), clear=False)
 
-    def _focus(self):
+    def _input_focus(self):
+        """输入前使元素获取焦点"""
+        try:
+            self.page.run_cdp('DOM.focus', backendNodeId=self._backend_id)
+        except Exception:
+            self.click(by_js=None)
+
+    def focus(self):
         """使元素获取焦点"""
         try:
             self.page.run_cdp('DOM.focus', backendNodeId=self._backend_id)
@@ -548,22 +585,22 @@ class ChromiumElement(DrissionElement):
         x, y = offset_scroll(self, offset_x, offset_y)
         self.page.run_cdp('Input.dispatchMouseEvent', type='mouseMoved', x=x, y=y)
 
-    def drag(self, offset_x=0, offset_y=0, speed=40):
+    def drag(self, offset_x=0, offset_y=0, duration=.5):
         """拖拽当前元素到相对位置
         :param offset_x: x变化值
         :param offset_y: y变化值
-        :param speed: 拖动的速度，传入0即瞬间到达
+        :param duration: 拖动用时，传入0即瞬间到j达
         :return: None
         """
         curr_x, curr_y = self.locations.midpoint
         offset_x += curr_x
         offset_y += curr_y
-        self.drag_to((offset_x, offset_y), speed)
+        self.drag_to((offset_x, offset_y), duration)
 
-    def drag_to(self, ele_or_loc, speed=40):
+    def drag_to(self, ele_or_loc, duration=.5):
         """拖拽当前元素，目标为另一个元素或坐标元组(x, y)
         :param ele_or_loc: 另一个元素或坐标元组，坐标为元素中点的坐标
-        :param speed: 拖动的速度，传入0即瞬间到达
+        :param duration: 拖动用时，传入0即瞬间到j达
         :return: None
         """
         # x, y：目标点坐标
@@ -577,7 +614,9 @@ class ChromiumElement(DrissionElement):
         current_x, current_y = self.locations.midpoint
         width = target_x - current_x
         height = target_y - current_y
-        num = 0 if not speed else int(((abs(width) ** 2 + abs(height) ** 2) ** .5) // speed)
+
+        duration = .02 if duration < .02 else duration
+        num = int(duration * 50)
 
         # 将要经过的点存入列表
         points = [(int(current_x + i * (width / num)), int(current_y + i * (height / num))) for i in range(1, num)]
@@ -589,9 +628,12 @@ class ChromiumElement(DrissionElement):
 
         # 逐个访问要经过的点
         for x, y in points:
+            t = perf_counter()
             actions.move(x - current_x, y - current_y)
             current_x, current_y = x, y
-            actions.wait(.05)
+            ss = .02 - perf_counter() + t
+            if ss > 0:
+                sleep(ss)
         actions.release()
 
     def _get_obj_id(self, node_id=None, backend_id=None):
@@ -683,7 +725,7 @@ class ChromiumElement(DrissionElement):
         :return: None
         """
         warn("click_at()方法即将弃用，请用click.left_at()方法代替。", DeprecationWarning)
-        self.click.left_at(offset_x, offset_y)
+        self.click.at(offset_x, offset_y, 'left')
 
     def r_click(self):
         """右键单击"""
@@ -697,7 +739,7 @@ class ChromiumElement(DrissionElement):
         :return: None
         """
         warn("r_click_at()方法即将弃用，请用click.right_at()方法代替。", DeprecationWarning)
-        self.click.right_at(offset_x, offset_y)
+        self.click.at(offset_x, offset_y, 'right')
 
     def m_click(self):
         """中键单击"""
@@ -916,10 +958,31 @@ class ChromiumShadowRoot(BaseElement):
 
         return self.parent_ele._ele(loc, timeout=0, relative=True, raise_err=False)
 
+    def child(self, filter_loc='', index=1):
+        """返回直接子元素元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
+        :return: 直接子元素或节点文本组成的列表
+        """
+        nodes = self.children(filter_loc=filter_loc)
+        if not nodes:
+            if Settings.raise_ele_not_found:
+                raise ElementNotFoundError
+            else:
+                return NoneElement()
+
+        try:
+            return nodes[index - 1]
+        except IndexError:
+            if Settings.raise_ele_not_found:
+                raise ElementNotFoundError
+            else:
+                return NoneElement()
+
     def next(self, filter_loc='', index=1):
-        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 第几个查询结果元素
+        """返回当前元素后面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
         :return: ChromiumElement对象
         """
         nodes = self.nexts(filter_loc=filter_loc)
@@ -931,9 +994,10 @@ class ChromiumShadowRoot(BaseElement):
             return NoneElement()
 
     def before(self, filter_loc='', index=1):
-        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 前面第几个查询结果元素
+        """返回文档中当前元素前面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 前面第几个查询结果，1开始
         :return: 本元素前面的某个元素或节点
         """
         nodes = self.befores(filter_loc=filter_loc)
@@ -945,9 +1009,10 @@ class ChromiumShadowRoot(BaseElement):
             return NoneElement()
 
     def after(self, filter_loc='', index=1):
-        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 后面第几个查询结果元素
+        """返回文档中此当前元素后面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 后面第几个查询结果，1开始
         :return: 本元素后面的某个元素或节点
         """
         nodes = self.afters(filter_loc=filter_loc)
@@ -958,9 +1023,25 @@ class ChromiumShadowRoot(BaseElement):
         else:
             return NoneElement()
 
+    def children(self, filter_loc=''):
+        """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :return: 直接子元素或节点文本组成的列表
+        """
+        if not filter_loc:
+            loc = '*'
+        else:
+            loc = get_loc(filter_loc, True)  # 把定位符转换为xpath
+            if loc[0] == 'css selector':
+                raise ValueError('此css selector语法不受支持，请换成xpath。')
+            loc = loc[1].lstrip('./')
+
+        loc = f'xpath:./{loc}'
+        return self._ele(loc, single=False, relative=True)
+
     def nexts(self, filter_loc=''):
-        """返回后面所有兄弟元素或节点组成的列表
-        :param filter_loc: 用于筛选元素的查询语法
+        """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
         :return: ChromiumElement对象组成的列表
         """
         loc = get_loc(filter_loc, True)
@@ -972,8 +1053,9 @@ class ChromiumShadowRoot(BaseElement):
         return self.parent_ele._ele(xpath, single=False, relative=True)
 
     def befores(self, filter_loc=''):
-        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
+        """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
         :return: 本元素前面的元素或节点组成的列表
         """
         loc = get_loc(filter_loc, True)
@@ -985,8 +1067,9 @@ class ChromiumShadowRoot(BaseElement):
         return self.parent_ele._ele(xpath, single=False, relative=True)
 
     def afters(self, filter_loc=''):
-        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
+        """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
         :return: 本元素后面的元素或节点组成的列表
         """
         eles1 = self.nexts(filter_loc)
@@ -1069,7 +1152,9 @@ class ChromiumShadowRoot(BaseElement):
 
     def _get_backend_id(self, node_id):
         """返回元素object id"""
-        return self.page.run_cdp('DOM.describeNode', nodeId=node_id)['node']['backendNodeId']
+        r = self.page.run_cdp('DOM.describeNode', nodeId=node_id)['node']
+        self._tag = r['localName'].lower()
+        return r['backendNodeId']
 
     # ------------准备废弃--------------
     @property
@@ -1174,19 +1259,16 @@ def find_by_xpath(ele, xpath, single, timeout, relative=True):
     type_txt = '9' if single else '7'
     node_txt = 'this.contentDocument' if ele.tag in FRAME_ELEMENT and not relative else 'this'
     js = make_js_for_find_ele_by_xpath(xpath, type_txt, node_txt)
-    r = ele.page.run_cdp('Runtime.callFunctionOn',
-                         functionDeclaration=js, objectId=ele.ids.obj_id, returnByValue=False, awaitPromise=True,
-                         userGesture=True)
+    r = ele.page.run_cdp_loaded('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele.ids.obj_id,
+                                returnByValue=False, awaitPromise=True, userGesture=True)
     if r['result']['type'] == 'string':
         return r['result']['value']
 
     if 'exceptionDetails' in r:
         if 'The result is not a node set' in r['result']['description']:
             js = make_js_for_find_ele_by_xpath(xpath, '1', node_txt)
-            r = ele.page.run_cdp('Runtime.callFunctionOn',
-                                 functionDeclaration=js, objectId=ele.ids.obj_id, returnByValue=False,
-                                 awaitPromise=True,
-                                 userGesture=True)
+            r = ele.page.run_cdp_loaded('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele.ids.obj_id,
+                                        returnByValue=False, awaitPromise=True, userGesture=True)
             return r['result']['value']
         else:
             raise SyntaxError(f'查询语句错误：\n{r}')
@@ -1194,9 +1276,8 @@ def find_by_xpath(ele, xpath, single, timeout, relative=True):
     end_time = perf_counter() + timeout
     while (r['result']['subtype'] == 'null'
            or r['result']['description'] == 'NodeList(0)') and perf_counter() < end_time:
-        r = ele.page.run_cdp('Runtime.callFunctionOn',
-                             functionDeclaration=js, objectId=ele.ids.obj_id, returnByValue=False, awaitPromise=True,
-                             userGesture=True)
+        r = ele.page.run_cdp_loaded('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele.ids.obj_id,
+                                    returnByValue=False, awaitPromise=True, userGesture=True)
 
     if single:
         return NoneElement() if r['result']['subtype'] == 'null' \
@@ -1205,7 +1286,8 @@ def find_by_xpath(ele, xpath, single, timeout, relative=True):
     if r['result']['description'] == 'NodeList(0)':
         return []
     else:
-        r = ele.page.run_cdp('Runtime.getProperties', objectId=r['result']['objectId'], ownProperties=True)['result']
+        r = ele.page.run_cdp_loaded('Runtime.getProperties', objectId=r['result']['objectId'],
+                                    ownProperties=True)['result']
         return [make_chromium_ele(ele.page, obj_id=i['value']['objectId'])
                 if i['value']['type'] == 'object' else i['value']['value']
                 for i in r[:-1]]
@@ -1223,18 +1305,17 @@ def find_by_css(ele, selector, single, timeout):
     find_all = '' if single else 'All'
     node_txt = 'this.contentDocument' if ele.tag in ('iframe', 'frame', 'shadow-root') else 'this'
     js = f'function(){{return {node_txt}.querySelector{find_all}("{selector}");}}'
-    r = ele.page.run_cdp('Runtime.callFunctionOn',
-                         functionDeclaration=js, objectId=ele.ids.obj_id, returnByValue=False, awaitPromise=True,
-                         userGesture=True)
-    if 'exceptionDetails' in r:
-        raise SyntaxError(f'查询语句错误：\n{r}')
+    r = ele.page.run_cdp_loaded('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele.ids.obj_id,
+                                returnByValue=False, awaitPromise=True, userGesture=True)
 
     end_time = perf_counter() + timeout
-    while (r['result']['subtype'] == 'null'
-           or r['result']['description'] == 'NodeList(0)') and perf_counter() < end_time:
-        r = ele.page.run_cdp('Runtime.callFunctionOn',
-                             functionDeclaration=js, objectId=ele.ids.obj_id, returnByValue=False, awaitPromise=True,
-                             userGesture=True)
+    while ('exceptionDetails' in r or r['result']['subtype'] == 'null' or
+           r['result']['description'] == 'NodeList(0)') and perf_counter() < end_time:
+        r = ele.page.run_cdp_loaded('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele.ids.obj_id,
+                                    returnByValue=False, awaitPromise=True, userGesture=True)
+
+    if 'exceptionDetails' in r:
+        raise SyntaxError(f'查询语句错误：\n{r}')
 
     if single:
         return NoneElement() if r['result']['subtype'] == 'null' \
@@ -1243,7 +1324,8 @@ def find_by_css(ele, selector, single, timeout):
     if r['result']['description'] == 'NodeList(0)':
         return []
     else:
-        r = ele.page.run_cdp('Runtime.getProperties', objectId=r['result']['objectId'], ownProperties=True)['result']
+        r = ele.page.run_cdp_loaded('Runtime.getProperties', objectId=r['result']['objectId'],
+                                    ownProperties=True)['result']
         return [make_chromium_ele(ele.page, obj_id=i['value']['objectId']) for i in r]
 
 
@@ -1362,7 +1444,7 @@ def parse_js_result(page, ele, result):
     the_type = result['type']
 
     if the_type == 'object':
-        sub_type = result['subtype']
+        sub_type = result.get('subtype', None)
         if sub_type == 'null':
             return None
 
@@ -1376,9 +1458,14 @@ def parse_js_result(page, ele, result):
                 return make_chromium_ele(page, obj_id=result['objectId'])
 
         elif sub_type == 'array':
-            r = page.run_cdp('Runtime.getProperties', objectId=result['result']['objectId'],
+            r = page.run_cdp('Runtime.getProperties', objectId=result['objectId'],
                              ownProperties=True)['result']
-            return [parse_js_result(page, ele, result=i['value']) for i in r]
+            return [parse_js_result(page, ele, result=i['value']) for i in r[:-1]]
+
+        elif 'objectId' in result and result['className'] == 'object':  # dict
+            r = page.run_cdp('Runtime.getProperties', objectId=result['objectId'],
+                             ownProperties=True)['result']
+            return {i['name']: parse_js_result(page, ele, result=i['value']) for i in r}
 
         else:
             return result['value']
@@ -1450,6 +1537,11 @@ class ChromiumElementStates(object):
     def is_selected(self):
         """返回元素是否被选择"""
         return self._ele.run_js('return this.selected;')
+
+    @property
+    def is_checked(self):
+        """返回元素是否被选择"""
+        return self._ele.run_js('return this.checked;')
 
     @property
     def is_displayed(self):
@@ -1636,29 +1728,45 @@ class Click(object):
         """
         self._ele = ele
 
-    def __call__(self, by_js=None, wait_loading=0):
+    def __call__(self, by_js=False, timeout=1):
         """点击元素
         如果遇到遮挡，可选择是否用js点击
         :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
-        :param wait_loading: 等待页面进入加载状态超时时间
+        :param timeout: 模拟点击的超时时间，等待元素可见、不被遮挡、进入视口
         :return: 是否点击成功
         """
-        return self.left(by_js, wait_loading)
+        return self.left(by_js, timeout)
 
-    def left(self, by_js=None, wait_loading=0):
+    def left(self, by_js=False, timeout=1):
         """点击元素
         如果遇到遮挡，可选择是否用js点击
         :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
-        :param wait_loading: 等待页面进入加载状态超时时间
+        :param timeout: 模拟点击的超时时间，等待元素可见、不被遮挡、进入视口
         :return: 是否点击成功
         """
         if not by_js:
             try:
                 self._ele.scroll.to_see()
-                if self._ele.states.is_in_viewport and not self._ele.states.is_covered:
-                    client_x, client_y = self._ele.locations.viewport_click_point
+                can_click = False
+
+                timeout = self._ele.page.timeout if timeout is None else timeout
+                if timeout == 0:
+                    if self._ele.states.is_in_viewport and self._ele.states.is_enabled and self._ele.states.is_displayed:
+                        can_click = True
+                else:
+                    end_time = perf_counter() + timeout
+                    while perf_counter() < end_time or timeout == 0:
+                        if self._ele.states.is_in_viewport and self._ele.states.is_enabled and self._ele.states.is_displayed:
+                            can_click = True
+                            break
+
+                if not self._ele.states.is_in_viewport:
+                    by_js = True
+
+                elif can_click and (by_js is False or not self._ele.states.is_covered):
+                    client_x, client_y = self._ele.locations.viewport_midpoint if self._ele.tag == 'input' \
+                        else self._ele.locations.viewport_click_point
                     self._click(client_x, client_y)
-                    self._ele.page.wait.load_start(wait_loading)
                     return True
 
             except NoRectError:
@@ -1666,9 +1774,10 @@ class Click(object):
 
         if by_js is not False:
             self._ele.run_js('this.click();')
-            self._ele.page.wait.load_start(wait_loading)
             return True
 
+        if Settings.raise_click_failed:
+            raise CanNotClickError
         return False
 
     def right(self):
@@ -1871,7 +1980,8 @@ class ChromiumSelect(object):
         if not self.is_multi:
             raise TypeError("只能对多项选框执行反选。")
         for i in self.options:
-            i.click(by_js=True)
+            mode = 'false' if i.states.is_selected else 'true'
+            i.run_js(f'this.selected={mode};')
 
     def clear(self):
         """清除所有已选项"""

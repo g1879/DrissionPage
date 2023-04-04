@@ -83,7 +83,8 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
             else:
                 raise TypeError('driver_or_options参数只能接收ChromiumDriver, ChromiumOptions、None或False。')
 
-        self.address = self._driver_options.debugger_address
+        self.address = self._driver_options.debugger_address.replace('localhost',
+                                                                     '127.0.0.1').lstrip('http://').lstrip('https://')
 
         # Session配置
         if isinstance(se_opt, Session):
@@ -362,18 +363,18 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
             selenium_user_agent = self.run_cdp('Runtime.evaluate', expression='navigator.userAgent;')['result']['value']
             self.session.headers.update({"User-Agent": selenium_user_agent})
 
-        set_session_cookies(self.session, self._get_driver_cookies(as_dict=True))
+        # set_session_cookies(self.session, self._get_driver_cookies(as_dict=True))
         # set_session_cookies(self.session, self._get_driver_cookies(all_domains=True))
-        # set_session_cookies(self.session, self._get_driver_cookies())
+        set_session_cookies(self.session, self._get_driver_cookies())
 
     def cookies_to_browser(self):
         """把session对象的cookies复制到浏览器"""
         if not self._has_driver:
             return
 
-        set_browser_cookies(self, super().get_cookies(as_dict=True))
+        # set_browser_cookies(self, super().get_cookies(as_dict=True))
         # set_browser_cookies(self, super().get_cookies(all_domains=True))
-        # set_browser_cookies(self, super().get_cookies())
+        set_browser_cookies(self, super().get_cookies())
 
     def get_cookies(self, as_dict=False, all_domains=False, all_info=False):
         """返回cookies

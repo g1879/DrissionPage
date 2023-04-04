@@ -89,7 +89,8 @@ def set_paths(driver_path=None,
         om.set_item('chrome_options', 'debugger_address', f'127.0.0.1:{local_port}')
 
     if debugger_address is not None:
-        om.set_item('chrome_options', 'debugger_address', debugger_address)
+        address = debugger_address.replace('localhost', '127.0.0.1').lstrip('http://').lstrip('https://')
+        om.set_item('chrome_options', 'debugger_address', address)
 
     if download_path is not None:
         om.set_item('paths', 'download_path', format_path(download_path))
@@ -150,7 +151,7 @@ def set_headless(on_off=True, ini_path=None):
     :param ini_path: 要修改的ini文件路径
     :return: None
     """
-    on_off = None if on_off else False
+    on_off = 'new' if on_off else False
     set_argument('--headless', on_off, ini_path)
 
 
@@ -338,7 +339,10 @@ def get_chrome_path(ini_path=None,
 
     # -----------从系统变量中获取--------------
     if from_system_path:
-        paths = popen('set path').read().encode('gbk').decode('utf-8').lower()
+        try:
+            paths = popen('set path').read().lower()
+        except:
+            return None
         r = search(r'[^;]*chrome[^;]*', paths)
 
         if r:

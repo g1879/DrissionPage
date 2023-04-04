@@ -15,6 +15,7 @@ from .chromium_base import ChromiumBase, Timeout, ChromiumBaseSetter, ChromiumBa
 from .chromium_driver import ChromiumDriver
 from .chromium_tab import ChromiumTab
 from .commons.browser import connect_browser
+from .commons.tools import port_is_using
 from .commons.web import set_session_cookies
 from .configs.chromium_options import ChromiumOptions
 from .errors import CallMethodError, BrowserConnectError
@@ -57,7 +58,8 @@ class ChromiumPage(ChromiumBase):
         else:
             raise TypeError('只能接收ChromiumDriver或ChromiumOptions类型参数。')
 
-        self.address = self._driver_options.debugger_address
+        self.address = self._driver_options.debugger_address.replace('localhost',
+                                                                     '127.0.0.1').lstrip('http://').lstrip('https://')
 
     def _set_runtime_settings(self):
         """设置运行时用到的属性"""
@@ -108,7 +110,10 @@ class ChromiumPage(ChromiumBase):
             pass
 
         self._process_id = None
-        for i in self.browser_driver.SystemInfo.getProcessInfo()['processInfo']:
+        r = self.browser_driver.SystemInfo.getProcessInfo()
+        if 'processInfo' not in r:
+            return None
+        for i in r['processInfo']:
             if i['type'] == 'browser':
                 self._process_id = i['id']
                 break
@@ -189,16 +194,30 @@ class ChromiumPage(ChromiumBase):
         tab_id = tab_id or self.tab_id
         return ChromiumTab(self, tab_id)
 
+    def find_tabs(self, text, by_title=True, by_url=None):
+        """查找符合条件的tab，返回它们的id组成的列表
+        :param text: 查询条件
+        :param by_title: 是否匹配title
+        :param by_url: 是否匹配url
+        :return: tab id组成的列表
+        """
+        if not (by_title or by_url):
+            return self.tabs
+
+        tabs = self._control_session.get(f'http://{self.address}/json').json()  # 不要改用cdp
+        return [i['id'] for i in tabs if i['type'] == 'page' and ((by_url and text in i['url']) or
+                                                                  (by_title and text in i['title']))]
+
     def new_tab(self, url=None, switch_to=True):
         """新建一个标签页,该标签页在最后面
         :param url: 新标签页跳转到的网址
         :param switch_to: 新建标签页后是否把焦点移过去
-        :return: None
+        :return: 新标签页的id
         """
         if switch_to:
             begin_tabs = set(self.tabs)
             len_tabs = len(begin_tabs)
-            self.run_cdp('Target.createTarget', url='')
+            tid = self.run_cdp('Target.createTarget', url='')['targetId']
 
             tabs = self.tabs
             while len(tabs) == len_tabs:
@@ -211,10 +230,12 @@ class ChromiumPage(ChromiumBase):
                 self.get(url)
 
         elif url:
-            self.run_cdp('Target.createTarget', url=url)
+            tid = self.run_cdp('Target.createTarget', url=url)['targetId']
 
         else:
-            self.run_cdp('Target.createTarget', url='')
+            tid = self.run_cdp('Target.createTarget', url='')['targetId']
+
+        return tid
 
     def to_main_tab(self):
         """跳转到主标签页"""
@@ -254,7 +275,7 @@ class ChromiumPage(ChromiumBase):
 
         self.driver.stop()
         self._driver_init(tab_id)
-        if read_doc and self.ready_state == 'complete':
+        if read_doc and self.ready_state in ('complete', None):
             self._get_document()
 
     def close_tabs(self, tabs_or_ids=None, others=False):
@@ -308,15 +329,15 @@ class ChromiumPage(ChromiumBase):
         :param accept: True表示确认，False表示取消，其它值不会按按钮但依然返回文本值
         :param send: 处理prompt提示框时可输入文本
         :param timeout: 等待提示框出现的超时时间，为None则使用self.timeout属性的值
-        :return: 提示框内容文本，未等到提示框则返回None
+        :return: 提示框内容文本，未等到提示框则返回False
         """
-        timeout = timeout or self.timeout
+        timeout = self.timeout if timeout is None else timeout
         timeout = .1 if timeout <= 0 else timeout
         end_time = perf_counter() + timeout
         while not self._alert.activated and perf_counter() < end_time:
             sleep(.1)
         if not self._alert.activated:
-            return None
+            return False
 
         res_text = self._alert.text
         if self._alert.type == 'prompt':
@@ -329,6 +350,9 @@ class ChromiumPage(ChromiumBase):
         """关闭浏览器"""
         self._tab_obj.Browser.close()
         self._tab_obj.stop()
+        ip, port = self.address.split(':')
+        while port_is_using(ip, port):
+            sleep(.1)
 
     def _on_alert_close(self, **kwargs):
         """alert关闭时触发的方法"""
@@ -396,6 +420,16 @@ class ChromiumPageWaiter(ChromiumBaseWaiter):
         :return: 是否等到下载开始
         """
         return self._driver.download_set.wait_download_begin(timeout)
+
+    def new_tab(self, timeout=None):
+        """等待新标签页出现
+        :param timeout: 等待超时时间，为None则使用页面对象timeout属性
+        :return: 是否等到下载开始
+        """
+        timeout = timeout if timeout is not None else self._driver.timeout
+        end_time = perf_counter() + timeout
+        while self._driver.tab_id == self._driver.latest_tab and perf_counter() < end_time:
+            sleep(.01)
 
 
 class ChromiumTabRect(object):
@@ -719,7 +753,7 @@ def show_or_hide_browser(page, hide=True):
     :param hide: 是否隐藏
     :return: None
     """
-    if not page.address.startswith(('localhost', '127.0.0.1')):
+    if not page.address.startswith(('127.0.0.1', 'localhost')):
         return
 
     if system().lower() != 'windows':

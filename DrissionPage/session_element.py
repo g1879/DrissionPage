@@ -82,73 +82,104 @@ class SessionElement(DrissionElement):
         """
         return super().parent(level_or_loc)
 
-    def prev(self, filter_loc='', index=1, timeout=None):
-        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 前面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素
+    def child(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回当前元素的一个符合条件的直接子元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 直接子元素或节点文本
         """
-        return super().prev(index, filter_loc, timeout)
+        return super().child(index, filter_loc, timeout, ele_only=ele_only)
 
-    def next(self, filter_loc='', index=1, timeout=None):
-        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 后面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素
+    def prev(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回当前元素前面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 前面第几个查询结果，1开始
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素
         """
-        return super().next(index, filter_loc, timeout)
+        return super().prev(index, filter_loc, timeout, ele_only=ele_only)
 
-    def before(self, filter_loc='', index=1, timeout=None):
-        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 前面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
+    def next(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回当前元素后面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素
+        """
+        return super().next(index, filter_loc, timeout, ele_only=ele_only)
+
+    def before(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回文档中当前元素前面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 前面第几个查询结果，1开始
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的某个元素或节点
         """
-        return super().before(index, filter_loc, timeout)
+        return super().before(index, filter_loc, timeout, ele_only=ele_only)
 
-    def after(self, filter_loc='', index=1, timeout=None):
-        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 后面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
+    def after(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回文档中此当前元素后面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 第几个查询结果，1开始
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素后面的某个元素或节点
         """
-        return super().after(index, filter_loc, timeout)
+        return super().after(index, filter_loc, timeout, ele_only=ele_only)
 
-    def prevs(self, filter_loc='', timeout=None):
-        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
+    def children(self, filter_loc='', timeout=0, ele_only=True):
+        """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 直接子元素或节点文本组成的列表
         """
-        return super().prevs(filter_loc, timeout)
+        return super().children(filter_loc, timeout, ele_only=ele_only)
 
-    def nexts(self, filter_loc='', timeout=None):
-        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
+    def prevs(self, filter_loc='', timeout=None, ele_only=True):
+        """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素或节点文本组成的列表
         """
-        return super().nexts(filter_loc, timeout)
+        return super().prevs(filter_loc, timeout, ele_only=ele_only)
 
-    def befores(self, filter_loc='', timeout=None):
-        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+    def nexts(self, filter_loc='', timeout=None, ele_only=True):
+        """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素或节点文本组成的列表
+        """
+        return super().nexts(filter_loc, timeout, ele_only=ele_only)
+
+    def befores(self, filter_loc='', timeout=None, ele_only=True):
+        """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的元素或节点组成的列表
         """
-        return super().befores(filter_loc, timeout)
+        return super().befores(filter_loc, timeout, ele_only=ele_only)
 
-    def afters(self, filter_loc='', timeout=None):
-        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+    def afters(self, filter_loc='', timeout=None, ele_only=True):
+        """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 此参数不起实际作用
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素后面的元素或节点组成的列表
         """
-        return super().afters(filter_loc, timeout)
+        return super().afters(filter_loc, timeout, ele_only=ele_only)
 
     def attr(self, attr):
         """返回attribute属性值

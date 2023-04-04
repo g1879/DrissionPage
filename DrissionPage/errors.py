@@ -50,3 +50,7 @@ class BrowserConnectError(BaseError):
 
 class NoResourceError(BaseError):
     _info = '该元素无可保存的内容或保存失败。'
+
+
+class CanNotClickError(BaseError):
+    _info = '该元素无法滚动到视口或被遮挡，无法点击。'

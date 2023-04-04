@@ -4,12 +4,14 @@
 @Contact :   g1879@qq.com
 """
 from re import search
+from threading import Thread
 from time import sleep, perf_counter
 from warnings import warn
 
+from .chromium_base import ChromiumBase, ChromiumPageScroll, ChromiumBaseSetter, ChromiumBaseWaiter
+from .chromium_element import ChromiumElement, ChromiumElementWaiter
 from .commons.tools import get_usable_path
-from .chromium_base import ChromiumBase, ChromiumPageScroll, ChromiumBaseSetter
-from .chromium_element import ChromiumElement
+from .errors import ContextLossError
 
 
 class ChromiumFrame(ChromiumBase):
@@ -36,6 +38,10 @@ class ChromiumFrame(ChromiumBase):
         end_time = perf_counter() + 2
         while perf_counter() < end_time and self.url == 'about:blank':
             sleep(.1)
+
+        t = Thread(target=self._check_alive)
+        t.daemon = True
+        t.start()
 
     def __call__(self, loc_or_str, timeout=None):
         """在内部查找元素
@@ -108,7 +114,8 @@ class ChromiumFrame(ChromiumBase):
             if self._debug:
                 print('---获取document')
 
-            while True:
+            end_time = perf_counter() + 3
+            while self.is_alive and perf_counter() < end_time:
                 try:
                     if self._is_diff_domain is False:
                         node = self.page.run_cdp('DOM.describeNode', backendNodeId=self.ids.backend_id)['node']
@@ -121,7 +128,10 @@ class ChromiumFrame(ChromiumBase):
                     break
 
                 except Exception:
-                    pass
+                    sleep(.1)
+
+            # else:
+            #     raise RuntimeError('获取document失败。')
 
             if self._debug:
                 print('---获取document结束')
@@ -131,7 +141,7 @@ class ChromiumFrame(ChromiumBase):
 
     def _onFrameNavigated(self, **kwargs):
         """页面跳转时触发"""
-        if kwargs['frame']['frameId'] == self.frame_id and self._first_run is False and self._is_loading:
+        if kwargs['frame']['id'] == self.frame_id and self._first_run is False and self._is_loading:
             self._is_loading = True
 
             if self._debug:
@@ -271,11 +281,26 @@ class ChromiumFrame(ChromiumBase):
                 return 'complete'
 
         else:
-            while True:
+            end_time = perf_counter() + 3
+            while self.is_alive and perf_counter() < end_time:
                 try:
                     return self.doc_ele.run_js('return this.readyState;')
-                except:
-                    pass
+                except ContextLossError:
+                    try:
+                        node = self.run_cdp('DOM.describeNode', backendNodeId=self.frame_ele.ids.backend_id)['node']
+                        doc = ChromiumElement(self.page, backend_id=node['contentDocument']['backendNodeId'])
+                        return doc.run_js('return this.readyState;')
+                    except:
+                        pass
+
+                sleep(.1)
+
+            # raise RuntimeError('获取document失败。')
+
+    @property
+    def is_alive(self):
+        """返回是否仍可用"""
+        return self.states.is_alive
 
     @property
     def scroll(self):
@@ -292,9 +317,14 @@ class ChromiumFrame(ChromiumBase):
     @property
     def states(self):
         """返回用于获取状态信息的对象"""
-        if self._states is None:
-            self._states = ChromiumFrameStates(self)
-        return self._states
+        return self.frame_ele.states
+
+    @property
+    def wait(self):
+        """返回用于等待的对象"""
+        if self._wait is None:
+            self._wait = FrameWaiter(self)
+        return self._wait
 
     def refresh(self):
         """刷新frame页面"""
@@ -338,81 +368,93 @@ class ChromiumFrame(ChromiumBase):
         self._check_ok()
         return self.frame_ele.parent(level_or_loc)
 
-    def prev(self, filter_loc='', index=1, timeout=0):
-        """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 前面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素
+    def prev(self, filter_loc='', index=1, timeout=0, ele_only=True):
+        """返回当前元素前面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 前面第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素或节点
         """
         self._check_ok()
-        return self.frame_ele.prev(filter_loc, index, timeout)
+        return self.frame_ele.prev(filter_loc, index, timeout, ele_only=ele_only)
 
-    def next(self, filter_loc='', index=1, timeout=0):
-        """返回后面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 后面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素
+    def next(self, filter_loc='', index=1, timeout=0, ele_only=True):
+        """返回当前元素后面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 后面第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素或节点
         """
         self._check_ok()
-        return self.frame_ele.next(filter_loc, index, timeout)
+        return self.frame_ele.next(filter_loc, index, timeout, ele_only=ele_only)
 
-    def before(self, filter_loc='', index=1, timeout=None):
-        """返回当前元素前面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 前面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
+    def before(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回文档中当前元素前面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 前面第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的某个元素或节点
         """
         self._check_ok()
-        return self.frame_ele.before(filter_loc, index, timeout)
+        return self.frame_ele.before(filter_loc, index, timeout, ele_only=ele_only)
 
-    def after(self, filter_loc='', index=1, timeout=None):
-        """返回当前元素后面的一个元素，可指定筛选条件和第几个。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param index: 后面第几个查询结果元素
-        :param timeout: 查找元素的超时时间
+    def after(self, filter_loc='', index=1, timeout=None, ele_only=True):
+        """返回文档中此当前元素后面符合条件的第一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param index: 后面第几个查询结果，1开始
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素后面的某个元素或节点
         """
         self._check_ok()
-        return self.frame_ele.after(filter_loc, index, timeout)
+        return self.frame_ele.after(filter_loc, index, timeout, ele_only=ele_only)
 
-    def prevs(self, filter_loc='', timeout=0):
-        """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
+    def prevs(self, filter_loc='', timeout=0, ele_only=True):
+        """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素或节点文本组成的列表
         """
         self._check_ok()
-        return self.frame_ele.prevs(filter_loc, timeout)
+        return self.frame_ele.prevs(filter_loc, timeout, ele_only=ele_only)
 
-    def nexts(self, filter_loc='', timeout=0):
-        """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
-        :return: 兄弟元素或节点文本组成的列表
+    def nexts(self, filter_loc='', timeout=0, ele_only=True):
+        """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
+        :return: 同级元素或节点文本组成的列表
         """
         self._check_ok()
-        return self.frame_ele.nexts(filter_loc, timeout)
+        return self.frame_ele.nexts(filter_loc, timeout, ele_only=ele_only)
 
-    def befores(self, filter_loc='', timeout=None):
-        """返回当前元素后面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+    def befores(self, filter_loc='', timeout=None, ele_only=True):
+        """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的元素或节点组成的列表
         """
         self._check_ok()
-        return self.frame_ele.befores(filter_loc, timeout)
+        return self.frame_ele.befores(filter_loc, timeout, ele_only=ele_only)
 
-    def afters(self, filter_loc='', timeout=None):
-        """返回当前元素后面符合条件的全部兄弟元素或节点组成的列表，可用查询语法筛选。查找范围不限兄弟元素，而是整个DOM文档
-        :param filter_loc: 用于筛选元素的查询语法
-        :param timeout: 查找元素的超时时间
+    def afters(self, filter_loc='', timeout=None, ele_only=True):
+        """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
+        查找范围不限同级元素，而是整个DOM文档
+        :param filter_loc: 用于筛选的查询语法
+        :param timeout: 查找节点的超时时间
+        :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的元素或节点组成的列表
         """
         self._check_ok()
-        return self.frame_ele.afters(filter_loc, timeout)
+        return self.frame_ele.afters(filter_loc, timeout, ele_only=ele_only)
 
     def get_screenshot(self, path=None, as_bytes=None, as_base64=None):
         """对页面进行截图，可对整个网页、可见网页、指定范围截图。对可视范围外截图需要90以上版本浏览器支持
@@ -538,7 +580,7 @@ class ChromiumFrame(ChromiumBase):
 
             if t < times:
                 sleep(interval)
-                while self.ready_state != 'complete':
+                while self.ready_state not in ('complete', None):
                     sleep(.1)
                 if self._debug:
                     print('重试')
@@ -555,6 +597,12 @@ class ChromiumFrame(ChromiumBase):
     def _is_inner_frame(self):
         """返回当前frame是否同域"""
         return self.frame_id in str(self.page.run_cdp('Page.getFrameTree')['frameTree'])
+
+    def _check_alive(self):
+        """检测iframe是否有效线程方法"""
+        while self.is_alive:
+            sleep(1)
+        self.driver.stop()
 
     # -------------准备废弃------------
     def set_attr(self, attr, value):
@@ -622,16 +670,6 @@ class ChromiumFrameIds(object):
         return self._frame.frame_ele.ids.node_id
 
 
-class ChromiumFrameStates(object):
-    def __init__(self, frame):
-        self._frame = frame
-
-    def is_displayed(self):
-        """返回frame元素是否显示"""
-        self._frame._check_ok()
-        return self._frame.frame_ele.states.is_displayed
-
-
 class ChromiumFrameScroll(ChromiumPageScroll):
     def __init__(self, frame):
         """
@@ -660,3 +698,12 @@ class ChromiumFrameSetter(ChromiumBaseSetter):
         """
         self._page._check_ok()
         self._page.frame_ele.set.attr(attr, value)
+
+
+class FrameWaiter(ChromiumBaseWaiter, ChromiumElementWaiter):
+    def __init__(self, frame):
+        """
+        :param frame: ChromiumFrame对象
+        """
+        super().__init__(frame)
+        super(ChromiumBaseWaiter, self).__init__(frame, frame.frame_ele)

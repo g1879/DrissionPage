@@ -82,6 +82,11 @@ class SessionPage(BasePage):
         return self._url
 
     @property
+    def _session_url(self):
+        """返回当前访问url"""
+        return self._url
+
+    @property
     def html(self):
         """返回页面的html文本"""
         return self.response.text if self.response else ''
@@ -191,7 +196,7 @@ class SessionPage(BasePage):
             cookies = self.session.cookies
         else:
             if self.url:
-                ex_url = extract(self.url)
+                ex_url = extract(self._session_url)
                 domain = f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain
 
                 cookies = tuple(x for x in self.session.cookies if domain in x.domain or x.domain == '')
@@ -339,6 +344,14 @@ class SessionPage(BasePage):
 class SessionPageSetter(object):
     def __init__(self, page):
         self._page = page
+
+    def retry_times(self, times):
+        """设置连接失败时重连次数"""
+        self._page.retry_times = times
+
+    def retry_interval(self, interval):
+        """设置连接失败时重连间隔"""
+        self._page.retry_interval = interval
 
     def timeout(self, second):
         """设置连接超时时间
