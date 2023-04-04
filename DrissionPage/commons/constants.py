@@ -12,6 +12,7 @@ ERROR = 'error'
 
 class Settings(object):
     raise_ele_not_found = False
+    raise_click_failed = False
 
 
 class NoneElement(object):

@@ -108,7 +108,7 @@ def str_to_loc(loc):
     elif loc.startswith(('css:', 'css=')) and loc not in ('css:', 'css='):
         loc_by = 'css selector'
         loc_str = loc[4:]
-    elif loc.startswith(('c:', 'cx=')) and loc not in ('c:', 'cx='):
+    elif loc.startswith(('c:', 'c=')) and loc not in ('c:', 'c='):
         loc_by = 'css selector'
         loc_str = loc[2:]
 

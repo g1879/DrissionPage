@@ -42,3 +42,6 @@ def set_session_cookies(session: Session, cookies: Union[RequestsCookieJar, list
 
 
 def set_browser_cookies(page: ChromiumBase, cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None: ...
+
+
+def is_cookie_in_driver(page: ChromiumBase, cookie: dict) -> bool: ...

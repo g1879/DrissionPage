@@ -183,7 +183,7 @@ def cookie_to_dict(cookie):
         cookie_dict = {}
 
         for key, attr in enumerate(cookie):
-            attr_val = attr.lstrip().split('=')
+            attr_val = attr.lstrip().split('=', 1)
 
             if key == 0:
                 cookie_dict['name'] = attr_val[0]
@@ -253,15 +253,42 @@ def set_browser_cookies(page, cookies):
             cookie.pop('expiry')
         if 'expires' in cookie:
             cookie['expires'] = int(cookie['expires'])
-
-        if not cookie.get('domain', None):
-            ex_url = extract(page._browser_url)
-            cookie['domain'] = f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain
-
         if cookie['value'] is None:
             cookie['value'] = ''
 
-        try:
+        if cookie.get('domain', None):
+            try:
+                page.run_cdp_loaded('Network.setCookie', **cookie)
+                if is_cookie_in_driver(page, cookie):
+                    continue
+            except Exception:
+                pass
+
+        ex_url = extract(page._browser_url)
+        d_list = ex_url.subdomain.split('.')
+        d_list.append(f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain)
+
+        tmp = [d_list[0]]
+        if len(d_list) > 1:
+            for i in d_list[1:]:
+                tmp.append('.')
+                tmp.append(i)
+
+        for i in range(len(tmp)):
+            d = ''.join(tmp[i:])
+            cookie['domain'] = d
             page.run_cdp_loaded('Network.setCookie', **cookie)
-        except Exception:
-            pass
+            if is_cookie_in_driver(page, cookie):
+                break
+
+
+def is_cookie_in_driver(page, cookie):
+    """查询cookie是否在浏览器内
+    :param page: BasePage对象
+    :param cookie: dict格式cookie
+    :return: bool
+    """
+    for c in page.get_cookies():
+        if cookie['name'] == c['name'] and cookie['value'] == c['value']:
+            return True
+    return False

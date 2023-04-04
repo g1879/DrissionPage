@@ -21,12 +21,11 @@ def connect_browser(option):
     :param option: DriverOptions对象
     :return: chrome 路径和进程对象组成的元组
     """
-    debugger_address = option.debugger_address
+    debugger_address = option.debugger_address.replace('localhost', '127.0.0.1').lstrip('http://').lstrip('https://')
     chrome_path = option.browser_path
 
-    debugger_address = debugger_address[7:] if debugger_address.startswith('http://') else debugger_address
     ip, port = debugger_address.split(':')
-    if ip not in ('127.0.0.1', 'localhost'):
+    if ip != '127.0.0.1':
         test_connect(ip, port)
         return None, None
 
@@ -63,13 +62,17 @@ def get_launch_args(opt):
     # ----------处理arguments-----------
     result = set()
     has_user_path = False
+    remote_allow = False
     for i in opt.arguments:
         if i.startswith(('--load-extension=', '--remote-debugging-port=')):
             continue
         elif i.startswith('--user-data-dir') and not opt.system_user_path:
-            p = Path(i[16:]).absolute()
-            result.add(f'--user-data-dir={p}')
+            result.add(f'--user-data-dir={Path(i[16:]).absolute()}')
             has_user_path = True
+            continue
+        elif i.startswith('--remote-allow-origins='):
+            remote_allow = True
+
         result.add(i)
 
     if not has_user_path and not opt.system_user_path:
@@ -77,6 +80,9 @@ def get_launch_args(opt):
         path = Path(gettempdir()) / 'DrissionPage' / f'userData_{port}'
         path.mkdir(parents=True, exist_ok=True)
         result.add(f'--user-data-dir={path}')
+
+    if not remote_allow:
+        result.add('--remote-allow-origins=*')
 
     result = list(result)
 
@@ -144,7 +150,7 @@ def test_connect(ip, port):
     end_time = perf_counter() + 6
     while perf_counter() < end_time:
         try:
-            tabs = requests_get(f'http://{ip}:{port}/json', timeout=3).json()
+            tabs = requests_get(f'http://{ip}:{port}/json', timeout=10).json()
             for tab in tabs:
                 if tab['type'] == 'page':
                     return
@@ -152,8 +158,9 @@ def test_connect(ip, port):
             sleep(.2)
 
     if ip in ('127.0.0.1', 'localhost'):
-        raise BrowserConnectError(f'\n连接浏览器失败，可能原因：\n1、{port}端口不是Chromium内核浏览器\n'
-                                  f'2、该浏览器未允许控制\n3、和已打开的浏览器冲突，请关闭')
+        raise BrowserConnectError(f'\n连接浏览器失败，可能原因：\n1、浏览器未启动\n2、{port}端口不是Chromium内核浏览器\n'
+                                  f'3、该浏览器未允许控制\n4、和已打开的浏览器冲突\n'
+                                  f'请尝试用ChromiumOptions指定别的端口和指定浏览器路径')
     raise BrowserConnectError(f'{ip}:{port}浏览器无法链接。')
 
 
@@ -164,7 +171,9 @@ def _run_browser(port, path: str, args) -> Popen:
     :param args: 启动参数
     :return: 进程对象
     """
-    arguments = [path, f'--remote-debugging-port={port}']
+    p = Path(path)
+    p = str(p / 'chrome') if p.is_dir() else str(path)
+    arguments = [p, f'--remote-debugging-port={port}']
     arguments.extend(args)
     return Popen(arguments, shell=False)
 
