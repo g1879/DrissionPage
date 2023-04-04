@@ -115,6 +115,7 @@ class ChromiumOptions(object):
     @debugger_address.setter
     def debugger_address(self, address):
         """设置浏览器地址，格式ip:port"""
+        address = address.replace('localhost', '127.0.0.1').lstrip('http://').lstrip('https://')
         self._debugger_address = address
 
     @property
@@ -238,7 +239,7 @@ class ChromiumOptions(object):
         :param on_off: 开或关
         :return: 当前对象
         """
-        on_off = None if on_off else False
+        on_off = 'new' if on_off else False
         return self.set_argument('--headless', on_off)
 
     def set_no_imgs(self, on_off=True):
@@ -313,7 +314,7 @@ class ChromiumOptions(object):
             self._auto_port = False
 
         if debugger_address is not None:
-            self._debugger_address = debugger_address
+            self.debugger_address = debugger_address
 
         if download_path is not None:
             self._download_path = str(download_path)
