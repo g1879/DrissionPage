@@ -6,7 +6,6 @@
 from re import search
 from time import sleep
 from urllib.parse import urlparse
-from warnings import warn
 
 from DownloadKit import DownloadKit
 from requests import Session, Response
@@ -328,27 +327,6 @@ class SessionPage(BasePage):
             if show_errmsg:
                 raise ConnectionError(f'状态码：{r.status_code}')
             return r, f'状态码：{r.status_code}'
-
-    def set_cookies(self, cookies):
-        """为Session对象设置cookies
-        :param cookies: cookies信息
-        :return: None
-        """
-        warn("set_cookies()方法即将弃用，请用set.cookies()方法代替。", DeprecationWarning)
-        self.set.cookies(cookies)
-
-    def set_headers(self, headers):
-        """设置通用的headers，设置的headers值回逐个覆盖原有的，不会清理原来的
-        :param headers: dict形式的headers
-        :return: None
-        """
-        warn("set_headers()方法即将弃用，请用set.headers()方法代替。", DeprecationWarning)
-        self.set.headers(headers)
-
-    def set_user_agent(self, ua):
-        """设置user agent"""
-        warn("set_user_agent()方法即将弃用，请用set.user_agent()方法代替。", DeprecationWarning)
-        self.set.user_agent(ua)
 
 
 class SessionPageSetter(object):
