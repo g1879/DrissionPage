@@ -157,7 +157,7 @@ def make_absolute_link(link, page=None):
 def is_js_func(func):
     """检查文本是否js函数"""
     func = func.strip()
-    if func.startswith('function') or func.startswith('async '):
+    if (func.startswith('function') or func.startswith('async ')) and func.endswith('}'):
         return True
     elif '=>' in func:
         return True
