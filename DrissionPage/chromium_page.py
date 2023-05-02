@@ -194,19 +194,22 @@ class ChromiumPage(ChromiumBase):
         tab_id = tab_id or self.tab_id
         return ChromiumTab(self, tab_id)
 
-    def find_tabs(self, text, by_title=True, by_url=None):
+    def find_tabs(self, text=None, by_title=True, by_url=None, special=False):
         """查找符合条件的tab，返回它们的id组成的列表
         :param text: 查询条件
         :param by_title: 是否匹配title
         :param by_url: 是否匹配url
+        :param special: 是否匹配特殊tab，如打印页
         :return: tab id组成的列表
         """
-        if not (by_title or by_url):
-            return self.tabs
-
         tabs = self._control_session.get(f'http://{self.address}/json').json()  # 不要改用cdp
-        return [i['id'] for i in tabs if i['type'] == 'page' and ((by_url and text in i['url']) or
-                                                                  (by_title and text in i['title']))]
+        if text is None or not (by_title or by_url):
+            return [i['id'] for i in tabs if (not special and i['type'] == 'page')
+                    or (special and i['type'] not in ('page', 'iframe'))]
+
+        return [i['id'] for i in tabs if ((not special and i['type'] == 'page')
+                                          or (special and i['type'] not in ('page', 'iframe')))
+                and ((by_url and text in i['url']) or (by_title and text in i['title']))]
 
     def new_tab(self, url=None, switch_to=True):
         """新建一个标签页,该标签页在最后面
@@ -374,46 +377,12 @@ class ChromiumPage(ChromiumBase):
         self._alert.response_text = None
         self._tab_obj.has_alert = True
 
-    # --------------准备弃用-------------
-    def set_main_tab(self, tab_id=None):
-        """设置主tab
-        :param tab_id: 标签页id，不传入则设置当前tab
-        :return: None
-        """
-        warn("set_main_tab()方法即将弃用，请用set.main_tab()方法代替。", DeprecationWarning)
-        self.set.main_tab(tab_id)
-
-    @property
-    def set_window(self):
-        """返回用于设置窗口大小的对象"""
-        warn("set_window()方法即将弃用，请用set.window.xxxx()方法代替。", DeprecationWarning)
-        return WindowSetter(self)
-
-    def wait_download_begin(self, timeout=None):
-        """等待浏览器下载开始
-        :param timeout: 等待超时时间，为None则使用页面对象timeout属性
-        :return: 是否等到下载开始
-        """
-        warn("wait_download_begin()方法即将弃用，请用wait.download_begin()方法代替。", DeprecationWarning)
-        return self.download_set.wait_download_begin(timeout)
-
-    def hide_browser(self):
-        """隐藏浏览器窗口，只在Windows系统可用"""
-        warn("hide_browser()方法即将弃用，请用set.hide()方法代替。", DeprecationWarning)
-        show_or_hide_browser(self, hide=True)
-
-    def show_browser(self):
-        """显示浏览器窗口，只在Windows系统可用"""
-        warn("show_browser()方法即将弃用，请用set.show()方法代替。", DeprecationWarning)
-        show_or_hide_browser(self, hide=False)
-
-    def to_front(self):
-        """激活当前标签页使其处于最前面"""
-        warn("to_front()方法即将弃用，请用set.tab_to_front()方法代替。", DeprecationWarning)
-        self.set.tab_to_front()
-
 
 class ChromiumPageWaiter(ChromiumBaseWaiter):
+    def __init__(self, page: ChromiumBase):
+        super().__init__(page)
+        self._listener = None
+
     def download_begin(self, timeout=None):
         """等待浏览器下载开始
         :param timeout: 等待超时时间，为None则使用页面对象timeout属性

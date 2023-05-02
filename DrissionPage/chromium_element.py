@@ -7,7 +7,6 @@ from os import sep
 from os.path import basename
 from pathlib import Path
 from time import perf_counter, sleep
-from warnings import warn
 
 from .base import DrissionElement, BaseElement
 from .commons.constants import FRAME_ELEMENT, NoneElement, Settings
@@ -40,7 +39,11 @@ class ChromiumElement(DrissionElement):
         self._tag = None
         self._wait = None
 
-        if node_id:
+        if node_id and obj_id and backend_id:
+            self._node_id = node_id
+            self._obj_id = obj_id
+            self._backend_id = backend_id
+        elif node_id:
             self._node_id = node_id
             self._obj_id = self._get_obj_id(node_id)
             self._backend_id = self._get_backend_id(self._node_id)
@@ -715,147 +718,6 @@ class ChromiumElement(DrissionElement):
         files = [str(Path(i).absolute()) for i in files]
         self.page.run_cdp('DOM.setFileInputFiles', files=files, backendNodeId=self._backend_id)
 
-    # ---------------准备废弃-----------------
-
-    def click_at(self, offset_x=None, offset_y=None, button='left'):
-        """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素左上角可接受点击的点
-        :param offset_x: 相对元素左上角坐标的x轴偏移量
-        :param offset_y: 相对元素左上角坐标的y轴偏移量
-        :param button: 左键还是右键
-        :return: None
-        """
-        warn("click_at()方法即将弃用，请用click.left_at()方法代替。", DeprecationWarning)
-        self.click.at(offset_x, offset_y, 'left')
-
-    def r_click(self):
-        """右键单击"""
-        warn("r_click()方法即将弃用，请用click.right()方法代替。", DeprecationWarning)
-        self.click.right()
-
-    def r_click_at(self, offset_x=None, offset_y=None):
-        """带偏移量右键单击本元素，相对于左上角坐标。不传入x或y值时点击元素中点
-        :param offset_x: 相对元素左上角坐标的x轴偏移量
-        :param offset_y: 相对元素左上角坐标的y轴偏移量
-        :return: None
-        """
-        warn("r_click_at()方法即将弃用，请用click.right_at()方法代替。", DeprecationWarning)
-        self.click.at(offset_x, offset_y, 'right')
-
-    def m_click(self):
-        """中键单击"""
-        warn("m_click()方法即将弃用，请用click.middle()方法代替。", DeprecationWarning)
-        self.click.middle()
-
-    @property
-    def client_location(self):
-        """返回元素左上角在视口中的坐标"""
-        warn("client_location属性即将弃用，请用locations.viewport_location代替。", DeprecationWarning)
-        return self.locations.viewport_location
-
-    @property
-    def client_midpoint(self):
-        """返回元素中间点在视口中的坐标"""
-        warn("client_midpoint属性即将弃用，请用locations.client_midpoint代替。", DeprecationWarning)
-        return self.locations.viewport_midpoint
-
-    @property
-    def midpoint(self):
-        """返回元素中间点的绝对坐标"""
-        warn("midpoint属性即将弃用，请用locations.midpoint代替。", DeprecationWarning)
-        return self.locations.midpoint
-
-    def set_attr(self, attr, value):
-        """设置元素attribute属性
-        :param attr: 属性名
-        :param value: 属性值
-        :return: None
-        """
-        warn("set_attr()方法即将弃用，请用set.attr()方法代替。", DeprecationWarning)
-        self.set.attr(attr, value)
-
-    def set_prop(self, prop, value):
-        """设置元素property属性
-        :param prop: 属性名
-        :param value: 属性值
-        :return: None
-        """
-        warn("set_prop()方法即将弃用，请用set.prop()方法代替。", DeprecationWarning)
-        self.set.prop(prop, value)
-
-    def set_innerHTML(self, html):
-        """设置元素innerHTML
-        :param html: html文本
-        :return: None
-        """
-        warn("set_innerHTML()方法即将弃用，请用set.innerHTML()方法代替。", DeprecationWarning)
-        self.set.innerHTML(html)
-
-    @property
-    def is_selected(self):
-        """返回元素是否被选择"""
-        warn("is_selected属性即将弃用，请用states.is_selected属性代替。", DeprecationWarning)
-        return self.states.is_selected
-
-    @property
-    def is_displayed(self):
-        """返回元素是否显示"""
-        warn("is_displayed属性即将弃用，请用states.is_displayed属性代替。", DeprecationWarning)
-        return self.states.is_displayed
-
-    @property
-    def is_enabled(self):
-        """返回元素是否可用"""
-        warn("is_enabled属性即将弃用，请用states.is_enabled属性代替。", DeprecationWarning)
-        return self.states.is_enabled
-
-    @property
-    def is_alive(self):
-        """返回元素是否仍在DOM中"""
-        warn("is_alive属性即将弃用，请用states.is_alive属性代替。", DeprecationWarning)
-        return self.states.is_alive
-
-    @property
-    def is_in_viewport(self):
-        """返回元素是否出现在视口中，以元素可以接受点击的点为判断"""
-        warn("is_in_viewport属性即将弃用，请用states.is_in_viewport属性代替。", DeprecationWarning)
-        return self.states.is_in_viewport
-
-    @property
-    def pseudo_before(self):
-        """返回当前元素的::before伪元素内容"""
-        warn("pseudo_before属性即将弃用，请用pseudo.before属性代替。", DeprecationWarning)
-        return self.pseudo.before
-
-    @property
-    def pseudo_after(self):
-        """返回当前元素的::after伪元素内容"""
-        warn("pseudo_after属性即将弃用，请用pseudo.after属性代替。", DeprecationWarning)
-        return self.pseudo.after
-
-    @property
-    def obj_id(self):
-        """返回js中的object id"""
-        warn("obj_id属性即将弃用，请用ids.obj_id属性代替。", DeprecationWarning)
-        return self._obj_id
-
-    @property
-    def node_id(self):
-        """返回cdp中的node id"""
-        warn("node_id属性即将弃用，请用ids.node_id属性代替。", DeprecationWarning)
-        return self._node_id
-
-    @property
-    def backend_id(self):
-        """返回backend id"""
-        warn("backend_id属性即将弃用，请用ids.backend_id属性代替。", DeprecationWarning)
-        return self._backend_id
-
-    @property
-    def doc_id(self):
-        """返回所在document的object id"""
-        warn("doc_id属性即将弃用，请用ids.doc_id属性代替。", DeprecationWarning)
-        return self._doc_id
-
 
 class ChromiumShadowRoot(BaseElement):
     """ChromiumShadowRoot是用于处理ShadowRoot的类，使用方法和ChromiumElement基本一致"""
@@ -1156,37 +1018,6 @@ class ChromiumShadowRoot(BaseElement):
         self._tag = r['localName'].lower()
         return r['backendNodeId']
 
-    # ------------准备废弃--------------
-    @property
-    def obj_id(self):
-        """返回js中的object id"""
-        warn("obj_id属性即将弃用，请用ids.obj_id属性代替。", DeprecationWarning)
-        return self._obj_id
-
-    @property
-    def node_id(self):
-        """返回cdp中的node id"""
-        warn("node_id属性即将弃用，请用ids.node_id属性代替。", DeprecationWarning)
-        return self._node_id
-
-    @property
-    def backend_id(self):
-        """返回backend id"""
-        warn("backend_id属性即将弃用，请用ids.backend_id属性代替。", DeprecationWarning)
-        return self._backend_id
-
-    @property
-    def is_enabled(self):
-        """返回元素是否可用"""
-        warn("is_enabled属性即将弃用，请用states.is_enabled属性代替。", DeprecationWarning)
-        return self.states.is_enabled
-
-    @property
-    def is_alive(self):
-        """返回元素是否仍在DOM中"""
-        warn("is_alive属性即将弃用，请用states.is_alive属性代替。", DeprecationWarning)
-        return self.states.is_alive
-
 
 class Ids(object):
     def __init__(self, ele):
@@ -1336,7 +1167,24 @@ def make_chromium_ele(page, node_id=None, obj_id=None):
     :param obj_id: 元素的object id
     :return: ChromiumElement对象或ChromiumFrame对象
     """
-    ele = ChromiumElement(page, obj_id=obj_id, node_id=node_id)
+    if node_id:
+        node = page.run_cdp('DOM.describeNode', nodeId=node_id)
+        if node['node']['nodeName'] in ('#text', '#comment'):
+            return node['node']['nodeValue']
+        backend_id = node['node']['backendNodeId']
+        obj_id = page.run_cdp('DOM.resolveNode', nodeId=node_id)['object']['objectId']
+
+    elif obj_id:
+        node = page.run_cdp('DOM.describeNode', objectId=obj_id)
+        if node['node']['nodeName'] in ('#text', '#comment'):
+            return node['node']['nodeValue']
+        backend_id = node['node']['backendNodeId']
+        node_id = node['node']['nodeId']
+
+    else:
+        raise ElementLossError
+
+    ele = ChromiumElement(page, obj_id=obj_id, node_id=node_id, backend_id=backend_id)
     if ele.tag in FRAME_ELEMENT:
         from .chromium_frame import ChromiumFrame
         ele = ChromiumFrame(page, ele)
@@ -1462,7 +1310,7 @@ def parse_js_result(page, ele, result):
                              ownProperties=True)['result']
             return [parse_js_result(page, ele, result=i['value']) for i in r[:-1]]
 
-        elif 'objectId' in result and result['className'] == 'object':  # dict
+        elif 'objectId' in result and result['className'].lower() == 'object':  # dict
             r = page.run_cdp('Runtime.getProperties', objectId=result['objectId'],
                              ownProperties=True)['result']
             return {i['name']: parse_js_result(page, ele, result=i['value']) for i in r}
@@ -1738,8 +1586,7 @@ class Click(object):
         return self.left(by_js, timeout)
 
     def left(self, by_js=False, timeout=1):
-        """点击元素
-        如果遇到遮挡，可选择是否用js点击
+        """点击元素，可选择是否用js点击
         :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
         :param timeout: 模拟点击的超时时间，等待元素可见、不被遮挡、进入视口
         :return: 是否点击成功
@@ -1755,7 +1602,7 @@ class Click(object):
                         can_click = True
                 else:
                     end_time = perf_counter() + timeout
-                    while perf_counter() < end_time or timeout == 0:
+                    while perf_counter() < end_time:
                         if self._ele.states.is_in_viewport and self._ele.states.is_enabled and self._ele.states.is_displayed:
                             can_click = True
                             break
@@ -1792,27 +1639,37 @@ class Click(object):
         x, y = self._ele.locations.viewport_click_point
         self._click(x, y, 'middle')
 
-    def at(self, offset_x=None, offset_y=None, button='left'):
-        """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素click_point
+    def at(self, offset_x=None, offset_y=None, button='left', count=1):
+        """带偏移量点击本元素，相对于左上角坐标。不传入x或y值时点击元素中间点
         :param offset_x: 相对元素左上角坐标的x轴偏移量
         :param offset_y: 相对元素左上角坐标的y轴偏移量
         :param button: 点击哪个键，可选 left, middle, right, back, forward
+        :param count: 点击次数
         :return: None
         """
         self._ele.page.scroll.to_see(self._ele)
+        if offset_x is None and offset_y is None:
+            w, h = self._ele.size
+            offset_x = w // 2
+            offset_y = h // 2
         x, y = offset_scroll(self._ele, offset_x, offset_y)
-        self._click(x, y, button)
+        self._click(x, y, button, count)
 
-    def _click(self, client_x, client_y, button='left'):
+    def twice(self):
+        """双击元素"""
+        self.at(count=2)
+
+    def _click(self, client_x, client_y, button='left', count=1):
         """实施点击
         :param client_x: 视口中的x坐标
         :param client_y: 视口中的y坐标
-        :param button: 'left' 或 'right'
+        :param button: 'left' 'right' 'middle'  'back' 'forward'
+        :param count: 点击次数
         :return: None
         """
         self._ele.page.run_cdp('Input.dispatchMouseEvent', type='mousePressed',
-                               x=client_x, y=client_y, button=button, clickCount=1)
-        sleep(.05)
+                               x=client_x, y=client_y, button=button, clickCount=count)
+        # sleep(.05)
         self._ele.page.run_cdp('Input.dispatchMouseEvent', type='mouseReleased',
                                x=client_x, y=client_y, button=button)
 
@@ -1979,9 +1836,13 @@ class ChromiumSelect(object):
         """反选"""
         if not self.is_multi:
             raise TypeError("只能对多项选框执行反选。")
+        change = False
         for i in self.options:
+            change = True
             mode = 'false' if i.states.is_selected else 'true'
             i.run_js(f'this.selected={mode};')
+        if change:
+            self._dispatch_change()
 
     def clear(self):
         """清除所有已选项"""
@@ -2068,9 +1929,11 @@ class ChromiumSelect(object):
         if self.is_multi:
             for ele in eles:
                 ele.run_js(f'this.selected={mode};')
+            self._dispatch_change()
             return True
 
         eles[0].run_js(f'this.selected={mode};')
+        self._dispatch_change()
         return True
 
     def _select(self, condition, para_type='text', cancel=False, timeout=None):
@@ -2085,7 +1948,7 @@ class ChromiumSelect(object):
 
         mode = 'false' if cancel else 'true'
         timeout = timeout if timeout is not None else self._ele.page.timeout
-        condition = {condition} if isinstance(condition, str) else set(condition)
+        condition = {condition} if isinstance(condition, (str, int)) else set(condition)
 
         if para_type in ('text', 'value'):
             return self._text_value(condition, para_type, mode, timeout)
@@ -2118,6 +1981,9 @@ class ChromiumSelect(object):
             for i in eles:
                 i.run_js(f'this.selected={mode};')
 
+            self._dispatch_change()
+            return True
+
         return False
 
     def _index(self, condition, mode, timeout):
@@ -2141,7 +2007,14 @@ class ChromiumSelect(object):
             for i in condition:
                 eles[i - 1].run_js(f'this.selected={mode};')
 
+            self._dispatch_change()
+            return True
+
         return False
+
+    def _dispatch_change(self):
+        """触发修改动作"""
+        self._ele.run_js('this.dispatchEvent(new UIEvent("change"));')
 
 
 class ChromiumElementWaiter(object):

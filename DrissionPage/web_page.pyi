@@ -26,8 +26,8 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     def __init__(self,
                  mode: str = 'd',
                  timeout: float = None,
-                 driver_or_options: Union[ChromiumDriver, ChromiumOptions, DriverOptions] = None,
-                 session_or_options: Union[Session, SessionOptions] = None) -> None:
+                 driver_or_options: Union[ChromiumDriver, ChromiumOptions, DriverOptions, bool] = None,
+                 session_or_options: Union[Session, SessionOptions, bool] = None) -> None:
         self._mode: str = ...
         self._has_driver: bool = ...
         self._has_session: bool = ...

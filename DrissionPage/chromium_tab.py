@@ -28,6 +28,11 @@ class ChromiumTab(ChromiumBase):
         self.retry_interval = self.page.retry_interval
         self._page_load_strategy = self.page.page_load_strategy
 
+    @property
+    def rect(self):
+        """返回获取窗口坐标和大小的对象"""
+        return self.page.rect
+
 
 class WebPageTab(SessionPage, ChromiumTab):
     def __init__(self, page, tab_id):

@@ -460,31 +460,6 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
             self._tab_obj = None
             self._has_driver = None
 
-    # ---------------准备废弃---------------
-    def set_cookies(self, cookies, set_session=True, set_driver=True):
-        """添加cookies信息到浏览器或session对象
-        :param cookies: 可以接收`CookieJar`、`list`、`tuple`、`str`、`dict`格式的`cookies`
-        :param set_session: 是否设置到Session对象
-        :param set_driver: 是否设置到浏览器
-        :return: None
-        """
-        # 添加cookie到driver
-        warn("set_cookies()方法即将弃用，请用set.user_agent()方法代替。", DeprecationWarning)
-        self.set.cookies(cookies, set_session, set_driver)
-
-    def set_headers(self, headers) -> None:
-        """设置固定发送的headers
-        :param headers: dict格式的headers数据
-        :return: None
-        """
-        warn("set_headers()方法即将弃用，请用set.headers()方法代替。", DeprecationWarning)
-        self.set.headers(headers)
-
-    def set_user_agent(self, ua, platform=None):
-        """设置user agent，d模式下只有当前tab有效"""
-        warn("set_user_agent()方法即将弃用，请用set.user_agent()方法代替。", DeprecationWarning)
-        self.set.user_agent(ua, platform)
-
 
 class WebPageSetter(ChromiumPageSetter):
     def __init__(self, page):

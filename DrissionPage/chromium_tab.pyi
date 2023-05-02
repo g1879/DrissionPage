@@ -11,7 +11,7 @@ from requests import Session, Response
 from .chromium_base import ChromiumBase, ChromiumBaseSetter
 from .chromium_element import ChromiumElement
 from .chromium_frame import ChromiumFrame
-from .chromium_page import ChromiumPage
+from .chromium_page import ChromiumPage, ChromiumTabRect
 from .session_element import SessionElement
 from .session_page import SessionPage, SessionPageSetter, DownloadSetter
 from .web_page import WebPage
@@ -23,6 +23,9 @@ class ChromiumTab(ChromiumBase):
         self.page: ChromiumPage = ...
 
     def _set_runtime_settings(self) -> None: ...
+
+    @property
+    def rect(self) -> ChromiumTabRect: ...
 
 
 class WebPageTab(SessionPage, ChromiumTab):

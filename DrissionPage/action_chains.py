@@ -99,6 +99,14 @@ class ActionChains:
         self._hold(on_ele, 'middle').wait(.05)._release('middle')
         return self
 
+    def db_click(self, on_ele=None):
+        """双击鼠标左键，可先移动到元素上
+        :param on_ele: ChromiumElement元素或文本定位符
+        :return: self
+        """
+        self._hold(on_ele, 'left', 2).wait(.05)._release('left')
+        return self
+
     def hold(self, on_ele=None):
         """按住鼠标左键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
@@ -153,15 +161,16 @@ class ActionChains:
         self._release('middle')
         return self
 
-    def _hold(self, on_ele=None, button='left'):
+    def _hold(self, on_ele=None, button='left', count=1):
         """按下鼠标按键
         :param on_ele: ChromiumElement元素或文本定位符
         :param button: 要按下的按键
+        :param count: 点击次数
         :return: self
         """
         if on_ele:
             self.move_to(on_ele)
-        self._dr.Input.dispatchMouseEvent(type='mousePressed', button=button, clickCount=1,
+        self._dr.Input.dispatchMouseEvent(type='mousePressed', button=button, clickCount=count,
                                           x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
         return self
 
@@ -243,13 +252,14 @@ class ActionChains:
 
     def type(self, text):
         """输入文本
-        :param text: 要输入的文本
+        :param text: 要输入的文本，特殊字符和多个文本可用list或tuple传入
         :return: self
         """
         for i in text:
-            self.key_down(i)
-            sleep(.05)
-            self.key_up(i)
+            for character in i:
+                self.key_down(character)
+                sleep(.05)
+                self.key_up(character)
         return self
 
     def wait(self, second):

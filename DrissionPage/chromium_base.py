@@ -10,7 +10,6 @@ from pathlib import Path
 from re import search
 from threading import Thread
 from time import perf_counter, sleep, time
-from warnings import warn
 
 from FlowViewer.listener import ResponseData
 from requests import Session
@@ -857,82 +856,6 @@ class ChromiumBase(BasePage):
             f.write(png)
         return str(path.absolute())
 
-    # ------------------准备废弃----------------------
-    def wait_loading(self, timeout=None):
-        """阻塞程序，等待页面进入加载状态
-        :param timeout: 超时时间
-        :return: 等待结束时是否进入加载状态
-        """
-        warn("wait_loading()方法即将弃用，请用wait.load_start()方法代替。", DeprecationWarning)
-        return self.wait.load_start(timeout)
-
-    def scroll_to_see(self, loc_or_ele):
-        """滚动页面直到元素可见
-        :param loc_or_ele: 元素的定位信息，可以是loc元组，或查询字符串（详见ele函数注释）
-        :return: None
-        """
-        warn("scroll_to_see()方法即将弃用，请用scroll.to_see()方法代替。", DeprecationWarning)
-        self.scroll.to_see(loc_or_ele)
-
-    def set_timeouts(self, implicit=None, page_load=None, script=None):
-        """设置超时时间，单位为秒
-        :param implicit: 查找元素超时时间
-        :param page_load: 页面加载超时时间
-        :param script: 脚本运行超时时间
-        :return: None
-        """
-        warn("set_timeouts()方法即将弃用，请用set.timeouts()方法代替。", DeprecationWarning)
-        self.set.timeouts(implicit, page_load, script)
-
-    def set_session_storage(self, item, value):
-        """设置或删除某项sessionStorage信息
-        :param item: 要设置的项
-        :param value: 项的值，设置为False时，删除该项
-        :return: None
-        """
-        warn("set_session_storage()方法即将弃用，请用set.session_storage()方法代替。", DeprecationWarning)
-        return self.set.session_storage(item, value)
-
-    def set_local_storage(self, item, value):
-        """设置或删除某项localStorage信息
-        :param item: 要设置的项
-        :param value: 项的值，设置为False时，删除该项
-        :return: None
-        """
-        warn("set_local_storage()方法即将弃用，请用set.local_storage()方法代替。", DeprecationWarning)
-        return self.set.local_storage(item, value)
-
-    def set_user_agent(self, ua, platform=None):
-        """为当前tab设置user agent，只在当前tab有效
-        :param ua: user agent字符串
-        :param platform: platform字符串
-        :return: None
-        """
-        warn("set_user_agent()方法即将弃用，请用set.user_agent()方法代替。", DeprecationWarning)
-        self.set.user_agent(ua, platform)
-
-    def set_cookies(self, cookies):
-        """设置cookies值
-        :param cookies: cookies信息
-        :return: None
-        """
-        warn("set_cookies()方法即将弃用，请用set.cookies()方法代替。", DeprecationWarning)
-        self.set.cookies(cookies)
-
-    def set_headers(self, headers: dict) -> None:
-        """设置固定发送的headers
-        :param headers: dict格式的headers数据
-        :return: None
-        """
-        warn("set_headers()方法即将弃用，请用set.headers()方法代替。", DeprecationWarning)
-        self.set.headers(headers)
-
-    @property
-    def set_page_load_strategy(self):
-        """返回用于设置页面加载策略的对象"""
-        warn("set_page_load_strategy()方法即将弃用，请用set.load_strategy.xxxx()方法代替。", DeprecationWarning)
-        return self.set.load_strategy
-
 
 class ChromiumBaseSetter(object):
     def __init__(self, page):
@@ -1056,7 +979,7 @@ class ChromiumBaseWaiter(object):
         :return: 是否等待成功
         """
         ele = self._driver._ele(loc_or_ele, raise_err=False)
-        return ele.wait.display(timeout)
+        return ele.wait.display(timeout) if ele else False
 
     def ele_hidden(self, loc_or_ele, timeout=None):
         """等待元素变成隐藏状态
@@ -1112,16 +1035,15 @@ class ChromiumBaseWaiter(object):
             self._listener = NetworkListener(self._driver)
         self._listener.set_targets(targets, is_regex)
 
-    def data_packets(self, targets=None, timeout=None, any_one=False):
+    def data_packets(self, timeout=None, any_one=False):
         """等待指定数据包加载完成
-        :param targets: 要匹配的数据包url特征，可用list等传入多个
         :param timeout: 超时时间，为None则使用页面对象timeout
         :param any_one: 多个target时，是否全部监听到才结束，为True时监听到一个目标就结束
         :return: ResponseData对象或监听结果字典
         """
         if not self._listener:
             self._listener = NetworkListener(self._driver)
-        return self._listener.listen(targets, timeout, any_one)
+        return self._listener.listen(timeout, any_one)
 
     def stop_listening(self):
         """停止监听数据包"""
@@ -1160,7 +1082,7 @@ class NetworkListener(object):
             self._page.driver.Network.responseReceived = self._response_received
             self._page.driver.Network.loadingFinished = self._loading_finished
         else:
-            self.stop_listening()
+            self.stop()
 
     def stop(self):
         """停止监听数据包"""
@@ -1169,18 +1091,14 @@ class NetworkListener(object):
         self._page.driver.Network.responseReceived = None
         self._page.driver.Network.loadingFinished = None
 
-    def listen(self, targets=None, timeout=None, any_one=False):
+    def listen(self, timeout=None, any_one=False):
         """等待指定数据包加载完成
-        :param targets: 要匹配的数据包url特征，可用list等传入多个
         :param timeout: 超时时间，为None则使用页面对象timeout
         :param any_one: 多个target时，是否全部监听到才结束，为True时监听到一个目标就结束
         :return: ResponseData对象或监听结果字典
         """
-        if self._targets is None and targets is None:
-            targets = ''
-        if targets is not None:
-            self.set_targets(targets, is_regex=self._is_regex)
-        self._results = {}
+        if self._targets is None:
+            raise RuntimeError('必须先用set_targets()设置等待目标。')
 
         timeout = timeout if timeout is not None else self._page.timeout
         end_time = perf_counter() + timeout
@@ -1192,7 +1110,9 @@ class NetworkListener(object):
         self._requests = {}
         if not self._results:
             return False
-        return list(self._results.values())[0] if self._single else self._results
+        r = list(self._results.values())[0] if self._single else self._results
+        self._results = {}
+        return r
 
     def _response_received(self, **kwargs):
         """接收到返回信息时处理方法"""
@@ -1204,16 +1124,19 @@ class NetworkListener(object):
         request_id = kwargs['requestId']
         if request_id in self._requests:
             try:
-                body = self._page.run_cdp('Network.getResponseBody', requestId=request_id)['body']
-            except:
-                body = None
+                r = self._page.run_cdp('Network.getResponseBody', requestId=request_id)
+                body = r['body']
+                is_base64 = r['base64Encoded']
+            except CallMethodError:
+                body = ''
+                is_base64 = False
 
             request = self._requests[request_id]
             target = request['target']
-            rd = ResponseData(request_id, request['response'],
-                              body, self._page.tab_id, target)
+            rd = ResponseData(request_id, request['response'], body, self._page.tab_id, target)
             rd.postData = request['post_data']
-            rd._requestHeaders = request['request_headers']
+            rd._base64_body = is_base64
+            rd.requestHeaders = request['request_headers']
             self._results[target] = rd
 
     def _requestWillBeSent(self, **kwargs):
@@ -1383,7 +1306,7 @@ class Screencast(object):
                     DrissionPage_Screencast_blob_ok = true;
                 })
                 mediaRecorder.start()
-                
+
                 mediaRecorder.addEventListener('stop', function(){
                     while(DrissionPage_Screencast_blob_ok==false){}
                     DrissionPage_Screencast_blob = new Blob(DrissionPage_Screencast_chunks, 

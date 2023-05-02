@@ -333,10 +333,9 @@ def make_session_ele(html_or_ele, loc=None, single=True):
         # 获取整个页面html再定位到当前元素，以实现查找上级元素
         page = html_or_ele.page
         xpath = html_or_ele.xpath
-        if hasattr(html_or_ele, 'doc_id'):  # ChromiumElement，兼容传入的元素在iframe内的情况
-            html = html_or_ele.page.run_cdp('DOM.getOuterHTML', objectId=html_or_ele.doc_id)['outerHTML']
-        else:
-            html = html_or_ele.page.html
+        # ChromiumElement，兼容传入的元素在iframe内的情况
+        html = html_or_ele.page.run_cdp('DOM.getOuterHTML', objectId=html_or_ele.ids.doc_id)['outerHTML'] \
+            if html_or_ele.ids.doc_id else html_or_ele.page.html
         html_or_ele = fromstring(html)
         html_or_ele = html_or_ele.xpath(xpath)[0]
 

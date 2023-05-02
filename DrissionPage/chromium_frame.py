@@ -6,7 +6,6 @@
 from re import search
 from threading import Thread
 from time import sleep, perf_counter
-from warnings import warn
 
 from .chromium_base import ChromiumBase, ChromiumPageScroll, ChromiumBaseSetter, ChromiumBaseWaiter
 from .chromium_element import ChromiumElement, ChromiumElementWaiter
@@ -603,46 +602,6 @@ class ChromiumFrame(ChromiumBase):
         while self.is_alive:
             sleep(1)
         self.driver.stop()
-
-    # -------------准备废弃------------
-    def set_attr(self, attr, value):
-        """设置frame元素attribute属性
-        :param attr: 属性名
-        :param value: 属性值
-        :return: None
-        """
-        warn("set_attr()方法即将弃用，请用set.attr()方法代替。", DeprecationWarning)
-        self.set.attr(attr, value)
-
-    @property
-    def is_displayed(self):
-        """返回frame元素是否显示"""
-        warn("is_displayed属性即将弃用，请用states.is_displayed属性代替。", DeprecationWarning)
-        return self.states.is_displayed()
-
-    @property
-    def tab_id(self):
-        """返回当前标签页id"""
-        warn("tab_id属性即将弃用，请用ids.tab_id属性代替。", DeprecationWarning)
-        return self.ids.tab_id
-
-    @property
-    def backend_id(self):
-        """返回cdp中的node id"""
-        warn("backend_id属性即将弃用，请用ids.backend_id属性代替。", DeprecationWarning)
-        return self.ids.backend_id
-
-    @property
-    def obj_id(self):
-        """返回frame元素的object id"""
-        warn("obj_id属性即将弃用，请用ids.obj_id属性代替。", DeprecationWarning)
-        return self.ids.obj_id
-
-    @property
-    def node_id(self):
-        """返回cdp中的node id"""
-        warn("node_id属性即将弃用，请用ids.node_id属性代替。", DeprecationWarning)
-        return self.ids.node_id
 
 
 class ChromiumFrameIds(object):
