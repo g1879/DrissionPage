@@ -417,7 +417,7 @@ class PortFinder(object):
         """查找一个可用端口
         :return: 可以使用的端口和用户文件夹路径组成的元组
         """
-        for i in range(9600, 9800):
+        for i in range(9600, 19800):
             if i in PortFinder.used_port or port_is_using('127.0.0.1', i):
                 continue
 
