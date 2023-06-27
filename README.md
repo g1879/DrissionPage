@@ -38,7 +38,7 @@ python 版本：3.6 及以上
 
 3.2 版已经发布。对底层逻辑进行了梳理，修复了许多问题，提高了稳定性，也对用户 api 进行了调整。
 
-详情查看：[新版介绍](https://g1879.gitee.io/drissionpagedocs/new/)
+详情查看：[新版介绍](https://g1879.gitee.io/drissionpagedocs/whatsnew/3_3/)
 
 ---
 
