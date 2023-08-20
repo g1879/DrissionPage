@@ -147,7 +147,7 @@ def test_connect(ip, port):
     :param port: 浏览器端口
     :return: None
     """
-    end_time = perf_counter() + 6
+    end_time = perf_counter() + 30
     while perf_counter() < end_time:
         try:
             tabs = requests_get(f'http://{ip}:{port}/json', timeout=10).json()
@@ -175,7 +175,10 @@ def _run_browser(port, path: str, args) -> Popen:
     p = str(p / 'chrome') if p.is_dir() else str(path)
     arguments = [p, f'--remote-debugging-port={port}']
     arguments.extend(args)
-    return Popen(arguments, shell=False)
+    try:
+        return Popen(arguments, shell=False)
+    except FileNotFoundError:
+        raise FileNotFoundError('未找到浏览器，请手动指定浏览器可执行文件路径。')
 
 
 def _make_leave_in_dict(target_dict: dict, src: list, num: int, end: int) -> None:

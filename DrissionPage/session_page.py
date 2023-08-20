@@ -8,7 +8,7 @@ from time import sleep
 from urllib.parse import urlparse
 
 from DownloadKit import DownloadKit
-from requests import Session, Response
+from requests import Session
 from requests.structures import CaseInsensitiveDict
 from tldextract import extract
 
@@ -97,6 +97,11 @@ class SessionPage(BasePage):
             return self.response.json()
         except Exception:
             return None
+
+    @property
+    def user_agent(self):
+        """返回user agent"""
+        return self.session.headers.get('user-agent', '')
 
     @property
     def download_path(self):
@@ -502,16 +507,18 @@ class FileExists(object):
         self._setter.DownloadKit._file_exists = 'overwrite'
 
 
-def check_headers(kwargs, headers, arg) -> bool:
+def check_headers(kwargs, headers, arg):
     """检查kwargs或headers中是否有arg所示属性"""
     return arg in kwargs['headers'] or arg in headers
 
 
-def set_charset(response) -> Response:
+def set_charset(response):
     """设置Response对象的编码"""
     # 在headers中获取编码
     content_type = response.headers.get('content-type', '').lower()
-    charset = search(r'charset[=: ]*(.*)?;', content_type)
+    if not content_type.endswith(';'):
+        content_type += ';'
+    charset = search(r'charset[=: ]*(.*)?;?', content_type)
 
     if charset:
         response.encoding = charset.group(1)

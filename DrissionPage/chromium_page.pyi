@@ -6,7 +6,7 @@
 from os import popen
 from pathlib import Path
 from threading import Thread
-from typing import Union, Tuple, List, Dict
+from typing import Union, Tuple, List
 
 from DownloadKit import DownloadKit
 from requests import Session
@@ -14,7 +14,6 @@ from requests import Session
 from .chromium_base import ChromiumBase, ChromiumBaseSetter, ChromiumBaseWaiter, NetworkListener
 from .chromium_driver import ChromiumDriver
 from .chromium_tab import ChromiumTab
-from .commons.web import DataPacket
 from .configs.chromium_options import ChromiumOptions
 from .configs.driver_options import DriverOptions
 from .session_page import DownloadSetter
@@ -82,10 +81,10 @@ class ChromiumPage(ChromiumBase):
 
     def get_tab(self, tab_id: str = None) -> ChromiumTab: ...
 
-    def find_tabs(self, text: str = None, by_title: bool = True, by_url: bool = None,
-                  special: bool = False) -> List[str]: ...
+    def find_tabs(self, title: str = None, url: str = None,
+                  tab_type: Union[str, list, tuple, set] = None, single: bool = True) -> Union[str, List[str]]: ...
 
-    def new_tab(self, url: str = None, switch_to: bool = True) -> str: ...
+    def new_tab(self, url: str = None, switch_to: bool = False) -> str: ...
 
     def to_main_tab(self) -> None: ...
 
@@ -117,13 +116,6 @@ class ChromiumPageWaiter(ChromiumBaseWaiter):
     def download_begin(self, timeout: float = None) -> bool: ...
 
     def new_tab(self, timeout: float = None) -> bool: ...
-
-    def set_targets(self, targets: Union[str, list, tuple, set], is_regex: bool = False) -> None: ...
-
-    def stop_listening(self) -> None: ...
-
-    def data_packets(self, timeout: float = None,
-                     any_one: bool = False) -> Union[DataPacket, Dict[str, List[DataPacket]], False]: ...
 
 
 class ChromiumTabRect(object):

@@ -64,6 +64,9 @@ class SessionPage(BasePage):
     def json(self) -> Union[dict, None]: ...
 
     @property
+    def user_agent(self) -> str: ...
+
+    @property
     def download_path(self) -> str: ...
 
     @property

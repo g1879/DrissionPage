@@ -146,8 +146,11 @@ class ChromiumOptions(object):
         """
         self.remove_argument(arg)
         if value is not False:
-            arg_str = arg if value is None else f'{arg}={value}'
-            self._arguments.append(arg_str)
+            if arg == '--headless' and value is None:
+                self._arguments.append('--headless=new')
+            else:
+                arg_str = arg if value is None else f'{arg}={value}'
+                self._arguments.append(arg_str)
         return self
 
     def remove_argument(self, value):

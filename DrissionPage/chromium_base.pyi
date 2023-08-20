@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Union, Tuple, List, Any, Dict
 
 from DataRecorder import Recorder
-from FlowViewer.listener import ResponseData
 from requests import Session
 from requests.cookies import RequestsCookieJar
 
@@ -16,6 +15,7 @@ from .chromium_driver import ChromiumDriver
 from .chromium_element import ChromiumElement, ChromiumScroll
 from .chromium_frame import ChromiumFrame
 from .commons.constants import NoneElement
+from .commons.web import ResponseData
 from .session_element import SessionElement
 
 
@@ -110,6 +110,9 @@ class ChromiumBase(BasePage):
 
     @property
     def page_load_strategy(self) -> str: ...
+
+    @property
+    def user_agent(self) -> str: ...
 
     @property
     def scroll(self) -> ChromiumPageScroll: ...
@@ -267,9 +270,9 @@ class NetworkListener(object):
 class ChromiumPageScroll(ChromiumScroll):
     def __init__(self, page: ChromiumBase): ...
 
-    def to_see(self, loc_or_ele: Union[str, tuple, ChromiumElement], center: bool = False) -> None: ...
+    def to_see(self, loc_or_ele: Union[str, tuple, ChromiumElement], center: Union[bool, None] = None) -> None: ...
 
-    def _to_see(self, ele: ChromiumElement, center: bool) -> None: ...
+    def _to_see(self, ele: ChromiumElement, center: Union[bool, None]) -> None: ...
 
 
 class ChromiumBaseSetter(object):

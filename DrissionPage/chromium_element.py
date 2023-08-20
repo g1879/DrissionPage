@@ -436,9 +436,10 @@ class ChromiumElement(DrissionElement):
         js = f'return window.getComputedStyle(this{pseudo_ele}).getPropertyValue("{style}");'
         return self.run_js(js)
 
-    def get_src(self, timeout=None):
+    def get_src(self, timeout=None, base64_to_bytes=True):
         """返回元素src资源，base64的会转为bytes返回，其它返回str
         :param timeout: 等待资源加载的超时时间
+        :param base64_to_bytes: 为True时，如果是base64数据，转换为bytes格式
         :return: 资源内容
         """
         timeout = self.page.timeout if timeout is None else timeout
@@ -471,8 +472,11 @@ class ChromiumElement(DrissionElement):
             return None
 
         if result['base64Encoded']:
-            from base64 import b64decode
-            data = b64decode(result['content'])
+            if base64_to_bytes:
+                from base64 import b64decode
+                data = b64decode(result['content'])
+            else:
+                data = result['content']
         else:
             data = result['content']
         return data
@@ -1535,21 +1539,24 @@ class Locations(object):
         """返回元素左上角在屏幕上坐标，左上角为(0, 0)"""
         vx, vy = self._ele.page.rect.viewport_location
         ex, ey = self.viewport_location
-        return vx + ex, ey + vy
+        pr = self._ele.page.run_js('return window.devicePixelRatio;')
+        return int((vx + ex) * pr), int((ey + vy) * pr)
 
     @property
     def screen_midpoint(self):
         """返回元素中点在屏幕上坐标，左上角为(0, 0)"""
         vx, vy = self._ele.page.rect.viewport_location
         ex, ey = self.viewport_midpoint
-        return vx + ex, ey + vy
+        pr = self._ele.page.run_js('return window.devicePixelRatio;')
+        return int((vx + ex) * pr), int((ey + vy) * pr)
 
     @property
     def screen_click_point(self):
         """返回元素中点在屏幕上坐标，左上角为(0, 0)"""
         vx, vy = self._ele.page.rect.viewport_location
         ex, ey = self.viewport_click_point
-        return vx + ex, ey + vy
+        pr = self._ele.page.run_js('return window.devicePixelRatio;')
+        return int((vx + ex) * pr), int((ey + vy) * pr)
 
     def _get_viewport_rect(self, quad):
         """按照类型返回在可视窗口中的范围
@@ -1771,9 +1778,9 @@ class ChromiumScroll(object):
 
 
 class ChromiumElementScroll(ChromiumScroll):
-    def to_see(self, center=False):
+    def to_see(self, center=None):
         """滚动页面直到元素可见
-        :param center: 是否尽量滚动到页面正中
+        :param center: 是否尽量滚动到页面正中，为None时如果被遮挡，则滚动到页面正中
         :return: None
         """
         self._driver.page.scroll.to_see(self._driver, center=center)

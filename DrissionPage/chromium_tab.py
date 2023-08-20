@@ -121,6 +121,14 @@ class WebPageTab(SessionPage, ChromiumTab):
         return super().cookies
 
     @property
+    def user_agent(self):
+        """返回user agent"""
+        if self._mode == 's':
+            return super().user_agent
+        elif self._mode == 'd':
+            return super(SessionPage, self).user_agent
+
+    @property
     def session(self):
         """返回Session对象，如未初始化则按配置信息创建"""
         if self._session is None:
@@ -292,9 +300,7 @@ class WebPageTab(SessionPage, ChromiumTab):
             selenium_user_agent = self.run_cdp('Runtime.evaluate', expression='navigator.userAgent;')['result']['value']
             self.session.headers.update({"User-Agent": selenium_user_agent})
 
-        # set_session_cookies(self.session, self._get_driver_cookies(as_dict=True))
-        # set_session_cookies(self.session, self._get_driver_cookies(all_domains=True))
-        set_session_cookies(self.session, self._get_driver_cookies())
+        set_session_cookies(self.session, super(SessionPage, self).get_cookies())
 
     def cookies_to_browser(self):
         """把session对象的cookies复制到浏览器"""
@@ -315,22 +321,7 @@ class WebPageTab(SessionPage, ChromiumTab):
         if self._mode == 's':
             return super().get_cookies(as_dict, all_domains, all_info)
         elif self._mode == 'd':
-            return self._get_driver_cookies(as_dict, all_info)
-
-    def _get_driver_cookies(self, as_dict=False, all_info=False):
-        """获取浏览器cookies
-        :param as_dict: 是否以dict形式返回，为True时all_info无效
-        :param all_info: 是否返回所有信息，为False时只返回name、value、domain
-        :return: cookies信息
-        """
-        cookies = self.run_cdp('Network.getCookies')['cookies']
-        if as_dict:
-            return {cookie['name']: cookie['value'] for cookie in cookies}
-        elif all_info:
-            return cookies
-        else:
-            return [{'name': cookie['name'], 'value': cookie['value'], 'domain': cookie['domain']}
-                    for cookie in cookies]
+            return super(SessionPage, self).get_cookies(as_dict, all_domains, all_info)
 
     def _find_elements(self, loc_or_ele, timeout=None, single=True, relative=False, raise_err=None):
         """返回页面中符合条件的元素、属性或节点文本，默认返回第一个

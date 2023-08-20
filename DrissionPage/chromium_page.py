@@ -194,24 +194,27 @@ class ChromiumPage(ChromiumBase):
         tab_id = tab_id or self.tab_id
         return ChromiumTab(self, tab_id)
 
-    def find_tabs(self, text=None, by_title=True, by_url=None, special=False):
+    def find_tabs(self, title=None, url=None, tab_type=None, single=True):
         """查找符合条件的tab，返回它们的id组成的列表
-        :param text: 查询条件
-        :param by_title: 是否匹配title
-        :param by_url: 是否匹配url
-        :param special: 是否匹配特殊tab，如打印页
-        :return: tab id组成的列表
+        :param title: 要匹配title的文本
+        :param url: 要匹配url的文本
+        :param tab_type: tab类型，可用列表输入多个
+        :param single: 是否返回首个结果的id，为False返回所有信息
+        :return: tab id或tab dict
         """
         tabs = self._control_session.get(f'http://{self.address}/json').json()  # 不要改用cdp
-        if text is None or not (by_title or by_url):
-            return [i['id'] for i in tabs if (not special and i['type'] == 'page')
-                    or (special and i['type'] not in ('page', 'iframe'))]
+        if isinstance(tab_type, str):
+            tab_type = {tab_type}
+        elif isinstance(tab_type, (list, tuple, set)):
+            tab_type = set(tab_type)
+        elif tab_type is not None:
+            raise TypeError('tab_type只能是set、list、tuple、str、None。')
 
-        return [i['id'] for i in tabs if ((not special and i['type'] == 'page')
-                                          or (special and i['type'] not in ('page', 'iframe')))
-                and ((by_url and text in i['url']) or (by_title and text in i['title']))]
+        r = [i for i in tabs if ((title is None or title in i['title']) and (url is None or url in i['url'])
+                                 and (tab_type is None or i['type'] in tab_type))]
+        return r[0]['id'] if r and single else r
 
-    def new_tab(self, url=None, switch_to=True):
+    def new_tab(self, url=None, switch_to=False):
         """新建一个标签页,该标签页在最后面
         :param url: 新标签页跳转到的网址
         :param switch_to: 新建标签页后是否把焦点移过去
