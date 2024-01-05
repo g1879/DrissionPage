@@ -3,7 +3,7 @@
 @Author  :   g1879
 @Contact :   g1879@qq.com
 """
-from json import load, dump
+from json import dump, load
 from pathlib import Path
 from subprocess import Popen
 from tempfile import gettempdir
@@ -13,6 +13,7 @@ from requests import get as requests_get
 
 from DrissionPage.configs.chromium_options import ChromiumOptions
 from DrissionPage.errors import BrowserConnectError
+
 from .tools import port_is_using
 
 
@@ -42,11 +43,14 @@ def connect_browser(option):
 
     # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
     except FileNotFoundError:
-        from DrissionPage.easy_set import get_chrome_path
-        chrome_path = get_chrome_path(show_msg=False)
+        from shutil import which
+        chrome_path = which('chromium') or which('chrome')
+        if not chrome_path:
+            from DrissionPage.easy_set import get_chrome_path
+            chrome_path = get_chrome_path(show_msg=False)
 
         if not chrome_path:
-            raise FileNotFoundError('无法找到chrome路径，请手动配置。')
+            raise FileNotFoundError('无法找到 chrome 或 chromium 路径，请手动配置。')
 
         debugger = _run_browser(port, chrome_path, args)
 
