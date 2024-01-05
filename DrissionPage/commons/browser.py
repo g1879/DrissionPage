@@ -44,7 +44,13 @@ def connect_browser(option):
     # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
     except FileNotFoundError:
         from shutil import which
-        chrome_path = which('chromium') or which('chrome')
+        chrome_path = (
+            which("chromium")
+            or which("google-chrome")
+            or which("google-chrome-stable")
+            or which("google-chrome-unstable")
+            or which("google-chrome-beta")
+        )
         if not chrome_path:
             from DrissionPage.easy_set import get_chrome_path
             chrome_path = get_chrome_path(show_msg=False)
