@@ -4,7 +4,7 @@
 @Contact :   g1879@qq.com
 """
 from functools import partial
-from json import dumps, loads
+from json import dumps, loads, JSONDecodeError
 from queue import Queue, Empty
 from threading import Thread, Event
 
@@ -120,6 +120,9 @@ class ChromiumDriver(object):
                 message = loads(message_json)
             except WebSocketTimeoutException:
                 continue
+            except JSONDecodeError as exc:
+                if message_json:
+                    raise exc
             except (WebSocketException, OSError, WebSocketConnectionClosedException):
                 self.stop()
                 return
