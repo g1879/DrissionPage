@@ -343,7 +343,7 @@ def get_chrome_path(ini_path=None,
             paths = popen('set path').read().lower()
         except:
             return None
-        r = search(r'[^;]*chrome[^;]*', paths)
+        r = search(r'[^;]*chrome[^;\n]*', paths)
 
         if r:
             path = Path(r.group(0)) if 'chrome.exe' in r.group(0) else Path(r.group(0)) / 'chrome.exe'
