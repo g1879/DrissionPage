@@ -340,20 +340,18 @@ def get_chrome_path(ini_path=None,
     # -----------从系统变量中获取--------------
     if from_system_path:
         try:
-            paths = popen('set path').read().lower()
+            paths = [i for i in os.environ['PATH'].split(';') if i != ""]
+            chrome_paths = [i for i in paths if "chrome" in i]
         except:
             return None
-        r = search(r'[^;]*chrome[^;]*', paths)
 
-        if r:
-            path = Path(r.group(0)) if 'chrome.exe' in r.group(0) else Path(r.group(0)) / 'chrome.exe'
+        if chrome_paths:
+            path = Path(chrome_paths[0]) if 'chrome.exe' in chrome_paths[0] else (Path(chrome_paths[0]) / 'chrome.exe')
 
             if path.exists():
                 if show_msg:
                     print('系统变量中', end='')
                 return str(path)
-
-        paths = paths.split(';')
 
         for path in paths:
             path = Path(path) / 'chrome.exe'
