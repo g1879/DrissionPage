@@ -1,126 +1,128 @@
-# ✨️ 概述
+[中文文档](https://g1879.gitee.io/drissionpagedocs)
 
-DrissionPage 是一个基于 python 的网页自动化工具。
+# ✨️ Overview
 
-它既能控制浏览器，也能收发数据包，还能把两者合而为一。
+DrissionPage is a python-based web page automation tool.
 
-可兼顾浏览器自动化的便利性和 requests 的高效率。
+It can control the browser, send and receive data packets, and combine the two into one.
 
-它功能强大，内置无数人性化设计和便捷功能。
+It can take into account the convenience of browser automation and the high efficiency of requests.
 
-它的语法简洁而优雅，代码量少，对新手友好。
+It is powerful and has countless built-in user-friendly designs and convenient functions.
 
----
-
-<a href='https://gitee.com/g1879/DrissionPage/stargazers'><img src='https://gitee.com/g1879/DrissionPage/badge/star.svg?theme=dark' alt='star'></img></a> <a href='https://gitee.com/g1879/DrissionPage/members'><img src='https://gitee.com/g1879/DrissionPage/badge/fork.svg?theme=dark' alt='fork'></img></a>
-
-项目地址：[gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage) 
-
-您的星星是对我最大的支持💖
-
---- 
-
-支持系统：Windows、Linux、Mac
-
-python 版本：3.6 及以上
-
-支持浏览器：Chromium 内核浏览器(如 Chrome 和 Edge)，electron 应用
+Its syntax is concise and elegant, the amount of code is small, and it is friendly to novices.
 
 ---
 
-# 🛠 如何使用
+<a href='https://gitee.com/g1879/DrissionPage/stargazers'><img src='https://gitee.com/g1879/DrissionPage/badge/star.svg?theme=dark' alt=' star'></img></a> <a href='https://gitee.com/g1879/DrissionPage/members'><img src='https://gitee.com/g1879/DrissionPage/badge/ fork.svg?theme=dark' alt='fork'></img></a>
 
-**📖 使用文档：**  [点击查看](https://g1879.gitee.io/drissionpagedocs)
+Project address: [gitee](https://gitee.com/g1879/DrissionPage) | [github](https://github.com/g1879/DrissionPage)
 
-**交流 QQ 群：**  636361957
-
----
-
-# 📕 背景
-
-用 requests 做数据采集面对要登录的网站时，要分析数据包、JS 源码，构造复杂的请求，往往还要应付验证码、JS 混淆、签名参数等反爬手段，门槛较高，开发效率不高。
-使用浏览器，可以很大程度上绕过这些坑，但浏览器运行效率不高。
-
-因此，这个库设计初衷，是将它们合而为一，同时实现“写得快”和“跑得快”。能够在不同需要时切换相应模式，并提供一种人性化的使用方法，提高开发和运行效率。  
-除了合并两者，本库还以网页为单位封装了常用功能，提供非常简便的操作和语句，使用户可减少考虑细节，专注功能实现。 以简单的方式实现强大的功能，使代码更优雅。
-
-以前的版本是对 selenium 进行重新封装实现的。从 3.0 开始，作者另起炉灶，对底层进行了重新开发，摆脱对 selenium 的依赖，增强了功能，提升了运行效率。
-
---- 
-
-# 💡 理念
-
-简洁而强大！
-
---- 
-
-# ☀️ 特性和亮点
-
-作者经过长期实践，踩过无数坑，总结出的经验全写到这个库里了。
-
-## 🎇 强大的自研内核
-
-本库采用全自研的内核，内置了 N 多实用功能，对常用功能作了整合和优化，对比 selenium，有以下优点：
-
-- 无 webdriver 特征
-
-- 无需为不同版本的浏览器下载不同的驱动
-
-- 运行速度更快
-
-- 可以跨`<iframe>`查找元素，无需切入切出
-
-- 把`<iframe>`看作普通元素，获取后可直接在其中查找元素，逻辑更清晰
-
-- 可以同时操作浏览器中的多个标签页，即使标签页为非激活状态，无需切换
-
-- 可以直接读取浏览器缓存来保存图片，无需用 GUI 点击另存
-
-- 可以对整个网页截图，包括视口外的部分（90以上版本浏览器支持）
-
-- 可处理非`open`状态的 shadow-root
-
-## 🎇 亮点功能
-
-除了以上优点，本库还内置了无数人性化设计。
-
-- 极简的语法规则。集成大量常用功能，代码更优雅
-
-- 定位元素更加容易，功能更强大稳定
-
-- 无处不在的等待和自动重试功能。使不稳定的网络变得易于控制，程序更稳定，编写更省心
-
-- 提供强大的下载工具。操作浏览器时也能享受快捷可靠的下载功能
-
-- 允许反复使用已经打开的浏览器。无须每次运行从头启动浏览器，调试超方便
-
-- 使用 ini 文件保存常用配置，自动调用，提供便捷的设置，远离繁杂的配置项
-
-- 内置 lxml 作为解析引擎，解析速度成几个数量级提升
-
-- 使用 POM 模式封装，可直接用于测试，便于扩展
-
-- 高度集成的便利功能，从每个细节中体现
-
-- 还有很多细节，这里不一一列举，欢迎实际使用中体验：）
+Your star is my greatest support💖
 
 ---
 
-# 🔖 版本历史
+Supported systems: Windows, Linux, Mac
 
-[点击查看版本历史](https://g1879.gitee.io/drissionpagedocs/history/introduction/)
+python version: 3.6 and above
 
---- 
+Supported browsers: Chromium core browsers (such as Chrome and Edge), electron applications
 
-# 🖐🏻 免责声明
+---
 
-请勿将 DrissionPage 应用到任何可能会违反法律规定和道德约束的工作中,请友善使用 DrissionPage，遵守蜘蛛协议，不要将 DrissionPage 用于任何非法用途。如您选择使用 DrissionPage
-即代表您遵守此协议，作者不承担任何由于您违反此协议带来任何的法律风险和损失，一切后果由您承担。
+# 🛠 How to use
 
----  
+**📖 Usage documentation:** [Click to view](https://g1879.gitee.io/drissionpagedocs)
 
-# ☕ 请我喝咖啡
+**Communication QQ group:** 636361957
 
-如果本项目对您有所帮助，不妨请作者我喝杯咖啡 ：）
+---
+
+# 📕 background
+
+When using requests for data collection, when facing a website to log in to, you have to analyze data packets and JS source code, construct complex requests, and often have to deal with anti-crawling methods such as verification codes, JS obfuscation, and signature parameters. The threshold is high and the development efficiency is low. high.
+Using a browser can largely bypass these pitfalls, but the browser is not very efficient.
+
+Therefore, the original intention of this library is to combine them into one and achieve "fast writing" and "fast running" at the same time. It can switch the corresponding mode when different needs are needed, and provide a humanized usage method to improve development and operation efficiency.
+In addition to merging the two, this library also encapsulates commonly used functions in web page units, providing very simple operations and statements, allowing users to reduce considerations of details and focus on function implementation. Implement powerful functions in a simple way and make your code more elegant.
+
+The previous version was implemented by repackaging selenium. Starting from 3.0, the author started from scratch, redeveloped the bottom layer, got rid of the dependence on selenium, enhanced functions, and improved operating efficiency.
+
+---
+
+# 💡 Concept
+
+Simple yet powerful!
+
+---
+
+# ☀️ Features and Highlights
+
+After long-term practice, the author has stepped through countless pitfalls, and all the experiences he has summarized have been written down in this library.
+
+## 🎇 Powerful self-developed core
+
+This library uses a fully self-developed kernel, has built-in N number of practical functions, and has integrated and optimized common functions. Compared with selenium, it has the following advantages:
+
+- No webdriver features
+
+- No need to download different drivers for different browser versions
+
+- Runs faster
+
+- Can find elements across `<iframe>` without switching in and out
+
+- Treat `<iframe>` as a normal element. After obtaining it, you can directly search for elements in it, making the logic clearer.
+
+- You can operate multiple tabs in the browser at the same time, even if the tab is inactive, no need to switch
+
+- Can directly read the browser cache to save images without using the GUI to click save
+
+- You can take screenshots of the entire web page, including parts outside the viewport (supported by browsers 90 and above)
+
+- Can handle shadow-root in non-open state
+
+## 🎇 Highlighted features
+
+In addition to the above advantages, this library also has numerous built-in humanized designs.
+
+- Minimalist grammar rules. Integrate a large number of commonly used functions to make the code more elegant
+
+- Positioning elements is easier and the function is more powerful and stable
+
+- Ubiquitous wait and auto-retry functionality. Make unstable networks easier to control, programs more stable, and writing more worry-free
+
+- Provide powerful download tools. You can also enjoy fast and reliable download functions when operating the browser
+
+- Allows repeated use of already open browsers. No need to start the browser from scratch every time, making debugging very convenient
+
+- Use ini files to save commonly used configurations and call them automatically, providing convenient settings and staying away from complicated configuration items.
+
+- Built-in lxml as a parsing engine, the parsing speed is improved by several orders of magnitude
+
+- Encapsulated using POM mode, which can be directly used for testing and easy to expand.
+
+- Highly integrated convenient functions, reflected in every detail
+
+- There are many details, so I won’t list them all here. You are welcome to experience them in actual use:)
+
+---
+
+# 🔖 Version History
+
+[Click to view version history](https://g1879.gitee.io/drissionpagedocs/history/introduction/)
+
+---
+
+# 🖐🏻 Disclaimer
+
+Please do not apply DrissionPage to any work that may violate legal regulations and moral constraints. Please use DrissionPage in a friendly manner, comply with the spider agreement, and do not use DrissionPage for any illegal purposes. If you choose to use DrissionPage
+This means that you abide by this agreement. The author does not bear any legal risks and losses caused by your violation of this agreement. You will be responsible for all consequences.
+
+---
+
+# ☕ Buy me coffee
+
+If this project is helpful to you, why not buy the author a cup of coffee :)
 
 ![](https://gitee.com/g1879/DrissionPageDocs/raw/master/docs/imgs/code.jpg)
