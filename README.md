@@ -14,7 +14,7 @@ Its syntax is concise and elegant, the amount of code is small, and it is friend
 
 ---
 
-<a href='https://gitee.com/g1879/DrissionPage/stargazers'><img src='https://gitee.com/g1879/DrissionPage/badge/star.svg?theme=dark' alt=' star'></img></a> <a href='https://gitee.com/g1879/DrissionPage/members'><img src='https://gitee.com/g1879/DrissionPage/badge/ fork.svg?theme=dark' alt='fork'></img></a>
+<a href='https://gitee.com/g1879/DrissionPage/stargazers'><img src='https://gitee.com/g1879/DrissionPage/badge/star.svg?theme=dark' alt=' star'></img></a>
 
 Project address: [gitee](https://gitee.com/g1879/DrissionPage) | [github](https://github.com/g1879/DrissionPage)
 
@@ -125,4 +125,4 @@ This means that you abide by this agreement. The author does not bear any legal 
 
 If this project is helpful to you, why not buy the author a cup of coffee :)
 
-![](https://gitee.com/g1879/DrissionPageDocs/raw/master/docs/imgs/code.jpg)
+![](https://g1879.gitee.io/drissionpagedocs/assets/images/code-cf68de50a2f331a2aa0d39c9aebbbe2c.jpg)
