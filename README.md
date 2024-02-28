@@ -125,4 +125,4 @@ This means that you abide by this agreement. The author does not bear any legal 
 
 If this project is helpful to you, why not buy the author a cup of coffee :)
 
-![](https://g1879.gitee.io/drissionpagedocs/assets/images/code-cf68de50a2f331a2aa0d39c9aebbbe2c.jpg)
+![](https://gitee.com/g1879/DrissionPageMD/raw/master/docs/imgs/code.jpg)
