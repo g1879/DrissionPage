@@ -1,5 +1,8 @@
 [中文文档](https://g1879.gitee.io/drissionpagedocs)
 
+This project is mainly updated in gitee, and will be submitted to GitHub after producing a stable version.
+Check out the latest developments at [gitee](https://gitee.com/g1879/DrissionPage).
+
 # ✨️ Overview
 
 DrissionPage is a python-based web page automation tool.
