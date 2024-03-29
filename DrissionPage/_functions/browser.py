@@ -337,3 +337,9 @@ def get_chrome_path(ini_path):
                 return str(path)
         except OSError:
             pass
+
+    # --------------从进程获取----------------
+    import psutil
+    for proc in psutil.process_iter(['name']):
+        if proc.info['name'] == 'chrome.exe':
+            return proc.exe()
