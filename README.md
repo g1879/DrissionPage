@@ -35,9 +35,9 @@ Supported browsers: Chromium core browsers (such as Chrome and Edge), electron a
 
 # 🛠 How to use
 
-**📖 Usage documentation:** [Click to view](https://g1879.gitee.io/drissionpagedocs)
+**📖 Usage documentation:** [Click to view](https://DrissionPage.cn)
 
-**Communication QQ group:** 636361957
+**Communication QQ group:** 558778073
 
 ---
 
@@ -111,12 +111,6 @@ In addition to the above advantages, this library also has numerous built-in hum
 
 ---
 
-# 🔖 Version History
-
-[Click to view version history](https://g1879.gitee.io/drissionpagedocs/history/introduction/)
-
----
-
 # 🖐🏻 Disclaimer
 
 Please do not apply DrissionPage to any work that may violate legal regulations and moral constraints. Please use DrissionPage in a friendly manner, comply with the spider agreement, and do not use DrissionPage for any illegal purposes. If you choose to use DrissionPage
@@ -128,4 +122,4 @@ This means that you abide by this agreement. The author does not bear any legal 
 
 If this project is helpful to you, why not buy the author a cup of coffee :)
 
-![](https://gitee.com/g1879/DrissionPageMD/raw/master/static/img/code2.jpg)
+![](https://gitee.com/g1879/DrissionPageDocs/raw/master/docs/imgs/code.jpg)
