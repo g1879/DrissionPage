@@ -122,4 +122,4 @@ This means that you abide by this agreement. The author does not bear any legal 
 
 If this project is helpful to you, why not buy the author a cup of coffee :)
 
-![](https://gitee.com/g1879/DrissionPageDocs/raw/master/docs/imgs/code.jpg)
+![](https://drissionpage.cn/code2.jpg)
