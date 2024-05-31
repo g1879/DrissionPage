@@ -23,6 +23,8 @@ Project address: [gitee](https://gitee.com/g1879/DrissionPage) | [github](https:
 
 Your star is my greatest support💖
 
+![Star History Chart](https://api.star-history.com/svg?repos=g1879/DrissionPage&type=Date)
+
 ---
 
 Supported systems: Windows, Linux, Mac
