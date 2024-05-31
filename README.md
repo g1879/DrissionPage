@@ -27,19 +27,19 @@ Your star is my greatest support💖
 
 ---
 
-Supported systems: Windows, Linux, Mac
-
-python version: 3.6 and above
-
-Supported browsers: Chromium core browsers (such as Chrome and Edge), electron applications
-
----
-
 # 🛠 How to use
 
 **📖 Usage documentation:** [Click to view](https://DrissionPage.cn)
 
 **Communication QQ group:** 558778073
+
+---
+
+# ☕ Buy me coffee
+
+If this project is helpful to you, why not buy the author a cup of coffee :)
+
+![](https://drissionpage.cn/code2.jpg)
 
 ---
 
@@ -117,11 +117,3 @@ In addition to the above advantages, this library also has numerous built-in hum
 
 Please do not apply DrissionPage to any work that may violate legal regulations and moral constraints. Please use DrissionPage in a friendly manner, comply with the spider agreement, and do not use DrissionPage for any illegal purposes. If you choose to use DrissionPage
 This means that you abide by this agreement. The author does not bear any legal risks and losses caused by your violation of this agreement. You will be responsible for all consequences.
-
----
-
-# ☕ Buy me coffee
-
-If this project is helpful to you, why not buy the author a cup of coffee :)
-
-![](https://drissionpage.cn/code2.jpg)
