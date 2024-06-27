@@ -1,5 +1,7 @@
 [中文文档](https://DrissionPage.cn)
 
+<a href="https://hellogithub.com/repository/dad1ecb7fbd34898a3380f5f0948ceb6" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=dad1ecb7fbd34898a3380f5f0948ceb6&claim_uid=undefined&theme=dark&theme=neutral&theme=dark" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
 This project is mainly updated in gitee, and will be submitted to GitHub after producing a stable version.
 Check out the latest developments at [gitee](https://gitee.com/g1879/DrissionPage).
 
