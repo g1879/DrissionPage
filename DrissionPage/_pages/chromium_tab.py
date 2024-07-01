@@ -399,7 +399,3 @@ class WebPageTab(SessionPage, ChromiumTab, BasePage):
 
     def __repr__(self):
         return f'<WebPageTab browser_id={self.browser.id} tab_id={self.tab_id}>'
-
-    # --------即将废弃-------
-    def get_cookies(self, as_dict=False, all_domains=False, all_info=False):
-        return self.cookies(as_dict=as_dict, all_domains=all_domains, all_info=all_info)

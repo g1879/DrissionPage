@@ -13,6 +13,7 @@ from lxml.html import HtmlElement, fromstring
 
 from .none_element import NoneElement
 from .._base.base import DrissionElement, BasePage, BaseElement
+from .._functions.elements import SessionElementsList
 from .._functions.locator import get_loc
 from .._functions.web import get_ele_txt, make_absolute_link
 
@@ -49,13 +50,6 @@ class SessionElement(DrissionElement):
 
     def __eq__(self, other):
         return self.xpath == getattr(other, 'xpath', None)
-
-    def __getattr__(self, item):
-        """获取元素属性
-        :param item: 属性名
-        :return: 属性值
-        """
-        return self.attr(item)
 
     @property
     def tag(self):
@@ -156,7 +150,7 @@ class SessionElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 直接子元素或节点文本组成的列表
         """
-        return super().children(locator, timeout, ele_only=ele_only)
+        return SessionElementsList(self.owner, super().children(locator, timeout, ele_only=ele_only))
 
     def prevs(self, locator='', timeout=None, ele_only=True):
         """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -165,7 +159,7 @@ class SessionElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 同级元素或节点文本组成的列表
         """
-        return super().prevs(locator, timeout, ele_only=ele_only)
+        return SessionElementsList(self.owner, super().prevs(locator, timeout, ele_only=ele_only))
 
     def nexts(self, locator='', timeout=None, ele_only=True):
         """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -174,7 +168,7 @@ class SessionElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 同级元素或节点文本组成的列表
         """
-        return super().nexts(locator, timeout, ele_only=ele_only)
+        return SessionElementsList(self.owner, super().nexts(locator, timeout, ele_only=ele_only))
 
     def befores(self, locator='', timeout=None, ele_only=True):
         """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -184,7 +178,7 @@ class SessionElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的元素或节点组成的列表
         """
-        return super().befores(locator, timeout, ele_only=ele_only)
+        return SessionElementsList(self.owner, super().befores(locator, timeout, ele_only=ele_only))
 
     def afters(self, locator='', timeout=None, ele_only=True):
         """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -194,7 +188,7 @@ class SessionElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素后面的元素或节点组成的列表
         """
-        return super().afters(locator, timeout, ele_only=ele_only)
+        return SessionElementsList(self.owner, super().afters(locator, timeout, ele_only=ele_only))
 
     def attr(self, name):
         """返回attribute属性值
@@ -293,12 +287,13 @@ class SessionElement(DrissionElement):
         return f'{path_str[1:]}' if mode == 'css' else path_str
 
 
-def make_session_ele(html_or_ele, loc=None, index=1):
+def make_session_ele(html_or_ele, loc=None, index=1, method=None):
     """从接收到的对象或html文本中查找元素，返回SessionElement对象
     如要直接从html生成SessionElement而不在下级查找，loc输入None即可
     :param html_or_ele: html文本、BaseParser对象
     :param loc: 定位元组或字符串，为None时不在下级查找，返回根元素
     :param index: 获取第几个元素，从1开始，可传入负数获取倒数第几个，None获取所有
+    :param method: 调用此方法的方法
     :return: 返回SessionElement元素或列表，或属性文本
     """
     # ---------------处理定位符---------------
@@ -353,8 +348,14 @@ def make_session_ele(html_or_ele, loc=None, index=1):
         page = html_or_ele.owner
         xpath = html_or_ele.xpath
         # ChromiumElement，兼容传入的元素在iframe内的情况
-        html = html_or_ele.owner.run_cdp('DOM.getOuterHTML', objectId=html_or_ele._doc_id)['outerHTML'] \
-            if html_or_ele._doc_id else html_or_ele.owner.html
+        if html_or_ele._doc_id is None:
+            doc = html_or_ele.run_js('return this.ownerDocument;')
+            html_or_ele._doc_id = doc['objectId'] if doc else False
+
+        if html_or_ele._doc_id:
+            html = html_or_ele.owner.run_cdp('DOM.getOuterHTML', objectId=html_or_ele._doc_id)['outerHTML']
+        else:
+            html = html_or_ele.owner.html
         html_or_ele = fromstring(html)
         html_or_ele = html_or_ele.xpath(xpath)[0]
 
@@ -394,12 +395,16 @@ def make_session_ele(html_or_ele, loc=None, index=1):
 
         # 把lxml元素对象包装成SessionElement对象并按需要返回一个或全部
         if index is None:
-            return [SessionElement(e, page) if isinstance(e, HtmlElement) else e for e in eles if e != '\n']
+            r = SessionElementsList(page=page)
+            for e in eles:
+                if e != '\n':
+                    r.append(SessionElement(e, page) if isinstance(e, HtmlElement) else e)
+            return r
 
         else:
             eles_count = len(eles)
             if eles_count == 0 or abs(index) > eles_count:
-                return NoneElement(page)
+                return NoneElement(page, method=method, args={'locator': loc, 'index': index})
             if index < 0:
                 index = eles_count + index + 1
 
@@ -409,7 +414,7 @@ def make_session_ele(html_or_ele, loc=None, index=1):
             elif isinstance(ele, str):
                 return ele
             else:
-                return NoneElement(page)
+                return NoneElement(page, method=method, args={'locator': loc, 'index': index})
 
     except Exception as e:
         if 'Invalid expression' in str(e):

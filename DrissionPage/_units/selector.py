@@ -23,7 +23,7 @@ class SelectElement(object):
     def __call__(self, text_or_index, timeout=None):
         """选定下拉列表中子元素
         :param text_or_index: 根据文本、值选或序号择选项，若允许多选，传入list或tuple可多选
-        :param timeout: 超时时间，不输入默认实用页面超时时间
+        :param timeout: 超时时间（秒），不输入默认实用页面超时时间
         :return: None
         """
         para_type = 'index' if isinstance(text_or_index, int) else 'text'
@@ -82,7 +82,7 @@ class SelectElement(object):
     def by_text(self, text, timeout=None):
         """此方法用于根据text值选择项。当元素是多选列表时，可以接收list或tuple
         :param text: text属性值，传入list或tuple可选择多项
-        :param timeout: 超时时间，为None默认使用页面超时时间
+        :param timeout: 超时时间（秒），为None默认使用页面超时时间
         :return: 是否选择成功
         """
         return self._select(text, 'text', False, timeout)

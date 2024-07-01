@@ -19,6 +19,7 @@ from .._configs.chromium_options import ChromiumOptions
 from .._configs.session_options import SessionOptions
 from .._elements.chromium_element import ChromiumElement
 from .._elements.session_element import SessionElement
+from .._functions.elements import SessionElementsList, ChromiumElementsList
 from .._units.setter import WebPageSetter
 
 
@@ -108,13 +109,13 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     def eles(self,
              locator: Union[Tuple[str, str], str],
-             timeout: float = None) -> List[Union[ChromiumElement, SessionElement]]: ...
+             timeout: float = None) -> Union[SessionElementsList, ChromiumElementsList]: ...
 
     def s_ele(self,
               locator: Union[Tuple[str, str], str] = None,
               index: int = 1) -> SessionElement: ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> List[SessionElement]: ...
+    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList: ...
 
     def change_mode(self, mode: str = None, go: bool = True, copy_cookies: bool = True) -> None: ...
 
@@ -185,8 +186,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
                        index: Optional[int] = 1,
                        relative: bool = False,
                        raise_err: bool = None) \
-            -> Union[ChromiumElement, SessionElement, ChromiumFrame, List[SessionElement],
-            List[Union[ChromiumElement, ChromiumFrame]]]: ...
+            -> Union[ChromiumElement, SessionElement, ChromiumFrame, SessionElementsList, ChromiumElementsList]: ...
 
     def _set_start_options(self,
                            dr_opt: Union[Driver, bool, None],

@@ -141,7 +141,7 @@ class Actions:
         :return: self
         """
         if on_ele:
-            self.move_to(on_ele, duration=0)
+            self.move_to(on_ele, duration=.2)
         self._release('left')
         return self
 
@@ -159,7 +159,7 @@ class Actions:
         :return: self
         """
         if on_ele:
-            self.move_to(on_ele, duration=0)
+            self.move_to(on_ele, duration=.2)
         self._release('right')
         return self
 
@@ -177,7 +177,7 @@ class Actions:
         :return: self
         """
         if on_ele:
-            self.move_to(on_ele, duration=0)
+            self.move_to(on_ele, duration=.2)
         self._release('middle')
         return self
 
@@ -189,7 +189,7 @@ class Actions:
         :return: self
         """
         if on_ele:
-            self.move_to(on_ele, duration=0)
+            self.move_to(on_ele, duration=.2)
         self._dr.run('Input.dispatchMouseEvent', type='mousePressed', button=button, clickCount=count,
                      x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
         self._holding = button
@@ -213,7 +213,7 @@ class Actions:
         :return: self
         """
         if on_ele:
-            self.move_to(on_ele, duration=0)
+            self.move_to(on_ele, duration=.2)
         self._dr.run('Input.dispatchMouseEvent', type='mouseWheel', x=self.curr_x, y=self.curr_y,
                      deltaX=delta_x, deltaY=delta_y, modifiers=self.modifier)
         return self

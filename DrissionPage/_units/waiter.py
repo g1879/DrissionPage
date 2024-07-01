@@ -36,7 +36,7 @@ class BaseWaiter(OriginWaiter):
     def ele_deleted(self, loc_or_ele, timeout=None, raise_err=None):
         """等待元素从DOM中删除
         :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
+        :param timeout: 超时时间（秒），默认读取页面超时时间
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -46,7 +46,7 @@ class BaseWaiter(OriginWaiter):
     def ele_displayed(self, loc_or_ele, timeout=None, raise_err=None):
         """等待元素变成显示状态
         :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
+        :param timeout: 超时时间（秒），默认读取页面超时时间
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -65,7 +65,7 @@ class BaseWaiter(OriginWaiter):
     def ele_hidden(self, loc_or_ele, timeout=None, raise_err=None):
         """等待元素变成隐藏状态
         :param loc_or_ele: 要等待的元素，可以是已有元素、定位符
-        :param timeout: 超时时间，默认读取页面超时时间
+        :param timeout: 超时时间（秒），默认读取页面超时时间
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -84,7 +84,7 @@ class BaseWaiter(OriginWaiter):
     def eles_loaded(self, locators, timeout=None, any_one=False, raise_err=None):
         """等待元素加载到DOM，可等待全部或任意一个
         :param locators: 要等待的元素，输入定位符，用list输入多个
-        :param timeout: 超时时间，默认读取页面超时时间
+        :param timeout: 超时时间（秒），默认读取页面超时时间
         :param any_one: 是否等待到一个就返回
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 成功返回True，失败返回False
@@ -119,9 +119,10 @@ class BaseWaiter(OriginWaiter):
         locators = ((get_loc(locators)[1],) if (isinstance(locators, str) or isinstance(locators, tuple)
                                                 and locators[0] in by and len(locators) == 2)
                     else [get_loc(l)[1] for l in locators])
+        method = any if any_one else all
+
         timeout = self._driver.timeout if timeout is None else timeout
         end_time = perf_counter() + timeout
-        method = any if any_one else all
         while perf_counter() < end_time:
             if method([_find(l, self._driver.driver) for l in locators]):
                 return True
@@ -133,7 +134,7 @@ class BaseWaiter(OriginWaiter):
 
     def load_start(self, timeout=None, raise_err=None):
         """等待页面开始加载
-        :param timeout: 超时时间，为None时使用页面timeout属性
+        :param timeout: 超时时间（秒），为None时使用页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -141,7 +142,7 @@ class BaseWaiter(OriginWaiter):
 
     def doc_loaded(self, timeout=None, raise_err=None):
         """等待页面加载完成
-        :param timeout: 超时时间，为None时使用页面timeout属性
+        :param timeout: 超时时间（秒），为None时使用页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -158,7 +159,7 @@ class BaseWaiter(OriginWaiter):
 
     def download_begin(self, timeout=None, cancel_it=False):
         """等待浏览器下载开始，可将其拦截
-        :param timeout: 超时时间，None使用页面对象超时时间
+        :param timeout: 超时时间（秒），None使用页面对象超时时间
         :param cancel_it: 是否取消该任务
         :return: 成功返回任务对象，失败返回False
         """
@@ -184,7 +185,7 @@ class BaseWaiter(OriginWaiter):
         """等待url变成包含或不包含指定文本
         :param text: 用于识别的文本
         :param exclude: 是否排除，为True时当url不包含text指定文本时返回True
-        :param timeout: 超时时间
+        :param timeout: 超时时间（秒）
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -194,7 +195,7 @@ class BaseWaiter(OriginWaiter):
         """等待title变成包含或不包含指定文本
         :param text: 用于识别的文本
         :param exclude: 是否排除，为True时当title不包含text指定文本时返回True
-        :param timeout: 超时时间
+        :param timeout: 超时时间（秒）
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -205,7 +206,7 @@ class BaseWaiter(OriginWaiter):
         :param arg: 要被匹配的属性
         :param text: 用于识别的文本
         :param exclude: 是否排除，为True时当属性不包含text指定文本时返回True
-        :param timeout: 超时时间
+        :param timeout: 超时时间（秒）
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -231,7 +232,7 @@ class BaseWaiter(OriginWaiter):
 
     def _loading(self, timeout=None, start=True, gap=.01, raise_err=None):
         """等待页面开始加载或加载完成
-        :param timeout: 超时时间，为None时使用页面timeout属性
+        :param timeout: 超时时间（秒），为None时使用页面timeout属性
         :param start: 等待开始还是结束
         :param gap: 间隔秒数
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
@@ -251,45 +252,12 @@ class BaseWaiter(OriginWaiter):
             else:
                 return False
 
-    # -----------即将废弃-----------
-
-    def data_packets(self, count=1, timeout=None, fix_count: bool = True):
-        """等待符合要求的数据包到达指定数量
-        :param count: 需要捕捉的数据包数量
-        :param timeout: 超时时间，为None无限等待
-        :param fix_count: 是否必须满足总数要求，发生超时，为True返回False，为False返回已捕捉到的数据包
-        :return: count为1时返回数据包对象，大于1时返回列表，超时且fix_count为True时返回False"""
-        return self._driver.listen.wait(count, timeout, fix_count)
-
-    def load_complete(self, timeout=None, raise_err=None):
-        """等待页面加载完成
-        :param timeout: 超时时间，为None时使用页面timeout属性
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 是否等待成功
-        """
-        return self._loading(timeout=timeout, start=False, raise_err=raise_err)
-
-    def ele_loaded(self, locator, timeout=None, raise_err=None):
-        """等待元素加载到DOM
-        :param locator: 要等待的元素，输入定位符
-        :param timeout: 超时时间，默认读取页面超时时间
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 成功返回元素对象，失败返回False
-        """
-        ele = self._driver._ele(locator, raise_err=False, timeout=timeout)
-        if ele:
-            return ele
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(f'等待元素加载失败（等待{timeout}秒）。')
-        else:
-            return False
-
 
 class TabWaiter(BaseWaiter):
 
     def downloads_done(self, timeout=None, cancel_if_timeout=True):
         """等待所有浏览器下载任务结束
-        :param timeout: 超时时间，为None时无限等待
+        :param timeout: 超时时间（秒），为None时无限等待
         :param cancel_if_timeout: 超时时是否取消剩余任务
         :return: 是否等待成功
         """
@@ -329,7 +297,7 @@ class PageWaiter(TabWaiter):
 
     def new_tab(self, timeout=None, raise_err=None):
         """等待新标签页出现
-        :param timeout: 等待超时时间，为None则使用页面对象timeout属性
+        :param timeout: 超时时间（秒），为None则使用页面对象timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 等到新标签页返回其id，否则返回False
         """
@@ -348,7 +316,7 @@ class PageWaiter(TabWaiter):
 
     def all_downloads_done(self, timeout=None, cancel_if_timeout=True):
         """等待所有浏览器下载任务结束
-        :param timeout: 超时时间，为None时无限等待
+        :param timeout: 超时时间（秒），为None时无限等待
         :param cancel_if_timeout: 超时时是否取消剩余任务
         :return: 是否等待成功
         """
@@ -388,7 +356,7 @@ class ElementWaiter(OriginWaiter):
 
     def deleted(self, timeout=None, raise_err=None):
         """等待元素从dom删除
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -396,7 +364,7 @@ class ElementWaiter(OriginWaiter):
 
     def displayed(self, timeout=None, raise_err=None):
         """等待元素从dom显示
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -404,7 +372,7 @@ class ElementWaiter(OriginWaiter):
 
     def hidden(self, timeout=None, raise_err=None):
         """等待元素从dom隐藏
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -412,15 +380,15 @@ class ElementWaiter(OriginWaiter):
 
     def covered(self, timeout=None, raise_err=None):
         """等待当前元素被遮盖
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 是否等待成功
+        :return: 成功返回覆盖元素id，返回False
         """
         return self._wait_state('is_covered', True, timeout, raise_err, err_text='等待元素被覆盖失败。')
 
     def not_covered(self, timeout=None, raise_err=None):
         """等待当前元素不被遮盖
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -428,7 +396,7 @@ class ElementWaiter(OriginWaiter):
 
     def enabled(self, timeout=None, raise_err=None):
         """等待当前元素变成可用
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -436,7 +404,7 @@ class ElementWaiter(OriginWaiter):
 
     def disabled(self, timeout=None, raise_err=None):
         """等待当前元素变成不可用
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -444,7 +412,7 @@ class ElementWaiter(OriginWaiter):
 
     def disabled_or_deleted(self, timeout=None, raise_err=None):
         """等待当前元素变成不可用或从DOM移除
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -463,7 +431,7 @@ class ElementWaiter(OriginWaiter):
 
     def stop_moving(self, timeout=None, gap=.1, raise_err=None):
         """等待当前元素停止运动
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param gap: 检测间隔时间
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
@@ -497,7 +465,7 @@ class ElementWaiter(OriginWaiter):
     def clickable(self, wait_moved=True, timeout=None, raise_err=None):
         """等待当前元素可被点击
         :param wait_moved: 是否等待元素运动结束
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 是否等待成功
         """
@@ -510,9 +478,9 @@ class ElementWaiter(OriginWaiter):
 
     def has_rect(self, timeout=None, raise_err=None):
         """等待当前元素有大小及位置属性
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 是否等待成功
+        :return: 成功返回元素四角坐标（左上 右上 右下 左下），失败返回False
         """
         return self._wait_state('has_rect', True, timeout, raise_err, err_text='等待元素拥有大小及位置失败（等{}秒）。')
 
@@ -520,21 +488,25 @@ class ElementWaiter(OriginWaiter):
         """等待元素某个元素状态到达指定状态
         :param attr: 状态名称
         :param mode: 等待True还是False
-        :param timeout: 超时时间，为None使用元素所在页面timeout属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :param err_text: 抛出错误时显示的信息
         :return: 是否等待成功
         """
-        err_text = err_text or '等待元素状态改变失败（等待{}秒）。'
+        a = self._ele.states.__getattribute__(attr)
+        if (a and mode) or (not a and not mode):
+            return True if isinstance(a, bool) else a
+
         if timeout is None:
             timeout = self._owner.timeout
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
             a = self._ele.states.__getattribute__(attr)
             if (a and mode) or (not a and not mode):
-                return True
+                return True if isinstance(a, bool) else a
             sleep(.05)
 
+        err_text = err_text or '等待元素状态改变失败（等待{}秒）。'
         if raise_err is True or Settings.raise_when_wait_failed is True:
             raise WaitTimeoutError(err_text.format(timeout))
         else:

@@ -12,6 +12,7 @@ from DownloadKit import DownloadKit
 
 from .._elements.none_element import NoneElement
 from .._elements.session_element import SessionElement
+from .._functions.elements import SessionElementsList
 from .._pages.chromium_page import ChromiumPage
 from .._pages.session_page import SessionPage
 from .._pages.web_page import WebPage
@@ -37,7 +38,7 @@ class BaseParser(object):
               locator: Union[Tuple[str, str], str, BaseElement, None] = None,
               index: int = 1) -> SessionElement: ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> List[SessionElement]: ...
+    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList: ...
 
     def _ele(self,
              locator: Union[Tuple[str, str], str],

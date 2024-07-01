@@ -213,12 +213,14 @@ def cookies_to_tuple(cookies):
 
     elif isinstance(cookies, str):
         c_dict = {}
-        r = match(r'.*?=([^=]+)=', cookies)
-        if not r:  # 只有一个
-            cookies = [cookies.rstrip(',;')]
-        else:
-            s = match(r'.*([,;]).*', r.group(1)).group(1)
-            cookies = cookies.rstrip(s).split(s)
+        cookies = cookies.rstrip('; ')
+        cookies = cookies.split(';')
+        # r = match(r'.*?=([^=]+)=', cookies)
+        # if not r:  # 只有一个
+        #     cookies = [cookies.rstrip(',;')]
+        # else:
+        #     s = match(r'.*([,;]).*', r.group(1)).group(1)
+        #     cookies = cookies.rstrip(s).split(s)
 
         for attr in cookies:
             attr_val = attr.strip().split('=', 1)

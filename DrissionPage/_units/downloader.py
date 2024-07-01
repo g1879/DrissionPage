@@ -292,7 +292,7 @@ class DownloadMission(object):
     def wait(self, show=True, timeout=None, cancel_if_timeout=True):
         """等待任务结束
         :param show: 是否显示下载信息
-        :param timeout: 超时时间，为None则无限等待
+        :param timeout: 超时时间（秒），为None则无限等待
         :param cancel_if_timeout: 超时时是否取消任务
         :return: 等待成功返回完整路径，否则返回False
         """

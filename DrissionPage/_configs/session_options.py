@@ -457,17 +457,6 @@ class SessionOptions(object):
             self._adapters = [(k, i) for k, i in session.adapters.items()]
         return self
 
-    # --------------即将废弃---------------
-
-    def set_paths(self, download_path=None):
-        """设置默认下载路径
-        :param download_path: 下载路径
-        :return: 返回当前对象
-        """
-        if download_path is not None:
-            self._download_path = str(download_path)
-        return self
-
     def __repr__(self):
         return f'<SessionOptions at {id(self)}>'
 

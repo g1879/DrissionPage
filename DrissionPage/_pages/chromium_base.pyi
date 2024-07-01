@@ -14,6 +14,7 @@ from .._base.browser import Browser
 from .._base.driver import Driver
 from .._elements.chromium_element import ChromiumElement
 from .._elements.session_element import SessionElement
+from .._functions.elements import SessionElementsList, ChromiumElementsList
 from .._pages.chromium_frame import ChromiumFrame
 from .._pages.chromium_page import ChromiumPage
 from .._units.actions import Actions
@@ -187,21 +188,20 @@ class ChromiumBase(BasePage):
 
     def eles(self,
              locator: Union[Tuple[str, str], str],
-             timeout: float = None) -> List[ChromiumElement]: ...
+             timeout: float = None) -> ChromiumElementsList: ...
 
     def s_ele(self,
               locator: Union[Tuple[str, str], str] = None,
               index: int = 1) -> SessionElement: ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> List[SessionElement]: ...
+    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList: ...
 
     def _find_elements(self,
                        locator: Union[Tuple[str, str], str, ChromiumElement, ChromiumFrame],
                        timeout: float = None,
                        index: Optional[int] = 1,
                        relative: bool = False,
-                       raise_err: bool = None) \
-            -> Union[ChromiumElement, ChromiumFrame, List[Union[ChromiumElement, ChromiumFrame]]]: ...
+                       raise_err: bool = None) -> Union[ChromiumElement, ChromiumFrame, ChromiumElementsList]: ...
 
     def refresh(self, ignore_cache: bool = False) -> None: ...
 

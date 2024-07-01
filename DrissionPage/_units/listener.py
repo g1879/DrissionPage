@@ -119,7 +119,7 @@ class Listener(object):
     def wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
         """等待符合要求的数据包到达指定数量
         :param count: 需要捕捉的数据包数量
-        :param timeout: 超时时间，为None无限等待
+        :param timeout: 超时时间（秒），为None无限等待
         :param fit_count: 是否必须满足总数要求，发生超时，为True返回False，为False返回已捕捉到的数据包
         :param raise_err: 超时时是否抛出错误，为None时根据Settings设置
         :return: count为1时返回数据包对象，大于1时返回列表，超时且fit_count为True时返回False
@@ -159,7 +159,7 @@ class Listener(object):
     def steps(self, count=None, timeout=None, gap=1):
         """用于单步操作，可实现每收到若干个数据包执行一步操作（如翻页）
         :param count: 需捕获的数据包总数，为None表示无限
-        :param timeout: 每个数据包等待时间，为None表示无限
+        :param timeout: 每个数据包等待时间（秒），为None表示无限
         :param gap: 每接收到多少个数据包返回一次数据
         :return: 用于在接收到监听目标时触发动作的可迭代对象
         """
@@ -219,7 +219,7 @@ class Listener(object):
 
     def wait_silent(self, timeout=None, targets_only=False, limit=0):
         """等待所有请求结束
-        :param timeout: 超时，为None时无限等待
+        :param timeout: 超时时间（秒），为None时无限等待
         :param targets_only: 是否只等待targets指定的请求结束
         :param limit: 剩下多少个连接时视为结束
         :return: 返回是否等待成功
@@ -251,13 +251,13 @@ class Listener(object):
         self._target_id = target_id
         self._address = address
         self._owner = owner
-        debug = False
+        # debug = False
         if self._driver:
-            debug = self._driver._debug
+            # debug = self._driver._debug
             self._driver.stop()
         if self.listening:
             self._driver = Driver(self._target_id, 'page', self._address)
-            self._driver._debug = debug
+            # self._driver._debug = debug
             self._driver.run('Network.enable')
             self._set_callback()
 
@@ -480,7 +480,7 @@ class DataPacket(object):
 
     def wait_extra_info(self, timeout=None):
         """等待额外的信息加载完成
-        :param timeout: 超时时间，None为无限等待
+        :param timeout: 超时时间（秒），None为无限等待
         :return: 是否等待成功
         """
         if timeout is None:

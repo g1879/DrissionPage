@@ -6,7 +6,7 @@
 @License  : BSD 3-Clause.
 """
 from pathlib import Path
-from typing import Any, Union, Tuple, List, Optional
+from typing import Any, Union, Tuple, Optional
 
 from requests import Session, Response
 from requests.structures import CaseInsensitiveDict
@@ -14,6 +14,7 @@ from requests.structures import CaseInsensitiveDict
 from .._base.base import BasePage
 from .._configs.session_options import SessionOptions
 from .._elements.session_element import SessionElement
+from .._functions.elements import SessionElementsList
 from .._units.setter import SessionPageSetter
 
 
@@ -97,21 +98,20 @@ class SessionPage(BasePage):
 
     def eles(self,
              locator: Union[Tuple[str, str], str],
-             timeout: float = None) -> List[SessionElement]: ...
+             timeout: float = None) -> SessionElementsList: ...
 
     def s_ele(self,
               locator: Union[Tuple[str, str], str, SessionElement] = None,
               index: int = 1) -> SessionElement: ...
 
-    def s_eles(self, loc: Union[Tuple[str, str], str]) -> List[SessionElement]: ...
+    def s_eles(self, loc: Union[Tuple[str, str], str]) -> SessionElementsList: ...
 
     def _find_elements(self,
                        locator: Union[Tuple[str, str], str, SessionElement],
                        timeout: float = None,
                        index: Optional[int] = 1,
                        relative: bool = True,
-                       raise_err: bool = None) \
-            -> Union[SessionElement, List[SessionElement]]: ...
+                       raise_err: bool = None) -> Union[SessionElement, SessionElementsList]: ...
 
     def cookies(self,
                 as_dict: bool = False,

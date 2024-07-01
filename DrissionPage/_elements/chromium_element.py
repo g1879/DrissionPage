@@ -17,8 +17,8 @@ from .none_element import NoneElement
 from .session_element import make_session_ele
 from .._base.base import DrissionElement, BaseElement
 from .._functions.keys import input_text_or_keys
-from .._functions.locator import get_loc
-from .._functions.settings import Settings
+from .._functions.locator import get_loc, locator_to_tuple
+from .._functions.elements import ChromiumElementsList
 from .._functions.web import make_absolute_link, get_ele_txt, format_html, is_js_func, offset_scroll, get_blob
 from .._units.clicker import Clicker
 from .._units.rect import ElementRect
@@ -27,8 +27,8 @@ from .._units.selector import SelectElement
 from .._units.setter import ChromiumElementSetter
 from .._units.states import ElementStates, ShadowRootStates
 from .._units.waiter import ElementWaiter
-from ..errors import (ContextLostError, ElementLostError, JavaScriptError, ElementNotFoundError,
-                      CDPError, NoResourceError, AlertExistsError)
+from ..errors import ContextLostError, ElementLostError, JavaScriptError, CDPError, NoResourceError, AlertExistsError, \
+    NoRectError
 
 __FRAME_ELEMENT__ = ('iframe', 'frame')
 
@@ -55,6 +55,7 @@ class ChromiumElement(DrissionElement):
         self._tag = None
         self._wait = None
         self._type = 'ChromiumElement'
+        self._doc_id = None
 
         if node_id and obj_id and backend_id:
             self._node_id = node_id
@@ -75,9 +76,6 @@ class ChromiumElement(DrissionElement):
         else:
             raise ElementLostError
 
-        doc = self.run_js('return this.ownerDocument;')
-        self._doc_id = doc['objectId'] if doc else None
-
     def __repr__(self):
         attrs = [f"{k}='{v}'" for k, v in self.attrs.items()]
         return f'<ChromiumElement {self.tag} {" ".join(attrs)}>'
@@ -92,14 +90,6 @@ class ChromiumElement(DrissionElement):
 
     def __eq__(self, other):
         return self._backend_id == getattr(other, '_backend_id', None)
-
-    def __getattr__(self, item):
-        """获取元素属性
-        :param item: 属性名
-        :return: 属性值
-        """
-        a = self.attr(item)
-        return a if a is not None else self.property(item)
 
     @property
     def tag(self):
@@ -221,25 +211,6 @@ class ChromiumElement(DrissionElement):
     def value(self):
         return self.property('value')
 
-    # -----即将废弃开始--------
-    @property
-    def location(self):
-        """返回元素左上角的绝对坐标"""
-        return self.rect.location
-
-    @property
-    def size(self):
-        """返回元素宽和高组成的元组"""
-        return self.rect.size
-
-    def prop(self, prop):
-        return self.property(prop)
-
-    def get_src(self, timeout=None, base64_to_bytes=True):
-        return self.src(timeout=timeout, base64_to_bytes=base64_to_bytes)
-
-    # -----即将废弃结束--------
-
     def check(self, uncheck=False, by_js=False):
         """选中或取消选中当前元素
         :param uncheck: 是否取消选中
@@ -328,7 +299,7 @@ class ChromiumElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 直接子元素或节点文本组成的列表
         """
-        return super().children(locator, timeout, ele_only=ele_only)
+        return ChromiumElementsList(self.owner, super().children(locator, timeout, ele_only=ele_only))
 
     def prevs(self, locator='', timeout=None, ele_only=True):
         """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -337,7 +308,7 @@ class ChromiumElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 兄弟元素或节点文本组成的列表
         """
-        return super().prevs(locator, timeout, ele_only=ele_only)
+        return ChromiumElementsList(self.owner, super().prevs(locator, timeout, ele_only=ele_only))
 
     def nexts(self, locator='', timeout=None, ele_only=True):
         """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -346,7 +317,7 @@ class ChromiumElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 兄弟元素或节点文本组成的列表
         """
-        return super().nexts(locator, timeout, ele_only=ele_only)
+        return ChromiumElementsList(self.owner, super().nexts(locator, timeout, ele_only=ele_only))
 
     def befores(self, locator='', timeout=None, ele_only=True):
         """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -356,7 +327,7 @@ class ChromiumElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素前面的元素或节点组成的列表
         """
-        return super().befores(locator, timeout, ele_only=ele_only)
+        return ChromiumElementsList(self.owner, super().befores(locator, timeout, ele_only=ele_only))
 
     def afters(self, locator='', timeout=None, ele_only=True):
         """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -366,7 +337,137 @@ class ChromiumElement(DrissionElement):
         :param ele_only: 是否只获取元素，为False时把文本、注释节点也纳入
         :return: 本元素后面的元素或节点组成的列表
         """
-        return super().afters(locator, timeout, ele_only=ele_only)
+        return ChromiumElementsList(self.owner, super().afters(locator, timeout, ele_only=ele_only))
+
+    def over(self, timeout=None):
+        """获取覆盖在本元素上最上层的元素
+        :param timeout: 等待元素出现的超时时间（秒）
+        :return: 元素对象
+        """
+        timeout = timeout if timeout is None else self.owner.timeout
+        bid = self.wait.covered(timeout=timeout)
+        if bid:
+            return ChromiumElement(owner=self.owner, backend_id=bid)
+        else:
+            return NoneElement(page=self.owner, method='on()', args={'timeout': timeout})
+
+    def offset(self, offset_x, offset_y):
+        """获取相对本元素左上角左边指定偏移量位置的元素
+        :param offset_x: 横坐标偏移量，向右为正
+        :param offset_y: 纵坐标偏移量，向下为正
+        :return: 元素对象
+        """
+        x, y = self.rect.location
+        try:
+            return ChromiumElement(owner=self.owner,
+                                   backend_id=self.owner.run_cdp('DOM.getNodeForLocation', x=x + offset_x,
+                                                                 y=y + offset_y, includeUserAgentShadowDOM=True,
+                                                                 ignorePointerEventsNone=False)['backendNodeId'])
+        except CDPError:
+            return NoneElement(page=self.owner, method='offset()', args={'offset_x': offset_x, 'offset_y': offset_y})
+
+    def east(self, loc_or_pixel=None, index=1):
+        """获取元素右边某个指定元素
+        :param loc_or_pixel: 定位符，只支持str或int，且不支持xpath和css方式，传入int按像素距离获取
+        :param index: 第几个，从1开始
+        :return: 获取到的元素对象
+        """
+        return self._get_relative_eles(mode='east', locator=loc_or_pixel, index=index)
+
+    def south(self, loc_or_pixel=None, index=1):
+        """获取元素下方某个指定元素
+        :param loc_or_pixel: 定位符，只支持str或int，且不支持xpath和css方式，传入int按像素距离获取
+        :param index: 第几个，从1开始
+        :return: 获取到的元素对象
+        """
+        return self._get_relative_eles(mode='south', locator=loc_or_pixel, index=index)
+
+    def west(self, loc_or_pixel=None, index=1):
+        """获取元素左边某个指定元素
+        :param loc_or_pixel: 定位符，只支持str或int，且不支持xpath和css方式，传入int按像素距离获取
+        :param index: 第几个，从1开始
+        :return: 获取到的元素对象
+        """
+        return self._get_relative_eles(mode='west', locator=loc_or_pixel, index=index)
+
+    def north(self, loc_or_pixel=None, index=1):
+        """获取元素上方某个指定元素
+        :param loc_or_pixel: 定位符，只支持str或int，且不支持xpath和css方式，传入int按像素距离获取
+        :param index: 第几个，从1开始
+        :return: 获取到的元素对象
+        """
+        return self._get_relative_eles(mode='north', locator=loc_or_pixel, index=index)
+
+    def _get_relative_eles(self, mode='north', locator=None, index=1):
+        """获取元素下方某个指定元素
+        :param locator: 定位符，只支持str或int，且不支持xpath和css方式
+        :param index: 第几个，从1开始
+        :return: 获取到的元素对象
+        """
+        if locator and not (isinstance(locator, str) and not locator.startswith(
+                ('x:', 'xpath:', 'x=', 'xpath=', 'c:', 'css:', 'c=', 'css=')) or isinstance(locator, int)):
+            raise ValueError('locator参数只能是str格式且不支持xpath和css形式。')
+        rect = self.states.has_rect
+        if not rect:
+            raise NoRectError
+
+        if mode == 'east':
+            cdp_data = {'x': int(rect[1][0]), 'y': int(self.rect.midpoint[1]),
+                        'includeUserAgentShadowDOM': True, 'ignorePointerEventsNone': False}
+            variable = 'x'
+            minus = False
+        elif mode == 'south':
+            cdp_data = {'x': int(self.rect.midpoint[0]), 'y': int(rect[2][1]),
+                        'includeUserAgentShadowDOM': True, 'ignorePointerEventsNone': False}
+            variable = 'y'
+            minus = False
+        elif mode == 'west':
+            cdp_data = {'x': int(rect[0][0]), 'y': int(self.rect.midpoint[1]),
+                        'includeUserAgentShadowDOM': True, 'ignorePointerEventsNone': False}
+            variable = 'x'
+            minus = True
+        else:  # north
+            cdp_data = {'x': int(self.rect.midpoint[0]), 'y': int(rect[0][1]),
+                        'includeUserAgentShadowDOM': True, 'ignorePointerEventsNone': False}
+            variable = 'y'
+            minus = True
+
+        if isinstance(locator, int):
+            if minus:
+                cdp_data[variable] -= locator
+            else:
+                cdp_data[variable] += locator
+            try:
+                return ChromiumElement(owner=self.owner,
+                                       backend_id=self.owner.run_cdp('DOM.getNodeForLocation',
+                                                                     **cdp_data)['backendNodeId'])
+            except CDPError:
+                return NoneElement(page=self.owner, method=f'{mode}()', args={'locator': locator})
+
+        num = 0
+        value = -8 if minus else 8
+        size = self.owner.rect.size
+        max_len = size[0] if mode == 'east' else size[1]
+        loc_data = locator_to_tuple(locator) if locator else None
+        curr_ele = None
+        while 0 < cdp_data[variable] < max_len:
+            cdp_data[variable] += value
+            try:
+                bid = self.owner.run_cdp('DOM.getNodeForLocation', **cdp_data)['backendNodeId']
+                if bid == curr_ele:
+                    continue
+                else:
+                    curr_ele = bid
+                ele = ChromiumElement(self.owner, backend_id=bid)
+
+                if loc_data is None or _check_ele(ele, loc_data):
+                    num += 1
+                    if num == index:
+                        return ele
+            except:
+                pass
+
+        return NoneElement(page=self.owner, method=f'{mode}()', args={'locator': locator})
 
     def attr(self, attr):
         """返回一个attribute属性值
@@ -459,14 +560,7 @@ class ChromiumElement(DrissionElement):
         :param index: 获取第几个，从1开始，可传入负数获取倒数第几个
         :return: SessionElement对象或属性、文本
         """
-        r = make_session_ele(self, locator, index=index)
-        if isinstance(r, NoneElement):
-            if Settings.raise_when_ele_not_found:
-                raise ElementNotFoundError(None, 's_ele()', {'locator': locator})
-            else:
-                r.method = 's_ele()'
-                r.args = {'locator': locator}
-        return r
+        return make_session_ele(self, locator, index=index, method='s_ele()')
 
     def s_eles(self, locator=None):
         """查找所有符合条件的元素，以SessionElement列表形式返回
@@ -638,6 +732,7 @@ class ChromiumElement(DrissionElement):
             self.run_js('this.dispatchEvent(new Event("change", {bubbles: true}));')
             return
 
+        self.wait.clickable(wait_moved=False, timeout=.5)
         if clear and vals not in ('\n', '\ue007'):
             self.clear(by_js=False)
         else:
@@ -704,7 +799,6 @@ class ChromiumElement(DrissionElement):
             ele_or_loc = ele_or_loc.rect.midpoint
         elif not isinstance(ele_or_loc, (list, tuple)):
             raise TypeError('需要ChromiumElement对象或坐标。')
-
         self.owner.actions.hold(self).move_to(ele_or_loc, duration=duration).release()
 
     def _get_obj_id(self, node_id=None, backend_id=None):
@@ -917,13 +1011,8 @@ class ShadowRoot(BaseElement):
 
         loc = f'xpath:./{loc}'
         ele = self._ele(loc, index=index, relative=True)
-        if ele:
-            return ele
 
-        if Settings.raise_when_ele_not_found:
-            raise ElementNotFoundError(None, 'child()', {'locator': locator, 'index': index})
-        else:
-            return NoneElement(self.owner, 'child()', {'locator': locator, 'index': index})
+        return ele if ele else NoneElement(self.owner, 'child()', {'locator': locator, 'index': index})
 
     def next(self, locator='', index=1):
         """返回当前元素后面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
@@ -938,13 +1027,8 @@ class ShadowRoot(BaseElement):
         loc = loc[1].lstrip('./')
         xpath = f'xpath:./{loc}'
         ele = self.parent_ele._ele(xpath, index=index, relative=True)
-        if ele:
-            return ele
 
-        if Settings.raise_when_ele_not_found:
-            raise ElementNotFoundError(None, 'next()', {'locator': locator, 'index': index})
-        else:
-            return NoneElement(self.owner, 'next()', {'locator': locator, 'index': index})
+        return ele if ele else NoneElement(self.owner, 'next()', {'locator': locator, 'index': index})
 
     def before(self, locator='', index=1):
         """返回文档中当前元素前面符合条件的一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
@@ -960,13 +1044,8 @@ class ShadowRoot(BaseElement):
         loc = loc[1].lstrip('./')
         xpath = f'xpath:./preceding::{loc}'
         ele = self.parent_ele._ele(xpath, index=index, relative=True)
-        if ele:
-            return ele
 
-        if Settings.raise_when_ele_not_found:
-            raise ElementNotFoundError(None, 'before()', {'locator': locator, 'index': index})
-        else:
-            return NoneElement(self.owner, 'before()', {'locator': locator, 'index': index})
+        return ele if ele else NoneElement(self.owner, 'before()', {'locator': locator, 'index': index})
 
     def after(self, locator='', index=1):
         """返回文档中此当前元素后面符合条件的一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
@@ -976,12 +1055,7 @@ class ShadowRoot(BaseElement):
         :return: 本元素后面的某个元素或节点
         """
         nodes = self.afters(locator=locator)
-        if nodes:
-            return nodes[index - 1]
-        if Settings.raise_when_ele_not_found:
-            raise ElementNotFoundError(None, 'after()', {'locator': locator, 'index': index})
-        else:
-            return NoneElement(self.owner, 'after()', {'locator': locator, 'index': index})
+        return nodes[index - 1] if nodes else NoneElement(self.owner, 'after()', {'locator': locator, 'index': index})
 
     def children(self, locator=''):
         """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
@@ -1219,8 +1293,12 @@ def find_by_xpath(ele, xpath, index, timeout, relative=True):
             res = ele.owner.run_cdp('Runtime.getProperties', objectId=res['result']['objectId'],
                                     ownProperties=True)['result'][:-1]
             if index is None:
-                r = [make_chromium_eles(ele.owner, _ids=i['value']['objectId'], is_obj_id=True)
-                     if i['value']['type'] == 'object' else i['value']['value'] for i in res]
+                r = ChromiumElementsList(page=ele.owner)
+                for i in res:
+                    if i['value']['type'] == 'object':
+                        r.append(make_chromium_eles(ele.owner, _ids=i['value']['objectId'], is_obj_id=True))
+                    else:
+                        r.append(i['value']['value'])
                 return None if False in r else r
 
             else:
@@ -1244,7 +1322,7 @@ def find_by_xpath(ele, xpath, index, timeout, relative=True):
 
     if result:
         return result
-    return NoneElement(ele.owner) if index is not None else []
+    return NoneElement(ele.owner) if index is not None else ChromiumElementsList(page=ele.owner)
 
 
 def find_by_css(ele, selector, index, timeout):
@@ -1290,7 +1368,7 @@ def find_by_css(ele, selector, index, timeout):
 
     if result:
         return result
-    return NoneElement(ele.owner) if index is not None else []
+    return NoneElement(ele.owner) if index is not None else ChromiumElementsList(page=ele.owner)
 
 
 def make_chromium_eles(page, _ids, index=1, is_obj_id=True, ele_only=False):
@@ -1322,7 +1400,7 @@ def make_chromium_eles(page, _ids, index=1, is_obj_id=True, ele_only=False):
             return get_node_func(page, obj_id, ele_only)
 
     else:  # 获取全部
-        nodes = []
+        nodes = ChromiumElementsList(page=page)
         for obj_id in _ids:
             tmp = get_node_func(page, obj_id, ele_only)
             if tmp is False:
@@ -1569,3 +1647,59 @@ class Pseudo(object):
     def after(self):
         """返回当前元素的::after伪元素内容"""
         return self._ele.style('content', 'after')
+
+
+def _check_ele(ele, loc_data):
+    """检查元素是否符合loc_data指定的要求
+    :param ele: 元素对象
+    :param loc_data: 格式： {'and': bool, 'args': ['属性名称', '匹配方式', '属性值', 是否否定]}
+    :return: bool
+    """
+    attrs = ele.attrs
+    if loc_data['and']:
+        ok = True
+        for i in loc_data['args']:
+            name, symbol, value, deny = i
+            if name == 'tag()':
+                arg = ele.tag
+                symbol = '='
+            elif name == 'text()':
+                arg = ele.raw_text
+            elif name is None:
+                arg = None
+            else:
+                arg = attrs.get(name, '')
+
+            if ((symbol == '=' and ((deny and arg == value) or (not deny and arg != value)))
+                    or (symbol == ':' and ((deny and value in arg) or (not deny and value not in arg)))
+                    or (symbol == '^' and ((deny and arg.startswith(value))
+                                           or (not deny and not arg.startswith(value))))
+                    or (symbol == '$' and ((deny and arg.endswith(value)) or (not deny and not arg.endswith(value))))
+                    or (arg is None and attrs)):
+                ok = False
+                break
+
+    else:
+        ok = False
+        for i in loc_data['args']:
+            name, value, symbol, deny = i
+            if name == 'tag()':
+                arg = ele.tag
+                symbol = '='
+            elif name == 'text()':
+                arg = ele.text
+            elif name is None:
+                arg = None
+            else:
+                arg = attrs.get(name, '')
+
+            if ((symbol == '=' and ((not deny and arg == value) or (deny and arg != value)))
+                    or (symbol == ':' and ((not deny and value in arg) or (deny and value not in arg)))
+                    or (symbol == '^' and ((not deny and arg.startswith(value))
+                                           or (deny and not arg.startswith(value))))
+                    or (symbol == '$' and ((not deny and arg.endswith(value)) or (deny and not arg.endswith(value))))
+                    or (arg is None and not attrs)):
+                ok = True
+                break
+
+    return ok

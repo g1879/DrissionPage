@@ -173,13 +173,6 @@ class ChromiumBaseSetter(BasePageSetter):
         self._owner.run_cdp('Network.enable')
         self._owner.run_cdp('Network.setBlockedURLs', urls=urls)
 
-    # --------------即将废弃---------------
-
-    @property
-    def load_strategy(self):
-        """返回用于设置页面加载策略的对象"""
-        return LoadMode(self._owner)
-
 
 class TabSetter(ChromiumBaseSetter):
     def __init__(self, owner):

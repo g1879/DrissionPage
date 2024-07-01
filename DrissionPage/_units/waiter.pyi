@@ -5,7 +5,7 @@
 @Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
 @License  : BSD 3-Clause.
 """
-from typing import Union, Tuple
+from typing import Union, Tuple, Literal, List
 
 from .downloader import DownloadMission
 from .._elements.chromium_element import ChromiumElement
@@ -91,7 +91,7 @@ class ElementWaiter(OriginWaiter):
 
     def hidden(self, timeout: float = None, raise_err: bool = None) -> bool: ...
 
-    def covered(self, timeout: float = None, raise_err: bool = None) -> bool: ...
+    def covered(self, timeout: float = None, raise_err: bool = None) -> Union[Literal[False], int]: ...
 
     def not_covered(self, timeout: float = None, raise_err: bool = None) -> bool: ...
 
@@ -101,7 +101,9 @@ class ElementWaiter(OriginWaiter):
 
     def clickable(self, wait_moved: bool = True, timeout: float = None, raise_err: bool = None) -> bool: ...
 
-    def has_rect(self, timeout: float = None, raise_err: bool = None) -> bool: ...
+    def has_rect(self,
+                 timeout: float = None,
+                 raise_err: bool = None) -> Union[Literal[False], List[Tuple[float, float]]]: ...
 
     def disabled_or_deleted(self, timeout: float = None, raise_err: bool = None) -> bool: ...
 

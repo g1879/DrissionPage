@@ -292,23 +292,25 @@ class SessionPage(BasePage):
         """
         kwargs = CaseInsensitiveDict(kwargs)
         if 'headers' not in kwargs:
-            kwargs['headers'] = {}
+            kwargs['headers'] = CaseInsensitiveDict()
         else:
             kwargs['headers'] = CaseInsensitiveDict(format_headers(kwargs['headers']))
 
         # 设置referer和host值
         parsed_url = urlparse(url)
-        hostname = parsed_url.hostname
+        hostname = parsed_url.netloc
         scheme = parsed_url.scheme
         if not check_headers(kwargs['headers'], self._headers, 'Referer'):
             kwargs['headers']['Referer'] = self.url if self.url else f'{scheme}://{hostname}'
-        if 'Host' not in kwargs['headers']:
+        if not check_headers(kwargs['headers'], self._headers, 'Host'):
             kwargs['headers']['Host'] = hostname
-
         if not check_headers(kwargs, self._headers, 'timeout'):
             kwargs['timeout'] = self.timeout
 
-        kwargs['headers'] = {**self._headers, **kwargs['headers']}
+        h = CaseInsensitiveDict(self._headers)
+        for k, v in kwargs['headers'].items():
+            h[k] = v
+        kwargs['headers'] = h
 
         r = err = None
         retry = retry if retry is not None else self.retry_times
@@ -353,10 +355,6 @@ class SessionPage(BasePage):
 
     def __repr__(self):
         return f'<SessionPage url={self.url}>'
-
-    # ---------即将废弃---------
-    def get_cookies(self, as_dict=False, all_domains=False, all_info=False):
-        return self.cookies(as_dict=as_dict, all_domains=all_domains, all_info=all_info)
 
 
 def check_headers(kwargs, headers, arg):

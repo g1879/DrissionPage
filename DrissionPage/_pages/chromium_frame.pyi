@@ -10,9 +10,10 @@ from typing import Union, Tuple, List, Any, Optional
 
 from .chromium_base import ChromiumBase
 from .chromium_page import ChromiumPage
-from .chromium_tab import ChromiumTab, WebPageTab
+from .chromium_tab import ChromiumTab
 from .web_page import WebPage
 from .._elements.chromium_element import ChromiumElement
+from .._functions.elements import ChromiumElementsList
 from .._units.listener import FrameListener
 from .._units.rect import FrameRect
 from .._units.scroller import FrameScroller
@@ -214,7 +215,6 @@ class ChromiumFrame(ChromiumBase):
                        timeout: float = None,
                        index: Optional[int] = 1,
                        relative: bool = False,
-                       raise_err: bool = None) \
-            -> Union[ChromiumElement, ChromiumFrame, None, List[Union[ChromiumElement, ChromiumFrame]]]: ...
+                       raise_err: bool = None) -> Union[ChromiumElement, ChromiumFrame, None, ChromiumElementsList]: ...
 
     def _is_inner_frame(self) -> bool: ...

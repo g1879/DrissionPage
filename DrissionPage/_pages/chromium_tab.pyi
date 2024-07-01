@@ -6,7 +6,7 @@
 @License  : BSD 3-Clause.
 """
 from pathlib import Path
-from typing import Union, Tuple, Any, List, Optional
+from typing import Union, Tuple, Any, Optional
 
 from requests import Session, Response
 
@@ -18,6 +18,7 @@ from .web_page import WebPage
 from .._base.browser import Browser
 from .._elements.chromium_element import ChromiumElement
 from .._elements.session_element import SessionElement
+from .._functions.elements import SessionElementsList, ChromiumElementsList
 from .._units.rect import TabRect
 from .._units.setter import TabSetter, WebPageTabSetter
 from .._units.waiter import TabWaiter
@@ -150,13 +151,13 @@ class WebPageTab(SessionPage, ChromiumTab):
 
     def eles(self,
              locator: Union[Tuple[str, str], str],
-             timeout: float = None) -> List[Union[ChromiumElement, SessionElement]]: ...
+             timeout: float = None) -> Union[SessionElementsList, ChromiumElementsList]: ...
 
     def s_ele(self,
               locator: Union[Tuple[str, str], str] = None,
               index: int = 1) -> SessionElement: ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> List[SessionElement]: ...
+    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList: ...
 
     def change_mode(self, mode: str = None, go: bool = True, copy_cookies: bool = True) -> None: ...
 
@@ -199,5 +200,4 @@ class WebPageTab(SessionPage, ChromiumTab):
                        index: Optional[int] = 1,
                        relative: bool = False,
                        raise_err: bool = None) \
-            -> Union[ChromiumElement, SessionElement, ChromiumFrame, List[SessionElement], List[
-                Union[ChromiumElement, ChromiumFrame]]]: ...
+            -> Union[ChromiumElement, SessionElement, ChromiumFrame, SessionElementsList, ChromiumElementsList]: ...

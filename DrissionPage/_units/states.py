@@ -18,7 +18,7 @@ class ElementStates(object):
 
     @property
     def is_selected(self):
-        """返回元素是否被选择"""
+        """返回列表元素是否被选择"""
         return self._ele.run_js('return this.selected;')
 
     @property
@@ -42,9 +42,9 @@ class ElementStates(object):
     def is_alive(self):
         """返回元素是否仍在DOM中"""
         try:
-            self._ele.attrs
-            return True
-        except Exception:
+            return self._ele.owner.run_cdp('DOM.describeNode',
+                                           backendNodeId=self._ele._backend_id)['node']['nodeId'] != 0
+        except ElementLostError:
             return False
 
     @property
@@ -101,9 +101,9 @@ class ShadowRootStates(object):
     def is_alive(self):
         """返回元素是否仍在DOM中"""
         try:
-            self._ele.owner.run_cdp('DOM.describeNode', backendNodeId=self._ele._backend_id)
-            return True
-        except Exception:
+            return self._ele.owner.run_cdp('DOM.describeNode',
+                                           backendNodeId=self._ele._backend_id)['node']['nodeId'] != 0
+        except ElementLostError:
             return False
 
 

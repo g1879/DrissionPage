@@ -28,13 +28,12 @@ class ChromiumPage(ChromiumBase):
     """用于管理浏览器的类"""
     _PAGES = {}
 
-    def __new__(cls, addr_or_opts=None, tab_id=None, timeout=None, addr_driver_opts=None):
+    def __new__(cls, addr_or_opts=None, tab_id=None, timeout=None):
         """
         :param addr_or_opts: 浏览器地址:端口、ChromiumOptions对象或端口数字（int）
         :param tab_id: 要控制的标签页id，不指定默认为激活的
         :param timeout: 超时时间（秒）
         """
-        addr_or_opts = addr_or_opts or addr_driver_opts
         opt = handle_options(addr_or_opts)
         is_exist, browser_id = run_browser(opt)
         if browser_id in cls._PAGES:
@@ -50,7 +49,7 @@ class ChromiumPage(ChromiumBase):
         cls._PAGES[browser_id] = r
         return r
 
-    def __init__(self, addr_or_opts=None, tab_id=None, timeout=None, addr_driver_opts=None):
+    def __init__(self, addr_or_opts=None, tab_id=None, timeout=None):
         """
         :param addr_or_opts: 浏览器地址:端口、ChromiumOptions对象或端口数字（int）
         :param tab_id: 要控制的标签页id，不指定默认为激活的
@@ -276,30 +275,6 @@ class ChromiumPage(ChromiumBase):
 
     def __repr__(self):
         return f'<ChromiumPage browser_id={self.browser.id} tab_id={self.tab_id}>'
-
-    # ----------即将废弃-----------
-    def close_other_tabs(self, tabs_or_ids=None):
-        """关闭传入的标签页以外标签页，默认保留当前页。可传入多个
-        :param tabs_or_ids: 要保留的标签页对象或id，可传入列表或元组，为None时保存当前页
-        :return: None
-        """
-        self.close_tabs(tabs_or_ids, True)
-
-    @property
-    def tabs(self):
-        """返回所有标签页id组成的列表"""
-        return self.browser.tab_ids
-
-    def find_tabs(self, title=None, url=None, tab_type=None, single=True):
-        """查找符合条件的tab，返回它们组成的列表
-        :param title: 要匹配title的文本
-        :param url: 要匹配url的文本
-        :param tab_type: tab类型，可用列表输入多个
-        :param single: 是否返回首个结果的id，为False返回所有信息
-        :return: tab id或tab列表
-        """
-        r = self._browser.find_tabs(title, url, tab_type)
-        return r[0]['id'] if r and single else r
 
 
 def handle_options(addr_or_opts):

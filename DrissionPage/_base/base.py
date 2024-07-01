@@ -169,14 +169,8 @@ class DrissionElement(BaseElement):
             loc = loc[1].lstrip('./')
 
         node = self._ele(f'xpath:./{loc}', timeout=timeout, index=index, relative=True, raise_err=False)
-        if node:
-            return node
-
-        if Settings.raise_when_ele_not_found:
-            raise ElementNotFoundError(None, 'child()', {'locator': locator, 'index': index,
-                                                         'ele_only': ele_only})
-        else:
-            return NoneElement(self.owner, 'child()', {'locator': locator, 'index': index, 'ele_only': ele_only})
+        return node if node else NoneElement(self.owner, 'child()',
+                                             {'locator': locator, 'index': index, 'ele_only': ele_only})
 
     def prev(self, locator='', index=1, timeout=None, ele_only=True):
         """返回前面的一个兄弟元素，可用查询语法筛选，可指定返回筛选结果的第几个
@@ -289,12 +283,8 @@ class DrissionElement(BaseElement):
             index = locator
             locator = ''
         node = self._get_relatives(index, locator, direction, brother, timeout, ele_only)
-        if node:
-            return node
-        if Settings.raise_when_ele_not_found:
-            raise ElementNotFoundError(None, func, {'locator': locator, 'index': index, 'ele_only': ele_only})
-        else:
-            return NoneElement(self.owner, func, {'locator': locator, 'index': index, 'ele_only': ele_only})
+        return node if node else NoneElement(self.owner, func,
+                                             {'locator': locator, 'index': index, 'ele_only': ele_only})
 
     def _get_relatives(self, index=None, locator='', direction='following', brother=True, timeout=.5, ele_only=True):
         """按要求返回兄弟元素或节点组成的列表

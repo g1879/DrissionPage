@@ -389,7 +389,7 @@ class ChromiumOptions(object):
         return self
 
     def set_paths(self, browser_path=None, local_port=None, address=None, download_path=None,
-                  user_data_path=None, cache_path=None, debugger_address=None):
+                  user_data_path=None, cache_path=None):
         """快捷的路径设置函数
         :param browser_path: 浏览器可执行文件路径
         :param local_port: 本地端口号
@@ -399,7 +399,6 @@ class ChromiumOptions(object):
         :param cache_path: 缓存路径
         :return: 当前对象
         """
-        address = address or debugger_address
         if browser_path is not None:
             self.set_browser_path(browser_path)
 
@@ -568,50 +567,3 @@ class ChromiumOptions(object):
 
     def __repr__(self):
         return f'<ChromiumOptions at {id(self)}>'
-
-    # ---------------即将废弃--------------
-
-    @property
-    def debugger_address(self):
-        """返回浏览器地址，ip:port"""
-        return self._address
-
-    @debugger_address.setter
-    def debugger_address(self, address):
-        """设置浏览器地址，格式ip:port"""
-        self.set_address(address)
-
-    def set_page_load_strategy(self, value):
-        return self.set_load_mode(value)
-
-    def set_headless(self, on_off=True):
-        """设置是否隐藏浏览器界面
-        :param on_off: 开或关
-        :return: 当前对象
-        """
-        on_off = 'new' if on_off else 'false'
-        return self.set_argument('--headless', on_off)
-
-    def set_no_imgs(self, on_off=True):
-        """设置是否加载图片
-        :param on_off: 开或关
-        :return: 当前对象
-        """
-        on_off = None if on_off else False
-        return self.set_argument('--blink-settings=imagesEnabled=false', on_off)
-
-    def set_no_js(self, on_off=True):
-        """设置是否禁用js
-        :param on_off: 开或关
-        :return: 当前对象
-        """
-        on_off = None if on_off else False
-        return self.set_argument('--disable-javascript', on_off)
-
-    def set_mute(self, on_off=True):
-        """设置是否静音
-        :param on_off: 开或关
-        :return: 当前对象
-        """
-        on_off = None if on_off else False
-        return self.set_argument('--mute-audio', on_off)

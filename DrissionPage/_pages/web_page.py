@@ -17,15 +17,14 @@ from .._units.setter import WebPageSetter
 class WebPage(SessionPage, ChromiumPage, BasePage):
     """整合浏览器和request的页面类"""
 
-    def __new__(cls, mode='d', timeout=None, chromium_options=None, session_or_options=None, driver_or_options=None):
+    def __new__(cls, mode='d', timeout=None, chromium_options=None, session_or_options=None):
         """初始化函数
         :param mode: 'd' 或 's'，即driver模式和session模式
         :param timeout: 超时时间（秒），d模式时为寻找元素时间，s模式时为连接时间，默认10秒
         :param chromium_options: Driver对象，只使用s模式时应传入False
         :param session_or_options: Session对象或SessionOptions对象，只使用d模式时应传入False
         """
-        opts = chromium_options or driver_or_options
-        return super().__new__(cls, opts)
+        return super().__new__(cls, chromium_options)
 
     def __init__(self, mode='d', timeout=None, chromium_options=None, session_or_options=None, driver_or_options=None):
         """初始化函数
@@ -402,7 +401,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     def _find_elements(self, locator, timeout=None, index=1, relative=False, raise_err=None):
         """返回页面中符合条件的元素、属性或节点文本，默认返回第一个
         :param locator: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
-        :param timeout: 查找元素超时时间，d模式专用
+        :param timeout: 查找元素超时时间（秒），d模式专用
         :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
         :param relative: WebPage用的表示是否相对定位的参数
         :param raise_err: 找不到元素是是否抛出异常，为None时根据全局设置
@@ -415,7 +414,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     def quit(self, timeout=5, force=True):
         """关闭浏览器和Session
-        :param timeout: 等待浏览器关闭超时时间
+        :param timeout: 等待浏览器关闭超时时间（秒）
         :param force: 关闭超时是否强制终止进程
         :return: None
         """
@@ -431,7 +430,3 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     def __repr__(self):
         return f'<WebPage browser_id={self.browser.id} tab_id={self.tab_id}>'
-
-    # -------即将废弃--------
-    def get_cookies(self, as_dict=False, all_domains=False, all_info=False):
-        return self.cookies(as_dict=as_dict, all_domains=all_domains, all_info=all_info)
