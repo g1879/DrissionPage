@@ -191,20 +191,32 @@ class ChromiumOptions(object):
                 self._arguments.append(arg_str)
         return self
 
+    @staticmethod
+    def __arg_requires_deletion(arg, value) -> bool:
+        """
+        检查给定的参数是否需要被删除。
+        :param arg: 要检查的参数
+        :param value: 用于比较的值
+        :return: 如果参数需要删除则返回 True，否则返回 False
+        """
+        return arg == value or arg.startswith(f'{value}=')
+
     def remove_argument(self, value):
         """移除一个argument项
         :param value: 设置项名，有值的设置项传入设置名称即可
         :return: 当前对象
         """
-        del_list = []
+        requires_deletion = any(
+            self.__arg_requires_deletion(arg, value) 
+            for arg in self._arguments
+        )
+        if not requires_deletion:
+            return self
 
-        for argument in self._arguments:
-            if argument == value or argument.startswith(f'{value}='):
-                del_list.append(argument)
-
-        for del_arg in del_list:
-            self._arguments.remove(del_arg)
-
+        self._arguments = [
+            arg for arg in self._arguments 
+            if not self.__arg_requires_deletion(arg, value)
+        ]
         return self
 
     def add_extension(self, path):
