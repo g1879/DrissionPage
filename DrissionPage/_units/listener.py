@@ -15,7 +15,7 @@ from requests.structures import CaseInsensitiveDict
 
 from .._base.driver import Driver
 from .._functions.settings import Settings
-from ..errors import WaitTimeoutError
+from ..errors import WaitTimeoutError, BrowserConnectError
 
 
 class Listener(object):
@@ -110,7 +110,10 @@ class Listener(object):
         if self.listening:
             return
 
-        self._driver = Driver(self._target_id, 'page', self._address)
+        try:
+            self._driver = Driver(self._target_id, 'page', self._address)
+        except ConnectionRefusedError:
+            raise BrowserConnectError('Websocket连接错误。\n请确保浏览器没有被过早关闭。')
         self._driver.run('Network.enable')
 
         self._set_callback()
@@ -185,6 +188,8 @@ class Listener(object):
         if self.listening:
             self.pause()
             self.clear()
+        if self._driver is None:
+            return
         self._driver.stop()
         self._driver = None
 
