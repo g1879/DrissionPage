@@ -25,7 +25,12 @@ Project address: [gitee](https://gitee.com/g1879/DrissionPage) | [github](https:
 
 Your star is my greatest support💖
 
-![Star History Chart](https://api.star-history.com/svg?repos=g1879/DrissionPage&type=Date)
+---
+
+# AD
+
+![](imgs/ad.png)
+[CapSolver](https://www.capsolver.com/?utm_source=github&utm_content=drission) is an AI-powered service that specializes in solving various types of captchas automatically, empowers data collection by helping developers easily overcome the captcha challenges encountered during Web Scraping. It supports captchas such as [reCAPTCHA V2](https://docs.capsolver.com/guide/captcha/ReCaptchaV2.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [reCAPTCHA V3](https://docs.capsolver.com/guide/captcha/ReCaptchaV3.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [hCaptcha](https://docs.capsolver.com/guide/captcha/HCaptcha.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [FunCaptcha](https://docs.capsolver.com/guide/captcha/FunCaptcha.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [DataDome](https://docs.capsolver.com/guide/captcha/DataDome.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [AWS Captcha](https://docs.capsolver.com/guide/captcha/awsWaf.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [Geetest](https://docs.capsolver.com/guide/captcha/Geetest.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), and [Cloudflare turnstile](https://docs.capsolver.com/guide/antibots/cloudflare_turnstile.html) among others. For developers, Capsolver offers API integration options detailed in [documentation](https://docs.capsolver.com/?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), facilitating the integration of captcha solving into applications. They also provide browser extensions for [Chrome](https://chromewebstore.google.com/detail/captcha-solver-auto-captc/pgojnojmmhpofjgdmaebadhbocahppod) and [Firefox](https://addons.mozilla.org/es/firefox/addon/capsolver-captcha-solver/), making it easy to use their service directly within a browser. Different pricing packages are available to accommodate varying needs, ensuring flexibility for users.
 
 ---
 
