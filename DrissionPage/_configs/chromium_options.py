@@ -196,15 +196,20 @@ class ChromiumOptions(object):
         :param value: 设置项名，有值的设置项传入设置名称即可
         :return: 当前对象
         """
-        del_list = []
+        elements_to_delete = tuple(
+            arg for arg in self._arguments 
+            if arg == value or arg.startswith(f'{value}=')
+        )
+        if len(elements_to_delete) == 0:
+            return self
 
-        for argument in self._arguments:
-            if argument == value or argument.startswith(f'{value}='):
-                del_list.append(argument)
-
-        for del_arg in del_list:
-            self._arguments.remove(del_arg)
-
+        if len(elements_to_delete) == 1:
+            self._arguments.remove(elements_to_delete[0])
+        else:
+            self._arguments = [
+                arg for arg in self._arguments 
+                if arg not in elements_to_delete
+            ]
         return self
 
     def add_extension(self, path):
