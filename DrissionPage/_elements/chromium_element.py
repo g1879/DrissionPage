@@ -605,7 +605,12 @@ class ChromiumElement(DrissionElement):
             while not self.run_js(js) and perf_counter() < end_time:
                 sleep(.1)
 
-        src = self.attr('src')
+        if self.tag == 'link':
+            # css标签link没有src属性,只有href属性
+            src = self.attr("href")
+        else:
+            src = self.attr('src')
+
         if not src:
             raise RuntimeError('元素没有src值或该值为空。')
         if src.lower().startswith('data:image'):
@@ -626,20 +631,32 @@ class ChromiumElement(DrissionElement):
                 sleep(.05)
 
         else:
-            while perf_counter() < end_time:
-                src = self.property('currentSrc')
-                if not src:
-                    continue
+            if self.tag == 'img':
+                while perf_counter() < end_time:
+                    src = self.property('currentSrc')
+                    if not src:
+                        continue
 
+                    node = self.owner.run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
+                    frame = node.get('frameId', None) or self.owner._frame_id
+
+                    try:
+                        result = self.owner.run_cdp('Page.getResourceContent', frameId=frame, url=src)
+                        break
+                    except CDPError:
+                        pass
+                    sleep(.1)
+
+            elif self.tag == 'script' or self.tag == 'link':
                 node = self.owner.run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
                 frame = node.get('frameId', None) or self.owner._frame_id
 
                 try:
                     result = self.owner.run_cdp('Page.getResourceContent', frameId=frame, url=src)
-                    break
                 except CDPError:
                     pass
                 sleep(.1)
+
 
         if not result:
             return None
