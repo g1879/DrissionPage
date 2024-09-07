@@ -22,6 +22,7 @@ class ChromiumOptions(object):
         self._prefs_to_del = []
         self.clear_file_flags = False
         self._headless = None
+        self.is_force_run_browser = False
 
         if read_file is False:
             ini_path = False
