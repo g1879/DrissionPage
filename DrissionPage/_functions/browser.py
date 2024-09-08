@@ -26,9 +26,10 @@ def connect_browser(option):
     """
     address = option.address.replace('localhost', '127.0.0.1').lstrip('http://').lstrip('https://')
     browser_path = option.browser_path
+    is_force_run_browser = option.is_force_run_browser
 
     ip, port = address.split(':')
-    if ip != '127.0.0.1' or port_is_using(ip, port) or option.is_existing_only:
+    if (is_force_run_browser == None or is_force_run_browser == False) and (ip != '127.0.0.1' or port_is_using(ip, port) or option.is_existing_only):
         test_connect(ip, port)
         option._headless = False
         for i in option.arguments:
