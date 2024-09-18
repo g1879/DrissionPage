@@ -10,10 +10,6 @@ from .by import By
 
 
 def locator_to_tuple(loc):
-    """解析定位字符串生成dict格式数据
-    :param loc: 待处理的字符串
-    :return: 格式： {'and': bool, 'args': ['属性名称', '匹配方式', '属性值', 是否否定]}
-    """
     loc = _preprocess(loc)
 
     # 多属性查找
@@ -84,18 +80,11 @@ def _get_arg(text) -> list:
 
 
 def is_loc(text):
-    """返回text是否定位符"""
     return text.startswith(('.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:', 'text=',
                             'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:', 'c='))
 
 
 def get_loc(loc, translate_css=False, css_mode=False):
-    """接收本库定位语法或selenium定位元组，转换为标准定位元组，可翻译css selector为xpath
-    :param loc: 本库定位语法或selenium定位元组
-    :param translate_css: 是否翻译css selector为xpath，用于相对定位
-    :param css_mode: 是否尽量用css selector方式
-    :return: DrissionPage定位元组
-    """
     if isinstance(loc, tuple):
         loc = translate_css_loc(loc) if css_mode else translate_loc(loc)
 
@@ -118,10 +107,6 @@ def get_loc(loc, translate_css=False, css_mode=False):
 
 
 def str_to_xpath_loc(loc):
-    """处理元素查找语句
-    :param loc: 查找语法字符串
-    :return: 匹配符元组
-    """
     loc_by = 'xpath'
     loc = _preprocess(loc)
 
@@ -173,10 +158,6 @@ def str_to_xpath_loc(loc):
 
 
 def str_to_css_loc(loc):
-    """处理元素查找语句
-    :param loc: 查找语法字符串
-    :return: 匹配符元组
-    """
     loc_by = 'css selector'
     loc = _preprocess(loc)
 
@@ -444,10 +425,6 @@ def _make_single_css_str(tag: str, text: str) -> tuple:
 
 
 def translate_loc(loc):
-    """把By类型的loc元组转换为css selector或xpath类型的
-    :param loc: By类型的loc元组
-    :return: css selector或xpath类型的loc元组
-    """
     if len(loc) != 2:
         raise ValueError('定位符长度必须为2。')
 
@@ -486,10 +463,6 @@ def translate_loc(loc):
 
 
 def translate_css_loc(loc):
-    """把By类型的loc元组转换为css selector或xpath类型的
-    :param loc: By类型的loc元组
-    :return: css selector或xpath类型的loc元组
-    """
     if len(loc) != 2:
         raise ValueError('定位符长度必须为2。')
 

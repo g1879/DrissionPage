@@ -5,7 +5,7 @@
 @Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
 @License  : BSD 3-Clause.
 """
-from typing import Tuple, Dict, Union, Any
+from typing import Tuple, Union, Any
 
 from .._pages.chromium_base import ChromiumBase
 
@@ -23,18 +23,14 @@ class Keys:
     CANCEL: str
     HELP: str
     BACKSPACE: str
-    BACK_SPACE: str
     TAB: str
     CLEAR: str
     RETURN: str
     ENTER: str
     SHIFT: str
-    LEFT_SHIFT: str
     CONTROL: str
     CTRL: str
-    LEFT_CONTROL: str
     ALT: str
-    LEFT_ALT: str
     PAUSE: str
     ESCAPE: str
     SPACE: str
@@ -43,13 +39,9 @@ class Keys:
     END: str
     HOME: str
     LEFT: str
-    ARROW_LEFT: str
     UP: str
-    ARROW_UP: str
     RIGHT: str
-    ARROW_RIGHT: str
     DOWN: str
-    ARROW_DOWN: str
     INSERT: str
     DELETE: str
     DEL: str
@@ -93,13 +85,38 @@ keyDefinitions: dict = ...
 modifierBit: dict = ...
 
 
-def keys_to_typing(value: Union[str, int, list, tuple]) -> Tuple[int, str]: ...
+def keys_to_typing(value: Union[str, int, list, tuple]) -> Tuple[int, str]:
+    """把要输入的内容连成字符串，去掉其中 ctrl 等键。
+        返回的modifier表示是否有按下组合键"""
+    ...
 
 
-def keyDescriptionForString(_modifiers: int, keyString: str) -> Dict: ...
+def make_input_data(modifiers: int,
+                    key: str,
+                    key_up: bool = False) -> dict:
+    """
+    :param modifiers: 功能键设置
+    :param key: 按键字符
+    :param key_up: 是否提起
+    :return: None
+    """
+    ...
 
 
-def send_key(page: ChromiumBase, modifier: int, key: str) -> None: ...
+def send_key(page: ChromiumBase, modifier: int, key: str) -> None:
+    """发送一个字，在键盘中的字符触发按键，其它直接发送文本
+    :param page: 动作所在页面
+    :param modifier: 功能键信息
+    :param key: 要是输入的按键
+    :return: None
+    """
+    ...
 
 
-def input_text_or_keys(page: ChromiumBase, text_or_keys: Any) -> None: ...
+def input_text_or_keys(page: ChromiumBase, text_or_keys: Any) -> None:
+    """输入文本，也可输入组合键，组合键用tuple形式输入
+    :param page: ChromiumBase对象
+    :param text_or_keys: 文本值或按键组合
+    :return: self
+    """
+    ...

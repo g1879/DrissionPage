@@ -7,29 +7,27 @@
 """
 from json import dumps, loads, JSONDecodeError
 from queue import Queue, Empty
-from threading import Thread, Event
+from threading import Thread
 from time import perf_counter, sleep
 
+from requests import adapters
 from requests import Session
 from websocket import (WebSocketTimeoutException, WebSocketConnectionClosedException, create_connection,
                        WebSocketException, WebSocketBadStatusException)
 
 from .._functions.settings import Settings
-from ..errors import PageDisconnectedError
+from ..errors import PageDisconnectedError, BrowserConnectError
+
+adapters.DEFAULT_RETRIES = 5
 
 
 class Driver(object):
     def __init__(self, tab_id, tab_type, address, owner=None):
-        """
-        :param tab_id: 标签页id
-        :param tab_type: 标签页类型
-        :param address: 浏览器连接地址
-        :param owner: 创建这个驱动的对象
-        """
         self.id = tab_id
         self.address = address
         self.type = tab_type
         self.owner = owner
+        # self._debug = True
         # self._debug = False
         self.alert_flag = False  # 标记alert出现，跳过一条请求后复原
 
@@ -43,7 +41,7 @@ class Driver(object):
         self._handle_event_th.daemon = True
         self._handle_immediate_event_th = None
 
-        self._stopped = Event()
+        self.is_running = False
 
         self.event_handlers = {}
         self.immediate_event_handlers = {}
@@ -54,11 +52,6 @@ class Driver(object):
         self.start()
 
     def _send(self, message, timeout=None):
-        """发送信息到浏览器，并返回浏览器返回的信息
-        :param message: 发送给浏览器的数据
-        :param timeout: 超时时间，为None表示无限
-        :return: 浏览器返回的数据
-        """
         self._cur_id += 1
         ws_id = self._cur_id
         message['id'] = ws_id
@@ -86,7 +79,7 @@ class Driver(object):
             self.method_results.pop(ws_id, None)
             return {'error': {'message': 'connection disconnected'}, 'type': 'connection_error'}
 
-        while not self._stopped.is_set():
+        while self.is_running:
             try:
                 result = self.method_results[ws_id].get(timeout=.2)
                 self.method_results.pop(ws_id, None)
@@ -106,8 +99,7 @@ class Driver(object):
         return {'error': {'message': 'connection disconnected'}, 'type': 'connection_error'}
 
     def _recv_loop(self):
-        """接收浏览器信息的守护线程方法"""
-        while not self._stopped.is_set():
+        while self.is_running:
             try:
                 # self._ws.settimeout(1)
                 msg_json = self._ws.recv()
@@ -144,8 +136,7 @@ class Driver(object):
             #     print(f'未知信息：{msg}')
 
     def _handle_event_loop(self):
-        """当接收到浏览器信息，执行已绑定的方法"""
-        while not self._stopped.is_set():
+        while self.is_running:
             try:
                 event = self.event_queue.get(timeout=1)
             except Empty:
@@ -158,7 +149,7 @@ class Driver(object):
             self.event_queue.task_done()
 
     def _handle_immediate_event_loop(self):
-        while not self._stopped.is_set() and not self.immediate_event_queue.empty():
+        while not self.immediate_event_queue.empty():
             function, kwargs = self.immediate_event_queue.get(timeout=1)
             try:
                 function(**kwargs)
@@ -166,11 +157,6 @@ class Driver(object):
                 pass
 
     def _handle_immediate_event(self, function, kwargs):
-        """处理立即执行的动作
-        :param function: 要运行下方法
-        :param kwargs: 方法参数
-        :return: None
-        """
         self.immediate_event_queue.put((function, kwargs))
         if self._handle_immediate_event_th is None or not self._handle_immediate_event_th.is_alive():
             self._handle_immediate_event_th = Thread(target=self._handle_immediate_event_loop)
@@ -183,7 +169,7 @@ class Driver(object):
         :param kwargs: cdp参数
         :return: 执行结果
         """
-        if self._stopped.is_set():
+        if not self.is_running:
             return {'error': 'connection disconnected', 'type': 'connection_error'}
 
         timeout = kwargs.pop('_timeout', Settings.cdp_timeout)
@@ -191,13 +177,12 @@ class Driver(object):
         if 'result' not in result and 'error' in result:
             kwargs['_timeout'] = timeout
             return {'error': result['error']['message'], 'type': result.get('type', 'call_method_error'),
-                    'method': _method, 'args': kwargs}
+                    'method': _method, 'args': kwargs, 'data': result['error'].get('data')}
         else:
             return result['result']
 
     def start(self):
-        """启动连接"""
-        self._stopped.clear()
+        self.is_running = True
         try:
             self._ws = create_connection(self._websocket_url, enable_multithread=True, suppress_origin=True)
         except WebSocketBadStatusException as e:
@@ -205,28 +190,37 @@ class Driver(object):
                 raise RuntimeError('请升级websocket-client库。')
             else:
                 return
+        except ConnectionRefusedError:
+            raise BrowserConnectError('浏览器未开启或已关闭。')
         self._recv_th.start()
         self._handle_event_th.start()
         return True
 
     def stop(self):
-        """中断连接"""
         self._stop()
         while self._handle_event_th.is_alive() or self._recv_th.is_alive():
             sleep(.1)
         return True
 
     def _stop(self):
-        """中断连接"""
-        if self._stopped.is_set():
+        if not self.is_running:
             return False
 
-        self._stopped.set()
+        self.is_running = False
         if self._ws:
             self._ws.close()
             self._ws = None
 
         # try:
+        #     while not self.immediate_event_queue.empty():
+        #         function, kwargs = self.immediate_event_queue.get_nowait()
+        #         try:
+        #             function(**kwargs)
+        #         except PageDisconnectedError:
+        #             raise
+        #             pass
+        #         sleep(.1)
+        #
         #     while not self.event_queue.empty():
         #         event = self.event_queue.get_nowait()
         #         function = self.event_handlers.get(event['method'])
@@ -244,12 +238,6 @@ class Driver(object):
             self.owner._on_disconnect()
 
     def set_callback(self, event, callback, immediate=False):
-        """绑定cdp event和回调方法
-        :param event: cdp event
-        :param callback: 绑定到cdp event的回调方法
-        :param immediate: 是否要立即处理的动作
-        :return: None
-        """
         handler = self.immediate_event_handlers if immediate else self.event_handlers
         if callback:
             handler[event] = callback
@@ -271,13 +259,15 @@ class BrowserDriver(Driver):
         self._created = True
         BrowserDriver.BROWSERS[tab_id] = self
         super().__init__(tab_id, tab_type, address, owner)
-        self._control_session = Session()
-        self._control_session.trust_env = False
 
     def __repr__(self):
         return f'<BrowserDriver {self.id}>'
 
     def get(self, url):
-        r = self._control_session.get(url, headers={'Connection': 'close'})
+        s = Session()
+        s.trust_env = False
+        s.keep_alive = False
+        r = s.get(url, headers={'Connection': 'close'})
         r.close()
+        s.close()
         return r

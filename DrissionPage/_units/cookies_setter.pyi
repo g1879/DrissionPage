@@ -8,43 +8,127 @@
 from http.cookiejar import Cookie, CookieJar
 from typing import Union
 
+from .._base.chromium import Chromium
 from .._pages.chromium_base import ChromiumBase
-from .._pages.chromium_tab import WebPageTab
+from .._pages.mix_tab import MixTab
 from .._pages.session_page import SessionPage
 from .._pages.web_page import WebPage
 
 
-class CookiesSetter(object):
-    _owner: ChromiumBase
+class BrowserCookiesSetter(object):
+    _owner: Chromium = ...
 
-    def __init__(self, page: ChromiumBase): ...
+    def __init__(self, owner: Chromium):
+        """
+        :param owner: Chromium对象
+        """
+        ...
 
-    def __call__(self, cookies: Union[CookieJar, Cookie, list, tuple, str, dict]) -> None: ...
+    def __call__(self, cookies: Union[CookieJar, Cookie, list, tuple, str, dict]) -> None:
+        """设置一个或多个cookie
+        :param cookies: cookies信息
+        :return: None
+        """
+        ...
 
-    def remove(self, name: str, url: str = None, domain: str = None, path: str = None) -> None: ...
+    def clear(self) -> None:
+        """清除cookies"""
+        ...
 
-    def clear(self) -> None: ...
+
+class CookiesSetter(BrowserCookiesSetter):
+    _owner: ChromiumBase = ...
+
+    def __init__(self, owner: ChromiumBase):
+        """
+        :param owner: 页面对象
+        """
+        ...
+
+    def __call__(self, cookies: Union[CookieJar, Cookie, list, tuple, str, dict]) -> None:
+        """设置一个或多个cookie
+        :param cookies: cookies信息
+        :return: None
+        """
+        ...
+
+    def remove(self,
+               name: str,
+               url: str = None,
+               domain: str = None,
+               path: str = None) -> None:
+        """删除一个cookie
+        :param name: cookie的name字段
+        :param url: cookie的url字段，可选
+        :param domain: cookie的domain字段，可选
+        :param path: cookie的path字段，可选
+        :return: None
+        """
+        ...
+
+    def clear(self) -> None:
+        """清除cookies"""
+        ...
 
 
 class SessionCookiesSetter(object):
-    _owner: SessionPage
+    _owner: SessionPage = ...
 
-    def __init__(self, page: SessionPage): ...
+    def __init__(self, owner: SessionPage):
+        """
+        :param owner: SessionPage对象
+        """
+        ...
 
-    def __call__(self, cookies: Union[CookieJar, Cookie, list, tuple, str, dict]) -> None: ...
+    def __call__(self, cookies: Union[CookieJar, Cookie, list, tuple, str, dict]) -> None:
+        """设置一个或多个cookie
+        :param cookies: cookies信息
+        :return: None
+        """
+        ...
 
-    def remove(self, name: str) -> None: ...
+    def remove(self, name: str) -> None:
+        """删除一个cookie
+        :param name: cookie的name字段
+        :return: None
+        """
+        ...
 
-    def clear(self) -> None: ...
+    def clear(self) -> None:
+        """清除cookies"""
+        ...
 
 
 class WebPageCookiesSetter(CookiesSetter, SessionCookiesSetter):
-    _owner: Union[WebPage, WebPageTab]
+    _owner: Union[WebPage, MixTab] = ...
 
-    def __init__(self, page: SessionPage): ...
+    def __init__(self, owner: Union[WebPage, MixTab]):
+        """
+        :param owner: WebPage, MixTab对象
+        """
+        ...
 
-    def __call__(self, cookies: Union[CookieJar, Cookie, list, tuple, str, dict]) -> None: ...
+    def __call__(self, cookies: Union[CookieJar, Cookie, list, tuple, str, dict]) -> None:
+        """设置一个或多个cookie
+        :param cookies: cookies信息
+        :return: None
+        """
+        ...
 
-    def remove(self, name: str, url: str = None, domain: str = None, path: str = None) -> None: ...
+    def remove(self,
+               name: str,
+               url: str = None,
+               domain: str = None,
+               path: str = None) -> None:
+        """删除一个cookie
+        :param name: cookie的name字段
+        :param url: cookie的url字段，可选，d模式时才有效
+        :param domain: cookie的domain字段，可选，d模式时才有效
+        :param path: cookie的path字段，可选，d模式时才有效
+        :return: None
+        """
+        ...
 
-    def clear(self) -> None: ...
+    def clear(self) -> None:
+        """清除cookies"""
+        ...
