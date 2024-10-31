@@ -341,6 +341,9 @@ def _make_search_str(search_str: str) -> str:
     :param search_str: 查询字符串
     :return: 把"转义后的字符串
     """
+    if '"' not in search_str:
+        return search_str
+
     parts = search_str.split('"')
     parts_num = len(parts)
     search_str = 'concat('
