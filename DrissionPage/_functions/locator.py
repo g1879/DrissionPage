@@ -342,7 +342,7 @@ def _make_search_str(search_str: str) -> str:
     :return: 把"转义后的字符串
     """
     if '"' not in search_str:
-        return search_str
+        return f'"{search_str}"'
 
     parts = search_str.split('"')
     parts_num = len(parts)
