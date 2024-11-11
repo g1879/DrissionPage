@@ -8,8 +8,10 @@
 from pathlib import Path
 from time import perf_counter, sleep
 
+from .waiter import wait_mission
 from .._functions.settings import Settings
 from .._functions.web import offset_scroll
+from .._units.downloader import TabDownloadSettings
 from ..errors import CanNotClickError, CDPError, NoRectError, AlertExistsError
 
 
@@ -118,25 +120,59 @@ class Clicker(object):
     def multi(self, times=2):
         return self.at(count=times)
 
-    def to_download(self, save_path=None, rename=None, suffix=None, new_tab=False, by_js=False, timeout=None):
-        tmp_save_path = None
+    def to_download(self, save_path=None, rename=None, suffix=None, new_tab=None, by_js=False, timeout=None):
         if not self._ele.tab._browser._dl_mgr._running:
             self._ele.tab._browser.set.download_path('.')
-        if save_path:
-            if new_tab:
-                tmp_save_path = str(Path(save_path).absolute())
-            else:
-                self._ele.tab.set.download_path(save_path)
 
-        obj = self._ele.tab._browser if new_tab else self._ele.owner._tab
+        when_file_exists = None
+        tmp_path = None
+        if self._ele.tab._type.endswith('Page'):
+            obj = browser = self._ele.owner._browser
+            tid = 'browser'
+
+        elif new_tab:
+            obj = browser = self._ele.owner._browser
+            tid = 'browser'
+            t_settings = TabDownloadSettings(self._ele.owner.tab_id)
+            b_settings = TabDownloadSettings('browser')
+
+            when_file_exists = b_settings.when_file_exists
+            b_settings.when_file_exists = t_settings.when_file_exists
+            b_settings.rename = t_settings.rename
+            b_settings.suffix = t_settings.suffix
+            t_settings.rename = None
+            t_settings.suffix = None
+            if not save_path and b_settings.path != t_settings.path:
+                tmp_path = b_settings.path
+                b_settings.path = t_settings.path
+
+        else:
+            obj = self._ele.owner._tab
+            browser = obj.browser
+            browser._dl_mgr._waiting_tab.add(self._ele.owner.tab_id)
+            tid = obj.tab_id
+
+        if save_path:
+            tmp_path = obj.download_path
+            TabDownloadSettings(tid).path = str(Path(save_path).absolute())
         if rename or suffix:
             obj.set.download_file_name(rename, suffix)
+        if timeout is None:
+            timeout = obj.timeout
 
+        browser._dl_mgr.set_flag(tid, True)
         self.left(by_js=by_js)
-        r = obj.wait.download_begin(timeout=timeout)
-        if tmp_save_path:
-            r.path = tmp_save_path
-        return r
+        m = wait_mission(browser, tid, timeout)
+
+        if tmp_path:
+            TabDownloadSettings(tid).path = tmp_path
+        if when_file_exists:
+            browser.set.when_download_file_exists(when_file_exists)
+        if m and new_tab:
+            self._ele.owner.browser._dl_mgr._tab_missions.setdefault(self._ele.owner.tab_id, set()).add(m)
+            m.from_tab = self._ele.owner.tab_id
+        browser._dl_mgr._waiting_tab.discard(self._ele.owner.tab_id)
+        return m
 
     def to_upload(self, file_paths, by_js=False):
         self._ele.owner.set.upload_files(file_paths)
@@ -144,7 +180,7 @@ class Clicker(object):
         self._ele.owner.wait.upload_paths_inputted()
 
     def for_new_tab(self, by_js=False, timeout=3):
-        curr_tid = self._ele.tab.browser.tab_ids[0]
+        curr_tid = self._ele.tab.browser._newest_tab_id
         self.left(by_js=by_js)
         tid = self._ele.tab.browser.wait.new_tab(timeout=timeout, curr_tab=curr_tid)
         if not tid:

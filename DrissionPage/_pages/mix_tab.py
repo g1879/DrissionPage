@@ -100,6 +100,8 @@ class MixTab(SessionPage, ChromiumTab, BasePage):
             self.cookies_to_session()
         if timeout is None:
             kwargs['timeout'] = self.timeouts.page_load
+        if self._session is None:
+            self._create_session()
         super().post(url, show_errmsg, retry, interval, **kwargs)
         return self.response
 
@@ -110,12 +112,13 @@ class MixTab(SessionPage, ChromiumTab, BasePage):
     def eles(self, locator, timeout=None):
         return super(SessionPage, self).eles(locator, timeout=timeout) if self._d_mode else super().eles(locator)
 
-    def s_ele(self, locator=None, index=1):
-        return super(SessionPage, self).s_ele(locator,
-                                              index=index) if self._d_mode else super().s_ele(locator, index=index)
+    def s_ele(self, locator=None, index=1, timeout=None):
+        return (super(SessionPage, self).s_ele(locator, index=index, timeout=timeout)
+                if self._d_mode else super().s_ele(locator, index=index, timeout=timeout))
 
-    def s_eles(self, locator):
-        return super(SessionPage, self).s_eles(locator) if self._d_mode else super().s_eles(locator)
+    def s_eles(self, locator, timeout=None):
+        return (super(SessionPage, self).s_eles(locator, timeout=timeout)
+                if self._d_mode else super().s_eles(locator, timeout=timeout))
 
     def change_mode(self, mode=None, go=True, copy_cookies=True):
         if mode:
@@ -176,7 +179,10 @@ class MixTab(SessionPage, ChromiumTab, BasePage):
             else super().cookies(all_domains, all_info)
 
     def close(self, others=False, session=False):
-        self.browser.close_tabs(self.tab_id, others=others)
+        if others:
+            self.browser.close_tabs(self.tab_id, others=True)
+        else:
+            self.browser._close_tab(self)
         if session and self._session:
             self._session.close()
             if self._response is not None:

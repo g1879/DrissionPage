@@ -187,6 +187,8 @@ class ChromiumBase(BasePage):
             self._doc_got = False
             self._ready_state = 'loading'
             self._is_loading = True
+            if kwargs.get('type', None) == 'BackForwardCacheRestore':
+                self._get_document()
 
     def _onDomContentEventFired(self, **kwargs):
         if self._load_mode == 'eager':
@@ -368,17 +370,17 @@ class ChromiumBase(BasePage):
 
     def run_cdp(self, cmd, **cmd_args):
         r = self.driver.run(cmd, **cmd_args)
-        return r if __ERROR__ not in r else raise_error(r, user=True)
+        return r if __ERROR__ not in r else raise_error(r, self.browser, user=True)
 
     def run_cdp_loaded(self, cmd, **cmd_args):
         self.wait.doc_loaded()
         r = self.driver.run(cmd, **cmd_args)
-        return r if __ERROR__ not in r else raise_error(r, user=True)
+        return r if __ERROR__ not in r else raise_error(r, self.browser, user=True)
 
     def _run_cdp(self, cmd, **cmd_args):
         ignore = cmd_args.pop('_ignore', None)
         r = self.driver.run(cmd, **cmd_args)
-        return r if __ERROR__ not in r else raise_error(r, ignore)
+        return r if __ERROR__ not in r else raise_error(r, self.browser, ignore)
 
     def _run_cdp_loaded(self, cmd, **cmd_args):
         self.wait.doc_loaded()

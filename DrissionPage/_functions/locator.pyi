@@ -16,8 +16,13 @@ def locator_to_tuple(loc: str) -> dict:
     ...
 
 
-def is_loc(text: str) -> bool:
+def is_str_loc(text: str) -> bool:
     """返回text是否定位符"""
+    ...
+
+
+def is_selenium_loc(loc: tuple) -> bool:
+    """返回tuple是否selenium的定位符"""
     ...
 
 

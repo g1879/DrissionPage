@@ -5,7 +5,7 @@
 @Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
 @License  : BSD 3-Clause.
 """
-from typing import Union, Tuple, List, Any
+from typing import Union, Tuple, Any
 
 from .downloader import DownloadMission
 from .._base.chromium import Chromium
@@ -27,7 +27,7 @@ class OriginWaiter(object):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: 调用等待的对象
         """
         ...
 
@@ -45,7 +45,7 @@ class BrowserWaiter(OriginWaiter):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: Chromium对象
         """
         ...
 
@@ -163,7 +163,7 @@ class BaseWaiter(OriginWaiter):
                    text: str,
                    exclude: bool = False,
                    timeout: float = None,
-                   raise_err: bool = None) -> bool:
+                   raise_err: bool = None) -> ChromiumBase:
         """等待url变成包含或不包含指定文本
         :param text: 用于识别的文本
         :param exclude: 是否排除，为True时当url不包含text指定文本时返回True
@@ -177,7 +177,7 @@ class BaseWaiter(OriginWaiter):
                      text: str,
                      exclude: bool = False,
                      timeout: float = None,
-                     raise_err: bool = None) -> bool:
+                     raise_err: bool = None) -> ChromiumBase:
         """等待title变成包含或不包含指定文本
         :param text: 用于识别的文本
         :param exclude: 是否排除，为True时当title不包含text指定文本时返回True
@@ -219,7 +219,7 @@ class BaseWaiter(OriginWaiter):
 
 
 class TabWaiter(BaseWaiter):
-    _owner: Union[ChromiumTab, MixTab] = ...
+    _owner: ChromiumTab = ...
 
     def __init__(self, owner: ChromiumTab):
         """
@@ -233,7 +233,7 @@ class TabWaiter(BaseWaiter):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: ChromiumTab对象
         """
         ...
 
@@ -284,7 +284,7 @@ class TabWaiter(BaseWaiter):
 
 
 class MixTabWaiter(BaseWaiter):
-    _owner: Union[ChromiumTab, MixTab] = ...
+    _owner: MixTab = ...
 
     def __init__(self, owner: MixTab):
         """
@@ -298,7 +298,7 @@ class MixTabWaiter(BaseWaiter):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: MixTab对象
         """
         ...
 
@@ -363,7 +363,7 @@ class ChromiumPageWaiter(TabWaiter):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: ChromiumPage对象
         """
         ...
 
@@ -431,7 +431,7 @@ class WebPageWaiter(TabWaiter):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: WebPage对象
         """
         ...
 
@@ -500,7 +500,7 @@ class ElementWaiter(OriginWaiter):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: ChromiumElement对象
         """
         ...
 
@@ -533,7 +533,7 @@ class ElementWaiter(OriginWaiter):
         """
         ...
 
-    def covered(self, timeout: float = None, raise_err: bool = None) -> Union[False, int]:
+    def covered(self, timeout: float = None, raise_err: bool = None) -> Union[ChromiumFrame, False]:
         """等待当前元素被遮盖
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
@@ -587,11 +587,11 @@ class ElementWaiter(OriginWaiter):
 
     def has_rect(self,
                  timeout: float = None,
-                 raise_err: bool = None) -> Union[False, List[Tuple[float, float]]]:
+                 raise_err: bool = None) -> Union[ChromiumElement, False]:
         """等待当前元素有大小及位置属性
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 成功返回元素四角坐标（左上 右上 右下 左下），失败返回False
+        :return: 成功返回元素对象，失败返回False
         """
         ...
 
@@ -639,7 +639,7 @@ class FrameWaiter(BaseWaiter, ElementWaiter):
         """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
         :param second: 秒数
         :param scope: 随机数范围
-        :return: None
+        :return: ChromiumFrame对象
         """
         ...
 
@@ -695,7 +695,17 @@ class FrameWaiter(BaseWaiter, ElementWaiter):
         """
         ...
 
-    def covered(self, timeout: float = None, raise_err: bool = None) -> Union[False, int]:
+    def has_rect(self,
+                 timeout: float = None,
+                 raise_err: bool = None) -> Union[ChromiumFrame, False]:
+        """等待当前元素有大小及位置属性
+        :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
+        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
+        :return: 成功返回元素对象，失败返回False
+        """
+        ...
+
+    def covered(self, timeout: float = None, raise_err: bool = None) -> Union[ChromiumFrame, False]:
         """等待当前元素被遮盖
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
@@ -758,3 +768,13 @@ class FrameWaiter(BaseWaiter, ElementWaiter):
         :return: 成功返回元素对象，失败返回False
         """
         ...
+
+
+def wait_mission(browser: Chromium, tid: str, timeout: float = None) -> Union[DownloadMission, False]:
+    """等待下载任务
+    :param browser: Chromium对象
+    :param tid: 标签页id
+    :param timeout: 超时时间
+    :return:
+    """
+    ...

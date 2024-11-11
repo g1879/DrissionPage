@@ -43,6 +43,7 @@ class ChromiumPage(ChromiumBase):
         self._type = 'ChromiumPage'
         self.set.timeouts(base=timeout)  # 即将废弃
         self._tab = self
+        self._browser._dl_mgr._page_id = self.tab_id
 
     def __repr__(self):
         return f'<ChromiumPage browser_id={self.browser.id} tab_id={self.tab_id}>'
@@ -96,6 +97,10 @@ class ChromiumPage(ChromiumBase):
     def address(self):
         return self.browser.address
 
+    @property
+    def download_path(self):
+        return self.browser.download_path
+
     def save(self, path=None, name=None, as_pdf=False, **kwargs):
         return save_page(self, path, name, as_pdf, kwargs)
 
@@ -114,10 +119,10 @@ class ChromiumPage(ChromiumBase):
         self.browser.activate_tab(id_ind_tab)
 
     def close(self):
-        self.close_tabs(self.tab_id)
+        self.browser._close_tab(self)
 
-    def close_tabs(self, tabs_or_ids=None, others=False):
-        self.browser.close_tabs(tabs_or_ids=tabs_or_ids or self.tab_id, others=others)
+    def close_tabs(self, tabs_or_ids, others=False):
+        self.browser.close_tabs(tabs_or_ids=tabs_or_ids, others=others)
 
     def quit(self, timeout=5, force=True, del_data=False):
         self.browser.quit(timeout, force, del_data=del_data)

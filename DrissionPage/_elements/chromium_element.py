@@ -204,6 +204,8 @@ class ChromiumElement(DrissionElement):
             if (is_checked and uncheck) or (not is_checked and not uncheck):
                 self.click()
 
+        return self
+
     def parent(self, level_or_loc=1, index=1, timeout=0):
         return super().parent(level_or_loc, index, timeout=timeout)
 
@@ -240,11 +242,12 @@ class ChromiumElement(DrissionElement):
     def over(self, timeout=None):
         if timeout is None:
             timeout = self.timeout
-        bid = self.wait.covered(timeout=timeout)
-        if bid:
-            return ChromiumElement(owner=self.owner, backend_id=bid)
-        else:
-            return NoneElement(page=self.owner, method='on()', args={'timeout': timeout})
+        bid = self.states.is_covered
+        end_time = perf_counter() + timeout
+        while not bid and perf_counter() < end_time:
+            bid = self.states.is_covered
+        return (ChromiumElement(owner=self.owner, backend_id=bid)
+                if bid else NoneElement(page=self.owner, method='over()', args={'timeout': timeout}))
 
     def offset(self, locator=None, x=None, y=None, timeout=None):
         if locator and not (isinstance(locator, str) and not locator.startswith(
@@ -398,6 +401,7 @@ class ChromiumElement(DrissionElement):
 
     def remove_attr(self, name):
         self._run_js(f'this.removeAttribute("{name}");')
+        return self
 
     def property(self, name):
         try:
@@ -554,7 +558,7 @@ class ChromiumElement(DrissionElement):
                 vals = ''.join([str(i) for i in vals])
             self.set.property('value', str(vals))
             self._run_js('this.dispatchEvent(new Event("change", {bubbles: true}));')
-            return
+            return self
 
         self.wait.clickable(wait_moved=False, timeout=.5)
         if clear and vals not in ('\n', '\ue007'):
@@ -574,7 +578,7 @@ class ChromiumElement(DrissionElement):
         if by_js:
             self._run_js("this.value='';")
             self._run_js('this.dispatchEvent(new Event("change", {bubbles: true}));')
-            return
+            return self
 
         self._input_focus()
         self.input(('\ue009', 'a', '\ue017'), clear=False)
@@ -635,31 +639,26 @@ class ChromiumElement(DrissionElement):
         self._obj_id = self._get_obj_id(backend_id=self._backend_id)
         self._node_id = self._get_node_id(obj_id=self._obj_id)
 
-    def _get_ele_path(self, mode):
-        if mode == 'xpath':
+    def _get_ele_path(self, xpath=True):
+        if xpath:
             txt1 = 'let tag = el.nodeName.toLowerCase();'
-            txt3 = ''' && sib.nodeName.toLowerCase()==tag'''
-            txt4 = '''
-            if(nth>1){path = '/' + tag + '[' + nth + ']' + path;}
-                    else{path = '/' + tag + path;}'''
+            txt3 = ''' && sib.nodeName.toLowerCase()===tag'''
+            txt4 = '''path = '/' + tag + '[' + nth + ']' + path;'''
             txt5 = '''return path;'''
 
-        elif mode == 'css':
+        else:
             txt1 = '''
             let i = el.getAttribute("id");
             if (i){path = '>' + el.tagName.toLowerCase() + "#" + i + path;
-            break;}
+            el = el.parentNode;
+            continue;}
             '''
             txt3 = ''
             txt4 = '''path = '>' + el.tagName.toLowerCase() + ":nth-child(" + nth + ")" + path;'''
             txt5 = '''return path.substr(1);'''
 
-        else:
-            raise ValueError(f"mode参数只能是'xpath'或'css'，现在是：'{mode}'。")
-
         js = '''function(){
         function e(el) {
-        //return el;
             if (!(el instanceof Element)) return;
             let path = '';
             while (el.nodeType === Node.ELEMENT_NODE) {
@@ -676,8 +675,7 @@ class ChromiumElement(DrissionElement):
         }
         return e(this);}
         '''
-        t = self._run_js(js)
-        return f'{t}' if mode == 'css' else t
+        return self._run_js(js)
 
     def _set_file_input(self, files):
         if isinstance(files, str):

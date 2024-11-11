@@ -15,6 +15,7 @@ from time import perf_counter, sleep
 
 from requests import Session
 
+from .settings import Settings
 from .tools import port_is_using
 from .._configs.options_manage import OptionsManager
 from ..errors import BrowserConnectError
@@ -168,8 +169,8 @@ def set_flags(opt):
         dump(states_dict, f)
 
 
-def test_connect(ip, port, timeout=30):
-    end_time = perf_counter() + timeout
+def test_connect(ip, port):
+    end_time = perf_counter() + Settings.browser_connect_timeout
     s = Session()
     s.trust_env = False
     s.keep_alive = False

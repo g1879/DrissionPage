@@ -103,18 +103,22 @@ class BrowserStates(object):
         """
         ...
 
+    @property
     def is_alive(self) -> bool:
         """返回浏览器是否仍可用"""
         ...
 
+    @property
     def is_headless(self) -> bool:
         """返回浏览器是否无头模式"""
         ...
 
+    @property
     def is_existed(self) -> bool:
         """返回浏览器是否接管的"""
         ...
 
+    @property
     def is_incognito(self) -> bool:
         """返回浏览器是否无痕模式"""
         ...
@@ -147,6 +151,21 @@ class PageStates(object):
     @property
     def has_alert(self) -> bool:
         """返回当前页面是否存在弹窗"""
+        ...
+
+    @property
+    def is_headless(self) -> bool:
+        """返回浏览器是否无头模式"""
+        ...
+
+    @property
+    def is_existed(self) -> bool:
+        """返回浏览器是否接管的"""
+        ...
+
+    @property
+    def is_incognito(self) -> bool:
+        """返回浏览器是否无痕模式"""
         ...
 
 

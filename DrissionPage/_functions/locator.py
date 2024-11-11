@@ -79,9 +79,15 @@ def _get_arg(text) -> list:
     return [name, None, None] if len(r) != 3 else [name, r[1], r[2]]
 
 
-def is_loc(text):
+def is_str_loc(text):
     return text.startswith(('.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:', 'text=',
                             'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:', 'c='))
+
+
+def is_selenium_loc(loc):
+    return (isinstance(loc, tuple) and len(loc) == 2 and isinstance(loc[1], str)
+            and loc[0] in ('id', 'xpath', 'link text', 'partial link text', 'name', 'tag name', 'class name',
+                           'css selector'))
 
 
 def get_loc(loc, translate_css=False, css_mode=False):
@@ -130,14 +136,14 @@ def str_to_xpath_loc(loc):
 
     # 根据文本查找
     elif loc.startswith('text='):
-        loc_str = f'//*[text()={_make_search_str(loc[5:])}]'
+        loc_str = f'//*[text()={_quotes_escape(loc[5:])}]'
     elif loc.startswith('text:') and loc != 'text:':
-        loc_str = f'//*/text()[contains(., {_make_search_str(loc[5:])})]/..'
+        loc_str = f'//*/text()[contains(., {_quotes_escape(loc[5:])})]/..'
     elif loc.startswith('text^') and loc != 'text^':
-        loc_str = f'//*/text()[starts-with(., {_make_search_str(loc[5:])})]/..'
+        loc_str = f'//*/text()[starts-with(., {_quotes_escape(loc[5:])})]/..'
     elif loc.startswith('text$') and loc != 'text$':
-        loc_str = f'//*/text()[substring(., string-length(.) - string-length({_make_search_str(loc[5:])}) +1) = ' \
-                  f'{_make_search_str(loc[5:])}]/..'
+        loc_str = (f'//*/text()[substring(., string-length(.) - string-length({_quotes_escape(loc[5:])}) +1) = '
+                   f'{_quotes_escape(loc[5:])}]/..')
 
     # 用xpath查找
     elif loc.startswith(('xpath:', 'xpath=')) and loc not in ('xpath:', 'xpath='):
@@ -150,7 +156,7 @@ def str_to_xpath_loc(loc):
 
     # 根据文本模糊查找
     elif loc:
-        loc_str = f'//*/text()[contains(., {_make_search_str(loc)})]/..'
+        loc_str = f'//*/text()[contains(., {_quotes_escape(loc)})]/..'
     else:
         loc_str = '//*'
 
@@ -219,31 +225,31 @@ def _make_single_xpath_str(tag: str, text: str) -> tuple:
             else:
                 symbol = r[1]
                 if symbol == '=':  # 精确查找
-                    arg = '.' if r[0] in ('@text()', '@tx()') else r[0]
-                    arg_str = f'{arg}={_make_search_str(r[2])}'
+                    arg = 'text()' if r[0] in ('@text()', '@tx()') else r[0]
+                    arg_str = f'{arg}={_quotes_escape(r[2])}'
 
                 elif symbol == '^':  # 匹配开头
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = f'/text()[starts-with(., {_make_search_str(r[2])})]/..'
+                        txt_str = f'/text()[starts-with(., {_quotes_escape(r[2])})]/..'
                         arg_str = ''
                     else:
-                        arg_str = f"starts-with({r[0]},{_make_search_str(r[2])})"
+                        arg_str = f"starts-with({r[0]},{_quotes_escape(r[2])})"
 
                 elif symbol == '$':  # 匹配结尾
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = (f'/text()[substring(., string-length(.) - string-length({_make_search_str(r[2])}) '
-                                   f'+1) = {_make_search_str(r[2])}]/..')
+                        txt_str = (f'/text()[substring(., string-length(.) - string-length('
+                                   f'{_quotes_escape(r[2])}) +1) = {_quotes_escape(r[2])}]/..')
                         arg_str = ''
                     else:
-                        arg_str = (f'substring({r[0]}, string-length({r[0]}) - string-length({_make_search_str(r[2])}) '
-                                   f'+1) = {_make_search_str(r[2])}')
+                        arg_str = (f'substring({r[0]}, string-length({r[0]}) - string-length('
+                                   f'{_quotes_escape(r[2])}) +1) = {_quotes_escape(r[2])}')
 
                 elif symbol == ':':  # 模糊查找
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = f'/text()[contains(., {_make_search_str(r[2])})]/..'
+                        txt_str = f'/text()[contains(., {_quotes_escape(r[2])})]/..'
                         arg_str = ''
                     else:
-                        arg_str = f"contains({r[0]},{_make_search_str(r[2])})"
+                        arg_str = f"contains({r[0]},{_quotes_escape(r[2])})"
 
                 else:
                     raise ValueError(f'符号不正确：{symbol}')
@@ -307,17 +313,17 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
                     txt = r[2]
 
                 if symbol == '=':
-                    arg_str = f'{arg}={_make_search_str(txt)}'
+                    arg_str = f'{arg}={_quotes_escape(txt)}'
 
                 elif symbol == ':':
-                    arg_str = f'contains({arg},{_make_search_str(txt)})'
+                    arg_str = f'contains({arg},{_quotes_escape(txt)})'
 
                 elif symbol == '^':
-                    arg_str = f'starts-with({arg},{_make_search_str(txt)})'
+                    arg_str = f'starts-with({arg},{_quotes_escape(txt)})'
 
                 elif symbol == '$':
-                    arg_str = f'substring({arg}, string-length({arg}) - string-length({_make_search_str(txt)}) +1) ' \
-                              f'= {_make_search_str(txt)}'
+                    arg_str = (f'substring({arg}, string-length({arg}) - string-length('
+                               f'{_quotes_escape(txt)}) +1) = {_quotes_escape(txt)}')
 
                 else:
                     raise ValueError(f'符号不正确：{symbol}')
@@ -336,11 +342,14 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
     return 'xpath', f'//*[{arg_str}]' if arg_str else f'//*'
 
 
-def _make_search_str(search_str: str) -> str:
+def _quotes_escape(search_str: str) -> str:
     """将"转义，不知何故不能直接用 \ 来转义
     :param search_str: 查询字符串
     :return: 把"转义后的字符串
     """
+    if '"' not in search_str:
+        return f'"{search_str}"'
+
     parts = search_str.split('"')
     parts_num = len(parts)
     search_str = 'concat('
@@ -457,7 +466,7 @@ def translate_loc(loc):
         loc_str = f'//a[contains(text(),"{loc[1]}")]'
 
     else:
-        raise ValueError('无法识别的定位符。')
+        raise ValueError(f'无法识别的定位符：{loc}')
 
     return loc_by, loc_str
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Union, Tuple
 
+from .._base.chromium import Chromium
 from .._pages.chromium_base import ChromiumBase
 
 
@@ -53,9 +54,9 @@ def clean_folder(folder_path: Union[str, Path], ignore: Union[tuple, list] = Non
     ...
 
 
-def show_or_hide_browser(page: ChromiumBase, hide: bool = True) -> None:
+def show_or_hide_browser(tab: ChromiumBase, hide: bool = True) -> None:
     """执行显示或隐藏浏览器窗口
-    :param page: ChromePage对象
+    :param tab: ChromiumTab对象
     :param hide: 是否隐藏
     :return: None
     """
@@ -98,9 +99,10 @@ def configs_to_here(save_name: Union[Path, str] = None) -> None:
     ...
 
 
-def raise_error(result: dict, ignore=None, user: bool = False) -> None:
+def raise_error(result: dict, browser: Chromium, ignore=None, user: bool = False) -> None:
     """抛出error对应报错
     :param result: 包含error的dict
+    :param browser: 浏览器对象
     :param ignore: 要忽略的错误
     :param user: 是否用户调用的
     :return: None

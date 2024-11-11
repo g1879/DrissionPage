@@ -7,7 +7,7 @@
 """
 from time import perf_counter, sleep
 
-from .locator import is_loc
+from .locator import is_str_loc
 from .._elements.none_element import NoneElement
 
 
@@ -15,6 +15,15 @@ class SessionElementsList(list):
     def __init__(self, owner=None, *args):
         super().__init__(*args)
         self._owner = owner
+
+    def __getitem__(self, item):
+        cls = type(self)
+        if isinstance(item, slice):
+            return cls(self._owner, super().__getitem__(item))
+        elif isinstance(item, int):
+            return super().__getitem__(item)
+        else:
+            raise TypeError('序号必须是数字或切片。')
 
     @property
     def get(self):
@@ -263,7 +272,7 @@ class Getter(object):
 
 
 def get_eles(locators, owner, any_one=False, first_ele=True, timeout=10):
-    if isinstance(locators, str):
+    if isinstance(locators, (tuple, str)):
         locators = (locators,)
     res = {loc: None for loc in locators}
 
@@ -293,7 +302,7 @@ def get_eles(locators, owner, any_one=False, first_ele=True, timeout=10):
 
 def get_frame(owner, loc_ind_ele, timeout=None):
     if isinstance(loc_ind_ele, str):
-        if not is_loc(loc_ind_ele):
+        if not is_str_loc(loc_ind_ele):
             xpath = f'xpath://*[(name()="iframe" or name()="frame") and ' \
                     f'(@name="{loc_ind_ele}" or @id="{loc_ind_ele}")]'
         else:
@@ -310,14 +319,12 @@ def get_frame(owner, loc_ind_ele, timeout=None):
         r = ele
 
     elif isinstance(loc_ind_ele, int):
-        if loc_ind_ele == 0:
-            loc_ind_ele = 1
-        elif loc_ind_ele < 0:
-            loc_ind_ele = f'last()+{loc_ind_ele}+1'
-        xpath = f'xpath:(//*[name()="frame" or name()="iframe"])[{loc_ind_ele}]'
-        r = owner._ele(xpath, timeout=timeout)
+        ele = owner._ele('@|tag():iframe@|tag():frame', timeout=timeout, index=loc_ind_ele)
+        if ele and ele._type != 'ChromiumFrame':
+            raise TypeError('该定位符不是指向frame元素。')
+        r = ele
 
-    elif loc_ind_ele._type == 'ChromiumFrame':
+    elif getattr(loc_ind_ele, '_type', None) == 'ChromiumFrame':
         r = loc_ind_ele
 
     else:

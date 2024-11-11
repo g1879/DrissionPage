@@ -28,16 +28,15 @@ class OriginWaiter(object):
 class BrowserWaiter(OriginWaiter):
     def new_tab(self, timeout=None, curr_tab=None, raise_err=None):
         if not curr_tab:
-            curr_tab = self._owner.tab_ids[0]
+            curr_tab = self._owner._newest_tab_id
         elif hasattr(curr_tab, '_type'):
             curr_tab = curr_tab.tab_id
         if timeout is None:
             timeout = self._owner.timeout
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
-            latest_tid = self._owner.tab_ids[0]
-            if curr_tab != latest_tid:
-                return latest_tid
+            if curr_tab != self._owner._newest_tab_id:
+                return self._owner._newest_tab_id
             sleep(.01)
 
         if raise_err is True or Settings.raise_when_wait_failed is True:
@@ -51,18 +50,7 @@ class BrowserWaiter(OriginWaiter):
         self._owner._dl_mgr.set_flag('browser', False if cancel_it else True)
         if timeout is None:
             timeout = self._owner.timeout
-
-        r = False
-        end_time = perf_counter() + timeout
-        while perf_counter() < end_time:
-            v = self._owner._dl_mgr.get_flag('browser')
-            if not isinstance(v, bool):
-                r = v
-                break
-            sleep(.005)
-
-        self._owner._dl_mgr.set_flag('browser', None)
-        return r
+        return wait_mission(self._owner, 'browser', timeout)
 
     def downloads_done(self, timeout=None, cancel_if_timeout=True):
         if not self._owner._dl_mgr._running:
@@ -184,18 +172,7 @@ class BaseWaiter(OriginWaiter):
         self._owner.browser._dl_mgr.set_flag(self._owner.tab_id, False if cancel_it else True)
         if timeout is None:
             timeout = self._owner.timeout
-
-        r = False
-        end_time = perf_counter() + timeout
-        while perf_counter() < end_time:
-            v = self._owner.browser._dl_mgr.get_flag(self._owner.tab_id)
-            if not isinstance(v, bool):
-                r = v
-                break
-            sleep(.005)
-
-        self._owner.browser._dl_mgr.set_flag(self._owner.tab_id, None)
-        return r
+        return wait_mission(self._owner.browser, self._owner.tab_id, timeout)
 
     def url_change(self, text, exclude=False, timeout=None, raise_err=None):
         return self._owner if self._change('url', text, exclude, timeout, raise_err) else False
@@ -293,6 +270,9 @@ class ChromiumPageWaiter(TabWaiter):
     def new_tab(self, timeout=None, raise_err=None):
         return self._owner.browser.wait.new_tab(timeout=timeout, raise_err=raise_err)
 
+    def download_begin(self, timeout=None, cancel_it=False):
+        return self._owner.browser.wait.download_begin(timeout=timeout, cancel_it=cancel_it)
+
     def all_downloads_done(self, timeout=None, cancel_if_timeout=True):
         return self._owner.browser.wait.downloads_done(timeout=timeout, cancel_if_timeout=cancel_if_timeout)
 
@@ -316,7 +296,8 @@ class ElementWaiter(OriginWaiter):
         return self._wait_state('is_displayed', False, timeout, raise_err, err_text='等待元素隐藏失败。')
 
     def covered(self, timeout=None, raise_err=None):
-        return self._wait_state('is_covered', True, timeout, raise_err, err_text='等待元素被覆盖失败。')
+        return self._ele if self._wait_state('is_covered', True, timeout, raise_err,
+                                             err_text='等待元素被覆盖失败。') else False
 
     def not_covered(self, timeout=None, raise_err=None):
         return self._wait_state('is_covered', False, timeout, raise_err, err_text='等待元素不被覆盖失败。')
@@ -355,7 +336,8 @@ class ElementWaiter(OriginWaiter):
         return r
 
     def has_rect(self, timeout=None, raise_err=None):
-        return self._wait_state('has_rect', True, timeout, raise_err, err_text='等待元素拥有大小及位置失败（等{}秒）。')
+        return self._ele if self._wait_state('has_rect', True, timeout, raise_err,
+                                             err_text='等待元素拥有大小及位置失败（等{}秒）。') else False
 
     def stop_moving(self, timeout=None, gap=.1, raise_err=None):
         if timeout is None:
@@ -416,3 +398,17 @@ class FrameWaiter(BaseWaiter, ElementWaiter):
     @property
     def _timeout(self):
         return self._owner.timeout
+
+
+def wait_mission(browser, tid, timeout=None):
+    r = False
+    end_time = perf_counter() + timeout
+    while perf_counter() < end_time:
+        v = browser._dl_mgr.get_flag(tid)
+        if not isinstance(v, bool):
+            r = v
+            break
+        sleep(.005)
+
+    browser._dl_mgr.set_flag(tid, None)
+    return r

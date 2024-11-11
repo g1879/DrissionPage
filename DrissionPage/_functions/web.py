@@ -302,10 +302,10 @@ def tree(ele_or_page, text=False, show_js=False, show_css=False):
 def format_headers(txt):
     if isinstance(txt, (dict, CaseInsensitiveDict)):
         for k, v in txt.items():
-            if k in (':method', ':scheme', ':authority', ':path'):
-                txt.pop(k)
-            elif v not in (None, False, True):
+            if v not in (None, False, True):
                 txt[k] = str(v)
+        for i in (':method', ':scheme', ':authority', ':path'):
+            txt.pop(i, None)
         return txt
     headers = {}
     for header in txt.split('\n'):

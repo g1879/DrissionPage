@@ -240,17 +240,20 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     def s_ele(self,
               locator: Union[Tuple[str, str], str] = None,
-              index: int = 1) -> SessionElement:
+              index: int = 1,
+              timeout: float = None) -> SessionElement:
         """查找第一个符合条件的元素以SessionElement形式返回，d模式处理复杂页面时效率很高
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
         :param index: 获取第几个，从1开始，可传入负数获取倒数第几个
+        :param timeout: 查找元素超时时间（秒），默认与页面等待时间一致
         :return: SessionElement对象或属性、文本
         """
         ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList:
+    def s_eles(self, locator: Union[Tuple[str, str], str], timeout: float = None) -> SessionElementsList:
         """查找所有符合条件的元素以SessionElement形式返回，d模式处理复杂页面时效率很高
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
+        :param timeout: 查找元素超时时间（秒），默认与页面等待时间一致
         :return: SessionElement对象或属性、文本组成的列表
         """
         ...

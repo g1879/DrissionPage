@@ -112,6 +112,10 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     def timeout(self):
         return self.timeouts.base if self._d_mode else self._timeout
 
+    @property
+    def download_path(self):
+        return self.browser.download_path
+
     def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, **kwargs):
         if self._d_mode:
             return super(SessionPage, self).get(url, show_errmsg, retry, interval, timeout)
@@ -123,9 +127,8 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     def post(self, url, show_errmsg=False, retry=None, interval=None, **kwargs):
         if self.mode == 'd':
             self.cookies_to_session()
-            super().post(url, show_errmsg, retry, interval, **kwargs)
-            return self.response
-        return super().post(url, show_errmsg, retry, interval, **kwargs)
+        super().post(url, show_errmsg, retry, interval, **kwargs)
+        return self.response
 
     def ele(self, locator, index=1, timeout=None):
         return (super(SessionPage, self).ele(locator, index=index, timeout=timeout)
@@ -134,12 +137,13 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     def eles(self, locator, timeout=None):
         return super(SessionPage, self).eles(locator, timeout=timeout) if self._d_mode else super().eles(locator)
 
-    def s_ele(self, locator=None, index=1):
-        return super(SessionPage, self).s_ele(locator,
-                                              index=index) if self._d_mode else super().s_ele(locator, index=index)
+    def s_ele(self, locator=None, index=1, timeout=None):
+        return (super(SessionPage, self).s_ele(locator, index=index, timeout=timeout)
+                if self._d_mode else super().s_ele(locator, index=index, timeout=timeout))
 
-    def s_eles(self, locator):
-        return super(SessionPage, self).s_eles(locator) if self._d_mode else super().s_eles(locator)
+    def s_eles(self, locator, timeout=None):
+        return (super(SessionPage, self).s_eles(locator, timeout=timeout)
+                if self._d_mode else super().s_eles(locator, timeout=timeout))
 
     def change_mode(self, mode=None, go=True, copy_cookies=True):
         if mode:
@@ -227,7 +231,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     def close(self):
         if self._has_driver:
-            self.close_tabs(self.tab_id)
+            self.browser._close_tab(self)
         if self._session:
             self._session.close()
             if self._response is not None:

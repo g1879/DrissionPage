@@ -179,7 +179,7 @@ class Actions:
         self.owner._run_cdp('Input.dispatchKeyEvent', **data)
         return self
 
-    def type(self, keys):
+    def type(self, keys, interval=0):
         modifiers = []
         if not isinstance(keys, (str, tuple, list)):
             keys = str(keys)
@@ -197,6 +197,7 @@ class Actions:
 
                 else:
                     self.owner._run_cdp('Input.dispatchKeyEvent', type='char', text=character)
+                sleep(interval)
 
         for m in modifiers:
             self.key_up(m)

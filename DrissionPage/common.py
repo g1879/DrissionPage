@@ -6,6 +6,7 @@
 @License  : BSD 3-Clause.
 """
 from ._base.chromium import Chromium
+from ._configs.chromium_options import ChromiumOptions
 from ._elements.session_element import make_session_ele
 from ._functions.by import By
 from ._functions.keys import Keys
@@ -23,7 +24,9 @@ def from_selenium(driver):
     address, port = driver.caps.get('goog:chromeOptions', {}).get('debuggerAddress', ':').split(':')
     if not address:
         raise RuntimeError('获取失败。')
-    return Chromium(f'{address}:{port}')
+    co = ChromiumOptions().set_local_port(port)
+    co._ua_set = True
+    return Chromium(co)
 
 
 def from_playwright(page_or_browser):
@@ -48,4 +51,6 @@ def from_playwright(page_or_browser):
             break
     else:
         raise RuntimeError('获取失败，请用管理员权限运行。')
-    return Chromium(f'127.0.0.1:{port}')
+    co = ChromiumOptions().set_local_port(f'127.0.0.1:{port}')
+    co._ua_set = True
+    return Chromium(co)

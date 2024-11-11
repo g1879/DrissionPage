@@ -17,7 +17,7 @@ from requests import Session
 from .._configs.session_options import SessionOptions
 from .._elements.none_element import NoneElement
 from .._functions.elements import get_frame, get_eles
-from .._functions.locator import get_loc
+from .._functions.locator import get_loc, is_selenium_loc
 from .._functions.settings import Settings
 from .._functions.web import format_html
 from ..errors import ElementNotFoundError
@@ -40,7 +40,17 @@ class BaseParser(object):
             timeout = 0
         if timeout is None:
             timeout = self.timeout
-        return get_eles(locators, self, any_one, first_ele, timeout)
+        if isinstance(locators, tuple) and not is_selenium_loc(locators):
+            raise ValueError(f"locators参数为tuple时必须是单独的定位符，即长度为2，且第一位是'id', 'xpath', 'link text', "
+                             f"'partial link text','name', 'tag name', 'class name', 'css selector' 之一。\n"
+                             f"现在是：{locators}")
+        r = get_eles(locators, self, any_one, first_ele, timeout)
+        if any_one:
+            for ele in r:
+                if r[ele]:
+                    return ele, r[ele]
+            return None, None
+        return r
 
     # ----------------以下属性或方法待后代实现----------------
     @property
@@ -80,7 +90,7 @@ class BaseElement(BaseParser):
         r = self._find_elements(locator, timeout=timeout, index=index, relative=relative, raise_err=raise_err)
         if r or isinstance(r, list):
             return r
-        if Settings.raise_when_ele_not_found or raise_err is True:
+        if raise_err is True or (Settings.raise_when_ele_not_found and raise_err is None):
             raise ElementNotFoundError(None, method, {'locator': locator, 'index': index, 'timeout': timeout})
 
         r.method = method
@@ -114,11 +124,11 @@ class DrissionElement(BaseElement):
 
     @property
     def css_path(self):
-        return self._get_ele_path('css')
+        return self._get_ele_path(xpath=False)
 
     @property
     def xpath(self):
-        return self._get_ele_path('xpath')
+        return self._get_ele_path()
 
     @property
     def comments(self):
@@ -245,7 +255,7 @@ class DrissionElement(BaseElement):
     def attr(self, name: str):
         return ''
 
-    def _get_ele_path(self, mode):
+    def _get_ele_path(self, xpath=True):
         return ''
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
@@ -286,7 +296,7 @@ class BasePage(BaseParser):
         if self._DownloadKit is None:
             if not self._session:
                 self._create_session()
-            self._DownloadKit = DownloadKit(driver=self, goal_path=self.download_path)
+            self._DownloadKit = DownloadKit(driver=self, save_path=self.download_path)
         return self._DownloadKit
 
     def _before_connect(self, url, retry, interval):
@@ -346,7 +356,7 @@ class BasePage(BaseParser):
         r = self._find_elements(locator, timeout=timeout, index=index, raise_err=raise_err)
         if r or isinstance(r, list):
             return r
-        if Settings.raise_when_ele_not_found or raise_err is True:
+        if raise_err is True or (Settings.raise_when_ele_not_found and raise_err is None):
             raise ElementNotFoundError(None, method, {'locator': locator, 'index': index, 'timeout': timeout})
 
         r.method = method

@@ -47,9 +47,14 @@ class ChromiumTab(ChromiumBase):
         self._load_mode = self.browser._load_mode
         self._download_path = self.browser.download_path
         self._auto_handle_alert = self.browser._auto_handle_alert
+        self._none_ele_return_value = self.browser._none_ele_return_value
+        self._none_ele_value = self.browser._none_ele_value
 
     def close(self, others=False):
-        self.browser.close_tabs(self.tab_id, others=others)
+        if others:
+            self.browser.close_tabs(self.tab_id, others=True)
+        else:
+            self.browser._close_tab(self)
 
     @property
     def set(self):

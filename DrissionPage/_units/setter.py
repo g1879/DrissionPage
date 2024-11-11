@@ -10,7 +10,8 @@ from time import sleep
 
 from requests.structures import CaseInsensitiveDict
 
-from .cookies_setter import SessionCookiesSetter, CookiesSetter, WebPageCookiesSetter, BrowserCookiesSetter
+from .cookies_setter import (SessionCookiesSetter, CookiesSetter, WebPageCookiesSetter, BrowserCookiesSetter,
+                             MixTabCookiesSetter)
 from .._functions.tools import show_or_hide_browser
 from .._functions.web import format_headers
 from ..errors import ElementLostError, JavaScriptError
@@ -50,7 +51,7 @@ class SessionPageSetter(BaseSetter):
     def download_path(self, path):
         super().download_path(path)
         if self._owner._DownloadKit:
-            self._owner._DownloadKit.set.goal_path(self._owner._download_path)
+            self._owner._DownloadKit.set.save_path(self._owner._download_path)
 
     def timeout(self, second):
         self._owner._timeout = second
@@ -229,7 +230,7 @@ class TabSetter(ChromiumBaseSetter):
         super().download_path(path)
         self._owner.browser._dl_mgr.set_path(self._owner, self._owner._download_path)
         if self._owner._DownloadKit:
-            self._owner._DownloadKit.set.goal_path(self._owner._download_path)
+            self._owner._DownloadKit.set.save_path(self._owner._download_path)
 
     def download_file_name(self, name=None, suffix=None):
         self._owner.browser._dl_mgr.set_rename(self._owner.tab_id, name, suffix)
@@ -262,8 +263,18 @@ class ChromiumPageSetter(TabSetter):
         self._owner.browser.retry_interval = interval
 
     def download_path(self, path):
-        super().download_path(path)
-        self._owner.browser._download_path = self._owner._download_path
+        if path is None:
+            path = '.'
+        self._owner._download_path = str(Path(path).absolute())
+        self._owner.browser.set.download_path(path)
+        if self._owner._DownloadKit:
+            self._owner._DownloadKit.set.save_path(path)
+
+    def download_file_name(self, name=None, suffix=None):
+        self._owner.browser.set.download_file_name(name, suffix)
+
+    def when_download_file_exists(self, mode):
+        self._owner.browser.set.when_download_file_exists(mode)
 
 
 class WebPageSetter(ChromiumPageSetter):
@@ -300,7 +311,7 @@ class MixTabSetter(TabSetter):
     @property
     def cookies(self):
         if self._cookies_setter is None:
-            self._cookies_setter = WebPageCookiesSetter(self._owner)
+            self._cookies_setter = MixTabCookiesSetter(self._owner)
         return self._cookies_setter
 
     def headers(self, headers):

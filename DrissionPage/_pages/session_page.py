@@ -12,11 +12,12 @@ from urllib.parse import urlparse
 
 from requests import Response
 from requests.structures import CaseInsensitiveDict
-from tldextract import extract
+from tldextract import TLDExtract
 
 from .._base.base import BasePage
 from .._elements.session_element import SessionElement, make_session_ele
 from .._functions.cookies import cookie_to_dict, CookiesList
+from .._functions.settings import Settings
 from .._functions.web import format_headers
 from .._units.setter import SessionPageSetter
 
@@ -155,7 +156,9 @@ class SessionPage(BasePage):
             cookies = self.session.cookies
         else:
             if self.url:
-                ex_url = extract(self._session_url)
+                ex_url = TLDExtract(
+                    suffix_list_urls=["https://publicsuffix.org/list/public_suffix_list.dat",
+                                      f"file:///{Settings.suffixes_list_path}"]).extract_str(self._session_url)
                 domain = f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain
                 cookies = tuple(c for c in self.session.cookies if domain in c.domain or c.domain == '')
             else:

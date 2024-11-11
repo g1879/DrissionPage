@@ -6,13 +6,13 @@
 @License  : BSD 3-Clause.
 """
 from threading import Lock
-from typing import List, Optional, Set, Dict, Union, Tuple, Literal
+from typing import List, Optional, Set, Dict, Union, Tuple, Literal, Any
 
 from .driver import BrowserDriver, Driver
 from .._configs.chromium_options import ChromiumOptions
 from .._configs.session_options import SessionOptions
 from .._functions.cookies import CookiesList
-from .._pages.chromium_base import Timeout
+from .._pages.chromium_base import Timeout, ChromiumBase
 from .._pages.chromium_tab import ChromiumTab
 from .._pages.mix_tab import MixTab
 from .._units.downloader import DownloadManager
@@ -40,6 +40,7 @@ class Chromium(object):
     _frames: dict = ...
     _drivers: Dict[str, Driver] = ...
     _all_drivers: Dict[str, Set[Driver]] = ...
+    _relation: Dict[str, Optional[str]] = ...
     _process_id: Optional[int] = ...
     _dl_mgr: DownloadManager = ...
     _timeouts: Timeout = ...
@@ -49,6 +50,9 @@ class Chromium(object):
     _is_exists: bool = ...
     _is_headless: bool = ...
     _disconnect_flag: bool = ...
+    _none_ele_return_value: bool = ...
+    _none_ele_value: Any = ...
+    _newest_tab_id: Optional[str] = ...
 
     def __new__(cls,
                 addr_or_opts: Union[str, int, ChromiumOptions] = None,
@@ -189,6 +193,12 @@ class Chromium(object):
         :return: None
         """
         ...
+
+    def _close_tab(self, tab: Union[ChromiumBase, str]):
+        """关闭一个标签页
+        :param tab: 标签页对象或id
+        :return: None
+        """
 
     def activate_tab(self, id_ind_tab: Union[int, str, ChromiumTab]) -> None:
         """使一个标签页显示到前端

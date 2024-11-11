@@ -66,7 +66,7 @@ class Actions:
         :param offset_x: 偏移量x
         :param offset_y: 偏移量y
         :param duration: 拖动用时，传入0即瞬间到达
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
@@ -75,7 +75,7 @@ class Actions:
         :param offset_x: 偏移量x
         :param offset_y: 偏移量y
         :param duration: 拖动用时，传入0即瞬间到达
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
@@ -83,7 +83,7 @@ class Actions:
         """点击鼠标左键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
         :param times: 点击次数
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
@@ -91,7 +91,7 @@ class Actions:
         """点击鼠标右键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
         :param times: 点击次数
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
@@ -99,49 +99,49 @@ class Actions:
         """点击鼠标中键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
         :param times: 点击次数
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def hold(self, on_ele: Union[ChromiumElement, str] = None) -> Actions:
         """按住鼠标左键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def release(self, on_ele: Union[ChromiumElement, str] = None) -> Actions:
         """释放鼠标左键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def r_hold(self, on_ele: Union[ChromiumElement, str] = None) -> Actions:
         """按住鼠标右键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def r_release(self, on_ele: Union[ChromiumElement, str] = None) -> Actions:
         """释放鼠标右键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def m_hold(self, on_ele: Union[ChromiumElement, str] = None) -> Actions:
         """按住鼠标中键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def m_release(self, on_ele: Union[ChromiumElement, str] = None) -> Actions:
         """释放鼠标中键，可先移动到元素上
         :param on_ele: ChromiumElement元素或文本定位符
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
@@ -153,14 +153,14 @@ class Actions:
         :param on_ele: ChromiumElement元素或文本定位符
         :param button: 要按下的按键
         :param count: 点击次数
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def _release(self, button: str) -> Actions:
         """释放鼠标按键
         :param button: 要释放的按键
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
@@ -170,63 +170,66 @@ class Actions:
         :param delta_y: 滚轮变化值y
         :param delta_x: 滚轮变化值x
         :param on_ele: ChromiumElement元素
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def up(self, pixel: int) -> Actions:
         """鼠标向上移动若干像素
         :param pixel: 鼠标移动的像素值
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def down(self, pixel: int) -> Actions:
         """鼠标向下移动若干像素
         :param pixel: 鼠标移动的像素值
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def left(self, pixel: int) -> Actions:
         """鼠标向左移动若干像素
         :param pixel: 鼠标移动的像素值
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def right(self, pixel: int) -> Actions:
         """鼠标向右移动若干像素
         :param pixel: 鼠标移动的像素值
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def key_down(self, key: Union[KEYS, str]) -> Actions:
         """按下键盘上的按键，
         :param key: 使用Keys获取的按键，或 'DEL' 形式按键名称
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
     def key_up(self, key: Union[KEYS, str]) -> Actions:
         """提起键盘上的按键
         :param key: 按键，特殊字符见Keys
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 
-    def type(self, keys: Union[KEYS, str, list, tuple]) -> Actions:
+    def type(self,
+             keys: Union[KEYS, str, list, tuple],
+             interval: float = 0) -> Actions:
         """用模拟键盘按键方式输入文本，可输入字符串，也可输入组合键
         :param keys: 要按下的按键，特殊字符和多个文本可用list或tuple传入
-        :return: self
+        :param interval: 每个字符之间间隔时间
+        :return: 动作链对象本身
         """
         ...
 
     def input(self, text: Any) -> Actions:
         """输入文本，也可输入组合键，组合键用tuple形式输入
         :param text: 文本值或按键组合
-        :return: self
+        :return: 动作链对象本身
         """
         ...
 

@@ -41,13 +41,15 @@ class BaseParser(object):
              any_one: bool = True,
              first_ele: bool = True,
              timeout: float = None) -> Union[Dict[str, ChromiumElement], Dict[str, SessionElement],
-    Dict[str, List[ChromiumElement]], Dict[str, List[SessionElement]]]:
+    Dict[str, List[ChromiumElement]], Dict[str, List[SessionElement]], Tuple[str, SessionElement],
+    Tuple[str, ChromiumElement]]:
         """传入多个定位符，获取多个ele
         :param locators: 定位符组成的列表
         :param any_one: 是否任何一个定位符找到结果即返回
         :param first_ele: 每个定位符是否只获取第一个元素
         :param timeout: 超时时间（秒）
-        :return: 多个定位符组成的dict，first_only为False返回列表，否则为元素，无结果的返回False
+        :return: any_one为True时，返回一个找到的元素定位符和对象组成的元组，格式：(loc, ele)，全都没找到返回(None, None)
+                 any_one为False时，返回dict格式，key为定位符，value为找到的元素或列表
         """
         ...
 
@@ -350,7 +352,7 @@ class DrissionElement(BaseElement):
     @abstractmethod
     def attr(self, name: str) -> str: ...
 
-    def _get_ele_path(self, mode) -> str: ...
+    def _get_ele_path(self, xpath: bool = True) -> str: ...
 
 
 class BasePage(BaseParser):

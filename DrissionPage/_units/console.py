@@ -6,8 +6,9 @@ from time import perf_counter, sleep
 class Console(object):
     def __init__(self, owner):
         self._owner = owner
-        self.listening = False
         self._caught = None
+        self._not_enabled = True
+        self.listening = False
 
     @property
     def messages(self):
@@ -21,12 +22,13 @@ class Console(object):
     def start(self):
         self._caught = Queue(maxsize=0)
         self._owner._driver.set_callback("Console.messageAdded", self._console)
-        self._owner._run_cdp("Console.enable")
+        if self._not_enabled:
+            self._owner._run_cdp("Console.enable")
+            self._not_enabled = False
         self.listening = True
 
     def stop(self):
         if self.listening:
-            self._owner._run_cdp("Console.disable")
             self._owner._driver.set_callback('Console.messageAdded', None)
             self.listening = False
 
@@ -61,6 +63,7 @@ class Console(object):
             while self._owner._driver.is_running and self.listening and perf_counter() < end:
                 if self._caught.qsize():
                     yield self._caught.get_nowait()
+                    end = perf_counter() + timeout
                 sleep(0.05)
             return False
 
@@ -80,3 +83,11 @@ class ConsoleData(object):
     def __repr__(self):
         return (f'<ConsoleData source={self.source} level={self.level} text={self.text} url={self.url} '
                 f'line={self.line} column={self.column} >')
+
+    @property
+    def body(self):
+        from json import loads
+        try:
+            return loads(self.text)
+        except:
+            return self._raw_body

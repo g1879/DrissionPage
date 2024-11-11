@@ -451,7 +451,17 @@ class Request(object):
     def headers(self):
         if self._headers is None:
             self._headers = CaseInsensitiveDict(self._request['headers'])
+            if self.extra_info.headers:
+                h = CaseInsensitiveDict(self.extra_info.headers)
+                for k, v in h.items():
+                    if k not in self._headers:
+                        self._headers[k] = v
         return self._headers
+
+    @property
+    def params(self):
+        from urllib.parse import parse_qsl, urlparse
+        return dict(parse_qsl(urlparse(self.url).query, keep_blank_values=True))
 
     @property
     def postData(self):
@@ -493,6 +503,11 @@ class Response(object):
     def headers(self):
         if self._headers is None:
             self._headers = CaseInsensitiveDict(self._response['headers'])
+            if self.extra_info.headers:
+                h = CaseInsensitiveDict(self.extra_info.headers)
+                for k, v in h.items():
+                    if k not in self._headers:
+                        self._headers[k] = v
         return self._headers
 
     @property

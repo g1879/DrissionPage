@@ -243,6 +243,9 @@ class BrowserSetter(BrowserBaseSetter):
         """返回用于设置cookies的对象"""
         ...
 
+    @property
+    def window(self)->WindowSetter:...
+
     def auto_handle_alert(self,
                           on_off: bool = True,
                           accept: bool = True) -> None:

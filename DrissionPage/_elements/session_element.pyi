@@ -283,9 +283,9 @@ class SessionElement(DrissionElement):
         """
         ...
 
-    def _get_ele_path(self, mode: str) -> str:
+    def _get_ele_path(self, xpath: bool=True) -> str:
         """获取css路径或xpath路径
-        :param mode: 'css' 或 'xpath'
+        :param xpath: 用xpath还是css
         :return: css路径或xpath路径
         """
         ...

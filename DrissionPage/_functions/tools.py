@@ -80,8 +80,8 @@ def clean_folder(folder_path, ignore=None):
                 rmtree(f, True)
 
 
-def show_or_hide_browser(page, hide=True):
-    if not page.browser.address.startswith(('127.0.0.1', 'localhost')):
+def show_or_hide_browser(tab, hide=True):
+    if not tab.browser.address.startswith(('127.0.0.1', 'localhost')):
         return
 
     if system().lower() != 'windows':
@@ -93,10 +93,10 @@ def show_or_hide_browser(page, hide=True):
     except ImportError:
         raise ImportError('请先安装：pip install pypiwin32')
 
-    pid = page._page.process_id
+    pid = tab.browser.process_id
     if not pid:
         return None
-    hds = get_hwnds_from_pid(pid, page.title)
+    hds = get_hwnds_from_pid(pid, tab.title)
     sw = SW_HIDE if hide else SW_SHOW
     for hd in hds:
         ShowWindow(hd, sw)
@@ -157,7 +157,7 @@ def configs_to_here(save_name=None):
     om.save(save_name)
 
 
-def raise_error(result, ignore=None, user=False):
+def raise_error(result, browser, ignore=None, user=False):
     error = result['error']
     if error in ('Cannot find context with specified id', 'Inspected target navigated or closed',
                  'No frame with given id found'):
@@ -183,7 +183,7 @@ def raise_error(result, ignore=None, user=False):
     elif error == 'Given expression does not evaluate to a function':
         r = JavaScriptError(f'传入的js无法解析成函数：\n{result["args"]["functionDeclaration"]}')
     elif error.endswith("' wasn't found"):
-        r = RuntimeError(f'没有找到对应功能，方法错误或你的浏览器太旧。\n方法：{result["method"]}\n参数：{result["args"]}')
+        r = RuntimeError(f'没有找到对应功能，方法错误或你的浏览器太旧。\n浏览器版本：{browser.version}\n方法：{result["method"]}')
     elif result['type'] == 'timeout':
         from DrissionPage import __version__
         txt = f'\n错误：{result["error"]}\n方法：{result["method"]}\n参数：{result["args"]}\n' \

@@ -280,6 +280,11 @@ class Request(object):
         ...
 
     @property
+    def params(self) -> dict:
+        """dict格式返回请求url中的参数"""
+        ...
+
+    @property
     def postData(self) -> Any:
         """返回postData数据"""
         ...

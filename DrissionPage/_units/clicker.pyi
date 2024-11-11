@@ -80,14 +80,14 @@ class Clicker(object):
                     save_path: Union[str, Path] = None,
                     rename: str = None,
                     suffix: str = None,
-                    new_tab: bool = False,
+                    new_tab: bool = None,
                     by_js: bool = False,
                     timeout: float = None) -> DownloadMission:
         """点击触发下载
         :param save_path: 保存路径，为None保存在原来设置的，如未设置保存到当前路径
         :param rename: 重命名文件名
         :param suffix: 指定文件后缀
-        :param new_tab: 该下载是否在新tab中触发
+        :param new_tab: 下载任务是否从新标签页触发，为None会自动获取，如获取不到，设为True
         :param by_js: 是否用js方式点击，逻辑与click()一致
         :param timeout: 等待下载触发的超时时间，为None则使用页面对象设置
         :return: DownloadMission对象

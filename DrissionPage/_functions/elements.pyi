@@ -29,7 +29,7 @@ class SessionElementsList(list):
 
     def __next__(self) -> SessionElement: ...
 
-    def __getitem__(self, _i) -> Union[SessionElement, List[SessionElement]]: ...
+    def __getitem__(self, _i) -> Union[SessionElement, SessionElementsList]: ...
 
     def __iter__(self) -> List[SessionElement]: ...
 
@@ -63,7 +63,7 @@ class ChromiumElementsList(SessionElementsList):
 
     def __next__(self) -> ChromiumElement: ...
 
-    def __getitem__(self, _i) -> Union[ChromiumElement, List[ChromiumElement]]: ...
+    def __getitem__(self, _i) -> Union[ChromiumElement, ChromiumElementsList]: ...
 
     def __iter__(self) -> List[ChromiumElement]: ...
 
@@ -559,14 +559,14 @@ class Getter(object):
         ...
 
 
-def get_eles(locators: Union[str, List[str], tuple],
+def get_eles(locators: Union[str, tuple, List[Union[str, tuple]]],
              owner: BaseParser,
              any_one: bool = False,
              first_ele: bool = True,
              timeout: float = 10) -> Union[Dict[str, ChromiumElement], Dict[str, SessionElement],
 Dict[str, List[ChromiumElement]], Dict[str, List[SessionElement]]]:
     """传入多个定位符，获取多个ele
-    :param locators: 定位符组成的列表
+    :param locators: 定位符或它们组成的列表
     :param owner: 页面或元素对象
     :param any_one: 是否找到任何一个即返回
     :param first_ele: 每个定位符是否只获取第一个元素

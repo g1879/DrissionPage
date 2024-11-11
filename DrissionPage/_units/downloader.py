@@ -25,8 +25,11 @@ class DownloadManager(object):
         t.when_file_exists = 'rename'
 
         self._missions = {}  # {guid: DownloadMission}
-        self._tab_missions = {}  # {tab_id: DownloadMission}
+        self._tab_missions = {}  # {tab_id: [DownloadMission, ...]}
         self._flags = {}  # {tab_id: [bool, DownloadMission]}
+        self._waiting_tab = set()  # click.to_download()专用
+        self._tmp_path = '.'
+        self._page_id = None
 
         self._running = False
 
@@ -42,6 +45,7 @@ class DownloadManager(object):
             self._browser._driver.set_callback('Browser.downloadWillBegin', self._onDownloadWillBegin)
             r = self._browser._run_cdp('Browser.setDownloadBehavior', downloadPath=self._browser._download_path,
                                        behavior='allowAndName', eventsEnabled=True)
+            self._tmp_path = self._browser._download_path
             if 'error' in r:
                 print('浏览器版本太低无法使用下载管理功能。')
         self._running = True
@@ -61,14 +65,17 @@ class DownloadManager(object):
         return self._flags.get(tab_id, None)
 
     def get_tab_missions(self, tab_id):
-        return self._tab_missions.get(tab_id, [])
+        return self._tab_missions.get(tab_id, set())
 
     def set_done(self, mission, state, final_path=None):
         if mission.state not in ('canceled', 'skipped'):
             mission.state = state
         mission.final_path = final_path
-        if mission.tab_id in self._tab_missions and mission.id in self._tab_missions[mission.tab_id]:
-            self._tab_missions[mission.tab_id].remove(mission.id)
+        if mission.tab_id in self._tab_missions and mission in self._tab_missions[mission.tab_id]:
+            self._tab_missions[mission.tab_id].discard(mission)
+        if (mission.from_tab and mission.from_tab in self._tab_missions
+                and mission in self._tab_missions[mission.from_tab]):
+            self._tab_missions[mission.from_tab].discard(mission)
         self._missions.pop(mission.id, None)
         mission._is_done = True
 
@@ -92,12 +99,18 @@ class DownloadManager(object):
         self._tab_missions.pop(tab_id, None)
         self._flags.pop(tab_id, None)
         TabDownloadSettings.TABS.pop(tab_id, None)
+        self._waiting_tab.discard(tab_id)
 
     def _onDownloadWillBegin(self, **kwargs):
         guid = kwargs['guid']
         tab_id = self._browser._frames.get(kwargs['frameId'], 'browser')
+        tab = 'browser' if tab_id in ('browser', self._page_id) or self.get_flag('browser') is not None else tab_id
+        opener = self._browser._relation.get(tab_id, None)
+        from_tab = None
+        if opener and opener in self._waiting_tab:
+            tab = from_tab = opener
 
-        settings = TabDownloadSettings(tab_id if tab_id in TabDownloadSettings.TABS else 'browser')
+        settings = TabDownloadSettings(tab)
         if settings.rename:
             if settings.suffix is not None:
                 name = f'{settings.rename}.{settings.suffix}' if settings.suffix else settings.rename
@@ -122,25 +135,33 @@ class DownloadManager(object):
             name = kwargs['suggestedFilename']
 
         skip = False
+        overwrite = None  # 存在且重命名
         goal_path = Path(settings.path) / name
         if goal_path.exists():
             if settings.when_file_exists == 'skip':
                 skip = True
             elif settings.when_file_exists == 'overwrite':
-                goal_path.unlink()
+                overwrite = True  # 存在且覆盖
+        else:  # 不存在
+            overwrite = False
 
-        m = DownloadMission(self, tab_id, guid, settings.path, name, kwargs['url'], self._browser.download_path)
+        m = DownloadMission(self, tab_id, guid, settings.path, name, kwargs['url'], self._tmp_path, overwrite)
+        if from_tab:
+            m.from_tab = from_tab
+            self._tab_missions.setdefault(from_tab, set()).add(m)
         self._missions[guid] = m
 
-        if self.get_flag(tab_id) is False:  # 取消该任务
+        if self.get_flag('browser') is False or self.get_flag(tab) is False:  # 取消该任务
             self.cancel(m)
         elif skip:
             self.skip(m)
         else:
-            self._tab_missions.setdefault(tab_id, []).append(m)
+            self._tab_missions.setdefault(tab_id, set()).add(m)
 
-        if self.get_flag(tab_id) is not None:
-            self._flags[tab_id] = m
+        if self.get_flag('browser') is not None:
+            self._flags['browser'] = m
+        elif self.get_flag(tab) is not None:
+            self._flags[tab] = m
 
     def _onDownloadProgress(self, **kwargs):
         if kwargs['guid'] in self._missions:
@@ -151,13 +172,17 @@ class DownloadManager(object):
 
             elif kwargs['state'] == 'completed':
                 if mission.state == 'skipped':
-                    Path(f'{mission.save_path}{sep}{mission.id}').unlink(True)
+                    Path(f'{mission.tmp_path}{sep}{mission.id}').unlink(True)
                     self.set_done(mission, 'skipped')
                     return
                 mission.received_bytes = kwargs['receivedBytes']
                 mission.total_bytes = kwargs['totalBytes']
-                form_path = f'{mission.save_path}{sep}{mission.id}'
-                to_path = str(get_usable_path(f'{mission.path}{sep}{mission.name}'))
+                form_path = f'{mission.tmp_path}{sep}{mission.id}'
+                if mission._overwrite is None:
+                    to_path = str(get_usable_path(f'{mission.folder}{sep}{mission.name}'))
+                else:
+                    to_path = f'{mission.folder}{sep}{mission.name}'
+                Path(mission.folder).mkdir(parents=True, exist_ok=True)
                 not_moved = True
                 for _ in range(10):
                     try:
@@ -193,25 +218,27 @@ class TabDownloadSettings(object):
         self.tab_id = tab_id
         self.rename = None
         self.suffix = None
-        self.path = ''
-        self.when_file_exists = 'rename'
+        self.path = '' if tab_id == 'browser' else self.TABS['browser'].path
+        self.when_file_exists = 'rename' if tab_id == 'browser' else self.TABS['browser'].when_file_exists
 
         TabDownloadSettings.TABS[tab_id] = self
 
 
 class DownloadMission(object):
-    def __init__(self, mgr, tab_id, _id, path, name, url, save_path):
+    def __init__(self, mgr, tab_id, _id, folder, name, url, tmp_path, overwrite):
         self._mgr = mgr
         self.url = url
         self.tab_id = tab_id
+        self.from_tab = None
         self.id = _id
-        self.path = path
+        self.folder = folder
         self.name = name
         self.state = 'running'
         self.total_bytes = None
         self.received_bytes = 0
         self.final_path = None
-        self.save_path = save_path
+        self.tmp_path = tmp_path
+        self._overwrite = overwrite
         self._is_done = False
 
     def __repr__(self):
@@ -234,8 +261,8 @@ class DownloadMission(object):
             end_time = perf_counter()
             while self.name is None and perf_counter() < end_time:
                 sleep(0.01)
-            print(f'文件名：{self.name}')
-            print(f'目标路径：{self.path}')
+            print(f'文件名：{self.name or "未知"}')
+            print(f'目录路径：{self.folder}')
 
         if timeout is None:
             while not self.is_done:
@@ -255,11 +282,17 @@ class DownloadMission(object):
 
         if show:
             if self.state == 'completed':
-                print(f'下载完成 {self.final_path}')
+                print('\r100% ', end='')
+                if self._overwrite is None:
+                    print(f'完成并重命名 {self.final_path}')
+                elif self._overwrite is False:
+                    print(f'下载完成 {self.final_path}')
+                else:
+                    print(f'已覆盖 {self.final_path}')
             elif self.state == 'canceled':
                 print(f'下载取消')
             elif self.state == 'skipped':
-                print(f'已跳过')
+                print(f'已跳过 {self.folder}{sep}{self.name}')
             print()
 
         return self.final_path if self.final_path else False

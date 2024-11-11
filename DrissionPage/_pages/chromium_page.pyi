@@ -198,10 +198,10 @@ class ChromiumPage(ChromiumBase):
 
     def close_tabs(self,
                    tabs_or_ids: Union[str, ChromiumTab, List[Union[str, ChromiumTab]],
-                   Tuple[Union[str, ChromiumTab]]] = None,
+                                Tuple[Union[str, ChromiumTab]]],
                    others: bool = False) -> None:
-        """关闭传入的标签页，默认关闭当前页。可传入多个
-        :param tabs_or_ids: 要关闭的标签页对象或id，可传入列表或元组，为None时关闭当前页
+        """关闭传入的标签页，可传入多个
+        :param tabs_or_ids: 要关闭的标签页对象或id，可传入列表或元组
         :param others: 是否关闭指定标签页之外的
         :return: None
         """

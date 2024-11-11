@@ -377,7 +377,7 @@ class ChromiumElement(DrissionElement):
         """
         ...
 
-    def remove_attr(self, name: str) -> None:
+    def remove_attr(self, name: str) -> ChromiumElement:
         """删除元素一个attribute属性
         :param name: 属性名
         :return: None
@@ -587,7 +587,7 @@ class ChromiumElement(DrissionElement):
         """根据backend id刷新其它id"""
         ...
 
-    def _get_ele_path(self, mode: str) -> str:
+    def _get_ele_path(self, xpath: bool = True) -> str:
         """返获取绝对的css路径或xpath路径"""
         ...
 

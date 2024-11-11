@@ -6,6 +6,7 @@
 @License  : BSD 3-Clause.
 """
 from pathlib import Path
+from re import match
 from shutil import rmtree
 from threading import Lock
 from time import sleep, perf_counter
@@ -63,6 +64,8 @@ class Chromium(object):
         self._frames = {}
         self._drivers = {}
         self._all_drivers = {}
+        self._relation = {}
+        self._newest_tab_id = None
 
         self._set = None
         self._wait = None
@@ -71,6 +74,8 @@ class Chromium(object):
         self._load_mode = self._chromium_options.load_mode
         self._download_path = str(Path(self._chromium_options.download_path).absolute())
         self._auto_handle_alert = None
+        self._none_ele_return_value = False
+        self._none_ele_value = None
         self.retry_times = self._chromium_options.retry_times
         self.retry_interval = self._chromium_options.retry_interval
         self.address = self._chromium_options.address
@@ -186,34 +191,32 @@ class Chromium(object):
     def get_tabs(self, title=None, url=None, tab_type='page'):
         return self._get_tabs(title=title, url=url, tab_type=tab_type, mix=True, as_id=False)
 
-    def close_tabs(self, tabs_or_ids=None, others=False):
-        all_tabs = set(self.tab_ids)
+    def close_tabs(self, tabs_or_ids, others=False):
         if isinstance(tabs_or_ids, str):
             tabs = {tabs_or_ids}
         elif isinstance(tabs_or_ids, ChromiumTab):
             tabs = {tabs_or_ids.tab_id}
-        elif tabs_or_ids is None:
-            tabs = {self.tab_ids[0]}
         elif isinstance(tabs_or_ids, (list, tuple)):
             tabs = set(i.tab_id if isinstance(i, ChromiumTab) else i for i in tabs_or_ids)
         else:
             raise TypeError('tabs_or_ids参数只能传入标签页对象或id。')
 
+        all_tabs = set(self.tab_ids)
         if others:
             tabs = all_tabs - tabs
 
-        end_len = len(set(all_tabs) - set(tabs))
-        if end_len <= 0:
+        if len(all_tabs - tabs) > 0:
+            for tab in tabs:
+                self._close_tab(tab=tab)
+        else:
             self.quit()
-            return
 
-        for tab in tabs:
-            self._onTargetDestroyed(targetId=tab)
-            self._driver.run('Target.closeTarget', targetId=tab)
-            sleep(.2)
-        end_time = perf_counter() + 3
-        while self.tabs_count != end_len and perf_counter() < end_time:
-            sleep(.1)
+    def _close_tab(self, tab):
+        if isinstance(tab, str):
+            tab = self.get_tab(tab)
+        tab._run_cdp('Target.closeTarget', targetId=tab.tab_id)
+        while tab.driver.is_running and tab.tab_id in self._all_drivers:
+            sleep(.01)
 
     def activate_tab(self, id_ind_tab):
         if isinstance(id_ind_tab, int):
@@ -304,7 +307,7 @@ class Chromium(object):
         if tab:
             kwargs['browserContextId'] = tab
 
-        if self.states.is_incognito():
+        if self.states.is_incognito:
             return _new_tab_by_js(self, url, obj, new_window)
         else:
             try:
@@ -312,8 +315,12 @@ class Chromium(object):
             except CDPError:
                 return _new_tab_by_js(self, url, obj, new_window)
 
-        while tab not in self._drivers:
+        while self.states.is_alive:
+            if tab in self._drivers:
+                break
             sleep(.1)
+        else:
+            raise BrowserConnectError('浏览器已关闭')
         tab = obj(self, tab)
         if url:
             tab.get(url)
@@ -336,7 +343,7 @@ class Chromium(object):
             if tabs:
                 id_or_num = tabs[0]
             else:
-                return None
+                raise RuntimeError('没有找到指定标签页。')
 
         if as_id:
             return id_or_num
@@ -354,7 +361,8 @@ class Chromium(object):
             raise TypeError('tab_type只能是set、list、tuple、str、None。')
 
         tabs = [i for i in tabs if ((title is None or title in i['title']) and (url is None or url in i['url'])
-                                    and (tab_type is None or i['type'] in tab_type))]
+                                    and (tab_type is None or i['type'] in tab_type)
+                                    and i['title'] != 'chrome-extension://neajdppkdcdipfabeoofebfddakdcjhd/audio.html')]
         if as_id:
             return [tab['id'] for tab in tabs]
         with self._lock:
@@ -366,7 +374,7 @@ class Chromium(object):
     def _run_cdp(self, cmd, **cmd_args):
         ignore = cmd_args.pop('_ignore', None)
         r = self._driver.run(cmd, **cmd_args)
-        return r if __ERROR__ not in r else raise_error(r, ignore)
+        return r if __ERROR__ not in r else raise_error(r, self, ignore)
 
     def _get_driver(self, tab_id, owner=None):
         d = self._drivers.pop(tab_id, None)
@@ -382,9 +390,12 @@ class Chromium(object):
                 and not kwargs['targetInfo']['url'].startswith('devtools://')):
             try:
                 tab_id = kwargs['targetInfo']['targetId']
+                self._frames[tab_id] = tab_id
                 d = Driver(tab_id, 'page', self.address)
+                self._relation[tab_id] = kwargs['targetInfo'].get('openerId', None)
                 self._drivers[tab_id] = d
                 self._all_drivers.setdefault(tab_id, set()).add(d)
+                self._newest_tab_id = tab_id
             except WebSocketBadStatusException:
                 pass
 
@@ -397,6 +408,7 @@ class Chromium(object):
             d.stop()
         self._drivers.pop(tab_id, None)
         self._all_drivers.pop(tab_id, None)
+        self._relation.pop(tab_id, None)
 
     def _on_disconnect(self):
         if not self._disconnect_flag:
@@ -475,7 +487,9 @@ def run_browser(chromium_options):
 def _new_tab_by_js(browser: Chromium, url, obj, new_window):
     mix = isinstance(obj, MixTab)
     tab = browser._get_tab(mix=mix)
-    url = f'"{url}"' if url else ''
+    if url and not match(r'^.*?://.*', url):
+        raise ValueError(f'url也许需要加上http://？')
+    url = f'"{url}"' if url else '""'
     new = 'target="_new"' if new_window else 'target="_blank"'
     tid = browser.latest_tab.tab_id
     tab.run_js(f'window.open({url}, {new})')

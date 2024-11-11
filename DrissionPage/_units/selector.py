@@ -32,8 +32,7 @@ class SelectElement(object):
 
     @property
     def selected_option(self):
-        ele = self._ele._run_js('return this.options[this.selectedIndex];')
-        return ele
+        return self._ele._run_js('return this.options[this.selectedIndex];')
 
     @property
     def selected_options(self):
@@ -54,6 +53,7 @@ class SelectElement(object):
             i._run_js(f'this.selected={mode};')
         if change:
             self._dispatch_change()
+        return self._ele
 
     def clear(self):
         if not self.is_multi:
@@ -73,7 +73,7 @@ class SelectElement(object):
         return self._by_loc(locator, timeout)
 
     def by_option(self, option):
-        self._select_options(option, 'true')
+        return self._select_options(option, 'true')
 
     def cancel_by_text(self, text, timeout=None):
         return self._select(text, 'text', True, timeout)
@@ -88,19 +88,17 @@ class SelectElement(object):
         return self._by_loc(locator, timeout, True)
 
     def cancel_by_option(self, option):
-        self._select_options(option, 'false')
+        return self._select_options(option, 'false')
 
     def _by_loc(self, loc, timeout=None, cancel=False):
         eles = self._ele.eles(loc, timeout)
         if not eles:
-            return False
+            raise RuntimeError('没有找到指定选项。')
 
         mode = 'false' if cancel else 'true'
-        if self.is_multi:
-            self._select_options(eles, mode)
-        else:
-            self._select_options(eles[0], mode)
-        return True
+        if not self.is_multi:
+            eles = eles[0]
+        return self._select_options(eles, mode)
 
     def _select(self, condition, para_type='text', cancel=False, timeout=None):
         if not self.is_multi and isinstance(condition, (list, tuple)):
@@ -117,7 +115,6 @@ class SelectElement(object):
             return self._index(condition, mode, timeout)
 
     def _text_value(self, condition, para_type, mode, timeout):
-        ok = False
         text_len = len(condition)
         eles = []
         end_time = perf_counter() + timeout
@@ -128,34 +125,22 @@ class SelectElement(object):
                 eles = [i for i in self.options if i.attr('value') in condition]
 
             if len(eles) >= text_len:
-                ok = True
-                break
+                return self._select_options(eles, mode)
             sleep(.01)
 
-        if ok:
-            self._select_options(eles, mode)
-            return True
-
-        return False
+        raise RuntimeError('没有找到指定选项。')
 
     def _index(self, condition, mode, timeout):
-        ok = False
         condition = [int(i) for i in condition]
         text_len = abs(max(condition, key=abs))
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
             if len(self.options) >= text_len:
-                ok = True
-                break
+                eles = self.options
+                eles = [eles[i - 1] if i > 0 else eles[i] for i in condition]
+                return self._select_options(eles, mode)
             sleep(.01)
-
-        if ok:
-            eles = self.options
-            eles = [eles[i - 1] if i > 0 else eles[i] for i in condition]
-            self._select_options(eles, mode)
-            return True
-
-        return False
+        raise RuntimeError('没有找到指定选项。')
 
     def _select_options(self, option, mode):
         if isinstance(option, (list, tuple, set)):
@@ -167,6 +152,7 @@ class SelectElement(object):
         else:
             option._run_js(f'this.selected={mode};')
             self._dispatch_change()
+        return self._ele
 
     def _dispatch_change(self):
         self._ele._run_js('this.dispatchEvent(new CustomEvent("change", {bubbles: true}));')
