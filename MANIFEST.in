@@ -1,4 +1,5 @@
 include DrissionPage/_configs/configs.ini
+include DrissionPage/_functions/suffixes.dat
 include DrissionPage/*.pyi
 include DrissionPage/*/*.py
 include DrissionPage/*/*.pyi

@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
 from re import match
@@ -45,7 +44,7 @@ class Chromium(object):
             if browser_id in cls._BROWSERS:
                 r = cls._BROWSERS[browser_id]
                 while not hasattr(r, '_driver'):
-                    sleep(.1)
+                    sleep(.05)
                 return r
         r = object.__new__(cls)
         r._chromium_options = opt
@@ -294,7 +293,7 @@ class Chromium(object):
             rmtree(path, True)
 
     def _new_tab(self, mix=True, url=None, new_window=False, background=False, new_context=False):
-        obj = MixTab if mix else ChromiumTab
+        tab_type = MixTab if mix else ChromiumTab
         tab = None
         if new_context:
             tab = self._run_cdp('Target.createBrowserContext')['browserContextId']
@@ -308,20 +307,20 @@ class Chromium(object):
             kwargs['browserContextId'] = tab
 
         if self.states.is_incognito:
-            return _new_tab_by_js(self, url, obj, new_window)
+            return _new_tab_by_js(self, url, tab_type, new_window)
         else:
             try:
                 tab = self._run_cdp('Target.createTarget', **kwargs)['targetId']
             except CDPError:
-                return _new_tab_by_js(self, url, obj, new_window)
+                return _new_tab_by_js(self, url, tab_type, new_window)
 
         while self.states.is_alive:
             if tab in self._drivers:
                 break
-            sleep(.1)
+            sleep(.01)
         else:
             raise BrowserConnectError('浏览器已关闭')
-        tab = obj(self, tab)
+        tab = tab_type(self, tab)
         if url:
             tab.get(url)
         return tab
@@ -484,8 +483,8 @@ def run_browser(chromium_options):
     return is_headless, browser_id, is_exists
 
 
-def _new_tab_by_js(browser: Chromium, url, obj, new_window):
-    mix = isinstance(obj, MixTab)
+def _new_tab_by_js(browser: Chromium, url, tab_type, new_window):
+    mix = tab_type == MixTab
     tab = browser._get_tab(mix=mix)
     if url and not match(r'^.*?://.*', url):
         raise ValueError(f'url也许需要加上http://？')

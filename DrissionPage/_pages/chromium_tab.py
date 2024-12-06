@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from copy import copy
 from time import sleep
@@ -22,7 +21,7 @@ class ChromiumTab(ChromiumBase):
         if Settings.singleton_tab_obj and tab_id in cls._TABS:
             r = cls._TABS[tab_id]
             while not hasattr(r, '_frame_id'):
-                sleep(.1)
+                sleep(.05)
             return r
         r = object.__new__(cls)
         cls._TABS[tab_id] = r

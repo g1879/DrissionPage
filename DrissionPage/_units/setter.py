@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
 from time import sleep
@@ -469,7 +468,7 @@ class WindowSetter(object):
             try:
                 return self._owner._run_cdp('Browser.getWindowForTarget')
             except:
-                sleep(.1)
+                sleep(.02)
         raise RuntimeError('获取窗口信息失败。')
 
     def _perform(self, bounds):

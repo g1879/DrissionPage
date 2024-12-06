@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import dumps, loads, JSONDecodeError
 from queue import Queue, Empty
@@ -199,7 +198,7 @@ class Driver(object):
     def stop(self):
         self._stop()
         while self._handle_event_th.is_alive() or self._recv_th.is_alive():
-            sleep(.1)
+            sleep(.01)
         return True
 
     def _stop(self):

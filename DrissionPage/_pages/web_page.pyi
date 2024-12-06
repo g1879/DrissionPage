@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from http.cookiejar import CookieJar
 from typing import Union, Tuple, List, Any, Optional, Literal
@@ -19,6 +18,7 @@ from .._configs.chromium_options import ChromiumOptions
 from .._configs.session_options import SessionOptions
 from .._elements.chromium_element import ChromiumElement
 from .._elements.session_element import SessionElement
+from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, ChromiumElementsList
 from .._units.setter import WebPageSetter
 from .._units.waiter import WebPageWaiter
@@ -285,7 +285,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     def cookies(self,
                 all_domains: bool = False,
-                all_info: bool = False) -> Union[dict, list]:
+                all_info: bool = False) -> CookiesList:
         """返回cookies
         :param all_domains: 是否返回所有域的cookies
         :param all_info: 是否返回所有信息，False则只返回name、value、domain

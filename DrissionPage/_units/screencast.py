@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from base64 import b64decode
 from os.path import sep
@@ -58,7 +57,7 @@ class Screencast(object):
                                ? "video/webm; codecs=vp9"
                                : "video/webm"
                 mediaRecorder = new MediaRecorder(stream, {mimeType: mime})
-                DrissionPage_Screencast_chunks = []
+                DrissionPage_Screencast_chunks = [];
                 mediaRecorder.addEventListener('dataavailable', function(e) {
                     DrissionPage_Screencast_blob_ok = false;
                     DrissionPage_Screencast_chunks.push(e.data);
@@ -76,6 +75,7 @@ class Screencast(object):
             print('请手动选择要录制的目标。')
             self._owner._run_js('var DrissionPage_Screencast_blob;var DrissionPage_Screencast_blob_ok=false;')
             self._owner._run_js(js)
+        print('开始录制')
 
     def stop(self, video_name=None):
         if video_name and not video_name.endswith('mp4'):
@@ -86,12 +86,13 @@ class Screencast(object):
         if self._mode.startswith('js'):
             self._owner._run_js('mediaRecorder.stop();', as_expr=True)
             while not self._owner._run_js('return DrissionPage_Screencast_blob_ok;'):
-                sleep(.1)
-            blob = self._owner._run_js('return DrissionPage_Screencast_blob;')
-            uuid = self._owner._run_cdp('IO.resolveBlob', objectId=blob['result']['objectId'])['uuid']
-            data = self._owner._run_cdp('IO.read', handle=f'blob:{uuid}')['data']
+                sleep(.05)
             with open(path, 'wb') as f:
-                f.write(b64decode(data))
+                f.write(b64decode(self._owner._run_js('return DrissionPage_Screencast_blob;')))
+            self._owner._run_js('DrissionPage_Screencast_blob_ok = false;'
+                                'DrissionPage_Screencast_chunks = [];'
+                                'DrissionPage_Screencast_blob = null', as_expr=True)
+            print('停止录制')
             return path
 
         if self._mode.startswith('frugal'):
@@ -100,9 +101,10 @@ class Screencast(object):
         else:
             self._enable = False
             while self._running:
-                sleep(.1)
+                sleep(.01)
 
         if self._mode.endswith('imgs'):
+            print('停止录制')
             return str(Path(self._path).absolute())
 
         if not str(self._path).isascii():
@@ -127,6 +129,7 @@ class Screencast(object):
 
         rmtree(self._tmp_path)
         self._tmp_path = None
+        print('停止录制')
         return f'{self._path}{sep}{name}'
 
     def set_save_path(self, save_path=None):

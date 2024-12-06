@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from platform import system
 
@@ -236,7 +235,7 @@ keyDefinitions = {
     '\ue020': {'keyCode': 54, 'code': 'Digit6', 'shiftKey': '^', 'key': '6'},
     '\ue021': {'keyCode': 55, 'code': 'Digit7', 'shiftKey': '&', 'key': '7'},
     '\ue022': {'keyCode': 56, 'code': 'Digit8', 'shiftKey': '*', 'key': '8'},
-    '\ue023': {'keyCode': 57, 'code': 'Digit9', 'shiftKey': '\(', 'key': '9'},
+    '\ue023': {'keyCode': 57, 'code': 'Digit9', 'shiftKey': r'\(', 'key': '9'},
     '\ue024': {'keyCode': 106, 'code': 'NumpadMultiply', 'key': '*', 'location': 3},
     '\ue025': {'keyCode': 107, 'code': 'NumpadAdd', 'key': '+', 'location': 3},
     '\ue027': {'keyCode': 109, 'code': 'NumpadSubtract', 'key': '-', 'location': 3},

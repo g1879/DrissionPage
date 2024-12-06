@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from time import sleep, perf_counter
 
@@ -77,7 +76,7 @@ class Scroller(object):
 
         end_time = perf_counter() + owner.timeout
         while perf_counter() < end_time:
-            sleep(.1)
+            sleep(.02)
             r = owner._run_cdp('Page.getLayoutMetrics')
             x1 = r['layoutViewport']['pageX']
             y1 = r['layoutViewport']['pageY']

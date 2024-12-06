@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from time import sleep
 
@@ -24,7 +23,7 @@ class ChromiumPage(ChromiumBase):
         if browser.id in cls._PAGES:
             r = cls._PAGES[browser.id]
             while not hasattr(r, '_frame_id'):
-                sleep(.1)
+                sleep(.05)
             return r
 
         r = object.__new__(cls)

@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
 from typing import Union, Tuple, List, Any, Optional, Literal
@@ -237,6 +236,14 @@ class ChromiumFrame(ChromiumBase):
         """删除frame元素attribute属性
         :param name: 属性名
         :return: None
+        """
+        ...
+
+    def style(self, style: str, pseudo_ele: str = '') -> str:
+        """返回frame元素样式属性值，可获取伪元素属性值
+        :param style: 样式属性名称
+        :param pseudo_ele: 伪元素名称（如有）
+        :return: 样式属性的值
         """
         ...
 

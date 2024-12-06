@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from re import split
 from .by import By
@@ -343,7 +342,7 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
 
 
 def _quotes_escape(search_str: str) -> str:
-    """将"转义，不知何故不能直接用 \ 来转义
+    """将"转义，不知何故不能直接用 斜杠 来转义
     :param search_str: 查询字符串
     :return: 把"转义后的字符串
     """

@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from copy import copy
 from re import search, findall, DOTALL
@@ -35,7 +34,7 @@ class ChromiumFrame(ChromiumBase):
         if Settings.singleton_tab_obj and fid in cls._Frames:
             r = cls._Frames[fid]
             while not hasattr(r, '_type') or r._type != 'ChromiumFrame':
-                sleep(.1)
+                sleep(.01)
             return r
         r = object.__new__(cls)
         cls._Frames[fid] = r
@@ -332,6 +331,9 @@ class ChromiumFrame(ChromiumBase):
 
     def remove_attr(self, name):
         self.frame_ele.remove_attr(name)
+
+    def style(self, style, pseudo_ele=''):
+        return self.frame_ele.style(style=style, pseudo_ele=pseudo_ele)
 
     def run_js(self, script, *args, as_expr=False, timeout=None):
         return self._run_js(script, *args, as_expr=as_expr, timeout=timeout)

@@ -2,8 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import loads
 from os.path import basename
@@ -289,7 +288,7 @@ class ChromiumElement(DrissionElement):
 
             if ele and (loc_data is None or _check_ele(ele, loc_data)):
                 return ele
-            sleep(.1)
+            sleep(.01)
 
         return NoneElement(page=self.owner, method='offset()',
                            args={'locator': locator, 'offset_x': x, 'offset_y': y, 'timeout': timeout})
@@ -451,7 +450,7 @@ class ChromiumElement(DrissionElement):
                   '&& this.naturalHeight > 0')
             end_time = perf_counter() + timeout
             while not self._run_js(js) and perf_counter() < end_time:
-                sleep(.1)
+                sleep(.05)
 
         src = self.attr('href') if self.tag == 'link' else self.attr('src')
         if not src:
@@ -488,7 +487,7 @@ class ChromiumElement(DrissionElement):
                     break
                 except CDPError:
                     pass
-                sleep(.1)
+                sleep(.05)
 
         if not result:
             return None
@@ -533,7 +532,7 @@ class ChromiumElement(DrissionElement):
                   '&& typeof this.naturalHeight != "undefined" && this.naturalHeight > 0')
             end_time = perf_counter() + self.timeout
             while not self._run_js(js) and perf_counter() < end_time:
-                sleep(.1)
+                sleep(.05)
         if scroll_to_center:
             self.scroll.to_see(center=True)
 
@@ -905,7 +904,7 @@ class ShadowRoot(BaseElement):
         end_time = perf_counter() + timeout
         result = do_find()
         while result is None and perf_counter() <= end_time:
-            sleep(.1)
+            sleep(.01)
             result = do_find()
 
         if result:
@@ -1004,7 +1003,7 @@ def find_by_xpath(ele, xpath, index, timeout, relative=True):
     end_time = perf_counter() + timeout
     result = do_find()
     while result is None and perf_counter() < end_time:
-        sleep(.1)
+        sleep(.01)
         result = do_find()
 
     if result:
@@ -1043,7 +1042,7 @@ def find_by_css(ele, selector, index, timeout):
     end_time = perf_counter() + timeout
     result = do_find()
     while result is None and perf_counter() < end_time:
-        sleep(.1)
+        sleep(.01)
         result = do_find()
 
     if result:
@@ -1253,7 +1252,13 @@ def parse_js_result(page, ele, result, end_time):
             r = page._run_cdp('Runtime.getProperties', objectId=result['objectId'], ownProperties=True)['result']
             return [parse_js_result(page, ele, result=i['value'], end_time=end_time) for i in r if i['name'].isdigit()]
 
-        elif 'objectId' in result:
+        elif result.get('className') == 'Blob':
+            data = page._run_cdp('IO.read',
+                                 handle=f"blob:{page._run_cdp('IO.resolveBlob', objectId=result['objectId'])['uuid']}")[
+                'data']
+            return data
+
+        elif 'objectId' in result and result.get('className') == 'Blob':
             timeout = end_time - perf_counter()
             if timeout < 0:
                 return
