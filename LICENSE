@@ -1,29 +1,49 @@
-BSD 3-Clause License
-
 Copyright (c) 2020, g1879
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+允许任何人以个人身份使用或分发本项目源代码，但仅限于学习和合法非盈利目的。
 
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
+个人或组织如未获得版权持有人授权，不得将本项目以源代码或二进制形式用于商业行为。
 
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
+使用本项目需满足以下条款，如使用过程中出现违反任意一项条款的情形，授权自动失效。
 
-* Neither the name of the copyright holder nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
+* 禁止将DrissionPage应用到任何可能违反当地法律规定和道德约束的项目中
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* 禁止将DrissionPage用于任何可能有损他人利益的项目中
+
+* 禁止将DrissionPage用于攻击与骚扰行为
+
+* 遵守Robots协议，禁止将DrissionPage用于采集法律或系统Robots协议不允许的数据
+
+使用DrissionPage发生的一切行为均由使用人自行负责。
+因使用DrissionPage进行任何行为所产生的一切纠纷及后果均与版权持有人无关，
+版权持有人不承担任何使用DrissionPage带来的风险和损失。
+版权持有人不对DrissionPage可能存在的缺陷导致的任何损失负任何责任。
+
+---------------------------------------------------------
+
+Anyone may use or distribute the source code of this project in their personal capacity, 
+but only for the purpose of learning and legal non-profit activities. 
+
+An individual or organization may not use the project's source code or binary form for 
+commercial purposes without authorization from the copyright holder. 
+
+The following terms and conditions must be met in order to use this project. Authorization
+ will automatically expire if any of the terms are violated during use. 
+
+* It is strictly prohibited to use the DrissionPage app for any project that may violate local 
+  laws and ethical constraints. 
+
+* It is strictly prohibited to use DrissionPage for any project that may harm the interests of others. 
+
+* It is strictly prohibited to use DrissionPage for attack and harassment. 
+
+* Follow the Robots protocol and do not use the DrissionPage to collect data that is prohibited 
+  by law or the system's Robots protocol. 
+
+All actions taken using DrissionPage are the responsibility of the user.
+The copyright holder is not involved in any disputes or consequences arising from the use of 
+DrissionPage for any actions, and the copyright holder shall not bear any risks and losses arising 
+from the use of DrissionPage.
+The copyright holder shall not bear any responsibility for any losses resulting from any defects in 
+DrissionPage.

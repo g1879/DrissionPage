@@ -1,8 +1,8 @@
 requests
 lxml
 cssselect
-DownloadKit>=2.0.0
+DownloadKit>=2.0.7
 websocket-client
 click
-tldextract
+tldextract>=3.4.4
 psutil

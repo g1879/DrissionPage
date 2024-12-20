@@ -1,20 +1,21 @@
 # -*- coding:utf-8 -*-
 from setuptools import setup, find_packages
+from DrissionPage import __version__
 
 with open("README.md", "r", encoding='utf-8') as fh:
     long_description = fh.read()
 
 setup(
     name="DrissionPage",
-    version="3.2.31",
+    version=__version__,
     author="g1879",
     author_email="g1879@qq.com",
     description="Python based web automation tool. It can control the browser and send and receive data packets.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    license="BSD",
+    # license="BSD",
     keywords="DrissionPage",
-    url="https://gitee.com/g1879/DrissionPage",
+    url="https://DrissionPage.cn",
     include_package_data=True,
     packages=find_packages(),
     zip_safe=False,
@@ -22,22 +23,22 @@ setup(
         'lxml',
         'requests',
         'cssselect',
-        'DownloadKit>=1.0.0',
-        'FlowViewer>=0.3.0',
+        'DownloadKit>=2.0.7',
         'websocket-client',
         'click',
-        'tldextract'
+        'tldextract>=3.4.4',
+        'psutil'
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Development Status :: 4 - Beta",
         "Topic :: Utilities",
-        "License :: OSI Approved :: BSD License",
+        # "License :: OSI Approved :: BSD License",
     ],
     python_requires='>=3.6',
     entry_points={
         'console_scripts': [
-            'dp = DrissionPage.commons.cli:main',
+            'dp = DrissionPage._functions.cli:main',
         ],
     },
 )

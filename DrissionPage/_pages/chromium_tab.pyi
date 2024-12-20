@@ -2,202 +2,108 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
-from typing import Union, Tuple, Any, Optional
-
-from requests import Session, Response
+from typing import Union, Optional
 
 from .chromium_base import ChromiumBase
-from .chromium_frame import ChromiumFrame
-from .chromium_page import ChromiumPage
-from .session_page import SessionPage
-from .web_page import WebPage
-from .._base.browser import Browser
-from .._elements.chromium_element import ChromiumElement
-from .._elements.session_element import SessionElement
-from .._functions.elements import SessionElementsList, ChromiumElementsList
+from .._base.chromium import Chromium
 from .._units.rect import TabRect
-from .._units.setter import TabSetter, WebPageTabSetter
+from .._units.setter import TabSetter
 from .._units.waiter import TabWaiter
 
 
 class ChromiumTab(ChromiumBase):
+    """实现浏览器标签页的类"""
     _TABS: dict = ...
+    _tab: ChromiumTab = ...
+    _rect: Optional[TabRect] = ...
 
-    def __new__(cls, page: ChromiumPage, tab_id: str): ...
+    def __new__(cls, browser: Chromium, tab_id: str):
+        """
+        :param browser: Browser对象
+        :param tab_id: 标签页id
+        """
+        ...
 
-    def __init__(self, page: ChromiumPage, tab_id: str):
-        self._page: ChromiumPage = ...
-        self._browser: Browser = ...
-        self._rect: Optional[TabRect] = ...
+    def __init__(self, browser: Chromium, tab_id: str):
+        """
+        :param browser: Browser对象
+        :param tab_id: 标签页id
+        """
+        ...
 
-    def _d_set_runtime_settings(self) -> None: ...
+    def _d_set_runtime_settings(self) -> None:
+        """重写设置浏览器运行参数方法"""
+        ...
 
-    def close(self) -> None: ...
+    def close(self, others: bool = False) -> None:
+        """关闭标签页
+        :param others: 是否关闭其它，保留自己
+        :return: None
+        """
+        ...
 
     @property
-    def page(self) -> ChromiumPage: ...
+    def set(self) -> TabSetter:
+        """返回用于设置的对象"""
+        ...
 
     @property
-    def set(self) -> TabSetter: ...
-
-    @property
-    def wait(self) -> TabWaiter: ...
+    def wait(self) -> TabWaiter:
+        """返回用于等待的对象"""
+        ...
 
     def save(self,
              path: Union[str, Path] = None,
              name: str = None,
              as_pdf: bool = False,
-             landscape: bool = ...,
-             displayHeaderFooter: bool = ...,
-             printBackground: bool = ...,
-             scale: float = ...,
-             paperWidth: float = ...,
-             paperHeight: float = ...,
-             marginTop: float = ...,
-             marginBottom: float = ...,
-             marginLeft: float = ...,
-             marginRight: float = ...,
-             pageRanges: str = ...,
-             headerTemplate: str = ...,
-             footerTemplate: str = ...,
-             preferCSSPageSize: bool = ...,
+             landscape: bool = False,
+             displayHeaderFooter: bool = False,
+             printBackground: bool = False,
+             scale: float = 1,
+             paperWidth: float = 8.5,
+             paperHeight: float = 11,
+             marginTop: float = 11,
+             marginBottom: float = 1,
+             marginLeft: float = 1,
+             marginRight: float = 1,
+             pageRanges: str = '',
+             headerTemplate: str = '',
+             footerTemplate: str = '',
+             preferCSSPageSize: bool = False,
              generateTaggedPDF: bool = ...,
-             generateDocumentOutline: bool = ...) -> Union[bytes, str]: ...
+             generateDocumentOutline: bool = ...) -> Union[bytes, str]:
+        """把当前页面保存为文件，如果path和name参数都为None，只返回文本
+        :param path: 保存路径，为None且name不为None时保存在当前路径
+        :param name: 文件名，为None且path不为None时用title属性值
+        :param as_pdf: 为Ture保存为pdf，否则为mhtml且忽略kwargs参数
+        :param landscape: 纸张方向，as_pdf为True时才生效
+        :param displayHeaderFooter: 是否显示页头页脚，as_pdf为True时才生效
+        :param printBackground: 是否打印背景图片，as_pdf为True时才生效
+        :param scale: 缩放比例，as_pdf为True时才生效
+        :param paperWidth: 页面宽度（英寸），as_pdf为True时才生效
+        :param paperHeight: 页面高度（英寸），as_pdf为True时才生效
+        :param marginTop: 上边距（英寸），as_pdf为True时才生效
+        :param marginBottom: 下边距（英寸），as_pdf为True时才生效
+        :param marginLeft: 左边距（英寸），as_pdf为True时才生效
+        :param marginRight: 右边距（英寸），as_pdf为True时才生效
+        :param pageRanges: 页面范围，格式'1-5, 8, 11-13'，as_pdf为True时才生效
+        :param headerTemplate: 页头HTML模板，as_pdf为True时才生效
+                模板可包含以下class：
+                - date：日期
+                - title：文档标题
+                - url：文档url
+                - pageNumber：当前页码
+                - totalPages：总页数
+                示例：<span class=title></span>
+        :param footerTemplate: 页脚HTML模板，格式与页头的一样，as_pdf为True时才生效
+        :param preferCSSPageSize: 是否使用css定义的页面大小，as_pdf为True时才生效
+        :param generateTaggedPDF: 是否生成带标签的(可访问的)PDF。默认为嵌入器选择，as_pdf为True时才生效
+        :param generateDocumentOutline: 是否将文档大纲嵌入到PDF中。，as_pdf为True时才生效
+        :return: as_pdf为True时返回bytes，否则返回文件文本
+        """
+        ...
 
-
-class WebPageTab(SessionPage, ChromiumTab):
-    def __init__(self, page: WebPage, tab_id: str):
-        self._page: WebPage = ...
-        self._browser: Browser = ...
-        self._mode: str = ...
-        self._has_driver = ...
-        self._has_session = ...
-
-    def __call__(self,
-                 locator: Union[Tuple[str, str], str, ChromiumElement, SessionElement],
-                 index: int = 1,
-                 timeout: float = None) -> Union[ChromiumElement, SessionElement]: ...
-
-    @property
-    def page(self) -> WebPage: ...
-
-    @property
-    def url(self) -> Union[str, None]: ...
-
-    @property
-    def _browser_url(self) -> Union[str, None]: ...
-
-    @property
-    def title(self) -> str: ...
-
-    @property
-    def raw_data(self) -> Union[str, bytes]: ...
-
-    @property
-    def html(self) -> str: ...
-
-    @property
-    def json(self) -> dict: ...
-
-    @property
-    def response(self) -> Response: ...
-
-    @property
-    def mode(self) -> str: ...
-
-    @property
-    def user_agent(self) -> str: ...
-
-    @property
-    def session(self) -> Session: ...
-
-    @property
-    def _session_url(self) -> str: ...
-
-    @property
-    def timeout(self) -> float: ...
-
-    @timeout.setter
-    def timeout(self, second: float) -> None: ...
-
-    def get(self,
-            url: str,
-            show_errmsg: bool = False,
-            retry: int | None = None,
-            interval: float | None = None,
-            timeout: float | None = None,
-            params: dict | None = ...,
-            data: Union[dict, str, None] = ...,
-            json: Union[dict, str, None] = ...,
-            headers: dict | None = ...,
-            cookies: Any | None = ...,
-            files: Any | None = ...,
-            auth: Any | None = ...,
-            allow_redirects: bool = ...,
-            proxies: dict | None = ...,
-            hooks: Any | None = ...,
-            stream: Any | None = ...,
-            verify: Any | None = ...,
-            cert: Any | None = ...) -> Union[bool, None]: ...
-
-    def ele(self,
-            locator: Union[Tuple[str, str], str, ChromiumElement, SessionElement],
-            index: int = 1,
-            timeout: float = None) -> Union[ChromiumElement, SessionElement]: ...
-
-    def eles(self,
-             locator: Union[Tuple[str, str], str],
-             timeout: float = None) -> Union[SessionElementsList, ChromiumElementsList]: ...
-
-    def s_ele(self,
-              locator: Union[Tuple[str, str], str] = None,
-              index: int = 1) -> SessionElement: ...
-
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList: ...
-
-    def change_mode(self, mode: str = None, go: bool = True, copy_cookies: bool = True) -> None: ...
-
-    def cookies_to_session(self, copy_user_agent: bool = True) -> None: ...
-
-    def cookies_to_browser(self) -> None: ...
-
-    def cookies(self, as_dict: bool = False, all_domains: bool = False,
-                all_info: bool = False) -> Union[dict, list]: ...
-
-    def close(self) -> None: ...
-
-    # ----------------重写SessionPage的函数-----------------------
-    def post(self,
-             url: str,
-             data: Union[dict, str, None] = None,
-             show_errmsg: bool = False,
-             retry: int | None = None,
-             interval: float | None = None,
-             timeout: float | None = ...,
-             params: dict | None = ...,
-             json: Union[dict, str, None] = ...,
-             headers: dict | None = ...,
-             cookies: Any | None = ...,
-             files: Any | None = ...,
-             auth: Any | None = ...,
-             allow_redirects: bool = ...,
-             proxies: dict | None = ...,
-             hooks: Any | None = ...,
-             stream: Any | None = ...,
-             verify: Any | None = ...,
-             cert: Any | None = ...) -> Union[bool, Response]: ...
-
-    @property
-    def set(self) -> WebPageTabSetter: ...
-
-    def _find_elements(self,
-                       locator: Union[Tuple[str, str], str, ChromiumElement, SessionElement, ChromiumFrame],
-                       timeout: float = None,
-                       index: Optional[int] = 1,
-                       relative: bool = False,
-                       raise_err: bool = None) \
-            -> Union[ChromiumElement, SessionElement, ChromiumFrame, SessionElementsList, ChromiumElementsList]: ...
+    def _on_disconnect(self): ...

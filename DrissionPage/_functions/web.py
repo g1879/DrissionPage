@@ -2,26 +2,19 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-from datetime import datetime
 from html import unescape
-from http.cookiejar import Cookie, CookieJar
 from os.path import sep
 from pathlib import Path
-from re import sub, match
+from re import sub
 from urllib.parse import urlparse, urljoin, urlunparse
 
 from DataRecorder.tools import make_valid_name
-from tldextract import extract
+from requests.structures import CaseInsensitiveDict
 
 
 def get_ele_txt(e):
-    """获取元素内所有文本
-    :param e: 元素对象
-    :return: 元素内所有文本
-    """
     # 前面无须换行的元素
     nowrap_list = ('br', 'sub', 'sup', 'em', 'strong', 'a', 'font', 'b', 'span', 's', 'i', 'del', 'ins', 'img', 'td',
                    'th', 'abbr', 'bdi', 'bdo', 'cite', 'code', 'data', 'dfn', 'kbd', 'mark', 'q', 'rp', 'rt', 'ruby',
@@ -37,7 +30,7 @@ def get_ele_txt(e):
     if e.tag in noText_list:
         return e.raw_text
 
-    def get_node_txt(ele, pre: bool = False):
+    def get_node_txt(ele, pre=False) -> list:
         tag = ele.tag
         if tag == 'br':
             return [True]
@@ -59,7 +52,7 @@ def get_ele_txt(e):
                     if sub('[ \n\t\r]', '', el) != '':  # 字符除了回车和空格还有其它内容
                         txt = el
                         if not pre:
-                            txt = txt.replace('\r\n', ' ').replace('\n', ' ').strip(' ')
+                            txt = txt.replace('\r\n', ' ').replace('\n', ' ')
                             txt = sub(r' {2,}', ' ', txt)
                         str_list.append(txt)
 
@@ -80,25 +73,38 @@ def get_ele_txt(e):
     re_str = get_node_txt(e)
     if re_str and re_str[-1] == '\n':
         re_str.pop()
-    re_str = ''.join([i if i is not True else '\n' for i in re_str])
-    return format_html(re_str)
+
+    l = len(re_str)
+    if l > 1:
+        r = []
+        for i in range(l - 1):
+            i1 = re_str[i]
+            i2 = re_str[i + 1]
+            if i1 is True:
+                r.append('\n')
+                continue
+            elif i2 is True:
+                r.append(i1)
+                continue
+            elif i1.endswith(' ') and i2.startswith(' '):
+                i1 = i1[:-1]
+            r.append(i1)
+        r.append('\n' if re_str[-1] is True else re_str[-1])
+        re_str = ''.join(r)
+
+    elif not l:
+        re_str = ''
+    else:
+        re_str = re_str[0] if re_str[0] is not True else '\n'
+
+    return format_html(re_str.strip())
 
 
 def format_html(text):
-    """处理html编码字符
-    :param text: html文本
-    :return: 格式化后的html文本
-    """
     return unescape(text).replace('\xa0', ' ') if text else text
 
 
 def location_in_viewport(page, loc_x, loc_y):
-    """判断给定的坐标是否在视口中          |n
-    :param page: ChromePage对象
-    :param loc_x: 页面绝对坐标x
-    :param loc_y: 页面绝对坐标y
-    :return: bool
-    """
     js = f'''function(){{let x = {loc_x}; let y = {loc_y};
     const scrollLeft = document.documentElement.scrollLeft;
     const scrollTop = document.documentElement.scrollTop;
@@ -106,24 +112,17 @@ def location_in_viewport(page, loc_x, loc_y):
     const vHeight = document.documentElement.clientHeight;
     if (x< scrollLeft || y < scrollTop || x > vWidth + scrollLeft || y > vHeight + scrollTop){{return false;}}
     return true;}}'''
-    return page.run_js(js)
+    return page._run_js(js)
 
 
 def offset_scroll(ele, offset_x, offset_y):
-    """接收元素及偏移坐标，把坐标滚动到页面中间，返回该点在视口中的坐标
-    有偏移量时以元素左上角坐标为基准，没有时以click_point为基准
-    :param ele: 元素对象
-    :param offset_x: 偏移量x
-    :param offset_y: 偏移量y
-    :return: 视口中的坐标
-    """
     loc_x, loc_y = ele.rect.location
     cp_x, cp_y = ele.rect.click_point
     lx = loc_x + offset_x if offset_x else cp_x
     ly = loc_y + offset_y if offset_y else cp_y
     if not location_in_viewport(ele.owner, lx, ly):
-        clientWidth = ele.owner.run_js('return document.body.clientWidth;')
-        clientHeight = ele.owner.run_js('return document.body.clientHeight;')
+        clientWidth = ele.owner._run_js('return document.body.clientWidth;')
+        clientHeight = ele.owner._run_js('return document.body.clientHeight;')
         ele.owner.scroll.to_location(lx - clientWidth // 2, ly - clientHeight // 2)
     cl_x, cl_y = ele.rect.viewport_location
     ccp_x, ccp_y = ele.rect.viewport_click_point
@@ -133,19 +132,13 @@ def offset_scroll(ele, offset_x, offset_y):
 
 
 def make_absolute_link(link, baseURI=None):
-    """获取绝对url
-    :param link: 超链接
-    :param baseURI: 页面或iframe的url
-    :return: 绝对链接
-    """
     if not link:
         return link
 
     link = link.strip().replace('\\', '/')
     parsed = urlparse(link)._asdict()
     if baseURI:
-        p = urlparse(baseURI)._asdict()
-        baseURI = f'{p["scheme"]}://{p["netloc"]}'
+        baseURI = baseURI.rstrip('/\\')
 
     # 是相对路径，与页面url拼接并返回
     if not parsed['netloc']:
@@ -162,7 +155,6 @@ def make_absolute_link(link, baseURI=None):
 
 
 def is_js_func(func):
-    """检查文本是否js函数"""
     func = func.strip()
     if (func.startswith('function') or func.startswith('async ')) and func.endswith('}'):
         return True
@@ -171,195 +163,7 @@ def is_js_func(func):
     return False
 
 
-def cookie_to_dict(cookie):
-    """把Cookie对象转为dict格式
-    :param cookie: Cookie对象、字符串或字典
-    :return: cookie字典
-    """
-    if isinstance(cookie, Cookie):
-        cookie_dict = cookie.__dict__.copy()
-        cookie_dict.pop('rfc2109', None)
-        cookie_dict.pop('_rest', None)
-        return cookie_dict
-
-    elif isinstance(cookie, dict):
-        cookie_dict = cookie
-
-    elif isinstance(cookie, str):
-        cookie_dict = {}
-        for attr in cookie.strip().rstrip(';,').split(',' if ',' in cookie else ';'):
-            attr_val = attr.strip().split('=', 1)
-            if attr_val[0] in ('domain', 'path', 'expires', 'max-age', 'HttpOnly', 'secure', 'expiry', 'name', 'value'):
-                cookie_dict[attr_val[0]] = attr_val[1] if len(attr_val) == 2 else ''
-            else:
-                cookie_dict['name'] = attr_val[0]
-                cookie_dict['value'] = attr_val[1] if len(attr_val) == 2 else ''
-
-        return cookie_dict
-
-    else:
-        raise TypeError('cookie参数必须为Cookie、str或dict类型。')
-
-    return cookie_dict
-
-
-def cookies_to_tuple(cookies):
-    """把cookies转为tuple格式
-    :param cookies: cookies信息，可为CookieJar, list, tuple, str, dict
-    :return: 返回tuple形式的cookies
-    """
-    if isinstance(cookies, (list, tuple, CookieJar)):
-        cookies = tuple(cookie_to_dict(cookie) for cookie in cookies)
-
-    elif isinstance(cookies, str):
-        c_dict = {}
-        cookies = cookies.rstrip('; ')
-        cookies = cookies.split(';')
-        # r = match(r'.*?=([^=]+)=', cookies)
-        # if not r:  # 只有一个
-        #     cookies = [cookies.rstrip(',;')]
-        # else:
-        #     s = match(r'.*([,;]).*', r.group(1)).group(1)
-        #     cookies = cookies.rstrip(s).split(s)
-
-        for attr in cookies:
-            attr_val = attr.strip().split('=', 1)
-            c_dict[attr_val[0]] = attr_val[1] if len(attr_val) == 2 else True
-        cookies = _dict_cookies_to_tuple(c_dict)
-
-    elif isinstance(cookies, dict):
-        cookies = _dict_cookies_to_tuple(cookies)
-
-    elif isinstance(cookies, Cookie):
-        cookies = (cookie_to_dict(cookies),)
-
-    else:
-        raise TypeError('cookies参数必须为Cookie、CookieJar、list、tuple、str或dict类型。')
-
-    return cookies
-
-
-def set_session_cookies(session, cookies):
-    """设置Session对象的cookies
-    :param session: Session对象
-    :param cookies: cookies信息
-    :return: None
-    """
-    for cookie in cookies_to_tuple(cookies):
-        if cookie['value'] is None:
-            cookie['value'] = ''
-
-        kwargs = {x: cookie[x] for x in cookie
-                  if x.lower() in ('version', 'port', 'domain', 'path', 'secure',
-                                   'expires', 'discard', 'comment', 'comment_url', 'rest')}
-
-        if 'expiry' in cookie:
-            kwargs['expires'] = cookie['expiry']
-
-        session.cookies.set(cookie['name'], cookie['value'], **kwargs)
-
-
-def set_browser_cookies(page, cookies):
-    """设置cookies值
-    :param page: 页面对象
-    :param cookies: cookies信息
-    :return: None
-    """
-    for cookie in cookies_to_tuple(cookies):
-        if 'expiry' in cookie:
-            cookie['expires'] = int(cookie['expiry'])
-            cookie.pop('expiry')
-
-        if 'expires' in cookie:
-            if not cookie['expires']:
-                cookie.pop('expires')
-
-            elif isinstance(cookie['expires'], str):
-                if cookie['expires'].isdigit():
-                    cookie['expires'] = int(cookie['expires'])
-
-                elif cookie['expires'].replace('.', '').isdigit():
-                    cookie['expires'] = float(cookie['expires'])
-
-                else:
-                    try:
-                        cookie['expires'] = datetime.strptime(cookie['expires'],
-                                                              '%a, %d %b %Y %H:%M:%S GMT').timestamp()
-                    except ValueError:
-                        cookie['expires'] = datetime.strptime(cookie['expires'],
-                                                              '%a, %d %b %y %H:%M:%S GMT').timestamp()
-
-        if cookie['value'] is None:
-            cookie['value'] = ''
-        elif not isinstance(cookie['value'], str):
-            cookie['value'] = str(cookie['value'])
-
-        if cookie['name'].startswith('__Host-'):
-            cookie['path'] = '/'
-            cookie['secure'] = True
-            if not page.url.startswith('http'):
-                cookie['name'] = cookie['name'].replace('__Host-', '__Secure-', 1)
-            else:
-                cookie['url'] = page.url
-            page.run_cdp_loaded('Network.setCookie', **cookie)
-            continue  # 不用设置域名，可退出
-
-        if cookie['name'].startswith('__Secure-'):
-            cookie['secure'] = True
-
-        if cookie.get('domain', None):
-            try:
-                page.run_cdp_loaded('Network.setCookie', **cookie)
-                if is_cookie_in_driver(page, cookie):
-                    continue
-            except Exception:
-                pass
-
-        url = page._browser_url
-        if not url.startswith('http'):
-            raise RuntimeError(f'未设置域名，请设置cookie的domain参数或先访问一个网站。{cookie}')
-        ex_url = extract(url)
-        d_list = ex_url.subdomain.split('.')
-        d_list.append(f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain)
-
-        tmp = [d_list[0]]
-        if len(d_list) > 1:
-            for i in d_list[1:]:
-                tmp.append('.')
-                tmp.append(i)
-
-        for i in range(len(tmp)):
-            cookie['domain'] = ''.join(tmp[i:])
-            page.run_cdp_loaded('Network.setCookie', **cookie)
-            if is_cookie_in_driver(page, cookie):
-                break
-
-
-def is_cookie_in_driver(page, cookie):
-    """查询cookie是否在浏览器内
-    :param page: BasePage对象
-    :param cookie: dict格式cookie
-    :return: bool
-    """
-    if 'domain' in cookie:
-        for c in page.cookies(all_domains=True):
-            if cookie['name'] == c['name'] and cookie['value'] == c['value'] and cookie['domain'] == c.get('domain',
-                                                                                                           None):
-                return True
-    else:
-        for c in page.cookies(all_domains=True):
-            if cookie['name'] == c['name'] and cookie['value'] == c['value']:
-                return True
-    return False
-
-
 def get_blob(page, url, as_bytes=True):
-    """获取知道blob资源
-    :param page: 资源所在页面对象
-    :param url: 资源url
-    :param as_bytes: 是否以字节形式返回
-    :return: 资源内容
-    """
     if not url.startswith('blob'):
         raise TypeError('该链接非blob类型。')
     js = """
@@ -378,7 +182,7 @@ def get_blob(page, url, as_bytes=True):
     }
 """
     try:
-        result = page.run_js(js, url)
+        result = page._run_js(js, url)
     except:
         raise RuntimeError('无法获取该资源。')
     if as_bytes:
@@ -389,14 +193,6 @@ def get_blob(page, url, as_bytes=True):
 
 
 def save_page(tab, path=None, name=None, as_pdf=False, kwargs=None):
-    """把当前页面保存为文件，如果path和name参数都为None，只返回文本
-    :param tab: Tab或Page对象
-    :param path: 保存路径，为None且name不为None时保存在当前路径
-    :param name: 文件名，为None且path不为None时用title属性值
-    :param as_pdf: 为Ture保存为pdf，否则为mhtml且忽略kwargs参数
-    :param kwargs: pdf生成参数
-    :return: as_pdf为True时返回bytes，否则返回文件文本
-    """
     if name:
         if name.endswith('.pdf'):
             name = name[:-4]
@@ -420,13 +216,7 @@ def save_page(tab, path=None, name=None, as_pdf=False, kwargs=None):
 
 
 def get_mhtml(page, path=None, name=None):
-    """把当前页面保存为mhtml文件，如果path和name参数都为None，只返回mhtml文本
-    :param page: 要保存的页面对象
-    :param path: 保存路径，为None且name不为None时保存在当前路径
-    :param name: 文件名，为None且path不为None时用title属性值
-    :return: mhtml文本
-    """
-    r = page.run_cdp('Page.captureSnapshot')['data']
+    r = page._run_cdp('Page.captureSnapshot')['data']
     if path is None and name is None:
         return r
 
@@ -439,20 +229,13 @@ def get_mhtml(page, path=None, name=None):
 
 
 def get_pdf(page, path=None, name=None, kwargs=None):
-    """把当前页面保存为pdf文件，如果path和name参数都为None，只返回字节
-    :param page: 要保存的页面对象
-    :param path: 保存路径，为None且name不为None时保存在当前路径
-    :param name: 文件名，为None且path不为None时用title属性值
-    :param kwargs: pdf生成参数
-    :return: pdf文本
-    """
     if not kwargs:
         kwargs = {}
     kwargs['transferMode'] = 'ReturnAsBase64'
     if 'printBackground' not in kwargs:
         kwargs['printBackground'] = True
     try:
-        r = page.run_cdp('Page.printToPDF', **kwargs)['data']
+        r = page._run_cdp('Page.printToPDF', **kwargs)['data']
     except:
         raise RuntimeError('保存失败，可能浏览器版本不支持。')
     from base64 import b64decode
@@ -469,14 +252,6 @@ def get_pdf(page, path=None, name=None, kwargs=None):
 
 
 def tree(ele_or_page, text=False, show_js=False, show_css=False):
-    """把页面或元素对象DOM结构打印出来
-    :param ele_or_page: 页面或元素对象
-    :param text: 是否打印文本，输入数字可指定打印文本长度上线
-    :param show_js: 打印文本时是否包含<script>内文本，text参数为False时无效
-    :param show_css: 打印文本时是否包含<style>内文本，text参数为False时无效
-    :return: None
-    """
-
     def _tree(obj, last_one=True, body=''):
         list_ele = obj.children()
         length = len(list_ele)
@@ -524,27 +299,17 @@ def tree(ele_or_page, text=False, show_js=False, show_css=False):
 
 
 def format_headers(txt):
-    """从浏览器复制的文本生成dict格式headers，文本用换行分隔
-    :param txt: 从浏览器复制的原始文本格式headers
-    :return: dict格式headers
-    """
-    if not isinstance(txt, str):
+    if isinstance(txt, (dict, CaseInsensitiveDict)):
+        for k, v in txt.items():
+            if v not in (None, False, True):
+                txt[k] = str(v)
+        for i in (':method', ':scheme', ':authority', ':path'):
+            txt.pop(i, None)
         return txt
     headers = {}
     for header in txt.split('\n'):
         if header:
             name, value = header.split(': ', maxsplit=1)
-            headers[name] = value
+            if name not in (':method', ':scheme', ':authority', ':path'):
+                headers[name] = value
     return headers
-
-
-def _dict_cookies_to_tuple(cookies: dict):
-    """把dict形式的cookies转换为tuple形式
-    :param cookies: 单个或多个cookies，单个时包含'name'和'value'
-    :return: 多个dict格式cookies组成的列表
-    """
-    if 'name' in cookies and 'value' in cookies:  # 单个cookie
-        return (cookies,)
-    keys = ('domain', 'path', 'expires', 'max-age', 'HttpOnly', 'secure', 'expiry')
-    template = {k: v for k, v in cookies.items() if k in keys}
-    return tuple(dict(**{'name': k, 'value': v}, **template) for k, v in cookies.items() if k not in keys)

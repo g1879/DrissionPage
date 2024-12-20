@@ -2,44 +2,46 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import load, dump, JSONDecodeError
 from os import environ
 from pathlib import Path
+from shutil import rmtree
 from subprocess import Popen, DEVNULL
 from tempfile import gettempdir
 from time import perf_counter, sleep
 
 from requests import Session
 
+from .settings import Settings
 from .tools import port_is_using
 from .._configs.options_manage import OptionsManager
 from ..errors import BrowserConnectError
 
 
 def connect_browser(option):
-    """连接或启动浏览器
-    :param option: ChromiumOptions对象
-    :return: 返回是否接管的浏览器
-    """
-    address = option.address.replace('localhost', '127.0.0.1').lstrip('http://').lstrip('https://')
+    address = option.address.replace('localhost', '127.0.0.1').lstrip('htps:/')
     browser_path = option.browser_path
     is_force_run_browser = option.is_force_run_browser
 
     ip, port = address.split(':')
-    if (is_force_run_browser == None or is_force_run_browser == False) and (ip != '127.0.0.1' or port_is_using(ip, port) or option.is_existing_only):
-        test_connect(ip, port)
-        option._headless = False
-        for i in option.arguments:
-            if i.startswith('--headless') and not i.endswith('=false'):
-                option._headless = True
-                break
-        return True
+    using = port_is_using(ip, port)
+    if (is_force_run_browser == None or is_force_run_browser == False) and (ip != '127.0.0.1' or using or option.is_existing_only):
+        if test_connect(ip, port):
+            return True
+        elif ip != '127.0.0.1':
+            raise BrowserConnectError(f'\n{address}浏览器连接失败。')
+        elif using:
+            raise BrowserConnectError(f'\n{address}浏览器连接失败，请检查{port}端口是否浏览器，'
+                                      f'且已添加\'--remote-debugging-port={port}\'启动项。')
+        else:  # option.is_existing_only
+            raise BrowserConnectError(f'\n{address}浏览器连接失败，请确认浏览器已启动。')
 
     # ----------创建浏览器进程----------
-    args = get_launch_args(option)
+    args, user_path = get_launch_args(option)
+    if option._new_env:
+        rmtree(user_path, ignore_errors=True)
     set_prefs(option)
     set_flags(option)
     try:
@@ -48,61 +50,44 @@ def connect_browser(option):
     # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
     except FileNotFoundError:
         browser_path = get_chrome_path(option.ini_path)
-
         if not browser_path:
             raise FileNotFoundError('无法找到浏览器可执行文件路径，请手动配置。')
-
         _run_browser(port, browser_path, args)
 
-    test_connect(ip, port)
+    if not test_connect(ip, port):
+        raise BrowserConnectError(f'\n{address}浏览器连接失败。\n请确认：\n'
+                                  f'1、用户文件夹没有和已打开的浏览器冲突\n'
+                                  f'2、如为无界面系统，请添加\'--headless=new\'启动参数\n'
+                                  f'3、如果是Linux系统，尝试添加\'--no-sandbox\'启动参数\n'
+                                  f'可使用ChromiumOptions设置端口和用户文件夹路径。')
     return False
 
 
 def get_launch_args(opt):
-    """从ChromiumOptions获取命令行启动参数
-    :param opt: ChromiumOptions
-    :return: 启动参数列表
-    """
     # ----------处理arguments-----------
     result = set()
-    has_user_path = False
-    headless = None
+    user_path = False
     for i in opt.arguments:
         if i.startswith(('--load-extension=', '--remote-debugging-port=')):
             continue
         elif i.startswith('--user-data-dir') and not opt.system_user_path:
-            result.add(f'--user-data-dir={Path(i[16:]).absolute()}')
-            has_user_path = True
+            user_path = f'--user-data-dir={Path(i[16:]).absolute()}'
+            result.add(user_path)
             continue
-        elif i.startswith('--headless'):
-            if i == '--headless=false':
-                headless = False
-                continue
-            elif i == '--headless':
-                i = '--headless=new'
-                headless = True
-            else:
-                headless = True
-
+        elif i.startswith('--user-agent='):
+            opt._ua_set = True
         result.add(i)
 
-    if not has_user_path and not opt.system_user_path:
+    if not user_path and not opt.system_user_path:
         port = opt.address.split(':')[-1] if opt.address else '0'
         p = Path(opt.tmp_path) if opt.tmp_path else Path(gettempdir()) / 'DrissionPage'
-        path = p / f'userData_{port}'
+        path = p / 'userData' / port
         path.mkdir(parents=True, exist_ok=True)
-        opt.set_user_data_path(path)
-        result.add(f'--user-data-dir={path}')
-
-    # if headless is None and system().lower() == 'linux':  # 无界面Linux自动加入无头
-    #     from os import popen
-    #     r = popen('systemctl list-units | grep graphical.target')
-    #     if 'graphical.target' not in r.read():
-    #         headless = True
-    #         result.add('--headless=new')
+        user_path = path.absolute()
+        opt.set_user_data_path(user_path)
+        result.add(f'--user-data-dir={user_path}')
 
     result = list(result)
-    opt._headless = headless
 
     # ----------处理插件extensions-------------
     ext = [str(Path(e).absolute()) for e in opt.extensions]
@@ -111,14 +96,10 @@ def get_launch_args(opt):
         ext = f'--load-extension={ext}'
         result.append(ext)
 
-    return result
+    return result, user_path
 
 
 def set_prefs(opt):
-    """处理启动配置中的prefs项，目前只能对已存在文件夹配置
-    :param opt: ChromiumOptions
-    :return: None
-    """
     if not opt.user_data_path or (not opt.preferences and not opt._prefs_to_del):
         return
     prefs = opt.preferences
@@ -157,10 +138,6 @@ def set_prefs(opt):
 
 
 def set_flags(opt):
-    """处理启动配置中的flags项
-    :param opt: ChromiumOptions
-    :return: None
-    """
     if not opt.user_data_path or (not opt.clear_file_flags and not opt.flags):
         return
 
@@ -192,16 +169,11 @@ def set_flags(opt):
         dump(states_dict, f)
 
 
-def test_connect(ip, port, timeout=30):
-    """测试浏览器是否可用
-    :param ip: 浏览器ip
-    :param port: 浏览器端口
-    :param timeout: 超时时间（秒）
-    :return: None
-    """
-    end_time = perf_counter() + timeout
+def test_connect(ip, port):
+    end_time = perf_counter() + Settings.browser_connect_timeout
     s = Session()
     s.trust_env = False
+    s.keep_alive = False
     while perf_counter() < end_time:
         try:
             r = s.get(f'http://{ip}:{port}/json', timeout=10, headers={'Connection': 'close'})
@@ -209,18 +181,13 @@ def test_connect(ip, port, timeout=30):
                 if tab['type'] in ('page', 'webview'):
                     r.close()
                     s.close()
-                    return
+                    return True
             r.close()
         except Exception:
             sleep(.2)
 
     s.close()
-    raise BrowserConnectError(f'\n{ip}:{port}浏览器无法链接。\n请确认：\n1、该端口为浏览器\n'
-                              f'2、已添加\'--remote-debugging-port={port}\'启动项\n'
-                              f'3、用户文件夹没有和已打开的浏览器冲突\n'
-                              f'4、如为无界面系统，请添加\'--headless=new\'参数\n'
-                              f'5、如果是Linux系统，可能还要添加\'--no-sandbox\'启动参数\n'
-                              f'可使用ChromiumOptions设置端口和用户文件夹路径。')
+    return False
 
 
 def _run_browser(port, path: str, args) -> Popen:
@@ -288,7 +255,6 @@ def _remove_arg_from_dict(target_dict: dict, arg: str) -> None:
 
 
 def get_chrome_path(ini_path):
-    """从ini文件或系统变量中获取chrome可执行文件的路径"""
     # -----------从ini文件中获取--------------
     if ini_path and Path(ini_path).exists():
         path = OptionsManager(ini_path).chromium_options.get('browser_path', None)

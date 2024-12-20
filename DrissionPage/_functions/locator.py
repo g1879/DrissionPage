@@ -2,18 +2,13 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from re import split
 from .by import By
 
 
 def locator_to_tuple(loc):
-    """解析定位字符串生成dict格式数据
-    :param loc: 待处理的字符串
-    :return: 格式： {'and': bool, 'args': ['属性名称', '匹配方式', '属性值', 是否否定]}
-    """
     loc = _preprocess(loc)
 
     # 多属性查找
@@ -83,19 +78,18 @@ def _get_arg(text) -> list:
     return [name, None, None] if len(r) != 3 else [name, r[1], r[2]]
 
 
-def is_loc(text):
-    """返回text是否定位符"""
+def is_str_loc(text):
     return text.startswith(('.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:', 'text=',
                             'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:', 'c='))
 
 
+def is_selenium_loc(loc):
+    return (isinstance(loc, tuple) and len(loc) == 2 and isinstance(loc[1], str)
+            and loc[0] in ('id', 'xpath', 'link text', 'partial link text', 'name', 'tag name', 'class name',
+                           'css selector'))
+
+
 def get_loc(loc, translate_css=False, css_mode=False):
-    """接收本库定位语法或selenium定位元组，转换为标准定位元组，可翻译css selector为xpath
-    :param loc: 本库定位语法或selenium定位元组
-    :param translate_css: 是否翻译css selector为xpath，用于相对定位
-    :param css_mode: 是否尽量用css selector方式
-    :return: DrissionPage定位元组
-    """
     if isinstance(loc, tuple):
         loc = translate_css_loc(loc) if css_mode else translate_loc(loc)
 
@@ -118,10 +112,6 @@ def get_loc(loc, translate_css=False, css_mode=False):
 
 
 def str_to_xpath_loc(loc):
-    """处理元素查找语句
-    :param loc: 查找语法字符串
-    :return: 匹配符元组
-    """
     loc_by = 'xpath'
     loc = _preprocess(loc)
 
@@ -145,14 +135,14 @@ def str_to_xpath_loc(loc):
 
     # 根据文本查找
     elif loc.startswith('text='):
-        loc_str = f'//*[text()={_make_search_str(loc[5:])}]'
+        loc_str = f'//*[text()={_quotes_escape(loc[5:])}]'
     elif loc.startswith('text:') and loc != 'text:':
-        loc_str = f'//*/text()[contains(., {_make_search_str(loc[5:])})]/..'
+        loc_str = f'//*/text()[contains(., {_quotes_escape(loc[5:])})]/..'
     elif loc.startswith('text^') and loc != 'text^':
-        loc_str = f'//*/text()[starts-with(., {_make_search_str(loc[5:])})]/..'
+        loc_str = f'//*/text()[starts-with(., {_quotes_escape(loc[5:])})]/..'
     elif loc.startswith('text$') and loc != 'text$':
-        loc_str = f'//*/text()[substring(., string-length(.) - string-length({_make_search_str(loc[5:])}) +1) = ' \
-                  f'{_make_search_str(loc[5:])}]/..'
+        loc_str = (f'//*/text()[substring(., string-length(.) - string-length({_quotes_escape(loc[5:])}) +1) = '
+                   f'{_quotes_escape(loc[5:])}]/..')
 
     # 用xpath查找
     elif loc.startswith(('xpath:', 'xpath=')) and loc not in ('xpath:', 'xpath='):
@@ -165,7 +155,7 @@ def str_to_xpath_loc(loc):
 
     # 根据文本模糊查找
     elif loc:
-        loc_str = f'//*/text()[contains(., {_make_search_str(loc)})]/..'
+        loc_str = f'//*/text()[contains(., {_quotes_escape(loc)})]/..'
     else:
         loc_str = '//*'
 
@@ -173,10 +163,6 @@ def str_to_xpath_loc(loc):
 
 
 def str_to_css_loc(loc):
-    """处理元素查找语句
-    :param loc: 查找语法字符串
-    :return: 匹配符元组
-    """
     loc_by = 'css selector'
     loc = _preprocess(loc)
 
@@ -238,31 +224,31 @@ def _make_single_xpath_str(tag: str, text: str) -> tuple:
             else:
                 symbol = r[1]
                 if symbol == '=':  # 精确查找
-                    arg = '.' if r[0] in ('@text()', '@tx()') else r[0]
-                    arg_str = f'{arg}={_make_search_str(r[2])}'
+                    arg = 'text()' if r[0] in ('@text()', '@tx()') else r[0]
+                    arg_str = f'{arg}={_quotes_escape(r[2])}'
 
                 elif symbol == '^':  # 匹配开头
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = f'/text()[starts-with(., {_make_search_str(r[2])})]/..'
+                        txt_str = f'/text()[starts-with(., {_quotes_escape(r[2])})]/..'
                         arg_str = ''
                     else:
-                        arg_str = f"starts-with({r[0]},{_make_search_str(r[2])})"
+                        arg_str = f"starts-with({r[0]},{_quotes_escape(r[2])})"
 
                 elif symbol == '$':  # 匹配结尾
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = (f'/text()[substring(., string-length(.) - string-length({_make_search_str(r[2])}) '
-                                   f'+1) = {_make_search_str(r[2])}]/..')
+                        txt_str = (f'/text()[substring(., string-length(.) - string-length('
+                                   f'{_quotes_escape(r[2])}) +1) = {_quotes_escape(r[2])}]/..')
                         arg_str = ''
                     else:
-                        arg_str = (f'substring({r[0]}, string-length({r[0]}) - string-length({_make_search_str(r[2])}) '
-                                   f'+1) = {_make_search_str(r[2])}')
+                        arg_str = (f'substring({r[0]}, string-length({r[0]}) - string-length('
+                                   f'{_quotes_escape(r[2])}) +1) = {_quotes_escape(r[2])}')
 
                 elif symbol == ':':  # 模糊查找
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = f'/text()[contains(., {_make_search_str(r[2])})]/..'
+                        txt_str = f'/text()[contains(., {_quotes_escape(r[2])})]/..'
                         arg_str = ''
                     else:
-                        arg_str = f"contains({r[0]},{_make_search_str(r[2])})"
+                        arg_str = f"contains({r[0]},{_quotes_escape(r[2])})"
 
                 else:
                     raise ValueError(f'符号不正确：{symbol}')
@@ -326,17 +312,17 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
                     txt = r[2]
 
                 if symbol == '=':
-                    arg_str = f'{arg}={_make_search_str(txt)}'
+                    arg_str = f'{arg}={_quotes_escape(txt)}'
 
                 elif symbol == ':':
-                    arg_str = f'contains({arg},{_make_search_str(txt)})'
+                    arg_str = f'contains({arg},{_quotes_escape(txt)})'
 
                 elif symbol == '^':
-                    arg_str = f'starts-with({arg},{_make_search_str(txt)})'
+                    arg_str = f'starts-with({arg},{_quotes_escape(txt)})'
 
                 elif symbol == '$':
-                    arg_str = f'substring({arg}, string-length({arg}) - string-length({_make_search_str(txt)}) +1) ' \
-                              f'= {_make_search_str(txt)}'
+                    arg_str = (f'substring({arg}, string-length({arg}) - string-length('
+                               f'{_quotes_escape(txt)}) +1) = {_quotes_escape(txt)}')
 
                 else:
                     raise ValueError(f'符号不正确：{symbol}')
@@ -355,11 +341,14 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
     return 'xpath', f'//*[{arg_str}]' if arg_str else f'//*'
 
 
-def _make_search_str(search_str: str) -> str:
-    """将"转义，不知何故不能直接用 \ 来转义
+def _quotes_escape(search_str: str) -> str:
+    """将"转义，不知何故不能直接用 斜杠 来转义
     :param search_str: 查询字符串
     :return: 把"转义后的字符串
     """
+    if '"' not in search_str:
+        return f'"{search_str}"'
+
     parts = search_str.split('"')
     parts_num = len(parts)
     search_str = 'concat('
@@ -444,10 +433,6 @@ def _make_single_css_str(tag: str, text: str) -> tuple:
 
 
 def translate_loc(loc):
-    """把By类型的loc元组转换为css selector或xpath类型的
-    :param loc: By类型的loc元组
-    :return: css selector或xpath类型的loc元组
-    """
     if len(loc) != 2:
         raise ValueError('定位符长度必须为2。')
 
@@ -480,16 +465,12 @@ def translate_loc(loc):
         loc_str = f'//a[contains(text(),"{loc[1]}")]'
 
     else:
-        raise ValueError('无法识别的定位符。')
+        raise ValueError(f'无法识别的定位符：{loc}')
 
     return loc_by, loc_str
 
 
 def translate_css_loc(loc):
-    """把By类型的loc元组转换为css selector或xpath类型的
-    :param loc: By类型的loc元组
-    :return: css selector或xpath类型的loc元组
-    """
     if len(loc) != 2:
         raise ValueError('定位符长度必须为2。')
 

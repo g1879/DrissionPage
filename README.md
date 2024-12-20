@@ -1,91 +1,106 @@
-How to use: [Documents](https://DrissionPage.cn)
+# ✨️ 概述
 
-This project is mainly updated in gitee, and will be submitted to GitHub after producing a stable version.
-Check out the latest developments at [gitee](https://gitee.com/g1879/DrissionPage).
+DrissionPage 是一个基于 python 的网页自动化工具。
 
-# ✨️ Overview
+它既能控制浏览器，也能收发数据包，还能把两者合而为一。
 
-DrissionPage is a python-based web page automation tool.
-It can control the browser, send and receive data packets, and combine the two into one.
-It can take into account the convenience of browser automation and the high efficiency of requests.
-It is powerful and has countless built-in user-friendly designs and convenient functions.
-Its syntax is concise and elegant, the amount of code is small, and it is friendly to novices.
+可兼顾浏览器自动化的便利性和 requests 的高效率。
 
-Your star is the greatest support for me.💖
+它功能强大，内置无数人性化设计和便捷功能。
+
+它的语法简洁而优雅，代码量少，对新手友好。
 
 ---
 
-# Captcha Solver
+官方网站：[https://DrissionPage.cn](https://drissionpage.cn)
 
-[![](imgs/ad.png)](https://www.capsolver.com/?utm_source=github&utm_content=drission)
-[CapSolver](https://www.capsolver.com/?utm_source=github&utm_content=drission) is an AI-powered service that specializes in solving various types of captchas automatically, empowers data collection by helping developers easily overcome the captcha challenges encountered during Web Scraping. It supports captchas such as [reCAPTCHA V2](https://docs.capsolver.com/guide/captcha/ReCaptchaV2.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [reCAPTCHA V3](https://docs.capsolver.com/guide/captcha/ReCaptchaV3.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [hCaptcha](https://docs.capsolver.com/guide/captcha/HCaptcha.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [FunCaptcha](https://docs.capsolver.com/guide/captcha/FunCaptcha.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [DataDome](https://docs.capsolver.com/guide/captcha/DataDome.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [AWS Captcha](https://docs.capsolver.com/guide/captcha/awsWaf.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), [Geetest](https://docs.capsolver.com/guide/captcha/Geetest.html?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), and [Cloudflare turnstile](https://docs.capsolver.com/guide/antibots/cloudflare_turnstile.html) among others. For developers, Capsolver offers API integration options detailed in [documentation](https://docs.capsolver.com/?utm_source=github&utm_medium=banner_github&utm_campaign=fcsrv), facilitating the integration of captcha solving into applications. They also provide browser extensions for [Chrome](https://chromewebstore.google.com/detail/captcha-solver-auto-captc/pgojnojmmhpofjgdmaebadhbocahppod) and [Firefox](https://addons.mozilla.org/es/firefox/addon/capsolver-captcha-solver/), making it easy to use their service directly within a browser. Different pricing packages are available to accommodate varying needs, ensuring flexibility for users.
+项目地址：[gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage)     |    [gitcode](https://gitcode.com/g1879/DrissionPage) 
 
-Watch ads that support open source authors, thx.
+您的星星是对我最大的支持💖
 
-# ☕ Buy me coffee
+--- 
 
-If this project is helpful to you, why not buy the author a cup of coffee :)
+支持系统：Windows、Linux、Mac
+
+python 版本：3.6 及以上
+
+支持浏览器：Chromium 内核浏览器(如 Chrome 和 Edge)，electron 应用
+
+---
+
+# 🛠 如何使用
+
+**📖 使用文档：**  [点击查看](https://DrissionPage.cn)
+
+**交流 QQ 群：**  见使用文档
+
+![](https://drissionpage.cn/codes.jpg)
+
+---
+
+# 💡 理念
+
+简洁而强大！
+
+--- 
+
+# ☀️ 特性和亮点
+
+作者经过长期实践，踩过无数坑，总结出的经验全写到这个库里了。
+
+## 🎇 强大的自研内核
+
+本库采用全自研的内核，内置无数实用功能，对常用功能作了整合和优化，对比 selenium，有以下优点：
+
+- 不基于 webdriver
+- 无需为不同版本的浏览器下载不同的驱动
+- 运行速度更快
+- 可以跨 iframe 查找元素，无需切入切出
+- 把 iframe 看作普通元素，逻辑更清晰
+- 可同时操作多个标签页，无需切换
+- 可以直接读取浏览器缓存保存图片，无需用 GUI 点击另存
+- 可以对整个网页截图，包括视口外的部分
+- 可处理非`open`状态的 shadow-root
+
+## 🎇 亮点功能
+
+除了以上优点，本库还内置了无数人性化设计。
+
+- 极简的定位语法，查找元素更加容易
+- 集成大量常用功能，代码更优雅，功能强大稳定
+- 无处不在的等待和自动重试，使不稳定的网络变得易于控制，程序更稳定，编写更省心
+- 提供强大的下载工具，操作浏览器时也能享受快捷可靠的下载功能
+- 允许反复使用已经打开的浏览器，无需每次运行从头启动浏览器，调试方便
+- 使用 ini 文件保存常用配置，自动调用，提供便捷的设置，远离繁杂的配置项
+- 内置 lxml 作为解析引擎，解析速度成几个数量级提升
+- 使用 POM 模式封装，可直接用于测试，便于扩展
+- 高度集成的便利功能，从每个细节中体现
+- 还有很多细节，这里不一一列举，欢迎实际使用中体验：D
+
+--- 
+
+# 📝 使用条款
+
+允许任何人以个人身份使用或分发本项目源代码，但仅限于学习和合法非盈利目的。
+个人或组织如未获得版权持有人授权，不得将本项目以源代码或二进制形式用于商业行为。
+
+使用本项目需满足以下条款，如使用过程中出现违反任意一项条款的情形，授权自动失效。
+- 禁止将DrissionPage应用到任何可能违反当地法律规定和道德约束的项目中
+- 禁止将DrissionPage用于任何可能有损他人利益的项目中
+- 禁止将DrissionPage用于攻击与骚扰行为
+- 遵守Robots协议，禁止将DrissionPage用于采集法律或系统Robots协议不允许的数据
+
+使用DrissionPage发生的一切行为均由使用人自行负责。
+因使用DrissionPage进行任何行为所产生的一切纠纷及后果均与版权持有人无关，
+版权持有人不承担任何使用DrissionPage带来的风险和损失。
+版权持有人不对DrissionPage可能存在的缺陷导致的任何损失负任何责任。
+
+---  
+
+# ☕ 请我喝咖啡
+
+作者是个人开发者，开发和写文档工作量较为繁重。
+
+如果本项目对您有所帮助，不妨打赏一下作者 ：）
 
 ![](https://drissionpage.cn/code2.jpg)
-
----
-
-<a href="https://hellogithub.com/repository/dad1ecb7fbd34898a3380f5f0948ceb6" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=dad1ecb7fbd34898a3380f5f0948ceb6&claim_uid=5jzhYcST8nxeLiH&theme=dark" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
-
-# 📕 background
-
-When using requests for data collection, when facing a website to log in to, you have to analyze data packets and JS source code, construct complex requests, and often have to deal with anti-crawling methods such as verification codes, JS obfuscation, and signature parameters. The threshold is high and the development efficiency is low. high.
-Using a browser can largely bypass these pitfalls, but the browser is not very efficient.
-
-Therefore, the original intention of this library is to combine them into one and achieve "fast writing" and "fast running" at the same time. It can switch the corresponding mode when different needs are needed, and provide a humanized usage method to improve development and operation efficiency.
-In addition to merging the two, this library also encapsulates commonly used functions in web page units, providing very simple operations and statements, allowing users to reduce considerations of details and focus on function implementation. Implement powerful functions in a simple way and make your code more elegant.
-
-The previous version was implemented by repackaging selenium. Starting from 3.0, the author started from scratch, redeveloped the bottom layer, got rid of the dependence on selenium, enhanced functions, and improved operating efficiency.
-
----
-
-# 💡 Concept
-
-Simple yet powerful!
-
----
-
-# ☀️ Features and Highlights
-
-After long-term practice, the author has stepped through countless pitfalls, and all the experiences he has summarized have been written down in this library.
-
-## 🎇 Powerful self-developed core
-
-This library uses a fully self-developed kernel, has built-in N number of practical functions, and has integrated and optimized common functions. Compared with selenium, it has the following advantages:
-
-- No webdriver features
-- No need to download different drivers for different browser versions
-- Runs faster
-- Can find elements across `<iframe>` without switching in and out
-- Treat `<iframe>` as a normal element. After obtaining it, you can directly search for elements in it, making the logic clearer.
-- You can operate multiple tabs in the browser at the same time, even if the tab is inactive, no need to switch
-- Can directly read the browser cache to save images without using the GUI to click save
-- You can take screenshots of the entire web page, including parts outside the viewport (supported by browsers 90 and above)
-- Can handle shadow-root in non-open state
-
-## 🎇 Highlighted features
-
-In addition to the above advantages, this library also has numerous built-in humanized designs.
-
-- Minimalist grammar rules. Integrate a large number of commonly used functions to make the code more elegant
-- Positioning elements is easier and the function is more powerful and stable
-- Ubiquitous wait and auto-retry functionality. Make unstable networks easier to control, programs more stable, and writing more worry-free
-- Provide powerful download tools. You can also enjoy fast and reliable download functions when operating the browser
-- Allows repeated use of already open browsers. No need to start the browser from scratch every time, making debugging very convenient
-- Use ini files to save commonly used configurations and call them automatically, providing convenient settings and staying away from complicated configuration items.
-- Built-in lxml as a parsing engine, the parsing speed is improved by several orders of magnitude
-- Encapsulated using POM mode, which can be directly used for testing and easy to expand.
-- Highly integrated convenient functions, reflected in every detail
-- There are many details, so I won’t list them all here. You are welcome to experience them in actual use:)
-
----
-
-# 🖐🏻 Disclaimer
-
-Please do not apply DrissionPage to any work that may violate legal regulations and moral constraints. Please use DrissionPage in a friendly manner, comply with the spider agreement, and do not use DrissionPage for any illegal purposes. If you choose to use DrissionPage
-This means that you abide by this agreement. The author does not bear any legal risks and losses caused by your violation of this agreement. You will be responsible for all consequences.

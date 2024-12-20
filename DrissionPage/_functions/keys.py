@@ -2,9 +2,10 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
-@Copyright: (c) 2024 by g1879, Inc. All Rights Reserved.
-@License  : BSD 3-Clause.
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
+from platform import system
+
 from ..errors import AlertExistsError
 
 
@@ -21,18 +22,14 @@ class Keys:
     CANCEL = '\ue001'  # ^break
     HELP = '\ue002'
     BACKSPACE = '\ue003'
-    BACK_SPACE = BACKSPACE
     TAB = '\ue004'
     CLEAR = '\ue005'
     RETURN = '\ue006'
     ENTER = '\ue007'
     SHIFT = '\ue008'
-    LEFT_SHIFT = SHIFT
     CONTROL = '\ue009'
     CTRL = '\ue009'
-    LEFT_CONTROL = CONTROL
     ALT = '\ue00a'
-    LEFT_ALT = ALT
     PAUSE = '\ue00b'
     ESCAPE = '\ue00c'
     SPACE = '\ue00d'
@@ -41,13 +38,9 @@ class Keys:
     END = '\ue010'
     HOME = '\ue011'
     LEFT = '\ue012'
-    ARROW_LEFT = LEFT
     UP = '\ue013'
-    ARROW_UP = UP
     RIGHT = '\ue014'
-    ARROW_RIGHT = RIGHT
     DOWN = '\ue015'
-    ARROW_DOWN = DOWN
     INSERT = '\ue016'
     DELETE = '\ue017'
     DEL = '\ue017'
@@ -219,15 +212,15 @@ keyDefinitions = {
     '\ue005': {'keyCode': 12, 'shiftKeyCode': 101, 'key': 'Clear', 'code': 'Numpad5', 'shiftKey': '5', 'location': 3},
     '\ue006': {'keyCode': 13, 'code': 'NumpadEnter', 'key': 'Enter', 'text': '\r', 'location': 3},
     '\ue00b': {'keyCode': 19, 'code': 'Pause', 'key': 'Pause'},
-    'CapsLock': {'keyCode': 20, 'code': 'CapsLock', 'key': 'CapsLock'},
+    # 'CapsLock': {'keyCode': 20, 'code': 'CapsLock', 'key': 'CapsLock'},
     '\ue00c': {'keyCode': 27, 'code': 'Escape', 'key': 'Escape'},
-    'Convert': {'keyCode': 28, 'code': 'Convert', 'key': 'Convert'},
-    'NonConvert': {'keyCode': 29, 'code': 'NonConvert', 'key': 'NonConvert'},
+    # 'Convert': {'keyCode': 28, 'code': 'Convert', 'key': 'Convert'},
+    # 'NonConvert': {'keyCode': 29, 'code': 'NonConvert', 'key': 'NonConvert'},
     '\ue010': {'keyCode': 35, 'code': 'End', 'key': 'End'},
     # 'Numpad1': {'keyCode': 35, 'shiftKeyCode': 97, 'key': 'End', 'code': 'Numpad1', 'shiftKey': '1', 'location': 3},
-    'Select': {'keyCode': 41, 'code': 'Select', 'key': 'Select'},
-    'Open': {'keyCode': 43, 'code': 'Open', 'key': 'Execute'},
-    'PrintScreen': {'keyCode': 44, 'code': 'PrintScreen', 'key': 'PrintScreen'},
+    # 'Select': {'keyCode': 41, 'code': 'Select', 'key': 'Select'},
+    # 'Open': {'keyCode': 43, 'code': 'Open', 'key': 'Execute'},
+    # 'PrintScreen': {'keyCode': 44, 'code': 'PrintScreen', 'key': 'PrintScreen'},
     '\ue016': {'keyCode': 45, 'code': 'Insert', 'key': 'Insert'},
     # 'Numpad0': {'keyCode': 45, 'shiftKeyCode': 96, 'key': 'Insert', 'code': 'Numpad0', 'shiftKey': '0', 'location': 3},
     '\ue017': {'keyCode': 46, 'code': 'Delete', 'key': 'Delete'},
@@ -242,36 +235,7 @@ keyDefinitions = {
     '\ue020': {'keyCode': 54, 'code': 'Digit6', 'shiftKey': '^', 'key': '6'},
     '\ue021': {'keyCode': 55, 'code': 'Digit7', 'shiftKey': '&', 'key': '7'},
     '\ue022': {'keyCode': 56, 'code': 'Digit8', 'shiftKey': '*', 'key': '8'},
-    '\ue023': {'keyCode': 57, 'code': 'Digit9', 'shiftKey': '\(', 'key': '9'},
-    'KeyA': {'keyCode': 65, 'code': 'KeyA', 'shiftKey': 'A', 'key': 'a'},
-    'KeyB': {'keyCode': 66, 'code': 'KeyB', 'shiftKey': 'B', 'key': 'b'},
-    'KeyC': {'keyCode': 67, 'code': 'KeyC', 'shiftKey': 'C', 'key': 'c'},
-    'KeyD': {'keyCode': 68, 'code': 'KeyD', 'shiftKey': 'D', 'key': 'd'},
-    'KeyE': {'keyCode': 69, 'code': 'KeyE', 'shiftKey': 'E', 'key': 'e'},
-    'KeyF': {'keyCode': 70, 'code': 'KeyF', 'shiftKey': 'F', 'key': 'f'},
-    'KeyG': {'keyCode': 71, 'code': 'KeyG', 'shiftKey': 'G', 'key': 'g'},
-    'KeyH': {'keyCode': 72, 'code': 'KeyH', 'shiftKey': 'H', 'key': 'h'},
-    'KeyI': {'keyCode': 73, 'code': 'KeyI', 'shiftKey': 'I', 'key': 'i'},
-    'KeyJ': {'keyCode': 74, 'code': 'KeyJ', 'shiftKey': 'J', 'key': 'j'},
-    'KeyK': {'keyCode': 75, 'code': 'KeyK', 'shiftKey': 'K', 'key': 'k'},
-    'KeyL': {'keyCode': 76, 'code': 'KeyL', 'shiftKey': 'L', 'key': 'l'},
-    'KeyM': {'keyCode': 77, 'code': 'KeyM', 'shiftKey': 'M', 'key': 'm'},
-    'KeyN': {'keyCode': 78, 'code': 'KeyN', 'shiftKey': 'N', 'key': 'n'},
-    'KeyO': {'keyCode': 79, 'code': 'KeyO', 'shiftKey': 'O', 'key': 'o'},
-    'KeyP': {'keyCode': 80, 'code': 'KeyP', 'shiftKey': 'P', 'key': 'p'},
-    'KeyQ': {'keyCode': 81, 'code': 'KeyQ', 'shiftKey': 'Q', 'key': 'q'},
-    'KeyR': {'keyCode': 82, 'code': 'KeyR', 'shiftKey': 'R', 'key': 'r'},
-    'KeyS': {'keyCode': 83, 'code': 'KeyS', 'shiftKey': 'S', 'key': 's'},
-    'KeyT': {'keyCode': 84, 'code': 'KeyT', 'shiftKey': 'T', 'key': 't'},
-    'KeyU': {'keyCode': 85, 'code': 'KeyU', 'shiftKey': 'U', 'key': 'u'},
-    'KeyV': {'keyCode': 86, 'code': 'KeyV', 'shiftKey': 'V', 'key': 'v'},
-    'KeyW': {'keyCode': 87, 'code': 'KeyW', 'shiftKey': 'W', 'key': 'w'},
-    'KeyX': {'keyCode': 88, 'code': 'KeyX', 'shiftKey': 'X', 'key': 'x'},
-    'KeyY': {'keyCode': 89, 'code': 'KeyY', 'shiftKey': 'Y', 'key': 'y'},
-    'KeyZ': {'keyCode': 90, 'code': 'KeyZ', 'shiftKey': 'Z', 'key': 'z'},
-    'MetaLeft': {'keyCode': 91, 'code': 'MetaLeft', 'key': 'Meta'},
-    'MetaRight': {'keyCode': 92, 'code': 'MetaRight', 'key': 'Meta'},
-    'ContextMenu': {'keyCode': 93, 'code': 'ContextMenu', 'key': 'ContextMenu'},
+    '\ue023': {'keyCode': 57, 'code': 'Digit9', 'shiftKey': r'\(', 'key': '9'},
     '\ue024': {'keyCode': 106, 'code': 'NumpadMultiply', 'key': '*', 'location': 3},
     '\ue025': {'keyCode': 107, 'code': 'NumpadAdd', 'key': '+', 'location': 3},
     '\ue027': {'keyCode': 109, 'code': 'NumpadSubtract', 'key': '-', 'location': 3},
@@ -288,69 +252,94 @@ keyDefinitions = {
     '\ue03a': {'keyCode': 121, 'code': 'F10', 'key': 'F10'},
     '\ue03b': {'keyCode': 122, 'code': 'F11', 'key': 'F11'},
     '\ue03c': {'keyCode': 123, 'code': 'F12', 'key': 'F12'},
-    'F13': {'keyCode': 124, 'code': 'F13', 'key': 'F13'},
-    'F14': {'keyCode': 125, 'code': 'F14', 'key': 'F14'},
-    'F15': {'keyCode': 126, 'code': 'F15', 'key': 'F15'},
-    'F16': {'keyCode': 127, 'code': 'F16', 'key': 'F16'},
-    'F17': {'keyCode': 128, 'code': 'F17', 'key': 'F17'},
-    'F18': {'keyCode': 129, 'code': 'F18', 'key': 'F18'},
-    'F19': {'keyCode': 130, 'code': 'F19', 'key': 'F19'},
-    'F20': {'keyCode': 131, 'code': 'F20', 'key': 'F20'},
-    'F21': {'keyCode': 132, 'code': 'F21', 'key': 'F21'},
-    'F22': {'keyCode': 133, 'code': 'F22', 'key': 'F22'},
-    'F23': {'keyCode': 134, 'code': 'F23', 'key': 'F23'},
-    'F24': {'keyCode': 135, 'code': 'F24', 'key': 'F24'},
-    'NumLock': {'keyCode': 144, 'code': 'NumLock', 'key': 'NumLock'},
-    'ScrollLock': {'keyCode': 145, 'code': 'ScrollLock', 'key': 'ScrollLock'},
-    'AudioVolumeMute': {'keyCode': 173, 'code': 'AudioVolumeMute', 'key': 'AudioVolumeMute'},
-    'AudioVolumeDown': {'keyCode': 174, 'code': 'AudioVolumeDown', 'key': 'AudioVolumeDown'},
-    'AudioVolumeUp': {'keyCode': 175, 'code': 'AudioVolumeUp', 'key': 'AudioVolumeUp'},
-    'MediaTrackNext': {'keyCode': 176, 'code': 'MediaTrackNext', 'key': 'MediaTrackNext'},
-    'MediaTrackPrevious': {'keyCode': 177, 'code': 'MediaTrackPrevious', 'key': 'MediaTrackPrevious'},
-    'MediaStop': {'keyCode': 178, 'code': 'MediaStop', 'key': 'MediaStop'},
-    'MediaPlayPause': {'keyCode': 179, 'code': 'MediaPlayPause', 'key': 'MediaPlayPause'},
     '\ue018': {'keyCode': 186, 'code': 'Semicolon', 'shiftKey': ':', 'key': ';'},
-    'Equal': {'keyCode': 187, 'code': 'Equal', 'shiftKey': '+', 'key': '='},
     '\ue019': {'keyCode': 187, 'code': 'NumpadEqual', 'key': '=', 'location': 3},
-    'Comma': {'keyCode': 188, 'code': 'Comma', 'shiftKey': '<', 'key': ','},
-    'Minus': {'keyCode': 189, 'code': 'Minus', 'shiftKey': '_', 'key': '-'},
-    'Period': {'keyCode': 190, 'code': 'Period', 'shiftKey': '>', 'key': '.'},
-    'Slash': {'keyCode': 191, 'code': 'Slash', 'shiftKey': '?', 'key': '/'},
-    'Backquote': {'keyCode': 192, 'code': 'Backquote', 'shiftKey': '~', 'key': '`'},
-    'BracketLeft': {'keyCode': 219, 'code': 'BracketLeft', 'shiftKey': '{', 'key': '['},
-    'Backslash': {'keyCode': 220, 'code': 'Backslash', 'shiftKey': '|', 'key': '\\'},
-    'BracketRight': {'keyCode': 221, 'code': 'BracketRight', 'shiftKey': '}', 'key': ']'},
-    'Quote': {'keyCode': 222, 'code': 'Quote', 'shiftKey': '"', 'key': '\''},
-    'AltGraph': {'keyCode': 225, 'code': 'AltGraph', 'key': 'AltGraph'},
-    'Props': {'keyCode': 247, 'code': 'Props', 'key': 'CrSel'},
-    'Cancel': {'keyCode': 3, 'key': 'Cancel', 'code': 'Abort'},
-    'Clear': {'keyCode': 12, 'key': 'Clear', 'code': 'Numpad5', 'location': 3},
-    'Shift': {'keyCode': 16, 'key': 'Shift', 'code': 'ShiftLeft'},
-    'Control': {'keyCode': 17, 'key': 'Control', 'code': 'ControlLeft'},
-    'Alt': {'keyCode': 18, 'key': 'Alt', 'code': 'AltLeft'},
-    'Accept': {'keyCode': 30, 'key': 'Accept'},
-    'ModeChange': {'keyCode': 31, 'key': 'ModeChange'},
-    'Print': {'keyCode': 42, 'key': 'Print'},
-    'Execute': {'keyCode': 43, 'key': 'Execute', 'code': 'Open'},
     '\u0000': {'keyCode': 46, 'key': '\u0000', 'code': 'NumpadDecimal', 'location': 3},
-    'Attn': {'keyCode': 246, 'key': 'Attn'},
-    'CrSel': {'keyCode': 247, 'key': 'CrSel', 'code': 'Props'},
-    'ExSel': {'keyCode': 248, 'key': 'ExSel'},
-    'EraseEof': {'keyCode': 249, 'key': 'EraseEof'},
-    'Play': {'keyCode': 250, 'key': 'Play'},
-    'ZoomOut': {'keyCode': 251, 'key': 'ZoomOut'},
-    'Power': {'key': 'Power', 'code': 'Power'},
-    'Eject': {'key': 'Eject', 'code': 'Eject'},
+    # 'KeyA': {'keyCode': 65, 'code': 'KeyA', 'shiftKey': 'A', 'key': 'a'},
+    # 'KeyB': {'keyCode': 66, 'code': 'KeyB', 'shiftKey': 'B', 'key': 'b'},
+    # 'KeyC': {'keyCode': 67, 'code': 'KeyC', 'shiftKey': 'C', 'key': 'c'},
+    # 'KeyD': {'keyCode': 68, 'code': 'KeyD', 'shiftKey': 'D', 'key': 'd'},
+    # 'KeyE': {'keyCode': 69, 'code': 'KeyE', 'shiftKey': 'E', 'key': 'e'},
+    # 'KeyF': {'keyCode': 70, 'code': 'KeyF', 'shiftKey': 'F', 'key': 'f'},
+    # 'KeyG': {'keyCode': 71, 'code': 'KeyG', 'shiftKey': 'G', 'key': 'g'},
+    # 'KeyH': {'keyCode': 72, 'code': 'KeyH', 'shiftKey': 'H', 'key': 'h'},
+    # 'KeyI': {'keyCode': 73, 'code': 'KeyI', 'shiftKey': 'I', 'key': 'i'},
+    # 'KeyJ': {'keyCode': 74, 'code': 'KeyJ', 'shiftKey': 'J', 'key': 'j'},
+    # 'KeyK': {'keyCode': 75, 'code': 'KeyK', 'shiftKey': 'K', 'key': 'k'},
+    # 'KeyL': {'keyCode': 76, 'code': 'KeyL', 'shiftKey': 'L', 'key': 'l'},
+    # 'KeyM': {'keyCode': 77, 'code': 'KeyM', 'shiftKey': 'M', 'key': 'm'},
+    # 'KeyN': {'keyCode': 78, 'code': 'KeyN', 'shiftKey': 'N', 'key': 'n'},
+    # 'KeyO': {'keyCode': 79, 'code': 'KeyO', 'shiftKey': 'O', 'key': 'o'},
+    # 'KeyP': {'keyCode': 80, 'code': 'KeyP', 'shiftKey': 'P', 'key': 'p'},
+    # 'KeyQ': {'keyCode': 81, 'code': 'KeyQ', 'shiftKey': 'Q', 'key': 'q'},
+    # 'KeyR': {'keyCode': 82, 'code': 'KeyR', 'shiftKey': 'R', 'key': 'r'},
+    # 'KeyS': {'keyCode': 83, 'code': 'KeyS', 'shiftKey': 'S', 'key': 's'},
+    # 'KeyT': {'keyCode': 84, 'code': 'KeyT', 'shiftKey': 'T', 'key': 't'},
+    # 'KeyU': {'keyCode': 85, 'code': 'KeyU', 'shiftKey': 'U', 'key': 'u'},
+    # 'KeyV': {'keyCode': 86, 'code': 'KeyV', 'shiftKey': 'V', 'key': 'v'},
+    # 'KeyW': {'keyCode': 87, 'code': 'KeyW', 'shiftKey': 'W', 'key': 'w'},
+    # 'KeyX': {'keyCode': 88, 'code': 'KeyX', 'shiftKey': 'X', 'key': 'x'},
+    # 'KeyY': {'keyCode': 89, 'code': 'KeyY', 'shiftKey': 'Y', 'key': 'y'},
+    # 'KeyZ': {'keyCode': 90, 'code': 'KeyZ', 'shiftKey': 'Z', 'key': 'z'},
+    # 'MetaLeft': {'keyCode': 91, 'code': 'MetaLeft', 'key': 'Meta'},
+    # 'MetaRight': {'keyCode': 92, 'code': 'MetaRight', 'key': 'Meta'},
+    # 'ContextMenu': {'keyCode': 93, 'code': 'ContextMenu', 'key': 'ContextMenu'},
+    # 'F13': {'keyCode': 124, 'code': 'F13', 'key': 'F13'},
+    # 'F14': {'keyCode': 125, 'code': 'F14', 'key': 'F14'},
+    # 'F15': {'keyCode': 126, 'code': 'F15', 'key': 'F15'},
+    # 'F16': {'keyCode': 127, 'code': 'F16', 'key': 'F16'},
+    # 'F17': {'keyCode': 128, 'code': 'F17', 'key': 'F17'},
+    # 'F18': {'keyCode': 129, 'code': 'F18', 'key': 'F18'},
+    # 'F19': {'keyCode': 130, 'code': 'F19', 'key': 'F19'},
+    # 'F20': {'keyCode': 131, 'code': 'F20', 'key': 'F20'},
+    # 'F21': {'keyCode': 132, 'code': 'F21', 'key': 'F21'},
+    # 'F22': {'keyCode': 133, 'code': 'F22', 'key': 'F22'},
+    # 'F23': {'keyCode': 134, 'code': 'F23', 'key': 'F23'},
+    # 'F24': {'keyCode': 135, 'code': 'F24', 'key': 'F24'},
+    # 'NumLock': {'keyCode': 144, 'code': 'NumLock', 'key': 'NumLock'},
+    # 'ScrollLock': {'keyCode': 145, 'code': 'ScrollLock', 'key': 'ScrollLock'},
+    # 'AudioVolumeMute': {'keyCode': 173, 'code': 'AudioVolumeMute', 'key': 'AudioVolumeMute'},
+    # 'AudioVolumeDown': {'keyCode': 174, 'code': 'AudioVolumeDown', 'key': 'AudioVolumeDown'},
+    # 'AudioVolumeUp': {'keyCode': 175, 'code': 'AudioVolumeUp', 'key': 'AudioVolumeUp'},
+    # 'MediaTrackNext': {'keyCode': 176, 'code': 'MediaTrackNext', 'key': 'MediaTrackNext'},
+    # 'MediaTrackPrevious': {'keyCode': 177, 'code': 'MediaTrackPrevious', 'key': 'MediaTrackPrevious'},
+    # 'MediaStop': {'keyCode': 178, 'code': 'MediaStop', 'key': 'MediaStop'},
+    # 'MediaPlayPause': {'keyCode': 179, 'code': 'MediaPlayPause', 'key': 'MediaPlayPause'},
+    # 'Equal': {'keyCode': 187, 'code': 'Equal', 'shiftKey': '+', 'key': '='},
+    # 'Comma': {'keyCode': 188, 'code': 'Comma', 'shiftKey': '<', 'key': ','},
+    # 'Minus': {'keyCode': 189, 'code': 'Minus', 'shiftKey': '_', 'key': '-'},
+    # 'Period': {'keyCode': 190, 'code': 'Period', 'shiftKey': '>', 'key': '.'},
+    # 'Slash': {'keyCode': 191, 'code': 'Slash', 'shiftKey': '?', 'key': '/'},
+    # 'Backquote': {'keyCode': 192, 'code': 'Backquote', 'shiftKey': '~', 'key': '`'},
+    # 'BracketLeft': {'keyCode': 219, 'code': 'BracketLeft', 'shiftKey': '{', 'key': '['},
+    # 'Backslash': {'keyCode': 220, 'code': 'Backslash', 'shiftKey': '|', 'key': '\\'},
+    # 'BracketRight': {'keyCode': 221, 'code': 'BracketRight', 'shiftKey': '}', 'key': ']'},
+    # 'Quote': {'keyCode': 222, 'code': 'Quote', 'shiftKey': '"', 'key': '\''},
+    # 'AltGraph': {'keyCode': 225, 'code': 'AltGraph', 'key': 'AltGraph'},
+    # 'Props': {'keyCode': 247, 'code': 'Props', 'key': 'CrSel'},
+    # 'Cancel': {'keyCode': 3, 'key': 'Cancel', 'code': 'Abort'},
+    # 'Clear': {'keyCode': 12, 'key': 'Clear', 'code': 'Numpad5', 'location': 3},
+    # 'Shift': {'keyCode': 16, 'key': 'Shift', 'code': 'ShiftLeft'},
+    # 'Control': {'keyCode': 17, 'key': 'Control', 'code': 'ControlLeft'},
+    # 'Alt': {'keyCode': 18, 'key': 'Alt', 'code': 'AltLeft'},
+    # 'Accept': {'keyCode': 30, 'key': 'Accept'},
+    # 'ModeChange': {'keyCode': 31, 'key': 'ModeChange'},
+    # 'Print': {'keyCode': 42, 'key': 'Print'},
+    # 'Execute': {'keyCode': 43, 'key': 'Execute', 'code': 'Open'},
+    # 'Attn': {'keyCode': 246, 'key': 'Attn'},
+    # 'CrSel': {'keyCode': 247, 'key': 'CrSel', 'code': 'Props'},
+    # 'ExSel': {'keyCode': 248, 'key': 'ExSel'},
+    # 'EraseEof': {'keyCode': 249, 'key': 'EraseEof'},
+    # 'Play': {'keyCode': 250, 'key': 'Play'},
+    # 'ZoomOut': {'keyCode': 251, 'key': 'ZoomOut'},
+    # 'Power': {'key': 'Power', 'code': 'Power'},
+    # 'Eject': {'key': 'Eject', 'code': 'Eject'},
 }
-modifierBit = {'\ue00a': 1,
-               '\ue009': 2,
-               '\ue03d': 4,
-               '\ue008': 8}
+modifierBit = {'\ue00a': 1, '\ue009': 2, '\ue03d': 4, '\ue008': 8}
+sys = system().lower()
 
 
 def keys_to_typing(value):
-    """把要输入的内容连成字符串，去掉其中 ctrl 等键。
-        返回的modifier表示是否有按下组合键"""
     typing = []
     modifier = 0
     for val in value:
@@ -368,79 +357,65 @@ def keys_to_typing(value):
     return modifier, ''.join(typing)
 
 
-def keyDescriptionForString(_modifiers, keyString):  # noqa: C901
-    shift = _modifiers & 8
-    description = {'key': '',
-                   'keyCode': 0,
-                   'code': '',
-                   'text': '',
-                   'location': 0}
+def make_input_data(modifiers, key, key_up=False):
+    data = keyDefinitions.get(key)
+    if not data:
+        return None
 
-    definition = keyDefinitions.get(keyString)  # type: ignore
-    if not definition:
-        raise ValueError(f'未知按键：{keyString}')
+    result = {'modifiers': modifiers, 'autoRepeat': False, '_ignore': AlertExistsError}
+    shift = modifiers & 8
 
-    if 'key' in definition:
-        description['key'] = definition['key']
-    if shift and definition.get('shiftKey'):
-        description['key'] = definition['shiftKey']
+    if shift and data.get('shiftKey'):
+        result['key'] = data['shiftKey']
+        result['text'] = data['shiftKey']
+    elif 'key' in data:
+        result['key'] = data['key']
 
-    if 'keyCode' in definition:
-        description['keyCode'] = definition['keyCode']
-    if shift and definition.get('shiftKeyCode'):
-        description['keyCode'] = definition['shiftKeyCode']
+    if len(result.get('key', '')) == 1:  # type: ignore
+        result['text'] = data['key']
 
-    if 'code' in definition:
-        description['code'] = definition['code']
+    sys_text = 'windowsVirtualKeyCode' if sys == 'windows' else 'nativeVirtualKeyCode'
+    if shift and data.get('shiftKeyCode'):
+        result[sys_text] = data['shiftKeyCode']
+    elif 'keyCode' in data:
+        result[sys_text] = data['keyCode']
 
-    if 'location' in definition:
-        description['location'] = definition['location']
+    if 'code' in data:
+        result['code'] = data['code']
 
-    if len(description['key']) == 1:  # type: ignore
-        description['text'] = description['key']
+    if 'location' in data:
+        result['location'] = data['location']
+        result['isKeypad'] = data['location'] == 3
+    else:
+        result['location'] = 0
+        result['isKeypad'] = False
 
-    if 'text' in definition:
-        description['text'] = definition['text']
-    if shift and definition.get('shiftText'):
-        description['text'] = definition['shiftText']
+    if shift and data.get('shiftText'):
+        result['text'] = data['shiftText']
+        result['unmodifiedText'] = data['shiftText']
+    elif 'text' in data:
+        result['text'] = data['text']
+        result['unmodifiedText'] = data['text']
 
-    if _modifiers & ~8:
-        description['text'] = ''
+    if modifiers & ~8:
+        result['text'] = ''
 
-    return description
+    result['type'] = 'keyUp' if key_up else ('keyDown' if result.get('text') else 'rawKeyDown')
+    return result
 
 
 def send_key(page, modifier, key):
-    """发送一个字，在键盘中的字符触发按键，其它直接发送文本"""
-    if key in keyDefinitions:
-        description = keyDescriptionForString(modifier, key)
-        text = description['text']
-        data = {'type': 'keyDown' if text else 'rawKeyDown',
-                'modifiers': modifier,
-                'windowsVirtualKeyCode': description['keyCode'],
-                'code': description['code'],
-                'key': description['key'],
-                'text': text,
-                'autoRepeat': False,
-                'unmodifiedText': text,
-                'location': description['location'],
-                'isKeypad': description['location'] == 3,
-                '_ignore': AlertExistsError}
-
-        page.run_cdp('Input.dispatchKeyEvent', **data)
+    data = make_input_data(modifier, key)
+    if data:
+        page._run_cdp('Input.dispatchKeyEvent', **data)
         data['type'] = 'keyUp'
-        page.run_cdp('Input.dispatchKeyEvent', **data)
+        page._run_cdp('Input.dispatchKeyEvent', **data)
 
     else:
-        page.run_cdp('Input.insertText', text=key, _ignore=AlertExistsError)
+        page._run_cdp('Input.insertText', text=key, _ignore=AlertExistsError)
 
 
 def input_text_or_keys(page, text_or_keys):
-    """输入文本，也可输入组合键，组合键用tuple形式输入
-    :param page: ChromiumBase对象
-    :param text_or_keys: 文本值或按键组合
-    :return: self
-    """
     if not isinstance(text_or_keys, (tuple, list)):
         text_or_keys = (str(text_or_keys),)
     modifier, text_or_keys = keys_to_typing(text_or_keys)
@@ -451,7 +426,7 @@ def input_text_or_keys(page, text_or_keys):
         return
 
     if text_or_keys.endswith(('\n', '\ue007')):
-        page.run_cdp('Input.insertText', text=text_or_keys[:-1], _ignore=AlertExistsError)
+        page._run_cdp('Input.insertText', text=text_or_keys[:-1], _ignore=AlertExistsError)
         send_key(page, modifier, '\n')
     else:
-        page.run_cdp('Input.insertText', text=text_or_keys, _ignore=AlertExistsError)
+        page._run_cdp('Input.insertText', text=text_or_keys, _ignore=AlertExistsError)
