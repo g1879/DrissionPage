@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from copy import copy
@@ -9,7 +10,7 @@ from re import search, findall, DOTALL
 from time import sleep, perf_counter
 
 from .._elements.chromium_element import ChromiumElement
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from .._pages.chromium_base import ChromiumBase
 from .._units.listener import FrameListener
 from .._units.rect import FrameRect
@@ -31,7 +32,7 @@ class ChromiumFrame(ChromiumBase):
         """
         fid = info['node']['frameId'] if info else owner._run_cdp('DOM.describeNode',
                                                                   backendNodeId=ele._backend_id)['node']['frameId']
-        if Settings.singleton_tab_obj and fid in cls._Frames:
+        if _S.singleton_tab_obj and fid in cls._Frames:
             r = cls._Frames[fid]
             while not hasattr(r, '_type') or r._type != 'ChromiumFrame':
                 sleep(.01)
@@ -41,7 +42,7 @@ class ChromiumFrame(ChromiumBase):
         return r
 
     def __init__(self, owner, ele, info=None):
-        if Settings.singleton_tab_obj and hasattr(self, '_created'):
+        if _S.singleton_tab_obj and hasattr(self, '_created'):
             return
         self._created = True
 
@@ -97,7 +98,6 @@ class ChromiumFrame(ChromiumBase):
 
     def _reload(self):
         self._is_loading = True
-        # d_debug = self.driver._debug
         self._reloading = True
         self._doc_got = False
 
@@ -124,7 +124,6 @@ class ChromiumFrame(ChromiumBase):
             if self._listener:
                 self._listener._to_target(self._target_page.tab_id, self._browser.address, self)
             super().__init__(self._browser, self._target_page.tab_id)
-            # self.driver._debug = d_debug
 
         else:
             self._is_diff_domain = True
@@ -305,6 +304,10 @@ class ChromiumFrame(ChromiumBase):
         return self.frame_ele.sr
 
     @property
+    def child_count(self):
+        return int(self._ele('xpath:count(./*)'))
+
+    @property
     def _js_ready_state(self):
         if self._is_diff_domain:
             return super()._js_ready_state
@@ -385,7 +388,8 @@ class ChromiumFrame(ChromiumBase):
                 pic_type = 'png'
             else:
                 if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise TypeError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_bytes',
+                                     ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
                 pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
 
         elif as_base64:
@@ -393,7 +397,8 @@ class ChromiumFrame(ChromiumBase):
                 pic_type = 'png'
             else:
                 if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise TypeError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_base64',
+                                     ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
                 pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
 
         else:

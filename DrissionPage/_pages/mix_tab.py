@@ -2,20 +2,21 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from .chromium_tab import ChromiumTab
 from .._base.base import BasePage
 from .._configs.session_options import SessionOptions
 from .._functions.cookies import set_session_cookies, set_tab_cookies
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from .._pages.session_page import SessionPage
 from .._units.setter import MixTabSetter
 
 
 class MixTab(SessionPage, ChromiumTab, BasePage):
     def __init__(self, browser, tab_id):
-        if Settings.singleton_tab_obj and hasattr(self, '_created'):
+        if _S.singleton_tab_obj and hasattr(self, '_created'):
             return
         self._d_mode = True
         self._session_options = None
@@ -87,7 +88,7 @@ class MixTab(SessionPage, ChromiumTab, BasePage):
     def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, **kwargs):
         if self._d_mode:
             if kwargs:
-                raise ValueError(f'以下参数在s模式下才会生效：{" ".join(kwargs.keys())}')
+                raise ValueError(_S._lang.join(_S._lang.S_MODE_ONLY, ARGS=", ".join(kwargs.keys())))
             return super(SessionPage, self).get(url, show_errmsg, retry, interval, timeout)
 
         if timeout is None:

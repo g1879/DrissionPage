@@ -2,12 +2,14 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
 from re import search
 
 from .options_manage import OptionsManager
+from .._functions.settings import Settings as _S
 
 
 class ChromiumOptions(object):
@@ -25,7 +27,7 @@ class ChromiumOptions(object):
         elif ini_path:
             ini_path = Path(ini_path).absolute()
             if not ini_path.exists():
-                raise ValueError(f'文件不存在：{ini_path}')
+                raise FileNotFoundError(_S._lang.join(_S._lang.INI_NOT_FOUND, PATH=ini_path))
             self.ini_path = str(ini_path)
         else:
             self.ini_path = str(Path(__file__).parent / 'configs.ini')
@@ -194,7 +196,7 @@ class ChromiumOptions(object):
     def add_extension(self, path):
         path = Path(path)
         if not path.exists():
-            raise OSError('插件路径不存在。')
+            raise FileNotFoundError(_S._lang.join(_S._lang.EXT_NOT_FOUND, PATH=path))
         self._extensions.append(str(path))
         return self
 
@@ -286,15 +288,16 @@ class ChromiumOptions(object):
 
     def set_proxy(self, proxy):
         if search(r'.*?:.*?@.*?\..*', proxy):
-            print('你似乎在设置使用账号密码的代理，暂时不支持这种代理，可自行用插件实现需求。')
+            print(_S._lang.UNSUPPORTED_USER_PROXY)
         if proxy.lower().startswith('socks'):
-            print('你似乎在设置使用socks代理，暂时不支持这种代理，可自行用插件实现需求。')
+            print(_S._lang.UNSUPPORTED_SOCKS_PROXY)
         self._proxy = proxy
         return self.set_argument('--proxy-server', proxy)
 
     def set_load_mode(self, value):
         if value not in ('normal', 'eager', 'none'):
-            raise ValueError("只能选择 'normal', 'eager', 'none'。")
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'value',
+                                           ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
         self._load_mode = value.lower()
         return self
 

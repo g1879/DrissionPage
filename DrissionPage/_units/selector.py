@@ -2,9 +2,12 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from time import perf_counter, sleep
+
+from .._functions.settings import Settings as _S
 
 
 class SelectElement(object):
@@ -12,7 +15,7 @@ class SelectElement(object):
 
     def __init__(self, ele):
         if ele.tag != 'select':
-            raise TypeError("select方法只能在<select>元素使用。")
+            raise TypeError(_S._lang.join(_S._lang.SELECT_ONLY))
         self._ele = ele
 
     def __call__(self, text_or_index, timeout=None):
@@ -39,12 +42,12 @@ class SelectElement(object):
 
     def all(self):
         if not self.is_multi:
-            raise TypeError("只能在多选菜单执行此操作。")
+            raise TypeError(_S._lang.join(_S._lang.MULTI_SELECT_ONLY))
         return self._by_loc('tag:option', 1, False)
 
     def invert(self):
         if not self.is_multi:
-            raise TypeError("只能对多项选框执行反选。")
+            raise TypeError(_S._lang.join(_S._lang.MULTI_SELECT_ONLY))
         change = False
         for i in self.options:
             change = True
@@ -56,7 +59,7 @@ class SelectElement(object):
 
     def clear(self):
         if not self.is_multi:
-            raise TypeError("只能在多选菜单执行此操作。")
+            raise TypeError(_S._lang.join(_S._lang.MULTI_SELECT_ONLY))
         return self._by_loc('tag:option', 1, True)
 
     def by_text(self, text, timeout=None):
@@ -92,7 +95,7 @@ class SelectElement(object):
     def _by_loc(self, loc, timeout=None, cancel=False):
         eles = self._ele.eles(loc, timeout)
         if not eles:
-            raise RuntimeError('没有找到指定选项。')
+            raise RuntimeError(_S._lang.join(_S._lang.OPTION_NOT_FOUND))
 
         mode = 'false' if cancel else 'true'
         if not self.is_multi:
@@ -101,7 +104,7 @@ class SelectElement(object):
 
     def _select(self, condition, para_type='text', cancel=False, timeout=None):
         if not self.is_multi and isinstance(condition, (list, tuple)):
-            raise TypeError('单选列表只能传入str格式。')
+            raise TypeError(_S._lang.join(_S._lang.STR_FOR_SINGLE_SELECT))
 
         mode = 'false' if cancel else 'true'
         if timeout is None:
@@ -127,7 +130,7 @@ class SelectElement(object):
                 return self._select_options(eles, mode)
             sleep(.01)
 
-        raise RuntimeError('没有找到指定选项。')
+        raise RuntimeError(_S._lang.join(_S._lang.OPTION_NOT_FOUND))
 
     def _index(self, condition, mode, timeout):
         condition = [int(i) for i in condition]
@@ -139,7 +142,7 @@ class SelectElement(object):
                 eles = [eles[i - 1] if i > 0 else eles[i] for i in condition]
                 return self._select_options(eles, mode)
             sleep(.01)
-        raise RuntimeError('没有找到指定选项。')
+        raise RuntimeError(_S._lang.join(_S._lang.OPTION_NOT_FOUND))
 
     def _select_options(self, option, mode):
         if isinstance(option, (list, tuple, set)):
