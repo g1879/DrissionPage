@@ -559,13 +559,12 @@ class ChromiumElement(DrissionElement):
     def force_pseudo_state(self, forcedPseudoClasses: Union[bool, str, list, tuple] = None) -> ChromiumElement:
         """
         强制元素保持伪状态，如active、hover 等，可接受bool、str、list、tuple类型。
-        focus， hover，active这三个的顺序有要求，正常顺序为:focus -> :hover -> :active，其余状态名的顺序无要求
-        状态名前不能有:
+        focus， hover，active这三个的顺序有要求，正常顺序为:focus -> :hover -> :active，其余状态名的顺序无要求。
+        状态名前不能有:。
         :param forcedPseudoClasses:
-        传入True时保持元素hover时的样式，传入False时取消强制元素保持伪状态，传入str、list、tuple时传入状态名
+        传入True时保持元素hover时的样式，传入False时取消强制元素保持伪状态，传入str、list、tuple时传入状态名，可传入单个状态名
         str格式：active,hover
         list、tuple格式：['active','hover']、('active','hover')
-        可用参数：active,hover,focus,focus-within,focus-visible,target
         可用参数：active,hover,focus,focus-within,focus-visible,target
         :return: ChromiumElement对象
         """
