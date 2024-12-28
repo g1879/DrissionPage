@@ -593,6 +593,23 @@ class ChromiumElement(DrissionElement):
             self._run_js('this.focus();')
         return self
 
+    def force_pseudo_state(self, forcedPseudoClasses=None):
+        if not isinstance(forcedPseudoClasses, (str, bool, list, tuple)):
+            raise TypeError('forcedPseudoClasses需传入str、list或tuple或bool类型。')
+        if isinstance(forcedPseudoClasses, str):
+            if forcedPseudoClasses.endswith(','):
+                forcedPseudoClasses = forcedPseudoClasses[:-1]
+            forcedPseudoClasses = forcedPseudoClasses.split(',')
+        elif isinstance(forcedPseudoClasses, bool):
+            if forcedPseudoClasses is False:
+                self.owner.run_cdp('CSS.disable')
+                return self
+            else:
+                forcedPseudoClasses = ('hover',)
+        self.owner.run_cdp('CSS.enable')
+        self.owner.run_cdp('CSS.forcePseudoState', nodeId=self._node_id, forcedPseudoClasses=forcedPseudoClasses)
+        return self
+  
     def hover(self, offset_x=None, offset_y=None):
         self.owner.actions.move_to(self, offset_x=offset_x, offset_y=offset_y, duration=.1)
         return self
