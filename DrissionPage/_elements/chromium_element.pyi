@@ -556,6 +556,21 @@ class ChromiumElement(DrissionElement):
         """使元素获取焦点"""
         ...
 
+    def force_pseudo_state(self, forcedPseudoClasses: Union[bool, str, list, tuple] = None) -> ChromiumElement:
+        """
+        强制元素保持伪状态，如active、hover 等，可接受bool、str、list、tuple类型。
+        focus， hover，active这三个的顺序有要求，正常顺序为:focus -> :hover -> :active，其余状态名的顺序无要求
+        状态名前不能有:
+        :param forcedPseudoClasses:
+        传入True时保持元素hover时的样式，传入False时取消强制元素保持伪状态，传入str、list、tuple时传入状态名
+        str格式：active,hover
+        list、tuple格式：['active','hover']、('active','hover')
+        可用参数：active,hover,focus,focus-within,focus-visible,target
+        可用参数：active,hover,focus,focus-within,focus-visible,target
+        :return: ChromiumElement对象
+        """
+        ...
+
     def hover(self, offset_x: int = None, offset_y: int = None) -> ChromiumElement:
         """鼠标悬停，可接受偏移量，偏移量相对于元素左上角坐标。不传入offset_x和offset_y值时悬停在元素中点
         :param offset_x: 相对元素左上角坐标的x轴偏移量
