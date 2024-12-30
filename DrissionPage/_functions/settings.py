@@ -19,7 +19,7 @@ class Settings(object):
     cdp_timeout = 30
     browser_connect_timeout = 30
     auto_handle_alert = None
-    _lang = get_txt_class('zh_cn' if 'chinese' in getlocale()[0].lower() else 'en')
+    _lang = get_txt_class('zh_cn' if locale.getlocale()[0] and 'chinese' in getlocale()[0].lower() else 'en')
     suffixes_list = str(Path(__file__).parent.absolute() / 'suffixes.dat').replace('\\', '/')
 
     @classmethod
