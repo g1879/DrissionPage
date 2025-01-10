@@ -213,6 +213,66 @@ class Actions:
         self.owner.wait(second=second, scope=scope)
         return self
 
+    def touch_start(self, ele_or_loc, offset_x=None, offset_y=None):
+        mid_point = offset_x == offset_y is None
+        if offset_x is None:
+            offset_x = 0
+        if offset_y is None:
+            offset_y = 0
+        if isinstance(ele_or_loc, (tuple, list)):
+            lx = ele_or_loc[0] + offset_x
+            ly = ele_or_loc[1] + offset_y
+        elif isinstance(ele_or_loc, str) or ele_or_loc._type == 'ChromiumElement':
+            ele_or_loc = self.owner(ele_or_loc)
+            self.owner.scroll.to_see(ele_or_loc)
+            x, y = ele_or_loc.rect.midpoint if mid_point else ele_or_loc.rect.location
+            lx = x + offset_x
+            ly = y + offset_y
+        else:
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'ele_or_loc',
+                                           ALLOW_TYPE=_S._lang.ELE_LOC_FORMAT, CURR_VAL=ele_or_loc))
+        self.curr_x = lx
+        self.curr_y = ly
+        self._dr.run('Input.dispatchTouchEvent', type='touchStart',
+                     touchPoints=[{
+                         "x": lx,
+                         "y": ly,
+                         "radiusX": 11.5,
+                         "radiusY": 11.5,
+                         "force": 1
+                     }], modifiers=self.modifier)
+        return self
+
+    def touch_move(self, offset_x=0, offset_y=0, duration=.5):
+        duration = .02 if duration < .02 else duration
+        num = int(duration * 50)
+
+        points = [(self.curr_x + i * (offset_x / num),
+                   self.curr_y + i * (offset_y / num)) for i in range(1, num)]
+        points.append((self.curr_x + offset_x, self.curr_y + offset_y))
+
+        for x, y in points:
+            t = perf_counter()
+            self.curr_x = x
+            self.curr_y = y
+            self._dr.run('Input.dispatchTouchEvent', type='touchMove',
+                         touchPoints=[{
+                             "x": self.curr_x,
+                             "y": self.curr_y,
+                             "radiusX": 11.5,
+                             "radiusY": 11.5,
+                             "force": 1
+                         }], modifiers=self.modifier)
+            ss = .02 - perf_counter() + t
+            if ss > 0:
+                sleep(ss)
+
+        return self
+
+    def touch_end(self):
+        self._dr.run('Input.dispatchTouchEvent', type='touchEnd',
+                     touchPoints=[], modifiers=self.modifier)
+        return self
 
 def location_to_client(page, lx, ly):
     scroll_x = page._run_js('return document.documentElement.scrollLeft;')
