@@ -241,6 +241,31 @@ class Actions:
         """
         ...
 
+    def touch_start(self, ele_or_loc: Union[ChromiumElement, Tuple[int, int], str],
+                    offset_x: float = 0, offset_y: float = 0) -> Actions:
+        """触摸到元素中点，或页面上的某个绝对坐标。可设置偏移量
+        当带偏移量时，偏移量相对于元素左上角坐标
+        :param ele_or_loc: 元素对象、绝对坐标或文本定位符，坐标为tuple(int, int)形式
+        :param offset_x: 偏移量x
+        :param offset_y: 偏移量y
+        :return: 动作链对象本身
+        """
+        ...
+
+    def touch_move(self, offset_x: int = 0, offset_y: int = 0, duration: float = .5) -> Actions:
+        """触摸情况下相对当前位置移动若干位置
+        :param offset_x: 偏移量x
+        :param offset_y: 偏移量y
+        :param duration: 拖动用时，传入0即瞬间到达
+        :return: 动作链对象本身
+        """
+        ...
+
+    def touch_end(self) -> Actions:
+        """触摸结束
+        :return: 动作链对象本身
+        """
+        ...
 
 def location_to_client(page: ChromiumBase, lx: int, ly: int) -> tuple:
     """绝对坐标转换为视口坐标
