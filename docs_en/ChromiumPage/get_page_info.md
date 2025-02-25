@@ -311,7 +311,7 @@ Please note that if different subdomains use the same `name` attribute, the cook
 
 ---
 
-### 📌 `get_cookies()`
+### 📌 `cookies()`
 
 This method retrieves cookies and returns them as a list of cookie objects.
 
@@ -347,7 +347,7 @@ for i in page.get_cookies(as_dict=False):
 
 ---
 
-### 📌 `get_session_storage()`
+### 📌 `session_storage()`
 
 This method is used to retrieve sessionStorage information, and can retrieve all or a single item.
 
@@ -362,7 +362,7 @@ This method is used to retrieve sessionStorage information, and can retrieve all
 
 ---
 
-### 📌 `get_local_storage()`
+### 📌 `local_storage()`
 
 This method is used to retrieve localStorage information, and can retrieve all or a single item.
 
