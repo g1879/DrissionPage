@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -12,8 +13,9 @@ from threading import Lock
 from time import perf_counter, sleep
 
 from .._configs.options_manage import OptionsManager
-from ..errors import (ContextLostError, ElementLostError, CDPError, PageDisconnectedError, NoRectError,
-                      AlertExistsError, WrongURLError, StorageError, CookieFormatError, JavaScriptError)
+from .._functions.settings import Settings as _S
+from ..errors import (ContextLostError, ElementLostError, PageDisconnectedError, NoRectError, BrowserConnectError,
+                      AlertExistsError, IncorrectURLError, StorageError, CookieFormatError, JavaScriptError, CDPError)
 
 
 class PortFinder(object):
@@ -55,7 +57,7 @@ class PortFinder(object):
                 PortFinder.used_port.add(port)
                 PortFinder.prev_time = perf_counter()
                 return port, str(path)
-            raise OSError('未找到可用端口。')
+            raise BrowserConnectError(_S._lang.NO_AVAILABLE_PORT_FOUND)
 
 
 def port_is_using(ip, port):
@@ -84,13 +86,13 @@ def show_or_hide_browser(tab, hide=True):
         return
 
     if system().lower() != 'windows':
-        raise OSError('该方法只能在Windows系统使用。')
+        raise EnvironmentError(_S._lang.WIN_SYS_ONLY)
 
     try:
         from win32gui import ShowWindow
         from win32con import SW_HIDE, SW_SHOW
-    except ImportError:
-        raise ImportError('请先安装：pip install pypiwin32')
+    except (ImportError, ModuleNotFoundError):
+        raise EnvironmentError(_S._lang.join(_S._lang.NEED_LIB_, 'pypiwin32', TIP='pip install pypiwin32'))
 
     pid = tab.browser.process_id
     if not pid:
@@ -123,8 +125,9 @@ def get_hwnds_from_pid(pid, title):
     try:
         from win32gui import IsWindow, GetWindowText, EnumWindows
         from win32process import GetWindowThreadProcessId
-    except ImportError:
-        raise ImportError('请先安装win32gui，pip install pypiwin32')
+    except (ImportError, ModuleNotFoundError):
+        raise EnvironmentError(_S._lang.join(_S._lang.NEED_LIB_, 'win32gui, win32process',
+                                             TIP='pip install pypiwin32\npip install win32process'))
 
     def callback(hwnd, hds):
         if IsWindow(hwnd) and title in GetWindowText(hwnd):
@@ -172,30 +175,25 @@ def raise_error(result, browser, ignore=None, user=False):
     elif error in ('Node does not have a layout object', 'Could not compute box model.'):
         r = NoRectError()
     elif error == 'Cannot navigate to invalid URL':
-        r = WrongURLError(f'无效的url：{result["args"]["url"]}。也许要加上"http://"？')
+        r = IncorrectURLError(_S._lang.INVALID_URL, url=result["args"]["url"])
     elif error == 'Frame corresponds to an opaque origin and its storage key cannot be serialized':
         r = StorageError()
     elif error == 'Sanitizing cookie failed':
-        r = CookieFormatError(f'cookie格式不正确：{result["args"]}')
+        r = CookieFormatError(cookies=result["args"])
     elif error == 'Invalid header name':
-        r = ValueError(f'header名不正确。\n参数：{result["args"]["headers"]}')
+        r = ValueError(_S._lang.join(_S._lang.INVALID_HEADER_NAME, headers=result["args"]["headers"]))
     elif error == 'Given expression does not evaluate to a function':
-        r = JavaScriptError(f'传入的js无法解析成函数：\n{result["args"]["functionDeclaration"]}')
+        r = JavaScriptError(_S._lang.NOT_A_FUNCTION, JS=result["args"]["functionDeclaration"])
     elif error.endswith("' wasn't found"):
-        r = RuntimeError(f'没有找到对应功能，方法错误或你的浏览器太旧。\n浏览器版本：{browser.version}\n方法：{result["method"]}')
+        r = RuntimeError(_S._lang.join(_S._lang.METHOD_NOT_FOUND, BROWSER_VER=browser.version, METHOD=result["method"]))
     elif result['type'] == 'timeout':
-        from DrissionPage import __version__
-        txt = f'\n错误：{result["error"]}\n方法：{result["method"]}\n参数：{result["args"]}\n' \
-              f'版本：{__version__}\n超时，可能是浏览器卡了。'
-        r = TimeoutError(txt)
+        r = TimeoutError(_S._lang.join(_S._lang.NO_RESPONSE, INFO=result["error"],
+                                       METHOD=result["method"], ARGS=result["args"]))
     elif result['type'] == 'call_method_error' and not user:
-        from DrissionPage import __version__
-        txt = f'\n错误：{result["error"]}\n方法：{result["method"]}\n参数：{result["args"]}\n' \
-              f'版本：{__version__}\n出现这个错误可能意味着程序有bug，请把错误信息和重现方法' \
-              '告知作者，谢谢。\n报告网站：https://gitee.com/g1879/DrissionPage/issues'
-        r = CDPError(txt)
+        r = CDPError(_S._lang.UNKNOWN_ERR, INFO=result["error"], METHOD=result["method"],
+                     ARGS=result["args"], TIP=_S._lang.FEEDBACK)
     else:
-        r = RuntimeError(result)
+        r = RuntimeError(_S._lang.join(_S._lang.UNKNOWN_ERR, INFO=result, TIP=_S._lang.FEEDBACK))
 
     if not ignore or not isinstance(r, ignore):
         raise r

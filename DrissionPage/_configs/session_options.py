@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from copy import copy
@@ -12,6 +13,7 @@ from requests.structures import CaseInsensitiveDict
 
 from .options_manage import OptionsManager
 from .._functions.cookies import cookies_to_tuple, set_session_cookies
+from .._functions.settings import Settings as _S
 from .._functions.web import format_headers
 
 
@@ -29,7 +31,7 @@ class SessionOptions(object):
         elif ini_path:
             ini_path = Path(ini_path).absolute()
             if not ini_path.exists():
-                raise ValueError(f'文件不存在：{ini_path}')
+                raise FileNotFoundError(_S._lang.join(_S._lang.INI_NOT_FOUND, PATH=ini_path))
             self.ini_path = str(ini_path)
         else:
             self.ini_path = str(Path(__file__).parent / 'configs.ini')

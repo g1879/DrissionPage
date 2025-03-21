@@ -2,13 +2,14 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
 from time import perf_counter, sleep
 
 from .waiter import wait_mission
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from .._functions.web import offset_scroll
 from .._units.downloader import TabDownloadSettings
 from ..errors import CanNotClickError, CDPError, NoRectError, AlertExistsError
@@ -90,7 +91,7 @@ class Clicker(object):
         if by_js is not False:
             self._ele._run_js('this.click();')
             return self._ele
-        if Settings.raise_when_click_failed:
+        if _S.raise_when_click_failed:
             raise CanNotClickError
         return False
 
@@ -105,7 +106,7 @@ class Clicker(object):
         if get_tab:
             tid = self._ele.tab.browser.wait.new_tab(curr_tab=curr_tid)
             if not tid:
-                raise RuntimeError('没有出现新标签页。')
+                raise RuntimeError(_S._lang.join(_S._lang.NO_NEW_TAB))
             return self._ele.tab.browser._get_tab(tid, mix=self._ele.tab._type == 'MixTab')
 
     def at(self, offset_x=None, offset_y=None, button='left', count=1):
@@ -183,7 +184,7 @@ class Clicker(object):
         self.left(by_js=by_js)
         tid = self._ele.tab.browser.wait.new_tab(timeout=timeout, curr_tab=curr_tid)
         if not tid:
-            raise RuntimeError('没有出现新标签页。')
+            raise RuntimeError(_S._lang.join(_S._lang.NO_NEW_TAB))
         return self._ele.tab.browser._get_tab(tid, mix=self._ele.tab._type == 'MixTab')
 
     def for_url_change(self, text=None, exclude=False, by_js=False, timeout=None):

@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from html import unescape
@@ -14,7 +15,9 @@ from .none_element import NoneElement
 from .._base.base import DrissionElement, BasePage, BaseElement
 from .._functions.elements import SessionElementsList
 from .._functions.locator import get_loc
+from .._functions.settings import Settings as _S
 from .._functions.web import get_ele_txt, make_absolute_link
+from ..errors import LocatorError
 
 
 class SessionElement(DrissionElement):
@@ -58,7 +61,10 @@ class SessionElement(DrissionElement):
 
     @property
     def attrs(self):
-        return {attr: self.attr(attr) for attr, val in self.inner_ele.items()}
+        r = {}
+        for attr, val in self.inner_ele.items():
+            r[attr] = val if attr.lower in ('href', 'src') else self.attr(attr)
+        return r
 
     @property
     def text(self):
@@ -102,12 +108,11 @@ class SessionElement(DrissionElement):
         return SessionElementsList(self.owner, super().afters(locator, timeout, ele_only=ele_only))
 
     def attr(self, name):
-        if name == 'href':  # 获取href属性时返回绝对url
+        if name == 'href':
             link = self.inner_ele.get('href')
-            # 若为链接为None、js或邮件，直接返回
             if not link or link.lower().startswith(('javascript:', 'mailto:')):
                 return link
-            else:  # 其它情况直接返回绝对url
+            else:
                 return make_absolute_link(link, self.owner.url) if self.owner else link
 
         elif name == 'src':
@@ -177,7 +182,7 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
         loc = get_loc(loc)
 
     else:
-        raise ValueError("定位符必须为str或长度为2的tuple。")
+        raise LocatorError(ALLOW_VAL=_S._lang.LOC_FORMAT, CURR_VAL=loc)
 
     # ---------------根据传入对象类型获取页面对象和lxml元素对象---------------
     the_type = getattr(html_or_ele, '_type', None)
@@ -253,7 +258,8 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
         html_or_ele = fromstring(html)
 
     else:
-        raise TypeError('html_or_ele参数只能是元素、页面对象或html文本。')
+        raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'html_or_ele',
+                                       ALLOW_TYPE=_S._lang.HTML_ELE_TYPE, CURR_VAL=html_or_ele))
 
     # ---------------执行查找-----------------
     try:
@@ -290,8 +296,8 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
 
     except Exception as e:
         if 'Invalid expression' in str(e):
-            raise SyntaxError(f'无效的xpath语句：{loc}')
+            raise LocatorError(_S._lang.INVALID_XPATH_, loc)
         elif 'Expected selector' in str(e):
-            raise SyntaxError(f'无效的css select语句：{loc}')
+            raise LocatorError(_S._lang.INVALID_CSS_, loc)
 
         raise e

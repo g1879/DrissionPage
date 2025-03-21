@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from html import unescape
@@ -12,6 +13,8 @@ from urllib.parse import urlparse, urljoin, urlunparse
 
 from DataRecorder.tools import make_valid_name
 from requests.structures import CaseInsensitiveDict
+
+from .._functions.settings import Settings as _S
 
 
 def get_ele_txt(e):
@@ -165,7 +168,7 @@ def is_js_func(func):
 
 def get_blob(page, url, as_bytes=True):
     if not url.startswith('blob'):
-        raise TypeError('该链接非blob类型。')
+        raise ValueError(_S._lang.join(_S._lang.NOT_BLOB, url=url))
     js = """
        function fetchData(url) {
       return new Promise((resolve, reject) => {
@@ -184,7 +187,7 @@ def get_blob(page, url, as_bytes=True):
     try:
         result = page._run_js(js, url)
     except:
-        raise RuntimeError('无法获取该资源。')
+        raise RuntimeError(_S._lang.join(_S._lang.GET_BLOB_FAILED))
     if as_bytes:
         from base64 import b64decode
         return b64decode(result.split(',', 1)[-1])
@@ -237,7 +240,7 @@ def get_pdf(page, path=None, name=None, kwargs=None):
     try:
         r = page._run_cdp('Page.printToPDF', **kwargs)['data']
     except:
-        raise RuntimeError('保存失败，可能浏览器版本不支持。')
+        raise RuntimeError(_S._lang.join(_S._lang.GET_PDF_FAILED))
     from base64 import b64decode
     r = b64decode(r)
     if path is None and name is None:

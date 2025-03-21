@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -17,9 +18,8 @@ from .driver import BrowserDriver, Driver
 from .._configs.chromium_options import ChromiumOptions
 from .._functions.browser import connect_browser
 from .._functions.cookies import CookiesList
-from .._functions.settings import Settings
-from .._functions.tools import PortFinder
-from .._functions.tools import raise_error
+from .._functions.settings import Settings as _S
+from .._functions.tools import PortFinder, raise_error
 from .._pages.chromium_base import Timeout
 from .._pages.chromium_tab import ChromiumTab
 from .._pages.mix_tab import MixTab
@@ -27,8 +27,7 @@ from .._units.downloader import DownloadManager
 from .._units.setter import BrowserSetter
 from .._units.states import BrowserStates
 from .._units.waiter import BrowserWaiter
-from ..errors import BrowserConnectError, CDPError
-from ..errors import PageDisconnectedError
+from ..errors import BrowserConnectError, CDPError, PageDisconnectedError, IncorrectURLError
 
 __ERROR__ = 'error'
 
@@ -171,7 +170,7 @@ class Chromium(object):
 
     @property
     def latest_tab(self):
-        return self._get_tab(id_or_num=self.tab_ids[0], as_id=not Settings.singleton_tab_obj)
+        return self._get_tab(id_or_num=self.tab_ids[0], as_id=not _S.singleton_tab_obj)
 
     def cookies(self, all_info=False):
         cks = self._run_cdp(f'Storage.getCookies')['cookies']
@@ -184,7 +183,7 @@ class Chromium(object):
     def get_tab(self, id_or_num=None, title=None, url=None, tab_type='page'):
         t = self._get_tab(id_or_num=id_or_num, title=title, url=url, tab_type=tab_type, mix=True, as_id=False)
         if t._type != 'MixTab':
-            raise RuntimeError('该标签页已有非MixTab版本，如需多对象公用请用Settings设置singleton_tab_obj为False。')
+            raise RuntimeError(_S._lang.join(_S._lang.TAB_OBJ_EXISTS))
         return t
 
     def get_tabs(self, title=None, url=None, tab_type='page'):
@@ -198,7 +197,8 @@ class Chromium(object):
         elif isinstance(tabs_or_ids, (list, tuple)):
             tabs = set(i.tab_id if isinstance(i, ChromiumTab) else i for i in tabs_or_ids)
         else:
-            raise TypeError('tabs_or_ids参数只能传入标签页对象或id。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'tabs_or_ids',
+                                           ALLOW_TYPE=_S._lang.TAB_OR_ID, CURR_VAL=tabs_or_ids))
 
         all_tabs = set(self.tab_ids)
         if others:
@@ -319,7 +319,7 @@ class Chromium(object):
                 break
             sleep(.01)
         else:
-            raise BrowserConnectError('浏览器已关闭')
+            raise BrowserConnectError(_S._lang.BROWSER_DISCONNECTED)
         tab = tab_type(self, tab)
         if url:
             tab.get(url)
@@ -332,7 +332,7 @@ class Chromium(object):
             elif isinstance(id_or_num, ChromiumTab):
                 return id_or_num.tab_id if as_id else ChromiumTab(self, id_or_num.tab_id)
             elif id_or_num not in [i['id'] for i in self._driver.get(f'http://{self.address}/json').json()]:
-                raise ValueError(f'没有找到标签页{id_or_num}，所有标签页：{self.tab_ids}')
+                raise RuntimeError(_S._lang.join(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=self.tab_ids))
 
         elif title == url is None and tab_type == 'page':
             id_or_num = self.tab_ids[0]
@@ -342,7 +342,9 @@ class Chromium(object):
             if tabs:
                 id_or_num = tabs[0]
             else:
-                raise RuntimeError('没有找到指定标签页。')
+                raise RuntimeError(_S._lang.join(_S._lang.NO_SUCH_TAB,
+                                                 ARGS={'id_or_num': id_or_num, 'title': title, 'url': url,
+                                                       'tab_type': tab_type}))
 
         if as_id:
             return id_or_num
@@ -357,7 +359,8 @@ class Chromium(object):
         elif isinstance(tab_type, (list, tuple, set)):
             tab_type = set(tab_type)
         elif tab_type is not None:
-            raise TypeError('tab_type只能是set、list、tuple、str、None。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'tab_type',
+                                           ALLOW_TYPE='set, list, tuple, str, None', CURR_VAL=tab_type))
 
         tabs = [i for i in tabs if ((title is None or title in i['title']) and (url is None or url in i['url'])
                                     and (tab_type is None or i['type'] in tab_type)
@@ -447,7 +450,7 @@ def handle_options(addr_or_opts):
             addr_or_opts.auto_port(scope=addr_or_opts.is_auto_port)
         _chromium_options = addr_or_opts
 
-    elif isinstance(addr_or_opts, str):
+    elif isinstance(addr_or_opts, str) and ':' in addr_or_opts:
         _chromium_options = ChromiumOptions()
         _chromium_options.set_address(addr_or_opts)
 
@@ -456,7 +459,8 @@ def handle_options(addr_or_opts):
         _chromium_options.set_local_port(addr_or_opts)
 
     else:
-        raise TypeError('只能接收ip:port格式或ChromiumOptions类型参数。')
+        raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'addr_or_opts',
+                                       ALLOW_TYPE=_S._lang.IP_OR_OPTIONS, CURR_VAL=addr_or_opts))
 
     return _chromium_options
 
@@ -470,16 +474,16 @@ def run_browser(chromium_options):
         s.keep_alive = False
         ws = s.get(f'http://{chromium_options.address}/json/version', headers={'Connection': 'close'})
         if not ws:
-            raise BrowserConnectError('\n浏览器连接失败，请确认浏览器是否启动。')
+            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2)
         json = ws.json()
         browser_id = json['webSocketDebuggerUrl'].split('/')[-1]
         is_headless = 'headless' in json['User-Agent'].lower()
         ws.close()
         s.close()
     except KeyError:
-        raise BrowserConnectError('浏览器版本太旧或此浏览器不支持接管。')
+        raise BrowserConnectError(_S._lang.BROWSER_NOT_FOR_CONTROL)
     except:
-        raise BrowserConnectError('\n浏览器连接失败，请确认浏览器是否启动。')
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2)
     return is_headless, browser_id, is_exists
 
 
@@ -487,10 +491,10 @@ def _new_tab_by_js(browser: Chromium, url, tab_type, new_window):
     mix = tab_type == MixTab
     tab = browser._get_tab(mix=mix)
     if url and not match(r'^.*?://.*', url):
-        raise ValueError(f'url也许需要加上http://？')
+        raise IncorrectURLError(_S._lang.INVALID_URL, url=url)
     url = f'"{url}"' if url else '""'
     new = 'target="_new"' if new_window else 'target="_blank"'
-    tid = browser.latest_tab.tab_id
+    tid = browser._newest_tab_id
     tab.run_js(f'window.open({url}, {new})')
     tid = browser.wait.new_tab(curr_tab=tid)
     return browser._get_tab(tid, mix=mix)

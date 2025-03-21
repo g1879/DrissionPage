@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from datetime import datetime
@@ -9,7 +10,7 @@ from http.cookiejar import Cookie, CookieJar
 
 from tldextract import TLDExtract
 
-from .settings import Settings
+from .settings import Settings as _S
 
 
 def cookie_to_dict(cookie):
@@ -35,7 +36,8 @@ def cookie_to_dict(cookie):
         return cookie_dict
 
     else:
-        raise TypeError('cookie参数必须为Cookie、str或dict类型。')
+        raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'cookie',
+                                       ALLOW_TYPE='Cookie, str, dict', CURR_TYPE=type(cookie)))
 
     return cookie_dict
 
@@ -61,7 +63,8 @@ def cookies_to_tuple(cookies):
         cookies = (cookie_to_dict(cookies),)
 
     else:
-        raise TypeError('cookies参数必须为Cookie、CookieJar、list、tuple、str或dict类型。')
+        raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'cookies',
+                                       ALLOW_TYPE='Cookie, CookieJar, list, tuple, str, dict', CURR_TYPE=type(cookies)))
 
     return cookies
 
@@ -85,7 +88,7 @@ def set_browser_cookies(browser, cookies):
     c = []
     for cookie in cookies_to_tuple(cookies):
         if 'domain' not in cookie and 'url' not in cookie:
-            raise ValueError(f"cookie必须带有'domain'或'url'字段：{cookie}")
+            raise ValueError(_S._lang.join(_S._lang.NEED_DOMAIN2, cookie=cookie))
         c.append(format_cookie(cookie))
     browser._run_cdp('Storage.setCookies', cookies=c)
 
@@ -113,9 +116,9 @@ def set_tab_cookies(page, cookies):
 
         url = page._browser_url
         if not url.startswith('http'):
-            raise RuntimeError(f'未设置域名，请设置cookie的domain参数或先访问一个网站。{cookie}')
+            raise ValueError(_S._lang.join(_S._lang.DOMAIN_NOT_SET, cookie=cookie))
         ex_url = TLDExtract(suffix_list_urls=["https://publicsuffix.org/list/public_suffix_list.dat",
-                                              f"file:///{Settings.suffixes_list_path}"]).extract_str(url)
+                                              f"file:///{_S.suffixes_list}"]).extract_str(url)
         d_list = ex_url.subdomain.split('.')
         d_list.append(f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain)
 
@@ -165,7 +168,7 @@ def format_cookie(cookie):
                 try:
                     cookie['expires'] = datetime.strptime(cookie['expires'], '%a, %d %b %Y %H:%M:%S GMT').timestamp()
                 except ValueError:
-                    cookie['expires'] = datetime.strptime(cookie['expires'], '%a, %d %b %y %H:%M:%S GMT').timestamp()
+                    cookie.pop('expires')
 
     if cookie['value'] is None:
         cookie['value'] = ''
@@ -189,14 +192,17 @@ def format_cookie(cookie):
         if priority in (None, False):
             cookie.pop('priority')
         elif priority not in ('Low', 'Medium', 'High'):
-            raise ValueError(f'{cookie}\npriority字段必须为"Low"、"Medium"、"High"之一。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'priority', ALLOW_VAL='"Low", "Medium", "High"',
+                                           CURR_VAL=priority, cookie=cookie))
 
     if 'sourceScheme' in cookie:
         sourceScheme = cookie['sourceScheme']
         if sourceScheme in (None, False):
             cookie.pop('sourceScheme')
         elif sourceScheme not in ('Unset', 'NonSecure', 'Secure'):
-            raise ValueError(f'{cookie}\nsourceScheme字段必须为"Unset"、"NonSecure"、"Secure"之一。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'sourceScheme',
+                                           ALLOW_VAL='"Unset", "NonSecure", "Secure"', CURR_VAL=sourceScheme,
+                                           cookie=cookie))
 
     return cookie
 

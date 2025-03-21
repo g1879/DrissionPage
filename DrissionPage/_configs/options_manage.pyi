@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from configparser import RawConfigParser
@@ -10,6 +11,7 @@ from typing import Any, Optional, Union
 
 
 class OptionsManager(object):
+    """管理配置文件内容的类"""
     ini_path: Optional[Path] = ...
     file_exists: bool = ...
     _conf: RawConfigParser = ...

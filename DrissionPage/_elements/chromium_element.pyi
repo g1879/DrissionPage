@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -367,7 +368,13 @@ class ChromiumElement(DrissionElement):
         """
         ...
 
-    def check(self, uncheck: bool = False, by_js: bool = False) -> None: ...
+    def check(self, uncheck: bool = False, by_js: bool = False) -> None:
+        """选中或取消选中当前元素
+        :param uncheck: 是否取消选中
+        :param by_js: 是否用js执行
+        :return: None
+        """
+        ...
 
     def attr(self, name: str) -> Union[str, None]:
         """返回一个attribute属性值

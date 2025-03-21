@@ -2,16 +2,17 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from configparser import RawConfigParser, NoSectionError, NoOptionError
 from pathlib import Path
 from pprint import pprint
 
+from .._functions.settings import Settings as _S
+
 
 class OptionsManager(object):
-    """管理配置文件内容的类"""
-
     def __init__(self, path=None):
         if path is False:
             self.ini_path = None
@@ -112,7 +113,7 @@ class OptionsManager(object):
             path = default_path
         elif path is None:
             if self.ini_path is None:
-                raise ValueError('ini_path未设置。')
+                raise RuntimeError(_S._lang.join(_S._lang.INI_NOT_SET))
             path = self.ini_path.absolute()
         else:
             path = Path(path).absolute()
@@ -123,9 +124,9 @@ class OptionsManager(object):
         path = str(path)
         self._conf.write(open(path, 'w', encoding='utf-8'))
 
-        print(f'配置已保存到文件：{path}')
+        print(f'{_S._lang.OPTIONS_HAVE_SAVED}: {path}')
         if path == str(default_path):
-            print('以后程序可自动从文件加载配置。')
+            print(_S._lang.AUTO_LOAD_TIP)
 
         self.file_exists = True
         return path

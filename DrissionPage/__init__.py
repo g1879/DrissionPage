@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 
 允许任何人以个人身份使用或分发本项目源代码，但仅限于学习和合法非盈利目的。
@@ -24,5 +25,4 @@ from ._configs.session_options import SessionOptions
 from ._pages.chromium_page import ChromiumPage
 from ._pages.session_page import SessionPage
 from ._pages.web_page import WebPage
-
-__version__ = '4.1.0.13'
+from .version import __version__
