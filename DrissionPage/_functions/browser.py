@@ -23,10 +23,11 @@ from ..errors import BrowserConnectError
 def connect_browser(option):
     address = option.address.replace('localhost', '127.0.0.1').lstrip('htps:/')
     browser_path = option.browser_path
+    is_force_run_browser = option.is_force_run_browser
 
     ip, port = address.split(':')
     using = port_is_using(ip, port)
-    if ip != '127.0.0.1' or using or option.is_existing_only:
+    if (is_force_run_browser == None or is_force_run_browser == False) and (ip != '127.0.0.1' or using or option.is_existing_only):
         if test_connect(ip, port):
             return True
         elif ip != '127.0.0.1':

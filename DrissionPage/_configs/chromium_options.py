@@ -18,6 +18,7 @@ class ChromiumOptions(object):
         self.clear_file_flags = False
         self._is_headless = False
         self._ua_set = False
+        self.is_force_run_browser = False
 
         if read_file is False:
             ini_path = False
