@@ -2,12 +2,13 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from time import sleep, perf_counter
 
 from .._functions.locator import get_loc
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from ..errors import WaitTimeoutError, NoRectError
 
 
@@ -38,14 +39,14 @@ class BrowserWaiter(OriginWaiter):
                 return self._owner._newest_tab_id
             sleep(.01)
 
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(f'等待新标签页失败（等待{timeout}秒）。')
+        if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+            raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.NEW_TAB, timeout)
         else:
             return False
 
     def download_begin(self, timeout=None, cancel_it=False):
         if not self._owner._dl_mgr._running:
-            raise RuntimeError('此功能需显式设置下载路径才能使用。使用set.download_path()方法、配置对象或ini文件均可。')
+            raise RuntimeError(_S._lang.join(_S._lang.NEED_DOWNLOAD_PATH, TIP=_S._lang.SET_DOWNLOAD_PATH))
         self._owner._dl_mgr.set_flag('browser', False if cancel_it else True)
         if timeout is None:
             timeout = self._owner.timeout
@@ -53,7 +54,7 @@ class BrowserWaiter(OriginWaiter):
 
     def downloads_done(self, timeout=None, cancel_if_timeout=True):
         if not self._owner._dl_mgr._running:
-            raise RuntimeError('此功能需显式设置下载路径（使用set.download_path()方法、配置对象或ini文件均可）。')
+            raise RuntimeError(_S._lang.join(_S._lang.NEED_DOWNLOAD_PATH, TIP=_S._lang.SET_DOWNLOAD_PATH))
         if not timeout:
             while self._owner._dl_mgr._missions:
                 sleep(.5)
@@ -85,13 +86,12 @@ class BaseWaiter(OriginWaiter):
             timeout = self._owner.timeout
         end_time = perf_counter() + timeout
         ele = self._owner._ele(loc_or_ele, raise_err=False, timeout=timeout)
-        timeout = end_time - perf_counter()
-        if timeout <= 0 or not ele:
-            if raise_err is True or Settings.raise_when_wait_failed is True:
-                raise WaitTimeoutError(f'等待元素显示失败（等待{timeout}秒）。')
+        if not ele:
+            if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+                raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.ELE_DISPLAYED, timeout)
             else:
                 return False
-        return ele.wait.displayed(timeout, raise_err=raise_err)
+        return ele.wait.displayed(end_time - perf_counter(), raise_err=raise_err)
 
     def ele_hidden(self, loc_or_ele, timeout=None, raise_err=None):
         if timeout is None:
@@ -100,8 +100,8 @@ class BaseWaiter(OriginWaiter):
         ele = self._owner._ele(loc_or_ele, raise_err=False, timeout=timeout)
         timeout = end_time - perf_counter()
         if timeout <= 0:
-            if raise_err is True or Settings.raise_when_wait_failed is True:
-                raise WaitTimeoutError(f'等待元素显示失败（等待{timeout}秒）。')
+            if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+                raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.ELE_DISPLAYED, timeout)
             else:
                 return False
         return ele.wait.hidden(timeout, raise_err=raise_err)
@@ -146,8 +146,8 @@ class BaseWaiter(OriginWaiter):
             if method([_find(l, self._owner.driver) for l in locators]):
                 return True
             sleep(.01)
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(f'等待元素{locators}加载失败（等待{timeout}秒）。')
+        if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+            raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.ELE_LOADED, timeout, LOCATOR=locators)
         else:
             return False
 
@@ -167,7 +167,7 @@ class BaseWaiter(OriginWaiter):
 
     def download_begin(self, timeout=None, cancel_it=False):
         if not self._owner.browser._dl_mgr._running:
-            raise RuntimeError('此功能需显式设置下载路径（使用set.download_path()方法、配置对象或ini文件均可）。')
+            raise RuntimeError(_S._lang.join(_S._lang.NEED_DOWNLOAD_PATH, TIP=_S._lang.SET_DOWNLOAD_PATH))
         self._owner.browser._dl_mgr.set_flag(self._owner.tab_id, False if cancel_it else True)
         if timeout is None:
             timeout = self._owner.timeout
@@ -203,8 +203,8 @@ class BaseWaiter(OriginWaiter):
                 return True
             sleep(.05)
 
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(f'等待{arg}改变失败（等待{timeout}秒）。')
+        if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+            raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.ARG, timeout, ARG=arg)
         else:
             return False
 
@@ -218,8 +218,8 @@ class BaseWaiter(OriginWaiter):
                 return True
             sleep(gap)
 
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(f'等待页面加载失败（等待{timeout}秒）。')
+        if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+            raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.PAGE_LOADED, timeout)
         else:
             return False
 
@@ -227,7 +227,7 @@ class BaseWaiter(OriginWaiter):
 class TabWaiter(BaseWaiter):
     def downloads_done(self, timeout=None, cancel_if_timeout=True):
         if not self._owner.browser._dl_mgr._running:
-            raise RuntimeError('此功能需显式设置下载路径（使用set.download_path()方法、配置对象或ini文件均可）。')
+            raise RuntimeError(_S._lang.join(_S._lang.NEED_DOWNLOAD_PATH, TIP=_S._lang.SET_DOWNLOAD_PATH))
         if not timeout:
             while self._owner.browser._dl_mgr.get_tab_missions(self._owner.tab_id):
                 sleep(.5)
@@ -286,26 +286,33 @@ class ElementWaiter(OriginWaiter):
         return self._ele.timeout
 
     def deleted(self, timeout=None, raise_err=None):
-        return self._wait_state('is_alive', False, timeout, raise_err, err_text='等待元素被删除失败。')
+        return self._wait_state('is_alive', False, timeout, raise_err,
+                                err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_DEL, timeout))
 
     def displayed(self, timeout=None, raise_err=None):
-        return self._wait_state('is_displayed', True, timeout, raise_err, err_text='等待元素显示失败。')
+        return self._wait_state('is_displayed', True, timeout, raise_err,
+                                err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_DISPLAYED, timeout))
 
     def hidden(self, timeout=None, raise_err=None):
-        return self._wait_state('is_displayed', False, timeout, raise_err, err_text='等待元素隐藏失败。')
+        return self._wait_state('is_displayed', False, timeout, raise_err,
+                                err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_HIDDEN, timeout))
 
     def covered(self, timeout=None, raise_err=None):
         return self._ele if self._wait_state('is_covered', True, timeout, raise_err,
-                                             err_text='等待元素被覆盖失败。') else False
+                                             err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_COVERED,
+                                                                                      timeout)) else False
 
     def not_covered(self, timeout=None, raise_err=None):
-        return self._wait_state('is_covered', False, timeout, raise_err, err_text='等待元素不被覆盖失败。')
+        return self._wait_state('is_covered', False, timeout, raise_err,
+                                err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_NOT_COVERED, timeout))
 
     def enabled(self, timeout=None, raise_err=None):
-        return self._wait_state('is_enabled', True, timeout, raise_err, err_text='等待元素变成可用失败。')
+        return self._wait_state('is_enabled', True, timeout, raise_err,
+                                err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_AVAILABLE, timeout))
 
     def disabled(self, timeout=None, raise_err=None):
-        return self._wait_state('is_enabled', False, timeout, raise_err, err_text='等待元素变成不可用失败。')
+        return self._wait_state('is_enabled', False, timeout, raise_err,
+                                err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_NOT_AVAILABLE, timeout))
 
     def disabled_or_deleted(self, timeout=None, raise_err=None):
         if not self._ele.states.is_enabled or not self._ele.states.is_alive:
@@ -319,8 +326,8 @@ class ElementWaiter(OriginWaiter):
                 return self._ele
             sleep(.05)
 
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(f'等待元素隐藏或被删除失败（等待{timeout}秒）。')
+        if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+            raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.ELE_HIDDEN_DEL, timeout)
         else:
             return False
 
@@ -328,15 +335,17 @@ class ElementWaiter(OriginWaiter):
         if timeout is None:
             timeout = self._timeout
         t1 = perf_counter()
-        r = self._wait_state('is_clickable', True, timeout, raise_err, err_text='等待元素可点击失败（等{}秒）。')
+        r = self._wait_state('is_clickable', True, timeout, raise_err,
+                             err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_CLICKABLE, timeout))
         r = self.stop_moving(timeout=timeout - perf_counter() + t1) if wait_moved and r else r
         if raise_err and not r:
-            raise WaitTimeoutError(f'等待元素可点击失败（等{timeout}秒）。')
+            raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.ELE_CLICKABLE, timeout)
         return r
 
     def has_rect(self, timeout=None, raise_err=None):
         return self._ele if self._wait_state('has_rect', True, timeout, raise_err,
-                                             err_text='等待元素拥有大小及位置失败（等{}秒）。') else False
+                                             err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_HAS_RECT,
+                                                                                      timeout)) else False
 
     def stop_moving(self, timeout=None, gap=.1, raise_err=None):
         if timeout is None:
@@ -363,8 +372,8 @@ class ElementWaiter(OriginWaiter):
             size = self._ele.rect.size
             location = self._ele.rect.location
 
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(f'等待元素停止运动失败（等待{timeout}秒）。')
+        if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+            raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.ELE_STOP_MOVING, timeout)
         else:
             return False
 
@@ -382,9 +391,9 @@ class ElementWaiter(OriginWaiter):
                 return self._ele if isinstance(a, bool) else a
             sleep(.05)
 
-        err_text = err_text or '等待元素状态改变失败（等待{}秒）。'
-        if raise_err is True or Settings.raise_when_wait_failed is True:
-            raise WaitTimeoutError(err_text.format(timeout))
+        err_text = err_text or _S._lang.ELE_STATE_CHANGED_.format(timeout)
+        if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+            raise WaitTimeoutError(err_text)
         else:
             return False
 

@@ -2,14 +2,20 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-from typing import Any
+from typing import Any, Optional
 
 from .._base.base import BasePage
 
 
 class NoneElement(object):
+    _none_ele_value: Any = ...
+    _none_ele_return_value: Any = ...
+    method: Optional[str] = ...
+    args: Optional[dict] = ...
+
     def __init__(self,
                  page: BasePage = None,
                  method: str = None,

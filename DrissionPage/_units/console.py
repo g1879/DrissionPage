@@ -1,6 +1,14 @@
 # -*- coding:utf-8 -*-
+"""
+@Author   : g1879
+@Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
+@Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
+"""
 from queue import Queue
 from time import perf_counter, sleep
+
+from .._functions.settings import Settings as _S
 
 
 class Console(object):
@@ -37,7 +45,7 @@ class Console(object):
 
     def wait(self, timeout=None):
         if not self.listening:
-            raise RuntimeError('监听未启动。')
+            raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
         if timeout is None:
             while self._owner._driver.is_running and self.listening and not self._caught.qsize():
                 sleep(.03)

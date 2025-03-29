@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from queue import Queue
@@ -106,7 +107,8 @@ class BrowserDriver(Driver):
 
     def __init__(self, tab_id: str, tab_type: str, address: str, owner: Chromium): ...
 
-    def get(self, url) -> Response:
+    @staticmethod
+    def get(url) -> Response:
         """
         :param url: 要访问的链接
         :return: Response对象

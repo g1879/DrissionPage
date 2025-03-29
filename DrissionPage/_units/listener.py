@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from base64 import b64decode
@@ -13,7 +14,7 @@ from time import perf_counter, sleep
 from requests.structures import CaseInsensitiveDict
 
 from .._base.driver import Driver
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from ..errors import WaitTimeoutError
 
 
@@ -48,7 +49,8 @@ class Listener(object):
     def set_targets(self, targets=True, is_regex=False, method=('GET', 'POST'), res_type=True):
         if targets is not None:
             if not isinstance(targets, (str, list, tuple, set)) and targets is not True:
-                raise TypeError('targets只能是str、list、tuple、set、True。')
+                raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'targets',
+                                               ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(targets)))
             if targets is True:
                 self._targets = True
             else:
@@ -65,7 +67,8 @@ class Listener(object):
             elif method is True:
                 self._method = True
             else:
-                raise TypeError('method参数只能是str、list、tuple、set、True类型。')
+                raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'method',
+                                               ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(method)))
 
         if res_type is not None:
             if isinstance(res_type, str):
@@ -75,7 +78,8 @@ class Listener(object):
             elif res_type is True:
                 self._res_type = True
             else:
-                raise TypeError('res_type参数只能是str、list、tuple、set、True类型。')
+                raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'res_type',
+                                               ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(res_type)))
 
     def start(self, targets=None, is_regex=None, method=None, res_type=None):
         if targets is not None:
@@ -96,7 +100,7 @@ class Listener(object):
 
     def wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
         if not self.listening:
-            raise RuntimeError('监听未启动或已暂停。')
+            raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
         if not timeout:
             while self._driver.is_running and self.listening and self._caught.qsize() < count:
                 sleep(.03)
@@ -115,8 +119,8 @@ class Listener(object):
 
         if fail:
             if fit_count or not self._caught.qsize():
-                if raise_err is True or Settings.raise_when_wait_failed is True:
-                    raise WaitTimeoutError(f'等待数据包失败（等待{timeout}秒）。')
+                if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+                    raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.DATA_PACKET, timeout)
                 else:
                     return False
             else:
@@ -129,7 +133,7 @@ class Listener(object):
 
     def steps(self, count=None, timeout=None, gap=1):
         if not self.listening:
-            raise RuntimeError('监听未启动或已暂停。')
+            raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
         caught = 0
         if timeout is None:
             while self._driver.is_running and self.listening:
@@ -186,7 +190,7 @@ class Listener(object):
 
     def wait_silent(self, timeout=None, targets_only=False, limit=0):
         if not self.listening:
-            raise RuntimeError('监听未启动或已暂停。')
+            raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
         if timeout is None:
             while ((not targets_only and self._running_requests > limit)
                    or (targets_only and self._running_targets > limit)):

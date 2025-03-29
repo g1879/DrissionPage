@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from .chromium_page import ChromiumPage
@@ -10,7 +11,7 @@ from .._base.base import BasePage
 from .._configs.chromium_options import ChromiumOptions
 from .._configs.session_options import SessionOptions
 from .._functions.cookies import set_session_cookies, set_tab_cookies
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from .._units.setter import WebPageSetter
 
 
@@ -26,7 +27,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
         mode = mode.lower()
         if mode not in ('s', 'd'):
-            raise ValueError('mode参数只能是s或d。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'mode', ALLOW_VAL='"s", "d"', CURR_VAL=mode))
         self._d_mode = mode == 'd'
         self._has_driver = True
         self._has_session = True
@@ -49,7 +50,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
 
     @property
     def latest_tab(self):
-        return self.browser._get_tab(id_or_num=self.tab_ids[0], mix=True, as_id=not Settings.singleton_tab_obj)
+        return self.browser._get_tab(id_or_num=self.tab_ids[0], mix=True, as_id=not _S.singleton_tab_obj)
 
     @property
     def set(self):
@@ -176,7 +177,7 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
             if copy_cookies:
                 self.cookies_to_session()
             if go and not self.get(super(SessionPage, self).url):
-                raise ConnectionError('s模式访问失败，请设置go=False，自行构造连接参数进行访问。')
+                raise ConnectionError(_S._lang.join(_S._lang.S_MODE_GET_FAILED))
 
     def cookies_to_session(self, copy_user_agent=True):
         if not self._has_session:

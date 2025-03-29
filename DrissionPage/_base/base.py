@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from abc import abstractmethod
@@ -16,15 +17,13 @@ from requests import Session
 from .._configs.session_options import SessionOptions
 from .._elements.none_element import NoneElement
 from .._functions.elements import get_frame, get_eles
-from .._functions.locator import get_loc, is_selenium_loc
-from .._functions.settings import Settings
+from .._functions.locator import get_loc
+from .._functions.settings import Settings as _S
 from .._functions.web import format_html
-from ..errors import ElementNotFoundError
+from ..errors import ElementNotFoundError, LocatorError
 
 
 class BaseParser(object):
-    """所有页面、元素类的基类"""
-
     def __call__(self, locator):
         return self.ele(locator)
 
@@ -39,10 +38,6 @@ class BaseParser(object):
             timeout = 0
         if timeout is None:
             timeout = self.timeout
-        if isinstance(locators, tuple) and not is_selenium_loc(locators):
-            raise ValueError(f"locators参数为tuple时必须是单独的定位符，即长度为2，且第一位是'id', 'xpath', 'link text', "
-                             f"'partial link text','name', 'tag name', 'class name', 'css selector' 之一。\n"
-                             f"现在是：{locators}")
         r = get_eles(locators, self, any_one, first_ele, timeout)
         if any_one:
             for ele in r:
@@ -70,15 +65,14 @@ class BaseParser(object):
 
 
 class BaseElement(BaseParser):
-    """各元素类的基类"""
-
     def __init__(self, owner=None):
         self.owner = owner
         self._type = 'BaseElement'
 
     def get_frame(self, loc_or_ind, timeout=None):
         if not isinstance(loc_or_ind, (int, str, tuple)):
-            raise TypeError('loc_or_ind参数是定位符或序号。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'loc_or_ind',
+                                           ALLOW_TYPE=_S._lang.LOC_OR_IND, CURR_VAL=loc_or_ind))
         return get_frame(self, loc_ind_ele=loc_or_ind, timeout=timeout)
 
     def _ele(self, locator, timeout=None, index=1, relative=False, raise_err=None, method=None):
@@ -89,8 +83,8 @@ class BaseElement(BaseParser):
         r = self._find_elements(locator, timeout=timeout, index=index, relative=relative, raise_err=raise_err)
         if r or isinstance(r, list):
             return r
-        if raise_err is True or (Settings.raise_when_ele_not_found and raise_err is None):
-            raise ElementNotFoundError(None, method, {'locator': locator, 'index': index, 'timeout': timeout})
+        if raise_err is True or (_S.raise_when_ele_not_found and raise_err is None):
+            raise ElementNotFoundError(METHOD=method, ARGS={'locator': locator, 'index': index, 'timeout': timeout})
 
         r.method = method
         r.args = {'locator': locator, 'index': index, 'timeout': timeout}
@@ -99,6 +93,10 @@ class BaseElement(BaseParser):
     @property
     def timeout(self):
         return self.owner.timeout if self.owner else 10
+
+    @property
+    def child_count(self):
+        return int(self._ele('xpath:count(./*)'))
 
     # ----------------以下属性或方法由后代实现----------------
     @property
@@ -145,11 +143,12 @@ class DrissionElement(BaseElement):
         elif isinstance(level_or_loc, (tuple, str)):
             loc = get_loc(level_or_loc, True)
             if loc[0] == 'css selector':
-                raise ValueError('此css selector语法不受支持，请换成xpath。')
+                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
             loc = f'xpath:./ancestor::{loc[1].lstrip(". / ")}[{index}]'
 
         else:
-            raise TypeError('level_or_loc参数只能是tuple、int或str。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'level_or_loc', ALLOW_TYPE='tuple, int, str',
+                                           CURR_VAL=level_or_loc))
 
         return self._ele(loc, timeout=timeout, relative=True, raise_err=False, method='parent()')
 
@@ -162,7 +161,7 @@ class DrissionElement(BaseElement):
         else:
             loc = get_loc(locator, True)  # 把定位符转换为xpath
             if loc[0] == 'css selector':
-                raise ValueError('此css selector语法不受支持，请换成xpath。')
+                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
             loc = loc[1].lstrip('./')
 
         node = self._ele(f'xpath:./{loc}', timeout=timeout, index=index, relative=True, raise_err=False)
@@ -187,7 +186,7 @@ class DrissionElement(BaseElement):
         else:
             loc = get_loc(locator, True)  # 把定位符转换为xpath
             if loc[0] == 'css selector':
-                raise ValueError('此css selector语法不受支持，请换成xpath。')
+                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
             loc = loc[1].lstrip('./')
 
         loc = f'xpath:./{loc}'
@@ -225,7 +224,7 @@ class DrissionElement(BaseElement):
         else:
             loc = get_loc(locator, True)  # 把定位符转换为xpath
             if loc[0] == 'css selector':
-                raise ValueError('此css selector语法不受支持，请换成xpath。')
+                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
             loc = loc[1].lstrip('./')
 
         loc = f'xpath:./{direction}{brother}::{loc}'
@@ -251,7 +250,7 @@ class DrissionElement(BaseElement):
         return
 
     @abstractmethod
-    def attr(self, name: str):
+    def attr(self, name):
         return ''
 
     def _get_ele_path(self, xpath=True):
@@ -348,15 +347,15 @@ class BasePage(BaseParser):
 
     def _ele(self, locator, timeout=None, index=1, raise_err=None, method=None):
         if not locator:
-            raise ElementNotFoundError(None, method, {'locator': locator})
+            raise ElementNotFoundError(METHOD=method, ARGS={'locator': locator, 'index': index, 'timeout': timeout})
         if timeout is None:
             timeout = self.timeout
 
         r = self._find_elements(locator, timeout=timeout, index=index, raise_err=raise_err)
         if r or isinstance(r, list):
             return r
-        if raise_err is True or (Settings.raise_when_ele_not_found and raise_err is None):
-            raise ElementNotFoundError(None, method, {'locator': locator, 'index': index, 'timeout': timeout})
+        if raise_err is True or (_S.raise_when_ele_not_found and raise_err is None):
+            raise ElementNotFoundError(METHOD=method, ARGS={'locator': locator, 'index': index, 'timeout': timeout})
 
         r.method = method
         r.args = {'locator': locator, 'index': index, 'timeout': timeout}

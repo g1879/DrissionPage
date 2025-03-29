@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from os.path import sep
@@ -10,6 +11,8 @@ from shutil import move
 from time import sleep, perf_counter
 
 from DataRecorder.tools import get_usable_path
+
+from .._functions.settings import Settings as _S
 
 
 class DownloadManager(object):
@@ -46,15 +49,17 @@ class DownloadManager(object):
                                        behavior='allowAndName', eventsEnabled=True)
             self._tmp_path = self._browser._download_path
             if 'error' in r:
-                print('浏览器版本太低无法使用下载管理功能。')
+                print(_S._lang.NOT_SUPPORT_DOWNLOAD)
         self._running = True
 
-    def set_rename(self, tab_id, rename=None, suffix=None):
+    @staticmethod
+    def set_rename(tab_id, rename=None, suffix=None):
         ts = TabDownloadSettings(tab_id)
         ts.rename = rename
         ts.suffix = suffix
 
-    def set_file_exists(self, tab_id, mode):
+    @staticmethod
+    def set_file_exists(tab_id, mode):
         TabDownloadSettings(tab_id).when_file_exists = mode
 
     def set_flag(self, tab_id, flag):
@@ -256,12 +261,12 @@ class DownloadMission(object):
 
     def wait(self, show=True, timeout=None, cancel_if_timeout=True):
         if show:
-            print(f'url：{self.url}')
+            print(f'url: {self.url}')
             end_time = perf_counter()
             while self.name is None and perf_counter() < end_time:
                 sleep(0.01)
-            print(f'文件名：{self.name or "未知"}')
-            print(f'目录路径：{self.folder}')
+            print(f'{_S._lang.FILE_NAME}: {self.name or _S._lang.UNKNOWN}')
+            print(f'{_S._lang.FOLDER_PATH}: {self.folder}')
 
         if timeout is None:
             while not self.is_done:
@@ -283,15 +288,15 @@ class DownloadMission(object):
             if self.state == 'completed':
                 print('\r100% ', end='')
                 if self._overwrite is None:
-                    print(f'完成并重命名 {self.final_path}')
+                    print(f'{_S._lang.COMPLETED_AND_RENAME} {self.final_path}')
                 elif self._overwrite is False:
-                    print(f'下载完成 {self.final_path}')
+                    print(f'{_S._lang.DOWNLOAD_COMPLETED} {self.final_path}')
                 else:
-                    print(f'已覆盖 {self.final_path}')
+                    print(f'{_S._lang.OVERWROTE} {self.final_path}')
             elif self.state == 'canceled':
-                print(f'下载取消')
+                print(_S._lang.DOWNLOAD_CANCELED)
             elif self.state == 'skipped':
-                print(f'已跳过 {self.folder}{sep}{self.name}')
+                print(f'{_S._lang.SKIPPED} {self.folder}{sep}{self.name}')
             print()
 
         return self.final_path if self.final_path else False

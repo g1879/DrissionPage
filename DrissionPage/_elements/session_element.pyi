@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from typing import Union, List, Tuple, Optional
@@ -282,7 +283,7 @@ class SessionElement(DrissionElement):
         """
         ...
 
-    def _get_ele_path(self, xpath: bool=True) -> str:
+    def _get_ele_path(self, xpath: bool = True) -> str:
         """获取css路径或xpath路径
         :param xpath: 用xpath还是css
         :return: css路径或xpath路径
@@ -294,7 +295,7 @@ def make_session_ele(html_or_ele: Union[str, SessionElement, SessionPage, Chromi
 ChromiumBase],
                      loc: Union[str, Tuple[str, str]] = None,
                      index: Optional[int] = 1,
-                     method: Optional[str] = None) -> Union[SessionElement, SessionElementsList]:
+                     method: Optional[str] = None) -> Union[SessionElement, SessionElementsList, str, float]:
     """从接收到的对象或html文本中查找元素，返回SessionElement对象
     如要直接从html生成SessionElement而不在下级查找，loc输入None即可
     :param html_or_ele: html文本、BaseParser对象
