@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -16,7 +17,7 @@ from tldextract import TLDExtract
 from .._base.base import BasePage
 from .._elements.session_element import SessionElement, make_session_ele
 from .._functions.cookies import cookie_to_dict, CookiesList
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from .._functions.web import format_headers
 from .._units.setter import SessionPageSetter
 
@@ -113,7 +114,7 @@ class SessionPage(BasePage):
         :param kwargs: 连接参数
         :return: url是否可用
         """
-        retry, interval, is_file = self._before_connect(url.lstrip('file:///'), retry, interval)
+        retry, interval, is_file = self._before_connect(url.replace('file:///', '', 1), retry, interval)
         if is_file:
             with open(self._url, 'rb') as f:
                 r = Response()
@@ -157,7 +158,7 @@ class SessionPage(BasePage):
             if self.url:
                 ex_url = TLDExtract(
                     suffix_list_urls=["https://publicsuffix.org/list/public_suffix_list.dat",
-                                      f"file:///{Settings.suffixes_list_path}"]).extract_str(self._session_url)
+                                      f"file:///{_S.suffixes_list}"]).extract_str(self._session_url)
                 domain = f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain
                 cookies = tuple(c for c in self.session.cookies if domain in c.domain or c.domain == '')
             else:
@@ -181,7 +182,7 @@ class SessionPage(BasePage):
 
     def _s_connect(self, url, mode, show_errmsg=False, retry=None, interval=None, **kwargs):
         retry, interval, is_file = self._before_connect(url, retry, interval)
-        self._response, info = self._make_response(self._url, mode, retry, interval, show_errmsg, **kwargs)
+        self._response = self._make_response(self._url, mode, retry, interval, show_errmsg, **kwargs)
 
         if self._response is None:
             self._url_available = False
@@ -192,7 +193,7 @@ class SessionPage(BasePage):
 
             else:
                 if show_errmsg:
-                    raise ConnectionError(f'状态码：{self._response.status_code}.')
+                    raise ConnectionError(_S._lang.STATUS_CODE_, self._response.status_code)
                 self._url_available = False
 
         return self._url_available
@@ -237,8 +238,8 @@ class SessionPage(BasePage):
                 if r and r.content:
                     if self._encoding:
                         r.encoding = self._encoding
-                        return r, 'Success'
-                    return set_charset(r), 'Success'
+                        return r
+                    return set_charset(r)
 
             except Exception as e:
                 err = e
@@ -249,21 +250,22 @@ class SessionPage(BasePage):
             if i < retry:
                 sleep(interval)
                 if show_errmsg:
-                    print(f'重试 {url}')
+                    print(f'{_S._lang.RETRY} {url}')
 
         if show_errmsg:
             if err:
                 raise err
             elif r is not None:
-                raise ConnectionError(f'状态码：{r.status_code}') if r.content else ConnectionError('返回内容为空。')
+                raise (ConnectionError(_S._lang.join(_S._lang.STATUS_CODE_, r.status_code)) if r.content
+                       else ConnectionError(_S._lang.join(_S._lang.CONTENT_IS_EMPTY)))
             else:
-                raise ConnectionError('连接失败')
+                raise ConnectionError(_S._lang.join(_S._lang.CONNECT_ERR))
 
         else:
             if r is not None:
-                return (r, f'状态码：{r.status_code}') if r.content else (None, '返回内容为空')
+                return r if r.content else None
             else:
-                return None, '连接失败' if err is None else err
+                return None
 
 
 def check_headers(kwargs, headers, arg):

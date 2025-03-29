@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -207,6 +208,11 @@ class ChromiumFrame(ChromiumBase):
     @property
     def shadow_root(self) -> Union[None, ShadowRoot]:
         """返回iframe的shadow-root元素对象"""
+        ...
+
+    @property
+    def child_count(self) -> int:
+        """返回直接子元素的个数"""
         ...
 
     @property
