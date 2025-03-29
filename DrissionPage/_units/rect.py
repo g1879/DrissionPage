@@ -63,7 +63,7 @@ class ElementRect(object):
         pr = self._ele.owner._run_js('return window.devicePixelRatio;')
         if getattr(self._ele.owner, '_is_diff_domain', None):
             x, y = self._ele.owner.rect.screen_location
-            return (vx + ex) * pr + x, (ey + vy) * pr + y
+            return ex * pr + x, ey * pr + y
         else:
             return (vx + ex) * pr, (ey + vy) * pr
 
@@ -74,7 +74,7 @@ class ElementRect(object):
         pr = self._ele.owner._run_js('return window.devicePixelRatio;')
         if getattr(self._ele.owner, '_is_diff_domain', None):
             x, y = self._ele.owner.rect.screen_location
-            return (vx + ex) * pr + x, (ey + vy) * pr + y
+            return ex * pr + x, ey * pr + y
         else:
             return (vx + ex) * pr, (ey + vy) * pr
 
@@ -85,7 +85,7 @@ class ElementRect(object):
         pr = self._ele.owner._run_js('return window.devicePixelRatio;')
         if getattr(self._ele.owner, '_is_diff_domain', None):
             x, y = self._ele.owner.rect.screen_location
-            return (vx + ex) * pr + x, (ey + vy) * pr + y
+            return ex * pr + x, ey * pr + y
         else:
             return (vx + ex) * pr, (ey + vy) * pr
 
