@@ -13,12 +13,14 @@ from time import sleep, perf_counter
 from DataRecorder.tools import get_usable_path
 
 from .._functions.settings import Settings as _S
+from weakref import proxy as weak_proxy
 
 
 class DownloadManager(object):
 
     def __init__(self, browser):
-        self._browser = browser
+        # Circular reference caused a memory leak
+        self._browser = weak_proxy(browser)
 
         t = TabDownloadSettings('browser')
         t.path = self._browser.download_path
