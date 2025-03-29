@@ -377,7 +377,7 @@ This method is used to retrieve localStorage information, and can retrieve all o
 
 ---
 
-## ✅️️ Embeded Objects
+## ✅️️ Embedded Objects
 
 ### 📌 `driver`
 
