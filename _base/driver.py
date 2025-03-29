@@ -17,6 +17,7 @@ from websocket import (WebSocketTimeoutException, WebSocketConnectionClosedExcep
 
 from .._functions.settings import Settings as _S
 from ..errors import PageDisconnectedError, BrowserConnectError
+from weakref import proxy as weak_proxy
 
 adapters.DEFAULT_RETRIES = 5
 
@@ -26,7 +27,8 @@ class Driver(object):
         self.id = tab_id
         self.address = address
         self.type = tab_type
-        self.owner = owner
+        # Circular reference caused a memory leak
+        self.owner = weak_proxy(owner) if owner else None
         self.alert_flag = False  # 标记alert出现，跳过一条请求后复原
 
         self._websocket_url = f'ws://{address}/devtools/{tab_type}/{tab_id}'
