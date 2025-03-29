@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import loads
@@ -18,6 +19,7 @@ from .._base.base import DrissionElement, BaseElement
 from .._functions.elements import ChromiumElementsList, SessionElementsList
 from .._functions.keys import input_text_or_keys
 from .._functions.locator import get_loc, locator_to_tuple
+from .._functions.settings import Settings as _S
 from .._functions.web import make_absolute_link, get_ele_txt, format_html, is_js_func, get_blob
 from .._units.clicker import Clicker
 from .._units.rect import ElementRect
@@ -27,7 +29,7 @@ from .._units.setter import ChromiumElementSetter
 from .._units.states import ElementStates, ShadowRootStates
 from .._units.waiter import ElementWaiter
 from ..errors import (ContextLostError, ElementLostError, JavaScriptError, CDPError, NoResourceError,
-                      AlertExistsError, NoRectError)
+                      AlertExistsError, NoRectError, LocatorError)
 
 __FRAME_ELEMENT__ = ('iframe', 'frame')
 
@@ -183,11 +185,6 @@ class ChromiumElement(DrissionElement):
         return self.property('value')
 
     def check(self, uncheck=False, by_js=False):
-        """选中或取消选中当前元素
-        :param uncheck: 是否取消选中
-        :param by_js: 是否用js执行
-        :return: None
-        """
         is_checked = self.states.is_checked
         if by_js:
             js = None
@@ -251,7 +248,7 @@ class ChromiumElement(DrissionElement):
     def offset(self, locator=None, x=None, y=None, timeout=None):
         if locator and not (isinstance(locator, str) and not locator.startswith(
                 ('x:', 'xpath:', 'x=', 'xpath=', 'c:', 'css:', 'c=', 'css='))):
-            raise ValueError('locator参数只能是str格式且不支持xpath和css形式。')
+            raise LocatorError(ALLOW_TYPE=_S._lang.STR_ONLY, CURR_VAL=locator)
 
         if x == y is None:
             x, y = self.rect.midpoint
@@ -308,7 +305,7 @@ class ChromiumElement(DrissionElement):
     def _get_relative_eles(self, mode='north', locator=None, index=1):
         if locator and not (isinstance(locator, str) and not locator.startswith(
                 ('x:', 'xpath:', 'x=', 'xpath=', 'c:', 'css:', 'c=', 'css=')) or isinstance(locator, int)):
-            raise ValueError('locator参数只能是str格式且不支持xpath和css形式。')
+            raise LocatorError(ALLOW_TYPE=_S._lang.STR_ONLY, CURR_VAL=locator)
         rect = self.states.has_rect
         if not rect:
             raise NoRectError
@@ -371,32 +368,32 @@ class ChromiumElement(DrissionElement):
 
         return NoneElement(page=self.owner, method=f'{mode}()', args={'locator': locator})
 
-    def attr(self, attr):
+    def attr(self, name):
         attrs = self.attrs
-        if attr == 'href':  # 获取href属性时返回绝对url
+        if name == 'href':
             link = attrs.get('href')
             if not link or link.lower().startswith(('javascript:', 'mailto:')):
                 return link
             else:
                 return make_absolute_link(link, self.property('baseURI'))
 
-        elif attr == 'src':
+        elif name == 'src':
             return make_absolute_link(attrs.get('src'), self.property('baseURI'))
 
-        elif attr == 'text':
+        elif name == 'text':
             return self.text
 
-        elif attr == 'innerText':
+        elif name == 'innerText':
             return self.raw_text
 
-        elif attr in ('html', 'outerHTML'):
+        elif name in ('html', 'outerHTML'):
             return self.html
 
-        elif attr == 'innerHTML':
+        elif name == 'innerHTML':
             return self.inner_html
 
         else:
-            return attrs.get(attr, None)
+            return attrs.get(name, None)
 
     def remove_attr(self, name):
         self._run_js(f'this.removeAttribute("{name}");')
@@ -454,7 +451,7 @@ class ChromiumElement(DrissionElement):
 
         src = self.attr('href') if self.tag == 'link' else self.attr('src')
         if not src:
-            raise RuntimeError('元素没有src值或该值为空。')
+            raise RuntimeError(_S._lang.join(_S._lang.NO_SRC_ATTR))
         if src.lower().startswith('data:image'):
             if base64_to_bytes:
                 from base64 import b64decode
@@ -611,7 +608,8 @@ class ChromiumElement(DrissionElement):
         if isinstance(ele_or_loc, ChromiumElement):
             ele_or_loc = ele_or_loc.rect.midpoint
         elif not isinstance(ele_or_loc, (list, tuple)):
-            raise TypeError('需要ChromiumElement对象或坐标。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'ele_or_loc',
+                                           ALLOW_TYPE=_S._lang.ELE_LOC_FORMAT, CURR_VAL=ele_or_loc))
         self.owner.actions.hold(self).move_to(ele_or_loc, duration=duration).release()
         return self
 
@@ -747,12 +745,13 @@ class ShadowRoot(BaseElement):
             loc = get_loc(level_or_loc, True)
 
             if loc[0] == 'css selector':
-                raise ValueError('此css selector语法不受支持，请换成xpath。')
+                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
 
             loc = f'xpath:./ancestor-or-self::{loc[1].lstrip(". / ")}[{index}]'
 
         else:
-            raise TypeError('level_or_loc参数只能是tuple、int或str。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'level_or_loc',
+                                           ALLOW_TYPE=_S._lang.LOC_OR_IND, CURR_VAL=level_or_loc))
 
         return self.parent_ele._ele(loc, timeout=timeout, relative=True, raise_err=False, method='parent()')
 
@@ -762,7 +761,7 @@ class ShadowRoot(BaseElement):
         else:
             loc = get_loc(locator, True)  # 把定位符转换为xpath
             if loc[0] == 'css selector':
-                raise ValueError('此css selector语法不受支持，请换成xpath。')
+                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
             loc = loc[1].lstrip('./')
 
         loc = f'xpath:./{loc}'
@@ -774,7 +773,7 @@ class ShadowRoot(BaseElement):
     def next(self, locator='', index=1, timeout=None):
         loc = get_loc(locator, True)
         if loc[0] == 'css selector':
-            raise ValueError('此css selector语法不受支持，请换成xpath。')
+            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
 
         loc = loc[1].lstrip('./')
         xpath = f'xpath:./{loc}'
@@ -786,7 +785,7 @@ class ShadowRoot(BaseElement):
     def before(self, locator='', index=1, timeout=None):
         loc = get_loc(locator, True)
         if loc[0] == 'css selector':
-            raise ValueError('此css selector语法不受支持，请换成xpath。')
+            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
 
         loc = loc[1].lstrip('./')
         xpath = f'xpath:./preceding::{loc}'
@@ -806,7 +805,7 @@ class ShadowRoot(BaseElement):
         else:
             loc = get_loc(locator, True)  # 把定位符转换为xpath
             if loc[0] == 'css selector':
-                raise ValueError('此css selector语法不受支持，请换成xpath。')
+                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
             loc = loc[1].lstrip('./')
 
         loc = f'xpath:./{loc}'
@@ -815,7 +814,7 @@ class ShadowRoot(BaseElement):
     def nexts(self, locator='', timeout=None):
         loc = get_loc(locator, True)
         if loc[0] == 'css selector':
-            raise ValueError('此css selector语法不受支持，请换成xpath。')
+            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
 
         loc = loc[1].lstrip('./')
         xpath = f'xpath:./{loc}'
@@ -824,7 +823,7 @@ class ShadowRoot(BaseElement):
     def befores(self, locator='', timeout=None):
         loc = get_loc(locator, True)
         if loc[0] == 'css selector':
-            raise ValueError('此css selector语法不受支持，请换成xpath。')
+            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
 
         loc = loc[1].lstrip('./')
         xpath = f'xpath:./preceding::{loc}'
@@ -872,34 +871,54 @@ class ShadowRoot(BaseElement):
 
             else:
                 eles = make_session_ele(self, loc, index=None)
-                if not eles:
+                if isinstance(eles, (float, str, int)):
+                    return eles
+                elif not eles:
                     return None
 
                 css = []
                 for i in eles:
-                    c = i.css_path
-                    if c in ('html:nth-child(1)', 'html:nth-child(1)>body:nth-child(1)',
-                             'html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
-                        continue
-                    elif c.startswith('html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
-                        c = c[61:]
-                    css.append(c)
+                    if hasattr(i, 'css_path'):
+                        c = i.css_path
+                        if c in ('html:nth-child(1)', 'html:nth-child(1)>body:nth-child(1)',
+                                 'html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
+                            continue
+                        elif c.startswith('html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
+                            c = c[61:]
+                        css.append((True, c))
+
+                    else:
+                        css.append((False, i))
+
                 if index is not None:
                     try:
+                        c = css[index - 1]
+                        if c[0] is False:
+                            return c[1]
                         node_id = self.owner._run_cdp('DOM.querySelector', nodeId=self._node_id,
-                                                      selector=css[index - 1])['nodeId']
+                                                      selector=c[1])['nodeId']
+                        r = make_chromium_eles(self.owner, _ids=node_id, is_obj_id=False)
+                        return None if r is False else r
+
                     except IndexError:
                         return None
-                    r = make_chromium_eles(self.owner, _ids=node_id, is_obj_id=False)
-                    return None if r is False else r
+
                 else:
-                    node_ids = [self.owner._run_cdp('DOM.querySelector', nodeId=self._node_id, selector=i)['nodeId']
-                                for i in css]
-                    node_ids = [i for i in node_ids if i]
-                    if not node_ids:
-                        return None
-                    r = make_chromium_eles(self.owner, _ids=node_ids, index=index, is_obj_id=False)
-                    return None if r is False else r
+                    r = []
+                    for i in css:
+                        if i[0] is False:
+                            r.append(i[1])
+
+                        else:
+                            node_id = self.owner._run_cdp('DOM.querySelector', nodeId=self._node_id,
+                                                          selector=i[1])['nodeId']
+                            if node_id:
+                                e = make_chromium_eles(self.owner, _ids=node_id, is_obj_id=False)
+                                if e is False:
+                                    return None
+                                r.append(e)
+
+                    return None if not r else r
 
         end_time = perf_counter() + timeout
         result = do_find()
@@ -907,7 +926,7 @@ class ShadowRoot(BaseElement):
             sleep(.01)
             result = do_find()
 
-        if result:
+        if result or isinstance(result, (str, float, int)):
             return result
         return NoneElement(self.owner) if index is not None else ChromiumElementsList(self.owner)
 
@@ -928,7 +947,7 @@ def find_in_chromium_ele(ele, locator, index=1, timeout=None, relative=True):
     if isinstance(locator, (str, tuple)):
         loc = get_loc(locator)
     else:
-        raise ValueError(f"定位符必须为str或长度为2的tuple对象。现在是：{locator}")
+        raise LocatorError(ALLOW_TYPE=_S._lang.LOC_FORMAT, CURR_VAL=locator)
 
     loc_str = loc[1]
     if loc[0] == 'xpath' and loc[1].lstrip().startswith('/'):
@@ -966,7 +985,7 @@ def find_by_xpath(ele, xpath, index, timeout, relative=True):
                                          returnByValue=False, awaitPromise=True, userGesture=True)
                 return res['result']['value']
             else:
-                raise SyntaxError(f'查询语句错误：\n{res}')
+                raise LocatorError(_S._lang.join(_S._lang.FIND_ELE_ERR, INFO=res))
 
         if res['result']['subtype'] == 'null' or res['result']['description'] in ('NodeList(0)', 'Array(0)'):
             return None
@@ -1024,7 +1043,7 @@ def find_by_css(ele, selector, index, timeout):
                                  returnByValue=False, awaitPromise=True, userGesture=True)
 
         if 'exceptionDetails' in res:
-            raise SyntaxError(f'查询语句错误：\n{res}')
+            raise LocatorError(_S._lang.join(_S._lang.FIND_ELE_ERR, INFO=res))
         if res['result']['subtype'] == 'null' or res['result']['description'] in ('NodeList(0)', 'Array(0)'):
             return None
 
@@ -1179,7 +1198,7 @@ def run_js(page_or_ele, script, as_expr, timeout, args=None):
                 break
             sleep(.01)
         else:
-            raise RuntimeError('js运行环境出错。')
+            raise RuntimeError(_S._lang.join(_S._lang.JS_RUNTIME_ERR))
 
     if page.states.has_alert:
         raise AlertExistsError
@@ -1188,7 +1207,7 @@ def run_js(page_or_ele, script, as_expr, timeout, args=None):
         if Path(script).exists():
             with open(script, 'r', encoding='utf-8') as f:
                 script = f.read()
-    except OSError:
+    except (OSError, ValueError):
         pass
 
     end_time = perf_counter() + timeout
@@ -1205,25 +1224,22 @@ def run_js(page_or_ele, script, as_expr, timeout, args=None):
                                 arguments=[convert_argument(arg) for arg in args], returnByValue=False,
                                 awaitPromise=True, userGesture=True, _timeout=timeout, _ignore=AlertExistsError)
     except TimeoutError:
-        raise TimeoutError(f'执行js超时（等待{timeout}秒）。')
+        raise TimeoutError(_S._lang.join(_S._lang.TIMEOUT_, _S._lang.RUN_JS, timeout))
     except ContextLostError:
-        raise ContextLostError('页面已被刷新，请尝试等待页面加载完成再执行操作。') if is_page else ElementLostError(
-            '原来获取到的元素对象已不在页面内。')
+        raise ContextLostError() if is_page else ElementLostError()
 
     if not res:  # _timeout=0或js激活alert时
         return None
 
     exceptionDetails = res.get('exceptionDetails')
     if exceptionDetails:
-        raise JavaScriptError(f'\njavascript运行错误：\n{script}\n错误信息: \n{exceptionDetails}')
+        raise JavaScriptError(JS=script, INFO=exceptionDetails)
 
     try:
         return parse_js_result(page, page_or_ele, res.get('result'), end_time)
     except Exception:
         from DrissionPage import __version__
-        raise RuntimeError(f'\njs结果解析错误\n版本：{__version__}\n内容：{res}\njs：{script}\n'
-                           f'出现这个错误可能意味着程序有bug，请把错误信息和重现方法告知作者，谢谢。\n'
-                           f'报告网站：https://gitee.com/g1879/DrissionPage/issues')
+        raise RuntimeError(_S._lang.join(_S._lang.JS_RESULT_ERR, INFO=res, JS=script, TIP=_S._lang.FEEDBACK))
 
 
 def parse_js_result(page, ele, result, end_time):
@@ -1258,7 +1274,7 @@ def parse_js_result(page, ele, result, end_time):
                 'data']
             return data
 
-        elif 'objectId' in result and result.get('className') == 'Blob':
+        elif 'objectId' in result:
             timeout = end_time - perf_counter()
             if timeout < 0:
                 return
@@ -1294,7 +1310,7 @@ def convert_argument(arg):
     elif arg == -inf:
         return {'unserializableValue': '-Infinity'}
 
-    raise TypeError(f'不支持参数{arg}的类型：{type(arg)}')
+    raise TypeError(_S._lang.join(_S._lang.UNSUPPORTED_ARG_TYPE_, arg, type(arg)))
 
 
 class Pseudo(object):

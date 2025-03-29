@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -290,13 +291,13 @@ class SessionPage(BasePage):
                        retry: int = None,
                        interval: float = None,
                        show_errmsg: bool = False,
-                       **kwargs) -> tuple:
+                       **kwargs) -> Response:
         """生成Response对象
         :param url: 目标url
         :param mode: 'get' 或 'post'
         :param show_errmsg: 是否显示和抛出异常
         :param kwargs: 其它参数
-        :return: tuple，第一位为Response或None，第二位为出错信息或 'Success'
+        :return: Response对象
         """
         ...
 

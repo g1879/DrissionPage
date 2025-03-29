@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from abc import abstractmethod
@@ -23,6 +24,7 @@ from .._pages.web_page import WebPage
 
 
 class BaseParser(object):
+    """所有页面、元素类的基类"""
     _type: str
     timeout: float
 
@@ -78,6 +80,7 @@ class BaseParser(object):
 
 
 class BaseElement(BaseParser):
+    """各元素类的基类"""
     owner: BasePage = ...
 
     def __init__(self, owner: BasePage = None): ...
@@ -85,6 +88,11 @@ class BaseElement(BaseParser):
     @property
     def timeout(self) -> float:
         """返回其查找元素时超时时间"""
+        ...
+
+    @property
+    def child_count(self) -> int:
+        """返回直接子元素的个数"""
         ...
 
     # ----------------以下属性或方法由后代实现----------------

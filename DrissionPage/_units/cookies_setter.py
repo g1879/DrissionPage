@@ -2,9 +2,11 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from .._functions.cookies import set_tab_cookies, set_session_cookies, set_browser_cookies
+from .._functions.settings import Settings as _S
 
 
 class BrowserCookiesSetter(object):
@@ -31,7 +33,7 @@ class CookiesSetter(BrowserCookiesSetter):
         if not url and not domain:
             d['url'] = self._owner.url
             if not d['url'].startswith('http'):
-                raise ValueError('需设置domain或url值。如设置url值，需以http开头。')
+                raise ValueError(_S._lang.join(_S._lang.NEED_DOMAIN))
         if path is not None:
             d['path'] = path
         self._owner._run_cdp('Network.deleteCookies', **d)
@@ -66,7 +68,7 @@ class WebPageCookiesSetter(CookiesSetter):
             super().remove(name, url, domain, path)
         elif self._owner.mode == 's' and self._owner._has_session:
             if url or domain or path:
-                raise AttributeError('url、domain、path参数只有d模式下有效。')
+                raise ValueError(_S._lang.join(_S._lang.D_MODE_ONLY))
             self._owner.session.cookies.set(name, None)
 
     def clear(self):
@@ -88,7 +90,7 @@ class MixTabCookiesSetter(CookiesSetter):
             super().remove(name, url, domain, path)
         elif not self._owner._d_mode and self._owner._session:
             if url or domain or path:
-                raise AttributeError('url、domain、path参数只有d模式下有效。')
+                raise ValueError(_S._lang.join(_S._lang.D_MODE_ONLY))
             self._owner.session.cookies.set(name, None)
 
     def clear(self):

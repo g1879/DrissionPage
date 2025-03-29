@@ -1,106 +1,104 @@
+> DrissionPage can now set English error and prompt messages: [Set Language](https://drissionpage.cn/get_start/set_lang)
+
 # ✨️ 概述
 
-DrissionPage 是一个基于 python 的网页自动化工具。
+DrissionPage is a Python-based web automation tool.
 
-它既能控制浏览器，也能收发数据包，还能把两者合而为一。
+It can control the browser, send and receive packets, and combine the two.
 
-可兼顾浏览器自动化的便利性和 requests 的高效率。
+You can balance the convenience of browser automation with the efficiency of requests.
 
-它功能强大，内置无数人性化设计和便捷功能。
+It is powerful, built-in countless user-friendly design and convenient features.
 
-它的语法简洁而优雅，代码量少，对新手友好。
-
----
-
-官方网站：[https://DrissionPage.cn](https://drissionpage.cn)
-
-项目地址：[gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage)     |    [gitcode](https://gitcode.com/g1879/DrissionPage) 
-
-您的星星是对我最大的支持💖
-
---- 
-
-支持系统：Windows、Linux、Mac
-
-python 版本：3.6 及以上
-
-支持浏览器：Chromium 内核浏览器(如 Chrome 和 Edge)，electron 应用
+Its syntax is simple and elegant, the code is small, and it is friendly to beginners.
 
 ---
 
-# 🛠 如何使用
+WebSite: [https://DrissionPage.cn](https://drissionpage.cn)
 
-**📖 使用文档：**  [点击查看](https://DrissionPage.cn)
+Project: [gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage)     |    [gitcode](https://gitcode.com/g1879/DrissionPage) 
 
-**交流 QQ 群：**  见使用文档
+Your stars are my greatest support.💖
 
-![](https://drissionpage.cn/codes.jpg)
+--- 
+
+Support system: Windows、Linux、Mac
+
+Python version：more than 3.6
+
+Support browser: Chromium kernel(eg. Chrome, Edge)，electron
 
 ---
 
-# 💡 理念
+# 🛠 How to use
 
-简洁而强大！
+**📖 Document:**  [Click to see](https://DrissionPage.cn)
 
---- 
+![](https://drissionpage.cn/codes.png)
 
-# ☀️ 特性和亮点
+---
 
-作者经过长期实践，踩过无数坑，总结出的经验全写到这个库里了。
+# 💡 Idea
 
-## 🎇 强大的自研内核
-
-本库采用全自研的内核，内置无数实用功能，对常用功能作了整合和优化，对比 selenium，有以下优点：
-
-- 不基于 webdriver
-- 无需为不同版本的浏览器下载不同的驱动
-- 运行速度更快
-- 可以跨 iframe 查找元素，无需切入切出
-- 把 iframe 看作普通元素，逻辑更清晰
-- 可同时操作多个标签页，无需切换
-- 可以直接读取浏览器缓存保存图片，无需用 GUI 点击另存
-- 可以对整个网页截图，包括视口外的部分
-- 可处理非`open`状态的 shadow-root
-
-## 🎇 亮点功能
-
-除了以上优点，本库还内置了无数人性化设计。
-
-- 极简的定位语法，查找元素更加容易
-- 集成大量常用功能，代码更优雅，功能强大稳定
-- 无处不在的等待和自动重试，使不稳定的网络变得易于控制，程序更稳定，编写更省心
-- 提供强大的下载工具，操作浏览器时也能享受快捷可靠的下载功能
-- 允许反复使用已经打开的浏览器，无需每次运行从头启动浏览器，调试方便
-- 使用 ini 文件保存常用配置，自动调用，提供便捷的设置，远离繁杂的配置项
-- 内置 lxml 作为解析引擎，解析速度成几个数量级提升
-- 使用 POM 模式封装，可直接用于测试，便于扩展
-- 高度集成的便利功能，从每个细节中体现
-- 还有很多细节，这里不一一列举，欢迎实际使用中体验：D
+Simple and powerful!
 
 --- 
 
-# 📝 使用条款
+# ☀️ Features and highlights
 
-允许任何人以个人身份使用或分发本项目源代码，但仅限于学习和合法非盈利目的。
-个人或组织如未获得版权持有人授权，不得将本项目以源代码或二进制形式用于商业行为。
+## 🎇 Powerful self-developed kernel
 
-使用本项目需满足以下条款，如使用过程中出现违反任意一项条款的情形，授权自动失效。
-- 禁止将DrissionPage应用到任何可能违反当地法律规定和道德约束的项目中
-- 禁止将DrissionPage用于任何可能有损他人利益的项目中
-- 禁止将DrissionPage用于攻击与骚扰行为
-- 遵守Robots协议，禁止将DrissionPage用于采集法律或系统Robots协议不允许的数据
+This library uses a fully self-developed kernel with numerous built-in practical functions, and integrates and optimizes common functions. Compared with selenium, it has the following advantages:
 
-使用DrissionPage发生的一切行为均由使用人自行负责。
-因使用DrissionPage进行任何行为所产生的一切纠纷及后果均与版权持有人无关，
-版权持有人不承担任何使用DrissionPage带来的风险和损失。
-版权持有人不对DrissionPage可能存在的缺陷导致的任何损失负任何责任。
+- Not based on webdriver
+- No need to download different drivers for different versions of browsers
+- Run faster
+- Elements can be found across iframe without cutting in and out
+- Think of the iframe as a normal element for clearer logic
+- Can operate multiple tabs at the same time without switching
+- Can directly read the browser cache to save the image, no need to use the GUI click save
+- Can take a screenshot of the entire web page, including the parts outside the viewport
+- Can handle shadow-root in non-open state
+
+## 🎇 Highlight function
+
+In addition to the above advantages, the library also has numerous built-in user-friendly designs.
+
+- Minimal positioning syntax, easier to find elements
+- Integrate a large number of common functions, the code is more elegant, powerful and stable
+- Ubiquitous waiting and automatic retries make unstable networks easier to control, programs more stable, and writing easier
+- Provide powerful download tools, operating the browser can also enjoy fast and reliable download function
+- Allows repeated use of an already open browser, without having to start the browser from scratch every time you run, easy debugging
+- Use the ini file to save common configurations and automatically invoke them, providing convenient Settings and avoiding complicated configuration items
+- Built-in lxml as a parsing engine, the parsing speed is improved by several orders of magnitude
+- Packaged with POM mode, it can be used directly for testing and easy to expand
+- Highly integrated convenience features, reflected in every detail
+- There are many details, not listed here, welcome to practical use experience: D
+
+--- 
+
+# 📝 Terms of use
+
+Anyone is permitted to use or distribute the source code of the Project in their personal capacity, but only for learning and legitimate non-profit purposes.
+Individuals or organizations may not use this project in source code or binary form for commercial purposes without the authorization of the copyright holder.
+
+Use of this project must meet the following terms, if any of the terms are violated during use, the authorization will automatically expire.
+- DrissionPage is prohibited from being used in any project that may violate local legal and ethical requirements
+- Use of DrissionPage in any project that may harm the interests of others is prohibited
+- Use of DrissionPage for assault and harassment is prohibited
+- Comply with the Robots protocol and prohibit the use of DrissionPage to collect data that is not permitted by law or system Robots protocol
+
+All actions that occur while using DrissionPage are the user's own responsibility.
+All disputes and consequences arising out of any use of DrissionPage are independent of the copyright holder,
+The copyright holder does not assume any risk or loss arising from the use of DrissionPage.
+The copyright holder shall not be liable for any loss resulting from possible defects in DrissionPage.
 
 ---  
 
-# ☕ 请我喝咖啡
+# ☕ Buy me coffee
 
-作者是个人开发者，开发和写文档工作量较为繁重。
+The author is an individual developer, and the workload of developing and writing documentation is relatively heavy.
 
-如果本项目对您有所帮助，不妨打赏一下作者 ：）
+If this project was helpful to you, please give a tip to the author:)
 
 ![](https://drissionpage.cn/code2.jpg)
