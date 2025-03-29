@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import loads, JSONDecodeError
@@ -20,7 +21,7 @@ from .._elements.session_element import make_session_ele
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, get_frame, ChromiumElementsList
 from .._functions.locator import get_loc
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from .._functions.tools import raise_error
 from .._functions.web import location_in_viewport
 from .._units.actions import Actions
@@ -32,7 +33,8 @@ from .._units.scroller import PageScroller
 from .._units.setter import ChromiumBaseSetter
 from .._units.states import PageStates
 from .._units.waiter import BaseWaiter
-from ..errors import ContextLostError, CDPError, PageDisconnectedError, ElementLostError, JavaScriptError
+from ..errors import (ContextLostError, CDPError, PageDisconnectedError, ElementLostError, JavaScriptError,
+                      BrowserConnectError, LocatorError)
 
 __ERROR__ = 'error'
 
@@ -211,7 +213,7 @@ class ChromiumBase(BasePage):
     def _onFileChooserOpened(self, **kwargs):
         if self._upload_list:
             if 'backendNodeId' not in kwargs:
-                raise TypeError('该输入框无法接管，请改用对<input>元素输入路径的方法设置。')
+                raise RuntimeError(_S._lang.join(_S._lang.CANNOT_INPUT_FILE))
             files = self._upload_list if kwargs['mode'] == 'selectMultiple' else self._upload_list[:1]
             self._run_cdp('DOM.setFileInputFiles', files=files, backendNodeId=kwargs['backendNodeId'])
 
@@ -301,7 +303,7 @@ class ChromiumBase(BasePage):
     @property
     def driver(self):
         if self._driver is None:
-            raise RuntimeError('浏览器已关闭或链接已断开。')
+            raise BrowserConnectError(_S._lang.BROWSER_DISCONNECTED)
         return self._driver
 
     @property
@@ -442,7 +444,7 @@ class ChromiumBase(BasePage):
         elif locator._type in ('ChromiumElement', 'ChromiumFrame'):
             return locator
         else:
-            raise ValueError('locator参数只能是tuple、str、ChromiumElement类型。')
+            raise LocatorError(ALLOW_TYPE=_S._lang.ELE_OR_LOC, CURR_VAL=locator)
 
         self.wait.doc_loaded()
         end_time = perf_counter() + timeout
@@ -597,12 +599,13 @@ class ChromiumBase(BasePage):
                      '''
 
         else:
-            raise TypeError('html_or_info参数必须是html文本或tuple，tuple格式为(tag, {name: value})。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'html_or_info', ALLOW_TYPE='html, tuple',
+                                           TIP=_S._lang.NEW_ELE_INFO, CURR_VAL=html_or_info))
 
         try:
             ele = self._run_js(js, *args)
         except JavaScriptError:
-            raise RuntimeError('此网页不支持html格式新建元素，请用dict传入html_or_info参数。')
+            raise RuntimeError(_S._lang.join(_S._lang.DICT_TO_NEW_ELE))
         return ele
 
     def get_frame(self, loc_ind_ele, timeout=None):
@@ -717,8 +720,8 @@ class ChromiumBase(BasePage):
         if self._alert.auto is not None:
             if self._alert.auto != 'close':
                 self._handle_alert(self._alert.auto)
-        elif Settings.auto_handle_alert is not None:
-            self._handle_alert(Settings.auto_handle_alert)
+        elif _S.auto_handle_alert is not None:
+            self._handle_alert(_S.auto_handle_alert)
         elif self._alert.handle_next is not None:
             self._handle_alert(self._alert.handle_next, self._alert.next_text)
             self._alert.handle_next = None
@@ -761,15 +764,15 @@ class ChromiumBase(BasePage):
             try:
                 result = self._run_cdp('Page.navigate', frameId=self._frame_id, url=to_url, _timeout=timeout)
                 if 'errorText' in result:
-                    err = ConnectionError(result['errorText'])
+                    err = ConnectionError(_S._lang.join(_S._lang.CONNECT_ERR, INFO=result['errorText']))
             except TimeoutError:
-                err = TimeoutError(f'页面连接超时（等待{timeout}秒）。')
+                err = TimeoutError(_S._lang.join(_S._lang.TIMEOUT_, _S._lang.PAGE_CONNECT, timeout))
 
             if err:
                 if t < times:
                     sleep(interval)
                     if show_errmsg:
-                        print(f'重试{t + 1} {to_url}')
+                        print(f'{_S._lang.RETRY}{t + 1} {to_url}')
                 end_time1 = end_time - perf_counter()
                 while self._ready_state not in ('loading', 'complete') and perf_counter() < end_time1:  # 等待出错信息显示
                     sleep(.01)
@@ -782,11 +785,11 @@ class ChromiumBase(BasePage):
             yu = end_time - perf_counter()
             ok = self._wait_loaded(1 if yu <= 0 else yu)
             if not ok:
-                err = TimeoutError(f'页面连接超时（等待{timeout}秒）。')
+                err = TimeoutError(_S._lang.join(_S._lang.TIMEOUT_, _S._lang.PAGE_CONNECT, timeout))
                 if t < times:
                     sleep(interval)
                     if show_errmsg:
-                        print(f'重试{t + 1} {to_url}')
+                        print(f'{_S._lang.RETRY}{t + 1} {to_url}')
                 continue
 
             if not err:
@@ -794,7 +797,7 @@ class ChromiumBase(BasePage):
 
         if err:
             if show_errmsg:
-                raise err if err is not None else ConnectionError('连接异常。')
+                raise err if err is not None else ConnectionError(_S._lang.join(_S._lang.CONNECT_ERR))
             return False
 
         return True
@@ -806,7 +809,8 @@ class ChromiumBase(BasePage):
                 pic_type = 'png'
             else:
                 if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise TypeError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_bytes',
+                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
                 pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
 
         elif as_base64:
@@ -814,7 +818,8 @@ class ChromiumBase(BasePage):
                 pic_type = 'png'
             else:
                 if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise TypeError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_base64',
+                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
                 pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
 
         else:
@@ -833,7 +838,7 @@ class ChromiumBase(BasePage):
         if full_page:
             width, height = self.rect.size
             if width == 0 or height == 0:
-                raise RuntimeError('页面大小为0，请尝试等待页面加载完成。')
+                raise RuntimeError(_S._lang.join(_S._lang.ZERO_PAGE_SIZE))
             vp = {'x': 0, 'y': 0, 'width': width, 'height': height, 'scale': 1}
             args = {'format': pic_type, 'captureBeyondViewport': True, 'clip': vp}
         else:
@@ -911,7 +916,6 @@ def close_privacy_dialog(page, tid):
     :return: None
     """
     try:
-        print('ooo')
         driver = page.browser._get_driver(tid)
         driver.run('Runtime.enable')
         driver.run('DOM.enable')

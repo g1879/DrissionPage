@@ -2,10 +2,14 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from re import split
+
 from .by import By
+from .._functions.settings import Settings as _S
+from ..errors import LocatorError
 
 
 def locator_to_tuple(loc):
@@ -55,7 +59,7 @@ def _get_args(text: str = '') -> dict:
     arg_list = []
     args = split(r'(@!|@@|@\|)', text)[1:]
     if '@@' in args and '@|' in args:
-        raise ValueError('@@和@|不能同时出现在一个定位语句中。')
+        raise LocatorError(_S._lang.SYMBOL_CONFLICT, VALUE=text)
     _and = '@|' not in args
 
     for k in range(0, len(args) - 1, 2):
@@ -84,9 +88,9 @@ def is_str_loc(text):
 
 
 def is_selenium_loc(loc):
-    return (isinstance(loc, tuple) and len(loc) == 2 and isinstance(loc[1], str)
-            and loc[0] in ('id', 'xpath', 'link text', 'partial link text', 'name', 'tag name', 'class name',
-                           'css selector'))
+    return (isinstance(loc, tuple) and len(loc) == 2 and loc[0].lower() in (
+        'id', 'xpath', 'link text', 'partial link text', 'name', 'tag name', 'class name', 'css selector')
+            and isinstance(loc[1], str))
 
 
 def get_loc(loc, translate_css=False, css_mode=False):
@@ -97,7 +101,7 @@ def get_loc(loc, translate_css=False, css_mode=False):
         loc = str_to_css_loc(loc) if css_mode else str_to_xpath_loc(loc)
 
     else:
-        raise TypeError('loc参数只能是tuple或str。')
+        raise LocatorError(ALLOW_TYPE=_S._lang.LOC_FORMAT, CURR_VAL=loc)
 
     if loc[0] == 'css selector' and translate_css:
         from lxml.cssselect import CSSSelector, ExpressionError
@@ -251,7 +255,7 @@ def _make_single_xpath_str(tag: str, text: str) -> tuple:
                         arg_str = f"contains({r[0]},{_quotes_escape(r[2])})"
 
                 else:
-                    raise ValueError(f'符号不正确：{symbol}')
+                    raise LocatorError(_S._lang.INCORRECT_SIGN_, symbol)
 
         elif len_r != 3 and len_r0 > 1:
             if r[0] in ('@tag()', '@t()'):
@@ -274,7 +278,7 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
     arg_list = []
     args = split(r'(@!|@@|@\|)', text)[1:]
     if '@@' in args and '@|' in args:
-        raise ValueError('@@和@|不能同时出现在一个定位语句中。')
+        raise LocatorError(_S._lang.SYMBOL_CONFLICT, VALUE=text)
     _and = '@|' not in args
     tags = [] if tag == '*' else [f'name()="{tag}"']
     tags_connect = ' or '
@@ -325,7 +329,7 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
                                f'{_quotes_escape(txt)}) +1) = {_quotes_escape(txt)}')
 
                 else:
-                    raise ValueError(f'符号不正确：{symbol}')
+                    raise LocatorError(_S._lang.INCORRECT_SIGN_, symbol)
 
             if arg_str and ignore:
                 arg_str = f'not({arg_str})'
@@ -370,7 +374,7 @@ def _make_multi_css_str(tag: str, text: str) -> tuple:
     arg_list = []
     args = split(r'(@!|@@|@\|)', text)[1:]
     if '@@' in args and '@|' in args:
-        raise ValueError('@@和@|不能同时出现在一个定位语句中。')
+        raise LocatorError(_S._lang.SYMBOL_CONFLICT, LOCATOR=text)
     _and = '@|' not in args
 
     for k in range(0, len(args) - 1, 2):
@@ -434,7 +438,7 @@ def _make_single_css_str(tag: str, text: str) -> tuple:
 
 def translate_loc(loc):
     if len(loc) != 2:
-        raise ValueError('定位符长度必须为2。')
+        raise LocatorError(_S._lang.LOC_LEN, LOCATOR=loc)
 
     loc_by = By.XPATH
     loc_0 = loc[0].lower()
@@ -465,14 +469,14 @@ def translate_loc(loc):
         loc_str = f'//a[contains(text(),"{loc[1]}")]'
 
     else:
-        raise ValueError(f'无法识别的定位符：{loc}')
+        raise LocatorError(_S._lang.INVALID_LOC, LOCATOR=loc)
 
     return loc_by, loc_str
 
 
 def translate_css_loc(loc):
     if len(loc) != 2:
-        raise ValueError('定位符长度必须为2。')
+        raise LocatorError(_S._lang.LOC_LEN, LOCATOR=loc)
 
     loc_by = By.CSS_SELECTOR
     loc_0 = loc[0].lower()
@@ -505,7 +509,7 @@ def translate_css_loc(loc):
         loc_str = f'//a[contains(text(),"{loc[1]}")]'
 
     else:
-        raise ValueError('无法识别的定位符。')
+        raise LocatorError(_S._lang.INVALID_LOC, LOCATOR=loc)
 
     return loc_by, loc_str
 

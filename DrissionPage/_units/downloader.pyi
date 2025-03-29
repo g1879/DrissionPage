@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from typing import Dict, Optional, Union, Literal, Set
@@ -41,8 +42,8 @@ class DownloadManager(object):
         """
         ...
 
-    def set_rename(self,
-                   tab_id: str,
+    @staticmethod
+    def set_rename(tab_id: str,
                    rename: str = None,
                    suffix: str = None) -> None:
         """设置某个tab的重命名文件名
@@ -53,7 +54,8 @@ class DownloadManager(object):
         """
         ...
 
-    def set_file_exists(self, tab_id: str, mode: FILE_EXISTS) -> None:
+    @staticmethod
+    def set_file_exists(tab_id: str, mode: FILE_EXISTS) -> None:
         """设置某个tab下载文件重名时执行的策略
         :param tab_id: tab id
         :param mode: 下载路径

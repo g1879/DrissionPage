@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -35,9 +36,11 @@ class Screencast(object):
         """
         ...
 
-    def stop(self, video_name: str = None) -> str:
+    def stop(self, video_name: str = None, suffix: str='mp4', coding:str='mp4v') -> str:
         """停止录屏
         :param video_name: 视频文件名，为None时以当前时间名命
+        :param suffix: 文件后缀名
+        :param coding: 视频编码格式，仅video_mode模式有效，根据cv2.VideoWriter_fourcc()定义
         :return: 文件路径
         """
         ...
