@@ -47,6 +47,12 @@ class ChromiumPage(ChromiumBase):
     def __repr__(self):
         return f'<ChromiumPage browser_id={self.browser.id} tab_id={self.tab_id}>'
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.quit()
+
     def _d_set_runtime_settings(self):
         """设置运行时用到的属性"""
         self._timeouts = self.browser.timeouts
