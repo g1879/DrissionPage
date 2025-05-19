@@ -145,3 +145,9 @@ class Clicker(object):
         :return: None
         """
         ...
+
+    def _get_click_coordinates(self):
+        """
+        判断点击对象是否为超链接
+        """
+        ...
