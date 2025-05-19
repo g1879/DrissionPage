@@ -78,13 +78,12 @@ class Clicker(object):
                     r = self._ele.owner._run_cdp('DOM.getNodeForLocation', x=int(x), y=int(y),
                                                  includeUserAgentShadowDOM=True, ignorePointerEventsNone=True)
                     if r['backendNodeId'] != self._ele._backend_id:
-                        vx, vy = self._ele.rect.viewport_midpoint
+                        vx, vy = self._get_click_coordinates()
                     else:
                         vx, vy = self._ele.rect.viewport_click_point
 
                 except CDPError:
-                    vx, vy = self._ele.rect.viewport_midpoint
-
+                    vx, vy = self._get_click_coordinates()
                 self._click(vx, vy)
                 return self._ele
 
@@ -207,3 +206,8 @@ class Clicker(object):
         self._ele.owner._run_cdp('Input.dispatchMouseEvent', type='mouseReleased', x=view_x,
                                  y=view_y, button=button, _ignore=AlertExistsError)
         return self._ele
+
+    def _get_click_coordinates(self):
+        if self._ele.tag == 'a' and self._ele.attr('href'):
+            return self._ele.rect.viewport_click_point
+        return self._ele.rect.viewport_midpoint
