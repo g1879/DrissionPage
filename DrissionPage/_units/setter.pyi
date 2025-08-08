@@ -156,7 +156,7 @@ class SessionPageSetter(BaseSetter):
         """
         ...
 
-    def verify(self, on_off: Union[bool, None]) -> None:
+    def verify(self, on_off: Union[bool, str, None]) -> None:
         """设置是否验证SSL证书
         :param on_off: 是否验证 SSL 证书
         :return: None
