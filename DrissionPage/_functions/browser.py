@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import load, dump, JSONDecodeError
@@ -14,14 +15,16 @@ from time import perf_counter, sleep
 
 from requests import Session
 
-from .settings import Settings
+from .settings import Settings as _S
 from .tools import port_is_using
 from .._configs.options_manage import OptionsManager
 from ..errors import BrowserConnectError
 
 
 def connect_browser(option):
-    address = option.address.replace('localhost', '127.0.0.1').lstrip('htps:/')
+    address = option.address.replace('localhost', '127.0.0.1')
+    if address.startswith('http'):
+        address = address.lstrip('htps:/')
     browser_path = option.browser_path
 
     ip, port = address.split(':')
@@ -30,12 +33,11 @@ def connect_browser(option):
         if test_connect(ip, port):
             return True
         elif ip != '127.0.0.1':
-            raise BrowserConnectError(f'\n{address}浏览器连接失败。')
+            raise BrowserConnectError(ADDRESS=address)
         elif using:
-            raise BrowserConnectError(f'\n{address}浏览器连接失败，请检查{port}端口是否浏览器，'
-                                      f'且已添加\'--remote-debugging-port={port}\'启动项。')
+            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR1_, port, port, ADDRESS=address)
         else:  # option.is_existing_only
-            raise BrowserConnectError(f'\n{address}浏览器连接失败，请确认浏览器已启动。')
+            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, ADDRESS=address)
 
     # ----------创建浏览器进程----------
     args, user_path = get_launch_args(option)
@@ -46,19 +48,14 @@ def connect_browser(option):
     try:
         _run_browser(port, browser_path, args)
 
-    # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
-    except FileNotFoundError:
+    except FileNotFoundError:  # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
         browser_path = get_chrome_path(option.ini_path)
         if not browser_path:
-            raise FileNotFoundError('无法找到浏览器可执行文件路径，请手动配置。')
+            raise FileNotFoundError(_S._lang.join(_S._lang.BROWSER_EXE_NOT_FOUND))
         _run_browser(port, browser_path, args)
 
     if not test_connect(ip, port):
-        raise BrowserConnectError(f'\n{address}浏览器连接失败。\n请确认：\n'
-                                  f'1、用户文件夹没有和已打开的浏览器冲突\n'
-                                  f'2、如为无界面系统，请添加\'--headless=new\'启动参数\n'
-                                  f'3、如果是Linux系统，尝试添加\'--no-sandbox\'启动参数\n'
-                                  f'可使用ChromiumOptions设置端口和用户文件夹路径。')
+        raise BrowserConnectError(ADDRESS=address, TIP=_S._lang.BROWSER_CONNECT_ERR_INFO)
     return False
 
 
@@ -67,7 +64,7 @@ def get_launch_args(opt):
     result = set()
     user_path = False
     for i in opt.arguments:
-        if i.startswith(('--load-extension=', '--remote-debugging-port=')):
+        if i.startswith(('--disable-extensions-except=', '--load-extension=', '--remote-debugging-port=')):
             continue
         elif i.startswith('--user-data-dir') and not opt.system_user_path:
             user_path = f'--user-data-dir={Path(i[16:]).absolute()}'
@@ -89,11 +86,19 @@ def get_launch_args(opt):
     result = list(result)
 
     # ----------处理插件extensions-------------
-    ext = [str(Path(e).absolute()) for e in opt.extensions]
+    ext = [Path(e) for e in opt.extensions]
+    exts = []
     if ext:
-        ext = ','.join(set(ext))
-        ext = f'--load-extension={ext}'
-        result.append(ext)
+        for e in ext:
+            if e.is_file():
+                raise ValueError(_S._lang.join(_S._lang.PLUGIN_NEED_FOLDER, str(e.absolute())))
+            elif not e.exists():
+                raise FileNotFoundError(_S._lang.join(_S._lang.EXT_NOT_FOUND, PATH=e))
+            else:
+                exts.append(str(e.absolute()))
+        ext = ','.join(set(exts))
+        result.append(f'--disable-extensions-except={ext}')
+        result.append(f'--load-extension={ext}')
 
     return result, user_path
 
@@ -169,7 +174,7 @@ def set_flags(opt):
 
 
 def test_connect(ip, port):
-    end_time = perf_counter() + Settings.browser_connect_timeout
+    end_time = perf_counter() + _S.browser_connect_timeout
     s = Session()
     s.trust_env = False
     s.keep_alive = False
@@ -203,7 +208,7 @@ def _run_browser(port, path: str, args) -> Popen:
     try:
         return Popen(arguments, shell=False, stdout=DEVNULL, stderr=DEVNULL)
     except FileNotFoundError:
-        raise FileNotFoundError('未找到浏览器，请手动指定浏览器可执行文件路径。')
+        raise FileNotFoundError(_S._lang.join(_S._lang.BROWSER_NOT_FOUND))
 
 
 def _make_leave_in_dict(target_dict: dict, src: list, num: int, end: int) -> None:

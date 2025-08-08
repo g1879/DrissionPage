@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from typing import Union, Tuple, Any, Literal
@@ -229,6 +230,18 @@ class Actions:
         """输入文本，也可输入组合键，组合键用tuple形式输入
         :param text: 文本值或按键组合
         :return: 动作链对象本身
+        """
+        ...
+
+    def drag_in(self, ele_or_loc: Union[str, ChromiumElement], files: Union[str, list, tuple] = None,
+                text: str = None, title: str = None, baseURL: str = None) -> Actions:
+        """触发从浏览器外拖入文件、文本等事件
+        :param ele_or_loc: 接收拖动动作的元素
+        :param files: 要拖入文件路径，可多个，不为None时下面参数无效
+        :param text: 要拖入的文本，files参数为None时才生效
+        :param title: 如果text是超链接，可在此设置title，与baseURL互斥
+        :param baseURL: 如果text是html，可在此设置baseUrl，与title互斥
+        :return:
         """
         ...
 

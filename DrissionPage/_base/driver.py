@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import dumps, loads, JSONDecodeError
@@ -9,28 +10,24 @@ from queue import Queue, Empty
 from threading import Thread
 from time import perf_counter, sleep
 
-from requests import adapters
 from requests import Session
+from requests import adapters
 from websocket import (WebSocketTimeoutException, WebSocketConnectionClosedException, create_connection,
                        WebSocketException, WebSocketBadStatusException)
 
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from ..errors import PageDisconnectedError, BrowserConnectError
 
 adapters.DEFAULT_RETRIES = 5
 
 
 class Driver(object):
-    def __init__(self, tab_id, tab_type, address, owner=None):
-        self.id = tab_id
+    def __init__(self, _id, address, owner=None):
+        self.id = _id
         self.address = address
-        self.type = tab_type
         self.owner = owner
-        # self._debug = True
-        # self._debug = False
         self.alert_flag = False  # 标记alert出现，跳过一条请求后复原
 
-        self._websocket_url = f'ws://{address}/devtools/{tab_type}/{tab_id}'
         self._cur_id = 0
         self._ws = None
 
@@ -41,6 +38,7 @@ class Driver(object):
         self._handle_immediate_event_th = None
 
         self.is_running = False
+        self.session_id = None
 
         self.event_handlers = {}
         self.immediate_event_handlers = {}
@@ -55,16 +53,6 @@ class Driver(object):
         ws_id = self._cur_id
         message['id'] = ws_id
         message_json = dumps(message)
-
-        # if self._debug:
-        #     if self._debug is True or (isinstance(self._debug, str) and
-        #                                message.get('method', '').startswith(self._debug)):
-        #         print(f'发> {message_json}')
-        #     elif isinstance(self._debug, (list, tuple, set)):
-        #         for m in self._debug:
-        #             if message.get('method', '').startswith(m):
-        #                 print(f'发> {message_json}')
-        #                 break
 
         end_time = perf_counter() + timeout if timeout is not None else None
         self.method_results[ws_id] = Queue()
@@ -109,16 +97,6 @@ class Driver(object):
                 self._stop()
                 return
 
-            # if self._debug:
-            #     if self._debug is True or 'id' in msg or (isinstance(self._debug, str)
-            #                                               and msg.get('method', '').startswith(self._debug)):
-            #         print(f'<收 {msg_json}')
-            #     elif isinstance(self._debug, (list, tuple, set)):
-            #         for m in self._debug:
-            #             if msg.get('method', '').startswith(m):
-            #                 print(f'<收 {msg_json}')
-            #                 break
-
             if 'method' in msg:
                 if msg['method'].startswith('Page.javascriptDialog'):
                     self.alert_flag = msg['method'].endswith('Opening')
@@ -130,9 +108,6 @@ class Driver(object):
 
             elif msg.get('id') in self.method_results:
                 self.method_results[msg['id']].put(msg)
-
-            # elif self._debug:
-            #     print(f'未知信息：{msg}')
 
     def _handle_event_loop(self):
         while self.is_running:
@@ -163,16 +138,14 @@ class Driver(object):
             self._handle_immediate_event_th.start()
 
     def run(self, _method, **kwargs):
-        """执行cdp方法
-        :param _method: cdp方法名
-        :param kwargs: cdp参数
-        :return: 执行结果
-        """
         if not self.is_running:
             return {'error': 'connection disconnected', 'type': 'connection_error'}
 
-        timeout = kwargs.pop('_timeout', Settings.cdp_timeout)
-        result = self._send({'method': _method, 'params': kwargs}, timeout=timeout)
+        timeout = kwargs.pop('_timeout', _S.cdp_timeout)
+        if self.session_id:
+            result = self._send({'method': _method, 'params': kwargs, 'sessionId': self.session_id}, timeout=timeout)
+        else:
+            result = self._send({'method': _method, 'params': kwargs}, timeout=timeout)
         if 'result' not in result and 'error' in result:
             kwargs['_timeout'] = timeout
             return {'error': result['error']['message'], 'type': result.get('type', 'call_method_error'),
@@ -183,14 +156,14 @@ class Driver(object):
     def start(self):
         self.is_running = True
         try:
-            self._ws = create_connection(self._websocket_url, enable_multithread=True, suppress_origin=True)
+            self._ws = create_connection(self.address, enable_multithread=True, suppress_origin=True)
         except WebSocketBadStatusException as e:
             if 'Handshake status 403 Forbidden' in str(e):
-                raise RuntimeError('请升级websocket-client库。')
+                raise EnvironmentError(_S._lang.join(_S._lang.UPGRADE_WS))
             else:
-                return
+                raise
         except ConnectionRefusedError:
-            raise BrowserConnectError('浏览器未开启或已关闭。')
+            raise BrowserConnectError(_S._lang.BROWSER_NOT_EXIST)
         self._recv_th.start()
         self._handle_event_th.start()
         return True
@@ -210,25 +183,6 @@ class Driver(object):
             self._ws.close()
             self._ws = None
 
-        # try:
-        #     while not self.immediate_event_queue.empty():
-        #         function, kwargs = self.immediate_event_queue.get_nowait()
-        #         try:
-        #             function(**kwargs)
-        #         except PageDisconnectedError:
-        #             raise
-        #             pass
-        #         sleep(.1)
-        #
-        #     while not self.event_queue.empty():
-        #         event = self.event_queue.get_nowait()
-        #         function = self.event_handlers.get(event['method'])
-        #         if function:
-        #             function(**event['params'])
-        #         sleep(.1)
-        # except:
-        #     pass
-
         self.event_handlers.clear()
         self.method_results.clear()
         self.event_queue.queue.clear()
@@ -247,22 +201,23 @@ class Driver(object):
 class BrowserDriver(Driver):
     BROWSERS = {}
 
-    def __new__(cls, tab_id, tab_type, address, owner):
-        if tab_id in cls.BROWSERS:
-            return cls.BROWSERS[tab_id]
+    def __new__(cls, _id, address, owner):
+        if _id in cls.BROWSERS:
+            return cls.BROWSERS[_id]
         return object.__new__(cls)
 
-    def __init__(self, tab_id, tab_type, address, owner):
+    def __init__(self, _id, address, owner):
         if hasattr(self, '_created'):
             return
         self._created = True
-        BrowserDriver.BROWSERS[tab_id] = self
-        super().__init__(tab_id, tab_type, address, owner)
+        BrowserDriver.BROWSERS[_id] = self
+        super().__init__(_id, address, owner)
 
     def __repr__(self):
         return f'<BrowserDriver {self.id}>'
 
-    def get(self, url):
+    @staticmethod
+    def get(url):
         s = Session()
         s.trust_env = False
         s.keep_alive = False

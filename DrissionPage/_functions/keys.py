@@ -2,22 +2,19 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from platform import system
 
 from ..errors import AlertExistsError
 
+modifierBit = {'\ue00a': 1, '\ue009': 2, '\ue03d': 4, '\ue008': 8}
+sys = system().lower()
+
 
 class Keys:
     """特殊按键"""
-    CTRL_A = ('\ue009', 'a')
-    CTRL_C = ('\ue009', 'c')
-    CTRL_X = ('\ue009', 'x')
-    CTRL_V = ('\ue009', 'v')
-    CTRL_Z = ('\ue009', 'z')
-    CTRL_Y = ('\ue009', 'y')
-
     NULL = '\ue000'
     CANCEL = '\ue001'  # ^break
     HELP = '\ue002'
@@ -46,6 +43,18 @@ class Keys:
     DEL = '\ue017'
     SEMICOLON = '\ue018'
     EQUALS = '\ue019'
+
+    META = '\ue03d'
+    COMMAND = '\ue03d'
+
+    CTRL_COMM = '\ue03d' if sys in ('macos', 'darwin') else '\ue009'
+
+    CTRL_A = (CTRL_COMM, 'a')
+    CTRL_C = (CTRL_COMM, 'c')
+    CTRL_X = (CTRL_COMM, 'x')
+    CTRL_V = (CTRL_COMM, 'v')
+    CTRL_Z = (CTRL_COMM, 'z')
+    CTRL_Y = (CTRL_COMM, 'y')
 
     NUMPAD0 = '\ue01a'  # number pad keys
     NUMPAD1 = '\ue01b'
@@ -76,9 +85,6 @@ class Keys:
     F10 = '\ue03a'
     F11 = '\ue03b'
     F12 = '\ue03c'
-
-    META = '\ue03d'
-    COMMAND = '\ue03d'
     # ZENKAKU_HANKAKU = '\ue040'
 
 
@@ -181,6 +187,7 @@ keyDefinitions = {
     '"': {'keyCode': 222, 'key': '"', 'code': 'Quote'},
     '\n': {'keyCode': 13, 'code': 'Enter', 'key': 'Enter', 'text': '\r'},
     '\ue007': {'keyCode': 13, 'code': 'Enter', 'key': 'Enter', 'text': '\r'},
+    '\ue006': {'keyCode': 13, 'code': 'NumpadEnter', 'key': 'Enter', 'text': '\r', 'location': 3},
     '\ue003': {'keyCode': 8, 'code': 'Backspace', 'key': 'Backspace'},
     '\ue00d': {'keyCode': 32, 'code': 'Space', 'key': ' '},
     # 'PageUp': {'keyCode': 33, 'shiftKeyCode': 105, 'key': 'PageUp', 'code': 'Numpad9', 'shiftKey': '9', 'location': 3},
@@ -210,7 +217,6 @@ keyDefinitions = {
     '\ue002': {'keyCode': 6, 'code': 'Help', 'key': 'Help'},
     '\ue004': {'keyCode': 9, 'code': 'Tab', 'key': 'Tab'},
     '\ue005': {'keyCode': 12, 'shiftKeyCode': 101, 'key': 'Clear', 'code': 'Numpad5', 'shiftKey': '5', 'location': 3},
-    '\ue006': {'keyCode': 13, 'code': 'NumpadEnter', 'key': 'Enter', 'text': '\r', 'location': 3},
     '\ue00b': {'keyCode': 19, 'code': 'Pause', 'key': 'Pause'},
     # 'CapsLock': {'keyCode': 20, 'code': 'CapsLock', 'key': 'CapsLock'},
     '\ue00c': {'keyCode': 27, 'code': 'Escape', 'key': 'Escape'},
@@ -335,8 +341,6 @@ keyDefinitions = {
     # 'Power': {'key': 'Power', 'code': 'Power'},
     # 'Eject': {'key': 'Eject', 'code': 'Eject'},
 }
-modifierBit = {'\ue00a': 1, '\ue009': 2, '\ue03d': 4, '\ue008': 8}
-sys = system().lower()
 
 
 def keys_to_typing(value):
@@ -425,7 +429,7 @@ def input_text_or_keys(page, text_or_keys):
             send_key(page, modifier, key)
         return
 
-    if text_or_keys.endswith(('\n', '\ue007')):
+    if text_or_keys.endswith(('\n', '\ue007', '\ue006')):
         page._run_cdp('Input.insertText', text=text_or_keys[:-1], _ignore=AlertExistsError)
         send_key(page, modifier, '\n')
     else:

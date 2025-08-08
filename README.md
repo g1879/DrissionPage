@@ -34,7 +34,7 @@ python 版本：3.6 及以上
 
 **交流 QQ 群：**  见使用文档
 
-![](https://drissionpage.cn/codes.jpg)
+![](https://drissionpage.cn/codes.png)
 
 ---
 

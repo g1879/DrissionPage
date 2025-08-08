@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -24,7 +25,7 @@ from .._pages.chromium_frame import ChromiumFrame
 from .._units.actions import Actions
 from .._units.console import Console
 from .._units.listener import Listener
-from .._units.rect import TabRect
+from .._units.rect import TabRect, FrameRect
 from .._units.screencast import Screencast
 from .._units.scroller import Scroller, PageScroller
 from .._units.setter import ChromiumBaseSetter
@@ -181,7 +182,7 @@ class ChromiumBase(BasePage):
         ...
 
     @property
-    def rect(self) -> TabRect:
+    def rect(self) -> Union[TabRect, FrameRect]:
         """返回获取窗口坐标和大小的对象"""
         ...
 

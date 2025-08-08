@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from http.cookiejar import CookieJar
@@ -123,8 +124,8 @@ class MixTab(SessionPage, ChromiumTab):
             interval: Optional[float] = None,
             timeout: Optional[float] = None,
             params: Optional[dict] = None,
-            data: Union[dict, str, None] = None,
-            json: Union[dict, str, None] = None,
+            data: Any = None,
+            json: Any = None,
             headers: Optional[dict] = None,
             cookies: Union[CookieJar, dict] = None,
             files: Optional[Any] = None,
@@ -165,8 +166,8 @@ class MixTab(SessionPage, ChromiumTab):
              interval: Optional[float] = None,
              timeout: Optional[float] = None,
              params: Optional[dict] = None,
-             data: Union[dict, str, None] = None,
-             json: Union[dict, str, None] = None,
+             data: Any = None,
+             json: Any = None,
              headers: Optional[dict] = None,
              cookies: Union[CookieJar, dict] = None,
              files: Optional[Any] = None,

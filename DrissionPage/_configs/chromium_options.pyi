@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -10,7 +11,6 @@ from typing import Union, Any, Literal, Optional, Tuple
 
 class ChromiumOptions(object):
     ini_path: Optional[str] = ...
-    _driver_path: str = ...
     _user_data_path: Optional[str] = ...
     _download_path: str = ...
     _tmp_path: str = ...
@@ -34,6 +34,7 @@ class ChromiumOptions(object):
     _retry_interval: float = ...
     _is_headless: bool = ...
     _ua_set: bool = ...
+    ws_address: Optional[str] = ...
 
     def __init__(self,
                  read_file: [bool, None] = True,
@@ -314,14 +315,14 @@ class ChromiumOptions(object):
         ...
 
     def set_local_port(self, port: Union[str, int]) -> ChromiumOptions:
-        """设置本地启动端口
+        """设置本地启动端口，与set_address()和auto_port()互斥
         :param port: 端口号
         :return: 当前对象
         """
         ...
 
     def set_address(self, address: str) -> ChromiumOptions:
-        """设置浏览器地址，格式'ip:port'
+        """设置浏览器地址，格式'ip:port'，与auto_port()和set_local_port()互斥
         :param address: 浏览器地址
         :return: 当前对象
         """
@@ -362,10 +363,6 @@ class ChromiumOptions(object):
         """
         ...
 
-    def set_paths(self, browser_path: Union[str, Path] = None, local_port: Union[int, str] = None,
-                  address: str = None, download_path: Union[str, Path] = None, user_data_path: Union[str, Path] = None,
-                  cache_path: Union[str, Path] = None) -> ChromiumOptions: ...
-
     def use_system_user_path(self, on_off: bool = True) -> ChromiumOptions:
         """设置是否使用系统安装的浏览器默认用户文件夹
         :param on_off: 开或关
@@ -376,7 +373,7 @@ class ChromiumOptions(object):
     def auto_port(self,
                   on_off: bool = True,
                   scope: Tuple[int, int] = None) -> ChromiumOptions:
-        """自动获取可用端口
+        """自动获取可用端口，与set_address()和set_local_port()互斥
         :param on_off: 是否开启自动获取端口号
         :param scope: 指定端口范围，不含最后的数字，为None则使用[9600-59600)
         :return: 当前对象

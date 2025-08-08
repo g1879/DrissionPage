@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from copy import copy
@@ -9,7 +10,7 @@ from re import search, findall, DOTALL
 from time import sleep, perf_counter
 
 from .._elements.chromium_element import ChromiumElement
-from .._functions.settings import Settings
+from .._functions.settings import Settings as _S
 from .._pages.chromium_base import ChromiumBase
 from .._units.listener import FrameListener
 from .._units.rect import FrameRect
@@ -24,14 +25,9 @@ class ChromiumFrame(ChromiumBase):
     _Frames = {}
 
     def __new__(cls, owner, ele, info=None):
-        """
-        :param owner: frame所在的页面对象
-        :param ele: frame所在元素
-        :param info: frame所在元素信息
-        """
         fid = info['node']['frameId'] if info else owner._run_cdp('DOM.describeNode',
                                                                   backendNodeId=ele._backend_id)['node']['frameId']
-        if Settings.singleton_tab_obj and fid in cls._Frames:
+        if _S.singleton_tab_obj and fid in cls._Frames:
             r = cls._Frames[fid]
             while not hasattr(r, '_type') or r._type != 'ChromiumFrame':
                 sleep(.01)
@@ -41,7 +37,7 @@ class ChromiumFrame(ChromiumBase):
         return r
 
     def __init__(self, owner, ele, info=None):
-        if Settings.singleton_tab_obj and hasattr(self, '_created'):
+        if _S.singleton_tab_obj and hasattr(self, '_created'):
             return
         self._created = True
 
@@ -51,18 +47,23 @@ class ChromiumFrame(ChromiumBase):
         self._frame_ele = ele
         self._reloading = False
 
-        node = info['node'] if info else owner._run_cdp('DOM.describeNode', backendNodeId=ele._backend_id)['node']
-        self._frame_id = node['frameId']
-        if self._is_inner_frame():
-            self._is_diff_domain = False
-            self.doc_ele = ChromiumElement(self._target_page, backend_id=node['contentDocument']['backendNodeId'])
-            super().__init__(owner.browser, owner.driver.id)
-        else:
-            self._is_diff_domain = True
-            delattr(self, '_frame_id')
-            super().__init__(owner.browser, node['frameId'])
-            obj_id = super()._run_js('document;', as_expr=True)['objectId']
-            self.doc_ele = ChromiumElement(self, obj_id=obj_id)
+        try:
+            node = info['node'] if info else owner._run_cdp('DOM.describeNode', backendNodeId=ele._backend_id)['node']
+            self._frame_id = node['frameId']
+            if self._is_inner_frame():
+                self._is_diff_domain = False
+                self.doc_ele = ChromiumElement(self._target_page, backend_id=node['contentDocument']['backendNodeId'])
+                super().__init__(owner.browser, owner.driver.id)
+            else:
+                self._is_diff_domain = True
+                delattr(self, '_frame_id')
+                super().__init__(owner.browser, node['frameId'])
+                obj_id = super()._run_js('document;', as_expr=True)['objectId']
+                self.doc_ele = ChromiumElement(self, obj_id=obj_id)
+
+        except Exception as e:
+            ChromiumFrame._Frames.pop(self._frame_id, None)
+            raise e
 
         self._type = 'ChromiumFrame'
 
@@ -89,7 +90,8 @@ class ChromiumFrame(ChromiumBase):
         try:
             super()._driver_init(target_id)
         except:
-            self.browser._driver.get(f'http://{self._browser.address}/json')
+            if not self.browser._ws_only:
+                self.browser._driver.get(f'http://{self._browser.address}/json')
             super()._driver_init(target_id)
         self._driver.set_callback('Inspector.detached', self._onInspectorDetached, immediate=True)
         self._driver.set_callback('Page.frameDetached', None)
@@ -97,7 +99,6 @@ class ChromiumFrame(ChromiumBase):
 
     def _reload(self):
         self._is_loading = True
-        # d_debug = self.driver._debug
         self._reloading = True
         self._doc_got = False
 
@@ -122,9 +123,8 @@ class ChromiumFrame(ChromiumBase):
             self.doc_ele = ChromiumElement(self._target_page, backend_id=node['contentDocument']['backendNodeId'])
             self._frame_id = node['frameId']
             if self._listener:
-                self._listener._to_target(self._target_page.tab_id, self._browser.address, self)
+                self._listener._to_target(self._target_page.tab_id, self._browser._ws_address, self)
             super().__init__(self._browser, self._target_page.tab_id)
-            # self.driver._debug = d_debug
 
         else:
             self._is_diff_domain = True
@@ -305,6 +305,10 @@ class ChromiumFrame(ChromiumBase):
         return self.frame_ele.sr
 
     @property
+    def child_count(self):
+        return int(self._ele('xpath:count(./*)'))
+
+    @property
     def _js_ready_state(self):
         if self._is_diff_domain:
             return super()._js_ready_state
@@ -385,7 +389,8 @@ class ChromiumFrame(ChromiumBase):
                 pic_type = 'png'
             else:
                 if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise TypeError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_bytes',
+                                     ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
                 pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
 
         elif as_base64:
@@ -393,7 +398,8 @@ class ChromiumFrame(ChromiumBase):
                 pic_type = 'png'
             else:
                 if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise TypeError("只能接收 'jpg', 'jpeg', 'png', 'webp' 四种格式。")
+                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_base64',
+                                     ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
                 pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
 
         else:

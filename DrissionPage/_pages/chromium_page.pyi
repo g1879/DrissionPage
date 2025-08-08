@@ -2,6 +2,7 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
@@ -28,7 +29,7 @@ class ChromiumPage(ChromiumBase):
                 addr_or_opts: Union[str, int, ChromiumOptions] = None,
                 tab_id: str = None):
         """
-        :param addr_or_opts: 浏览器地址:端口、ChromiumOptions对象或端口数字（int）
+        :param addr_or_opts: 浏览器地址:端口、ws地址、ChromiumOptions对象或端口数字（int）
         :param tab_id: 要控制的标签页id，不指定默认为激活的
         """
         ...
@@ -37,7 +38,7 @@ class ChromiumPage(ChromiumBase):
                  addr_or_opts: Union[str, int, ChromiumOptions] = None,
                  tab_id: str = None):
         """
-        :param addr_or_opts: 浏览器地址:端口、ChromiumOptions对象或端口数字（int）
+        :param addr_or_opts: 浏览器地址:端口、ws地址、ChromiumOptions对象或端口数字（int）
         :param tab_id: 要控制的标签页id，不指定默认为激活的
         """
         ...

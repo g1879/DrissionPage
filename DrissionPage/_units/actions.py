@@ -2,11 +2,14 @@
 """
 @Author   : g1879
 @Contact  : g1879@qq.com
+@Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
+from pathlib import Path
 from time import sleep, perf_counter
 
 from .._functions.keys import modifierBit, make_input_data, input_text_or_keys, Keys
+from .._functions.settings import Settings as _S
 from .._functions.web import location_in_viewport
 
 
@@ -38,7 +41,8 @@ class Actions:
             lx = x + offset_x
             ly = y + offset_y
         else:
-            raise TypeError('ele_or_loc参数只能接受坐标(x, y)或ChromiumElement对象。')
+            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'ele_or_loc',
+                                           ALLOW_TYPE=_S._lang.ELE_LOC_FORMAT, CURR_VAL=ele_or_loc))
 
         if not location_in_viewport(self.owner, lx, ly):
             # 把坐标滚动到页面中间
@@ -162,7 +166,7 @@ class Actions:
 
         data = make_input_data(self.modifier, key, False)
         if not data:
-            raise ValueError(f'没有这个按键：{key}')
+            raise ValueError(_S._lang.join(_S._lang.NO_SUCH_KEY_, key))
         self.owner._run_cdp('Input.dispatchKeyEvent', **data)
         return self
 
@@ -174,7 +178,7 @@ class Actions:
 
         data = make_input_data(self.modifier, key, True)
         if not data:
-            raise ValueError(f'没有这个按键：{key}')
+            raise ValueError(_S._lang.join(_S._lang.NO_SUCH_KEY_, key))
         self.owner._run_cdp('Input.dispatchKeyEvent', **data)
         return self
 
@@ -204,6 +208,40 @@ class Actions:
 
     def input(self, text):
         input_text_or_keys(self.owner, text)
+        return self
+
+    def drag_in(self, ele_or_loc, files=None, text=None, title=None, baseURL=None):
+        ele_or_loc = self.owner(ele_or_loc)
+        x, y = ele_or_loc.rect.viewport_midpoint
+        if files:
+            items = []
+            paths = []
+            if isinstance(files, str):
+                files = [files]
+            for file in files:
+                path = str(Path(file).absolute())
+                item = {'mimeType': 'text/plain', 'data': path}
+                items.append(item)
+                paths.append(path)
+            data = {'items': items, 'files': paths, 'dragOperationsMask': 16}
+
+        elif text:
+            item = {'data': text}
+            if title is not None:
+                item['title'] = title
+                item['mimeType'] = 'text/uri-list'
+            elif baseURL is not None:
+                item['baseURL'] = baseURL
+                item['mimeType'] = 'text/uri-list'
+            else:
+                item['mimeType'] = 'text/plain'
+            data = {'items': [item], 'dragOperationsMask': 1}
+
+        else:
+            raise ValueError(_S._lang.NEED_FILES_OR_TEXT_ARG)
+
+        self._dr.run('Input.dispatchDragEvent', type='dragEnter', x=x, y=y, data=data, modifiers=self.modifier)
+        self._dr.run('Input.dispatchDragEvent', type='drop', x=x, y=y, data=data, modifiers=self.modifier)
         return self
 
     def wait(self, second, scope=None):
