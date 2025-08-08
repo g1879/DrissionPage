@@ -51,6 +51,6 @@ def from_playwright(page_or_browser):
             break
     else:
         raise RuntimeError(Settings._lang.join(Settings._lang.GET_OBJ_FAILED, TIP=Settings._lang.RUN_BY_ADMIN))
-    co = ChromiumOptions().set_local_port(f'127.0.0.1:{port}')
+    co = ChromiumOptions().set_local_port(port)
     co._ua_set = True
     return Chromium(co)
