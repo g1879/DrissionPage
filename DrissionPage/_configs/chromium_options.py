@@ -54,6 +54,7 @@ class ChromiumOptions(object):
                 break
 
         self._proxy = om.proxies.get('http', None) or om.proxies.get('https', None)
+        self._proxy_auth = None
 
         user_path = user = False
         for arg in self._arguments:
@@ -113,6 +114,11 @@ class ChromiumOptions(object):
     @property
     def proxy(self):
         return self._proxy
+
+    @property
+    def proxy_auth(self):
+        # 读取代理认证
+        return self._proxy_auth
 
     @property
     def address(self):
@@ -292,6 +298,13 @@ class ChromiumOptions(object):
             print(_S._lang.UNSUPPORTED_SOCKS_PROXY)
         self._proxy = proxy
         return self.set_argument('--proxy-server', proxy)
+
+    def set_proxy_auth(self, username, password):
+        # 增加代理认证
+        self._proxy_auth = {
+            'username': username,
+            'password': password
+        }
 
     def set_load_mode(self, value):
         if value not in ('normal', 'eager', 'none'):
