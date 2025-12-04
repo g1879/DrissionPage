@@ -236,7 +236,7 @@ class Chromium(object):
     def reconnect(self):
         self._disconnect_flag = True
         self._driver.stop()
-        BrowserDriver.BROWSERS.pop(self.id)
+        BrowserDriver.BROWSERS.pop(self.id, None)
         self._driver = BrowserDriver(self.id, self._ws_address, self)
         self._run_cdp('Target.setDiscoverTargets', discover=True)
         self._driver.set_callback('Target.targetDestroyed', self._onTargetDestroyed)
@@ -440,6 +440,7 @@ class Chromium(object):
     def _on_disconnect(self):
         if not self._disconnect_flag:
             Chromium._BROWSERS.pop(self.id, None)
+            BrowserDriver.BROWSERS.pop(self.id, None)
             if self._chromium_options.is_auto_port and self._chromium_options.user_data_path:
                 path = Path(self._chromium_options.user_data_path)
                 end_time = perf_counter() + 7
