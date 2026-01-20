@@ -105,4 +105,4 @@ python 版本：3.6 及以上
 
 如果本项目对您有所帮助，不妨打赏一下作者 ：）
 
-![](https://drissionpage.cn/code2.jpg)
+![](https://raw.githubusercontent.com/g1879/DrissionPage/refs/heads/master/img/code.jpg)
