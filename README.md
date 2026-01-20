@@ -10,7 +10,7 @@ DrissionPage 是一个基于 python 的网页自动化工具。
 
 它的语法简洁而优雅，代码量少，对新手友好。
 
-<a href="https://www.tgebrowser.com/zh" target="_blank"><img src="https://drissionpage.cn/img/ad.png"/></a>
+<a href="https://www.tgebrowser.com/zh" target="_blank"><img src="https://raw.githubusercontent.com/g1879/DrissionPage/refs/heads/master/img/ad.png"/></a>
 
 ---
 
