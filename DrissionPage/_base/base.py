@@ -11,7 +11,7 @@ from pathlib import Path
 from re import sub
 from urllib.parse import quote
 
-from DownloadKit import DownloadKit
+from DrissionGet import DrissionGet
 from requests import Session
 
 from .._configs.session_options import SessionOptions
@@ -267,7 +267,7 @@ class BasePage(BaseParser):
         self._url_available = None
         self.retry_times = 3
         self.retry_interval = 2
-        self._DownloadKit = None
+        self._downloader = None
         self._download_path = None
         self._none_ele_return_value = False
         self._none_ele_value = None
@@ -291,11 +291,11 @@ class BasePage(BaseParser):
 
     @property
     def download(self):
-        if self._DownloadKit is None:
+        if self._downloader is None:
             if not self._session:
                 self._create_session()
-            self._DownloadKit = DownloadKit(driver=self, save_path=self.download_path)
-        return self._DownloadKit
+            self._downloader = DrissionGet(driver=self, save_path=self.download_path)
+        return self._downloader
 
     def _before_connect(self, url, retry, interval):
         is_file = False

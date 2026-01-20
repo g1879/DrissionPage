@@ -38,14 +38,14 @@ class Chromium(object):
 
     def __new__(cls, addr_or_opts=None, session_options=None):
         opt = handle_options(addr_or_opts)
-        is_headless, browser_id, is_exists, ws_only = run_browser(opt)
+
         with cls._lock:
+            is_headless, browser_id, is_exists, ws_only, driver = run_browser(opt)
             if browser_id in cls._BROWSERS:
-                r = cls._BROWSERS[browser_id]
-                while not hasattr(r, '_driver'):
-                    sleep(.05)
-                return r
+                return cls._BROWSERS[browser_id]
         r = object.__new__(cls)
+        driver.owner = r
+        r._driver = driver
         r._chromium_options = opt
         r._is_headless = is_headless
         r._is_exists = is_exists
@@ -81,7 +81,6 @@ class Chromium(object):
         self._ws_address = (self._chromium_options.ws_address if self._chromium_options.ws_address
                             else f'ws://{self.address}/devtools/browser/{self.id}')
         self._disconnect_flag = False
-        self._driver = BrowserDriver(self.id, self._ws_address, self)
 
         if (not self._ws_only
                 and (not self._chromium_options._ua_set and self._is_headless != self._chromium_options.is_headless)
@@ -485,20 +484,38 @@ def handle_options(addr_or_opts):
 
 
 def run_browser(chromium_options):
+    ws_only = False
     if chromium_options.ws_address:
-        d = Driver('', chromium_options.ws_address)
-        browser_id = d.run('Target.getTargets')
+        try:
+            driver = BrowserDriver('', chromium_options.ws_address, None)
+        except EnvironmentError:
+            raise
+        except Exception as e:
+            raise BrowserConnectError(_S._lang.join(_S._lang.BROWSER_CONNECT_ERR2, INFO=str(e)))
+        browser_id = driver.run('Target.getTargets')
         if 'error' in browser_id:
             raise BrowserConnectError(_S._lang.join(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error']))
         browser_id = browser_id['targetInfos'][0]['browserContextId']
-        is_headless = 'headless' in d.run('Browser.getVersion')['userAgent'].lower()
-        is_exists = True
-        d.stop()
+        is_headless = 'headless' in driver.run('Browser.getVersion')['userAgent'].lower()
+        driver.id = browser_id
         if 'devtools/browser' not in chromium_options.ws_address:
-            return is_headless, browser_id, is_exists, True
-    else:
-        is_exists = connect_browser(chromium_options)
+            return is_headless, browser_id, True, True, driver
 
+        s = Session()
+        s.trust_env = False
+        s.keep_alive = False
+        try:
+            ws = s.get(f'http://{chromium_options.address}/json/version', headers={'Connection': 'close'}, timeout=2)
+            if not ws:
+                ws_only = True
+            else:
+                ws.close()
+        except:
+            ws_only = True
+        s.close()
+        return is_headless, browser_id, True, ws_only, driver
+
+    is_exists = connect_browser(chromium_options)
     try:
         s = Session()
         s.trust_env = False
@@ -507,20 +524,21 @@ def run_browser(chromium_options):
         if not ws and not chromium_options.ws_address:
             raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2)
         json = ws.json()
-        if not chromium_options.ws_address:
-            browser_id = json['webSocketDebuggerUrl'].split('/')[-1]
-            is_headless = 'headless' in json['User-Agent'].lower()
+        browser_id = json['webSocketDebuggerUrl'].split('/')[-1]
+        is_headless = 'headless' in json['User-Agent'].lower()
         ws.close()
         s.close()
-        ws_only = False
     except KeyError:
         raise BrowserConnectError(_S._lang.BROWSER_NOT_FOR_CONTROL)
     except:
-        if chromium_options.ws_address:
-            ws_only = True
-        else:
-            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2)
-    return is_headless, browser_id, is_exists, ws_only
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2)
+    driver = BrowserDriver('', f'ws://{chromium_options.address}/devtools/browser/{browser_id}', None)
+    browser_id = driver.run('Target.getTargets')
+    if 'error' in browser_id:
+        raise BrowserConnectError(_S._lang.join(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error']))
+    browser_id = browser_id['targetInfos'][0]['browserContextId']
+
+    return is_headless, browser_id, is_exists, ws_only, driver
 
 
 def _new_tab_by_js(browser: Chromium, url, tab_type, new_window):

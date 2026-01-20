@@ -202,15 +202,15 @@ class BrowserDriver(Driver):
     BROWSERS = {}
 
     def __new__(cls, _id, address, owner):
-        if _id in cls.BROWSERS:
-            return cls.BROWSERS[_id]
+        if address in cls.BROWSERS:
+            return cls.BROWSERS[address]
         return object.__new__(cls)
 
     def __init__(self, _id, address, owner):
         if hasattr(self, '_created'):
             return
         self._created = True
-        BrowserDriver.BROWSERS[_id] = self
+        BrowserDriver.BROWSERS[address] = self
         super().__init__(_id, address, owner)
 
     def __repr__(self):
