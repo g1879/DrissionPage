@@ -86,6 +86,11 @@ class ChromiumOptions(object):
         ...
 
     @property
+    def proxy_auth(self) -> dict:
+        """返回代理认证设置"""
+        ...
+
+    @property
     def address(self) -> str:
         """返回浏览器地址，ip:port"""
         ...
@@ -304,6 +309,14 @@ class ChromiumOptions(object):
         """
         ...
 
+    def set_proxy_auth(self, username: str, password: str) -> ChromiumOptions:
+        """设置代理认证
+        :param username: 用户名
+        :param password: 密码
+        :return: 当前对象
+        """
+        ...
+
     def set_load_mode(self, value: Literal['normal', 'eager', 'none']) -> ChromiumOptions:
         """设置load_mode，可接收 'normal', 'eager', 'none'
         normal：默认情况下使用, 等待所有资源下载完成
@@ -397,3 +410,4 @@ class ChromiumOptions(object):
     def save_to_default(self) -> str:
         """保存当前配置到默认ini文件"""
         ...
+

@@ -44,7 +44,11 @@ class ChromiumPage(ChromiumBase):
         self.set.timeouts(base=timeout)  # 即将废弃
         self._tab = self
         self._browser._dl_mgr._page_id = self.tab_id
-
+        self._proxy_auth = addr_or_opts.proxy_auth
+        if addr_or_opts.proxy_auth:
+            # 如果代理认证存在，则设置代理认证
+            self.__set_proxy_auth()
+    
     def __repr__(self):
         return f'<ChromiumPage browser_id={self.browser.id} tab_id={self.tab_id}>'
 
@@ -56,6 +60,36 @@ class ChromiumPage(ChromiumBase):
         self.retry_times = self.browser.retry_times
         self.retry_interval = self.browser.retry_interval
         self._auto_handle_alert = self.browser._auto_handle_alert
+
+    def handle_auth_required(self, **kwargs):
+        request_id = kwargs.get('requestId')
+        auth_challenge = kwargs.get('authChallenge', {})
+        if auth_challenge.get('source') == 'Proxy':
+            self.driver.run("Fetch.continueWithAuth",
+                            requestId=request_id,
+                            authChallengeResponse={
+                                'response': 'ProvideCredentials',
+                                'username': self._proxy_auth.get("username"),
+                                'password': self._proxy_auth.get("password")
+                            })
+        else:
+            self.driver.run("Fetch.continueWithAuth",
+                            requestId=request_id,
+                            authChallengeResponse={'response': 'Default'})
+
+    def handle_request_paused(self, **kwargs):
+        request_id = kwargs.get('requestId')
+
+        if 'authChallenge' in kwargs:
+            return
+
+        self.driver.run("Fetch.continueRequest", requestId=request_id)
+
+    def __set_proxy_auth(self):
+        # 开启代理认证
+        self.driver.run('Fetch.enable', handleAuthRequests=True)
+        self.driver.set_callback("Fetch.authRequired", self.handle_auth_required)
+        self.driver.set_callback("Fetch.requestPaused", self.handle_request_paused)
 
     @property
     def set(self):
@@ -129,3 +163,4 @@ class ChromiumPage(ChromiumBase):
 
     def _on_disconnect(self):
         ChromiumPage._PAGES.pop(self._browser.id, None)
+
