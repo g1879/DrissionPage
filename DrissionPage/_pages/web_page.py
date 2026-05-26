@@ -37,6 +37,12 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
             chromium_options = ChromiumOptions(read_file=chromium_options)
             chromium_options.set_timeouts(base=self._timeout).set_paths(download_path=self.download_path)
         super(SessionPage, self).__init__(addr_or_opts=chromium_options, timeout=timeout)  # 即将废弃timeout
+        
+        self._proxy_auth = chromium_options.proxy_auth
+        if chromium_options.proxy_auth:
+            # 如果代理认证存在，则设置代理认证
+            self.__set_proxy_auth()
+        
         self._type = 'WebPage'
         self.change_mode(mode, go=False, copy_cookies=False)
 
@@ -115,6 +121,37 @@ class WebPage(SessionPage, ChromiumPage, BasePage):
     @property
     def download_path(self):
         return self.browser.download_path
+
+    def handle_auth_required(self,**kwargs):
+        request_id = kwargs.get('requestId')
+        auth_challenge = kwargs.get('authChallenge', {})
+        if auth_challenge.get('source') == 'Proxy':
+            self.driver.run("Fetch.continueWithAuth", 
+                        requestId=request_id,
+                        authChallengeResponse={
+                            'response': 'ProvideCredentials',
+                            'username': self._proxy_auth.get("username"),
+                            'password': self._proxy_auth.get("password")
+                        })
+        else:
+            self.driver.run("Fetch.continueWithAuth",
+                        requestId=request_id,
+                        authChallengeResponse={'response': 'Default'})
+
+
+    def handle_request_paused(self,**kwargs):
+        request_id = kwargs.get('requestId')
+        
+        if 'authChallenge' in kwargs:
+            return
+        
+        self.driver.run("Fetch.continueRequest", requestId=request_id)
+
+    def __set_proxy_auth(self):
+        # 开启代理认证
+        self.driver.run('Fetch.enable', handleAuthRequests=True)
+        self.driver.set_callback("Fetch.authRequired", self.handle_auth_required)
+        self.driver.set_callback("Fetch.requestPaused", self.handle_request_paused)
 
     def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, **kwargs):
         if self._d_mode:

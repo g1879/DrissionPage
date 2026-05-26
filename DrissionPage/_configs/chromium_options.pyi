@@ -86,6 +86,11 @@ class ChromiumOptions(object):
         ...
 
     @property
+    def proxy_auth(self) -> dict:
+        """返回代理认证设置"""
+        ...
+
+    @property
     def address(self) -> str:
         """返回浏览器地址，ip:port"""
         ...
@@ -300,6 +305,14 @@ class ChromiumOptions(object):
     def set_proxy(self, proxy: str) -> ChromiumOptions:
         """设置代理
         :param proxy: 代理url和端口
+        :return: 当前对象
+        """
+        ...
+
+    def set_proxy_auth(self, username: str, password: str) -> ChromiumOptions:
+        """设置代理认证
+        :param username: 用户名
+        :param password: 密码
         :return: 当前对象
         """
         ...
