@@ -10,10 +10,7 @@ from typing import Tuple, Union
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
-from .._pages.chromium_page import ChromiumPage
 from .._pages.chromium_tab import ChromiumTab
-from .._pages.mix_tab import MixTab
-from .._pages.web_page import WebPage
 
 
 class ElementRect(object):
@@ -110,7 +107,7 @@ class TabRect(object):
         """
         :param owner: Page对象和Tab对象
         """
-        self._owner: Union[ChromiumPage, ChromiumTab, WebPage, MixTab] = ...
+        self._owner: ChromiumTab = ...
 
     @property
     def window_state(self) -> str:

@@ -6,83 +6,99 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import load, dump, JSONDecodeError
-from os import environ
+from os import environ, path as os_path, pathsep, X_OK, access
 from pathlib import Path
-from shutil import rmtree
+from shutil import copytree, Error as shutilError
 from subprocess import Popen, DEVNULL
+from sys import platform
 from tempfile import gettempdir
 from time import perf_counter, sleep
 
 from requests import Session
 
 from .settings import Settings as _S
-from .tools import port_is_using
-from .._configs.options_manage import OptionsManager
+from .tools import port_is_using, PortFinder, ensure_del_dir
 from ..errors import BrowserConnectError
 
 
-def connect_browser(option):
-    address = option.address.replace('localhost', '127.0.0.1')
-    if address.startswith('http'):
-        address = address.lstrip('htps:/')
-    browser_path = option.browser_path
+def connect_browser(opt):
+    if opt.is_auto_port:
+        ip = '127.0.0.1'
+        port = PortFinder(opt.tmp_path).get_port()
+        opt._address = address = f'{ip}:{port}'
 
-    ip, port = address.split(':')
-    using = port_is_using(ip, port)
-    if ip != '127.0.0.1' or using or option.is_existing_only:
-        if test_connect(ip, port):
-            return True
-        elif ip != '127.0.0.1':
-            raise BrowserConnectError(ADDRESS=address)
-        elif using:
-            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR1_, port, port, ADDRESS=address)
-        else:  # option.is_existing_only
-            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, ADDRESS=address)
+    else:
+        address = opt.address.replace('localhost', '127.0.0.1')
+        if address.startswith('http'):
+            address = address.lstrip('htps:/')
+        ip, port = address.split(':')
+        using = port_is_using(ip, port)
+        if ip != '127.0.0.1' or using or opt.is_existing_only:
+            if test_connect(ip, port):
+                return None
+            elif ip != '127.0.0.1':
+                raise BrowserConnectError(ADDRESS=address)
+            elif using:
+                raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR1_, port, port, ADDRESS=address)
+            else:  # opt.is_existing_only
+                raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, ADDRESS=address)
 
     # ----------创建浏览器进程----------
-    args, user_path = get_launch_args(option)
-    if option._new_env:
-        rmtree(user_path, ignore_errors=True)
-    set_prefs(option)
-    set_flags(option)
-    try:
-        _run_browser(port, browser_path, args)
+    args, user_path = get_launch_args(opt)
 
-    except FileNotFoundError:  # 传入的路径找不到，主动在ini文件、注册表、系统变量中找
-        browser_path = get_chrome_path(option.ini_path)
-        if not browser_path:
-            raise FileNotFoundError(_S._lang.join(_S._lang.BROWSER_EXE_NOT_FOUND))
-        _run_browser(port, browser_path, args)
+    is_edge = 'edge' in opt.browser_path.lower()
+    if not Path(opt._browser_path).exists():
+        opt._browser_path = get_edge_path() if is_edge else get_chrome_path()
+    if not Path(opt._browser_path).exists():
+        FileNotFoundError(_S._lang.BROWSER_EXE_NOT_FOUND)
+
+    if not user_path:
+        user_path = (Path(opt.tmp_path or gettempdir()) / 'DrissionPage'
+                     / ('autoPortData' if opt.is_auto_port else 'userData') / f'{port}')
+        if opt.system_user_path:  # 复制
+            src_path = get_edge_user_data_dir() if is_edge else get_sys_Chrome_user_data_dir()
+            try:
+                ensure_del_dir(user_path)
+                copytree(src_path, user_path)
+            except shutilError:
+                ensure_del_dir(user_path)
+                raise RuntimeError(_S._lang.join(_S._lang.SYS_BROWSER_ACTIVATED, 'edge' if is_edge else 'Chrome'))
+
+        elif opt.is_auto_port or opt._new_env:
+            if not ensure_del_dir(user_path):
+                raise RuntimeError(_S._lang.FAILED_TO_DEL_USER_DIR)
+
+        user_path = user_path.resolve()
+        opt.set_user_data_path(user_path)
+        args.append(f'--user-data-dir={user_path}')
+
+    else:
+        opt._auto_port = None  # 自动端口同时指定了文件夹，结束时不删除文件夹
+        if opt._new_env and not ensure_del_dir(user_path):
+            raise RuntimeError(_S._lang.FAILED_TO_DEL_USER_DIR)
+
+    set_prefs(opt)
+    set_flags(opt)
+
+    _run_browser(port, opt._browser_path, args)
 
     if not test_connect(ip, port):
         raise BrowserConnectError(ADDRESS=address, TIP=_S._lang.BROWSER_CONNECT_ERR_INFO)
-    return False
+    return args
 
 
 def get_launch_args(opt):
     # ----------处理arguments-----------
     result = set()
-    user_path = False
+    user_path = None
     for i in opt.arguments:
         if i.startswith(('--disable-extensions-except=', '--load-extension=', '--remote-debugging-port=')):
             continue
-        elif i.startswith('--user-data-dir') and not opt.system_user_path:
-            user_path = f'--user-data-dir={Path(i[16:]).absolute()}'
-            result.add(user_path)
-            continue
+        elif i.startswith('--user-data-dir='):
+            user_path = Path(i[16:]).resolve()
         elif i.startswith('--user-agent='):
             opt._ua_set = True
         result.add(i)
-
-    if not user_path and not opt.system_user_path:
-        port = opt.address.split(':')[-1] if opt.address else '0'
-        p = Path(opt.tmp_path) if opt.tmp_path else Path(gettempdir()) / 'DrissionPage'
-        path = p / 'userData' / port
-        path.mkdir(parents=True, exist_ok=True)
-        user_path = path.absolute()
-        opt.set_user_data_path(user_path)
-        result.add(f'--user-data-dir={user_path}')
-
     result = list(result)
 
     # ----------处理插件extensions-------------
@@ -91,11 +107,11 @@ def get_launch_args(opt):
     if ext:
         for e in ext:
             if e.is_file():
-                raise ValueError(_S._lang.join(_S._lang.PLUGIN_NEED_FOLDER, str(e.absolute())))
+                raise ValueError(_S._lang.join(_S._lang.PLUGIN_NEED_FOLDER, str(e.resolve())))
             elif not e.exists():
                 raise FileNotFoundError(_S._lang.join(_S._lang.EXT_NOT_FOUND, PATH=e))
             else:
-                exts.append(str(e.absolute()))
+                exts.append(str(e.resolve()))
         ext = ','.join(set(exts))
         result.append(f'--disable-extensions-except={ext}')
         result.append(f'--load-extension={ext}')
@@ -258,64 +274,165 @@ def _remove_arg_from_dict(target_dict: dict, arg: str) -> None:
         pass
 
 
-def get_chrome_path(ini_path):
-    # -----------从ini文件中获取--------------
-    if ini_path and Path(ini_path).exists():
-        path = OptionsManager(ini_path).chromium_options.get('browser_path', None)
-        if path and Path(path).is_file():
-            return str(path)
+def get_chrome_path():
+    system = platform.lower()
+    if system.startswith("win"):  # 注册表+常见路径
+        from winreg import OpenKey, QueryValue, HKEY_LOCAL_MACHINE
+        try:
+            reg_paths = [r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
+                         r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"]
+            for rp in reg_paths:
+                try:
+                    with OpenKey(HKEY_LOCAL_MACHINE, rp) as key:
+                        p = QueryValue(key, None)
+                        if p and Path(p).exists():
+                            return p
+                except Exception:
+                    continue
+        except ImportError:
+            pass
 
-    # -----------使用which获取-----------
-    from shutil import which
-    path = (which('chrome') or which('chromium') or which('google-chrome') or which('google-chrome-stable')
-            or which('google-chrome-unstable') or which('google-chrome-beta'))
-    if path:
-        return path
+        # 常见默认路径
+        local_appdata = environ.get("LOCALAPPDATA", "")
+        program_files = environ.get("PROGRAMFILES", "C:\\Program Files")
+        program_files_x86 = environ.get("PROGRAMFILES(X86)", "C:\\Program Files (x86)")
+        default_paths = [
+            Path(local_appdata) / "Google/Chrome/Application/chrome.exe",
+            Path(program_files) / "Google/Chrome/Application/chrome.exe",
+            Path(program_files_x86) / "Google/Chrome/Application/chrome.exe",
+        ]
+        for p in default_paths:
+            if p.exists():
+                return str(p)
 
-    # -----------从MAC和Linux默认路径获取-----------
-    from platform import system
-    sys = system().lower()
-    if sys in ('macos', 'darwin'):
-        p = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-        return p if Path(p).exists() else None
-
-    elif sys == 'linux':
-        paths = ('/usr/bin/google-chrome', '/opt/google/chrome/google-chrome',
-                 '/user/lib/chromium-browser/chromium-browser')
-        for p in paths:
+    elif system in ('macos', 'darwin'):  # macOS：默认应用路径
+        mac_paths = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                     "/Applications/Chromium.app/Contents/MacOS/Chromium"]
+        for p in mac_paths:
             if Path(p).exists():
                 return p
-        return None
 
-    elif sys != 'windows':
-        return None
+    elif system == "linux":  # Linux：常见 bin 路径
+        linux_paths = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable",
+                       "/usr/bin/chromium", "/usr/bin/chromium-browser", "/snap/bin/chromium"]
+        for p in linux_paths:
+            if Path(p).exists():
+                return p
 
-    # -----------从注册表中获取--------------
-    from winreg import OpenKey, EnumValue, CloseKey, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ
-    txt = r'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe'
-    try:
-        key = OpenKey(HKEY_CURRENT_USER, txt, reserved=0, access=KEY_READ)
-        k = EnumValue(key, 0)
-        CloseKey(key)
-        if k[1]:
-            return k[1]
+    # -------------------------- 从 PATH 查找 --------------------------
+    # 可执行文件名列表
+    if system.startswith('win'):
+        exe_names = ["chrome.exe", "google-chrome.exe"]
+    else:  # Linux / macOS
+        exe_names = ["chrome", "google-chrome", "chromium", "chromium-browser"]
 
-    except (FileNotFoundError, OSError):
+    # 遍历 PATH 目录查找
+    path_dirs = environ.get("PATH", "").split(pathsep)
+    for d in path_dirs:
+        dir_path = Path(d)
+        if not dir_path.is_dir():
+            continue
+        for exe in exe_names:
+            exe_path = dir_path / exe
+            if exe_path.exists() and exe_path.is_file() and access(exe_path, X_OK):
+                return str(exe_path)
+
+    raise RuntimeError(_S._lang.BROWSER_NOT_FOUND)
+
+
+def get_edge_path():
+    system = platform.lower()
+    if system.startswith("win"):
         try:
-            key = OpenKey(HKEY_LOCAL_MACHINE, txt, reserved=0, access=KEY_READ)
-            k = EnumValue(key, 0)
-            CloseKey(key)
-            if k[1]:
-                return k[1]
-
-        except (FileNotFoundError, OSError):
+            from winreg import OpenKey, QueryValue, HKEY_LOCAL_MACHINE
+            reg_paths = [r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe",
+                         r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe"]
+            for reg_path in reg_paths:
+                try:
+                    with OpenKey(HKEY_LOCAL_MACHINE, reg_path) as key:
+                        path = QueryValue(key, None)
+                        if path and os_path.exists(path):
+                            return path
+                except FileNotFoundError:
+                    continue
+        except:
             pass
 
-    # -----------从系统变量中获取--------------
-    for path in environ.get('PATH', '').split(';'):
-        path = Path(path) / 'chrome.exe'
-        try:
-            if path.exists():
-                return str(path)
-        except OSError:
-            pass
+        # Windows 备用默认路径
+        default_win_paths = [
+            os_path.join(environ.get("PROGRAMFILES", ""), r"Microsoft\Edge\Application\msedge.exe"),
+            os_path.join(environ.get("PROGRAMFILES(X86)", ""), r"Microsoft\Edge\Application\msedge.exe"),
+            os_path.join(environ.get("LOCALAPPDATA", ""), r"Microsoft\Edge\Application\msedge.exe"),
+        ]
+        for p in default_win_paths:
+            if os_path.exists(p):
+                return p
+
+    elif system in ('macos', 'darwin'):
+        mac_paths = ["/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+                     os_path.expanduser("~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge")]
+        for p in mac_paths:
+            if os_path.exists(p):
+                return p
+
+    elif system == "linux":
+        linux_paths = ["/usr/bin/microsoft-edge", "/usr/bin/microsoft-edge-stable", "/usr/local/bin/microsoft-edge",
+                       "/usr/local/bin/microsoft-edge-stable", os_path.expanduser("~/.local/bin/microsoft-edge"),
+                       os_path.expanduser("~/.local/bin/microsoft-edge-stable"), ]
+        for p in linux_paths:
+            if os_path.exists(p):
+                return p
+
+    raise RuntimeError(_S._lang.BROWSER_NOT_FOUND)
+
+
+def get_sys_Chrome_user_data_dir():
+    system = platform.lower()
+
+    if system.startswith("win"):
+        local_appdata = environ.get("LOCALAPPDATA")
+        if not local_appdata:
+            raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
+        src_path = os_path.join(local_appdata, "Google", "Chrome", "User Data")
+
+    elif system in ('macos', 'darwin'):
+        home = os_path.expanduser("~")
+        src_path = os_path.join(home, "Library", "Application Support", "Google", "Chrome")
+
+    elif system == "linux":
+        home = os_path.expanduser("~")
+        src_path = os_path.join(home, ".config", "google-chrome")
+
+    else:
+        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
+
+    if not os_path.exists(src_path):
+        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
+
+    return Path(src_path)
+
+
+def get_edge_user_data_dir():
+    system = platform.lower()
+
+    if system.startswith("win"):
+        local_appdata = environ.get("LOCALAPPDATA")
+        if not local_appdata:
+            raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
+        src_path = os_path.join(local_appdata, "Microsoft", "Edge", "User Data")
+
+    elif system in ('macos', 'darwin'):
+        home = os_path.expanduser("~")
+        src_path = os_path.join(home, "Library", "Application Support", "Microsoft Edge")
+
+    elif system == "linux":
+        home = os_path.expanduser("~")
+        src_path = os_path.join(home, ".config", "microsoft-edge")
+
+    else:
+        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
+
+    if not os_path.exists(src_path):
+        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
+
+    return Path(src_path)

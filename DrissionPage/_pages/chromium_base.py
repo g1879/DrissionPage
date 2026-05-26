@@ -12,17 +12,16 @@ from re import findall
 from threading import Thread
 from time import perf_counter, sleep
 
-from DataRecorder.tools import make_valid_name
+from DrissionRecord.tools import make_valid_name
 
-from .._base.base import BasePage
-from .._elements.chromium_element import run_js, make_chromium_eles
+from .._base.base import BasePage, Messenger
+from .._elements.chromium_element import run_js, make_chromium_eles, find_by_ax
 from .._elements.none_element import NoneElement
 from .._elements.session_element import make_session_ele
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, get_frame, ChromiumElementsList
 from .._functions.locator import get_loc
 from .._functions.settings import Settings as _S
-from .._functions.tools import raise_error
 from .._functions.web import location_in_viewport
 from .._units.actions import Actions
 from .._units.console import Console
@@ -36,15 +35,18 @@ from .._units.waiter import BaseWaiter
 from ..errors import (ContextLostError, CDPError, PageDisconnectedError, ElementLostError, JavaScriptError,
                       BrowserConnectError, LocatorError)
 
-__ERROR__ = 'error'
 
-
-class ChromiumBase(BasePage):
-    def __init__(self, browser, target_id=None):
-        super().__init__()
+class ChromiumBase(BasePage, Messenger):
+    def __init__(self, browser, target_id, context_id):
+        BasePage.__init__(self)
+        Messenger.__init__(self)
         self._browser = browser
         self._is_loading = None
         self._root_id = None  # object id
+        self._context_id = context_id
+        self._default_context = context_id == browser._browser_id
+        self._target_id = target_id
+        self._frame_id = None
         self._set = None
         self._screencast = None
         self._actions = None
@@ -62,11 +64,35 @@ class ChromiumBase(BasePage):
         self._init_jss = []
         self._disconnect_flag = False
         self._type = 'ChromiumBase'
+        self._Accessibility_enabled = False
         if not hasattr(self, '_listener'):
             self._listener = None
 
+        self._event_handlers = {
+            'Page.javascriptDialogOpening': self._on_alert_open,
+            'Page.javascriptDialogClosed': self._on_alert_close,
+            'Page.frameStartedLoading': self._onFrameStartedLoading,
+            'Page.frameNavigated': self._onFrameNavigated,
+            'Page.domContentEventFired': self._onDomContentEventFired,
+            'Page.loadEventFired': self._onLoadEventFired,
+            'Page.frameStoppedLoading': self._onFrameStoppedLoading,
+            'Page.frameAttached': self._onFrameAttached,
+            'Page.frameDetached': self._onFrameDetached,
+        }
+        self._imm_events = {'Page.javascriptDialogOpening'}
         self._d_set_runtime_settings()
-        self._connect_browser(target_id)
+        self._start_messenger()
+        self._connect_browser()
+        url, usr, pwd = self._browser._tabs.get_proxy(self._context_id)
+        if usr:
+            self._proxy_usr = usr
+            self._proxy_pwd = pwd
+            self._run_cdp('Fetch.enable', handleAuthRequests=True)
+            self._set_callback("Fetch.authRequired", self._onAuthRequired)
+            self._set_callback("Fetch.requestPaused", self._onRequestPaused)
+        else:
+            self._proxy_usr = None
+            self._proxy_pwd = None
 
     def __call__(self, locator, index=1, timeout=None):
         return self.ele(locator, index, timeout)
@@ -74,70 +100,32 @@ class ChromiumBase(BasePage):
     def _d_set_runtime_settings(self):
         pass
 
-    def _connect_browser(self, target_id=None):
+    def _connect_browser(self):
         self._is_reading = False
-
-        if not target_id:
-            if self.browser._ws_only:
-                tabs = self._run_cdp('Target.getTargets')['targetInfos']
-                _id = 'targetId'
-            else:
-                tabs = self.browser._driver.get(f'http://{self.browser.address}/json').json()
-                _id = 'id'
-            tabs = [(i[_id], i['url']) for i in tabs
-                    if i['type'] in ('page', 'webview') and not i['url'].startswith('devtools://')
-                    and not i['url'].startswith('chrome://newtab-footer')]
-            dialog = None
-            if len(tabs) > 1:
-                for k, t in enumerate(tabs):
-                    if t[1] == 'chrome://privacy-sandbox-dialog/notice':
-                        dialog = k
-                    elif not target_id:
-                        target_id = t[0]
-
-                    if target_id and dialog is not None:
-                        break
-
-                if dialog is not None:
-                    close_privacy_dialog(self, tabs[dialog][0])
-
-            else:
-                target_id = tabs[0][0]
-
-        self._driver_init(target_id)
+        self._driver_init()
         if self._js_ready_state == 'complete' and self._ready_state is None:
             self._get_document()
             self._ready_state = 'complete'
 
-    def _driver_init(self, target_id):
+    def _driver_init(self):
         self._is_loading = True
-        self._driver = self.browser._get_driver(target_id, self)
+        self._driver = self.browser._driver
 
         self._alert = Alert(self._auto_handle_alert)
-        self._driver.set_callback('Page.javascriptDialogOpening', self._on_alert_open, immediate=True)
-        self._driver.set_callback('Page.javascriptDialogClosed', self._on_alert_close)
-
-        self._driver.run('DOM.enable')
-        self._driver.run('Page.enable')
-        self._driver.run('Emulation.setFocusEmulationEnabled', enabled=True)
+        self._run_cdp('DOM.enable')
+        self._run_cdp('Page.enable')
+        self._run_cdp('Emulation.setFocusEmulationEnabled', enabled=True)
 
         r = self._run_cdp('Page.getFrameTree')
         for i in findall(r"'id': '(.*?)'", str(r)):
-            self.browser._frames[i] = self.tab_id
-        if not hasattr(self, '_frame_id'):
+            self.browser._tabs.add_frame(i, self.tab_id)
+        if not self._frame_id:
             self._frame_id = r['frameTree']['frame']['id']
-
-        self._driver.set_callback('Page.frameStartedLoading', self._onFrameStartedLoading)
-        self._driver.set_callback('Page.frameNavigated', self._onFrameNavigated)
-        self._driver.set_callback('Page.domContentEventFired', self._onDomContentEventFired)
-        self._driver.set_callback('Page.loadEventFired', self._onLoadEventFired)
-        self._driver.set_callback('Page.frameStoppedLoading', self._onFrameStoppedLoading)
-        self._driver.set_callback('Page.frameAttached', self._onFrameAttached)
-        self._driver.set_callback('Page.frameDetached', self._onFrameDetached)
+        self._inited = True
 
     def _get_document(self, timeout=10):
         if self._is_reading:
-            return
+            return None
         self._is_reading = True
         timeout = max(timeout, 2)
         end_time = perf_counter() + timeout
@@ -165,20 +153,20 @@ class ChromiumBase(BasePage):
         if result:
             r = self._run_cdp('Page.getFrameTree', _ignore=PageDisconnectedError)
             for i in findall(r"'id': '(.*?)'", str(r)):
-                self.browser._frames[i] = self.tab_id
+                self.browser._tabs.add_frame(i, self.tab_id)
 
         self._is_loading = False
         self._is_reading = False
         return result
 
     def _onFrameDetached(self, **kwargs):
-        self.browser._frames.pop(kwargs['frameId'], None)
+        self.browser._tabs.remove_frame(kwargs['frameId'])
 
     def _onFrameAttached(self, **kwargs):
-        self.browser._frames[kwargs['frameId']] = self.tab_id
+        self.browser._tabs.add_frame(kwargs['frameId'], self.tab_id)
 
     def _onFrameStartedLoading(self, **kwargs):
-        self.browser._frames[kwargs['frameId']] = self.tab_id
+        self.browser._tabs.add_frame(kwargs['frameId'], self.tab_id)
         if kwargs['frameId'] == self._frame_id:
             self._doc_got = False
             self._ready_state = 'connecting'
@@ -210,7 +198,7 @@ class ChromiumBase(BasePage):
         self._ready_state = 'complete'
 
     def _onFrameStoppedLoading(self, **kwargs):
-        self.browser._frames[kwargs['frameId']] = self.tab_id
+        self.browser._tabs.add_frame(kwargs['frameId'], self.tab_id)
         if kwargs['frameId'] == self._frame_id:
             if self._doc_got is False:
                 self._get_document(self._load_end_time - perf_counter() - .1)
@@ -223,9 +211,23 @@ class ChromiumBase(BasePage):
             files = self._upload_list if kwargs['mode'] == 'selectMultiple' else self._upload_list[:1]
             self._run_cdp('DOM.setFileInputFiles', files=files, backendNodeId=kwargs['backendNodeId'])
 
-            self.driver.set_callback('Page.fileChooserOpened', None)
+            self._set_callback('Page.fileChooserOpened', None)
             self._run_cdp('Page.setInterceptFileChooserDialog', enabled=False)
             self._upload_list = None
+
+    def _onAuthRequired(self, **kwargs):
+        request_id = kwargs['requestId']
+        if kwargs.get('authChallenge', {}).get('source') == 'Proxy':
+            auth = {'response': 'ProvideCredentials', 'username': self._proxy_usr, 'password': self._proxy_pwd}
+        else:
+            auth = {'response': 'Default'}
+        self._run_cdp("Fetch.continueWithAuth", requestId=request_id, authChallengeResponse=auth)
+
+    def _onRequestPaused(self, **kwargs):
+        if 'responseErrorReason' in kwargs or 'responseStatusCode' in kwargs:
+            self._run_cdp("Fetch.continueResponse", requestId=kwargs['requestId'])
+        else:
+            self._run_cdp("Fetch.continueRequest", requestId=kwargs['requestId'])
 
     def _wait_to_stop(self):
         end_time = perf_counter() + self.timeouts.page_load
@@ -338,11 +340,7 @@ class ChromiumBase(BasePage):
 
     @property
     def tab_id(self):
-        return self.driver.id
-
-    @property
-    def _target_id(self):
-        return self.driver.id
+        return self._target_id
 
     @property
     def active_ele(self):
@@ -376,22 +374,14 @@ class ChromiumBase(BasePage):
             return 'timeout'
 
     def run_cdp(self, cmd, **cmd_args):
-        r = self.driver.run(cmd, **cmd_args)
-        return r if __ERROR__ not in r else raise_error(r, self.browser, user=True)
+        return self._run_cdp(cmd, _user=True, **cmd_args)
 
     def run_cdp_loaded(self, cmd, **cmd_args):
-        self.wait.doc_loaded()
-        r = self.driver.run(cmd, **cmd_args)
-        return r if __ERROR__ not in r else raise_error(r, self.browser, user=True)
+        return self._run_cdp_loaded(cmd, _user=True, **cmd_args)
 
-    def _run_cdp(self, cmd, **cmd_args):
-        ignore = cmd_args.pop('_ignore', None)
-        r = self.driver.run(cmd, **cmd_args)
-        return r if __ERROR__ not in r else raise_error(r, self.browser, ignore)
-
-    def _run_cdp_loaded(self, cmd, **cmd_args):
+    def _run_cdp_loaded(self, cmd, _ignore=None, _user=False, _timeout=None, **cmd_args):
         self.wait.doc_loaded()
-        return self._run_cdp(cmd, **cmd_args)
+        return self._run_cdp(cmd, _ignore=_ignore, _user=_user, _timeout=_timeout, **cmd_args)
 
     def run_js(self, script, *args, as_expr=False, timeout=None):
         return self._run_js(script, *args, as_expr=as_expr, timeout=timeout)
@@ -417,8 +407,15 @@ class ChromiumBase(BasePage):
         return self._url_available
 
     def cookies(self, all_domains=False, all_info=False):
-        txt = 'Storage' if all_domains else 'Network'
-        cookies = self._run_cdp_loaded(f'{txt}.getCookies')['cookies']
+        self.wait.doc_loaded()
+        if all_domains:
+            if self._default_context:
+                cookies = self._browser._run_cdp(f'Storage.getCookies')['cookies']
+            else:
+                cookies = self._browser._run_cdp(f'Storage.getCookies', browserContextId=self._context_id)['cookies']
+
+        else:
+            cookies = self._run_cdp('Network.getCookies')['cookies']
 
         if all_info:
             r = cookies
@@ -446,19 +443,26 @@ class ChromiumBase(BasePage):
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
         if isinstance(locator, (str, tuple)):
-            loc = get_loc(locator)[1]
+            loc = get_loc(locator)
         elif locator._type in ('ChromiumElement', 'ChromiumFrame'):
             return locator
         else:
             raise LocatorError(_S._lang.join(ALLOW_TYPE=_S._lang.ELE_OR_LOC, CURR_VAL=locator))
 
+        if loc[0] == 'ax':
+            self._Accessibility_enable()
+            bid = self._run_cdp('Accessibility.getRootAXNode', frameId=self._frame_id)['node']['backendDOMNodeId']
+            return find_by_ax(self, bid, loc[1], index, timeout)
+
+        loc = loc[1]
         self.wait.doc_loaded()
         end_time = perf_counter() + timeout
 
         search_ids = []
         timeout = .5 if timeout <= 0 else timeout
-        result = self.driver.run('DOM.performSearch', query=loc, _timeout=timeout, includeUserAgentShadowDOM=True)
-        if not result or __ERROR__ in result:
+        result = self._run_cdp('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True,
+                               _timeout=timeout, _ignore=True)
+        if 'error' in result:
             num = 0
         else:
             num = result['resultCount']
@@ -478,16 +482,14 @@ class ChromiumBase(BasePage):
                     end_index = from_index + 1
 
                 if from_index <= num - 1:
-                    nIds = self._driver.run('DOM.getSearchResults', searchId=result['searchId'],
-                                            fromIndex=from_index, toIndex=end_index)
-                    if __ERROR__ not in nIds:
-                        if nIds['nodeIds'][0] != 0:
-                            r = make_chromium_eles(self, _ids=nIds['nodeIds'], index=index_arg,
-                                                   is_obj_id=False, ele_only=True)
-                            if r is not False:
-                                break
-
-                    elif nIds[__ERROR__] == 'connection disconnected':
+                    nIds = self._driver.run('DOM.getSearchResults', searchId=result['searchId'], _debug=self._debug,
+                                            fromIndex=from_index, toIndex=end_index, _session_id=self._session_id)
+                    n = nIds.get('nodeIds', None)
+                    if n and n[0] != 0:
+                        r = make_chromium_eles(self, _ids=n, index=index_arg, id_type='node_id', ele_only=True)
+                        if r is not False:
+                            break
+                    elif nIds.get('error', None) == 'connection disconnected':
                         raise PageDisconnectedError
 
             if perf_counter() >= end_time:
@@ -496,15 +498,16 @@ class ChromiumBase(BasePage):
             sleep(.01)
             timeout = end_time - perf_counter()
             timeout = .5 if timeout <= 0 else timeout
-            result = self.driver.run('DOM.performSearch', query=loc, _timeout=timeout, includeUserAgentShadowDOM=True)
-            if result and __ERROR__ not in result:
-                num = result['resultCount']
+            result = self._driver.run('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True,
+                                      _timeout=timeout, _session_id=self._session_id, _debug=self._debug)
+            num = result.get('resultCount', 0)
+            if num:
                 search_ids.append(result['searchId'])
-            elif result and result[__ERROR__] == 'connection disconnected':
+            elif result.get('error', None) == 'connection disconnected':
                 raise PageDisconnectedError
 
         for _id in search_ids:
-            self._driver.run('DOM.discardSearchResults', searchId=_id)
+            self._run_cdp('DOM.discardSearchResults', searchId=_id)
 
         return r
 
@@ -615,12 +618,19 @@ class ChromiumBase(BasePage):
         return ele
 
     def get_frame(self, loc_ind_ele, timeout=None):
-        return get_frame(self, loc_ind_ele=loc_ind_ele, timeout=timeout)
+        timeout = timeout if timeout is not None else self.timeouts.base
+        now = perf_counter()
+        end_time = now + timeout
+        while now <= end_time:
+            try:
+                return get_frame(self, loc_ind_ele=loc_ind_ele, timeout=end_time - now)
+            except ElementLostError:
+                now = perf_counter()
+        return NoneElement(self, 'get_frame()', args={'loc_ind_ele': loc_ind_ele, 'timeout': timeout})
 
     def get_frames(self, locator=None, timeout=None):
         locator = locator or 'xpath://*[name()="iframe" or name()="frame"]'
-        frames = self._ele(locator, timeout=timeout, index=None, raise_err=False)
-        return ChromiumElementsList(self, frames)
+        return ChromiumElementsList(self, self._ele(locator, timeout=timeout, index=None, raise_err=False))
 
     def session_storage(self, item=None):
         js = f'sessionStorage.getItem("{item}")' if item else 'sessionStorage'
@@ -671,20 +681,8 @@ class ChromiumBase(BasePage):
             self._run_cdp_loaded('Network.clearBrowserCookies')
 
     def disconnect(self):
-        if self._driver:
-            self._disconnect_flag = True
-            self._driver.stop()
-            self.browser._all_drivers.get(self._driver.id, set()).discard(self._driver)
-            self._disconnect_flag = False
-
-    def reconnect(self, wait=0):
-        t_id = self._target_id
-        self.disconnect()
-        sleep(wait)
-        self.browser.reconnect()
-        self._driver = self.browser._get_driver(t_id, self)
-        self._driver_init(t_id)
-        self._get_document()
+        self._stop_messenger()
+        self._browser._tabs.remove_session(session_id=self._session_id)
 
     def handle_alert(self, accept=True, send=None, timeout=None, next_one=False):
         if not isinstance(accept, bool):
@@ -714,7 +712,7 @@ class ChromiumBase(BasePage):
         d = {'accept': accept, '_timeout': 0}
         if self._alert.type == 'prompt' and send is not None:
             d['promptText'] = send
-        self.driver.run('Page.handleJavaScriptDialog', **d)
+        self._run_cdp('Page.handleJavaScriptDialog', **d)
         return res_text
 
     def _on_alert_open(self, **kwargs):
@@ -749,10 +747,9 @@ class ChromiumBase(BasePage):
             timeout = self.timeouts.page_load
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
-            if self._ready_state == 'complete':
-                return True
-            elif self._load_mode == 'eager' and self._ready_state in ('interactive',
-                                                                      'complete') and not self._is_loading:
+            if (self._ready_state == 'complete'
+                    or (self._load_mode == 'eager'
+                        and self._ready_state in ('interactive', 'complete') and not self._is_loading)):
                 return True
 
             sleep(.01)
@@ -762,6 +759,11 @@ class ChromiumBase(BasePage):
         except CDPError:
             pass
         return False
+
+    def _Accessibility_enable(self):
+        if not self._Accessibility_enabled:
+            self._run_cdp('Accessibility.enable')
+            self._Accessibility_enabled = True
 
     def _d_connect(self, to_url, times=0, interval=1, show_errmsg=False, timeout=None):
         err = None
@@ -888,7 +890,7 @@ class ChromiumBase(BasePage):
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, 'wb') as f:
             f.write(png)
-        return str(path.absolute())
+        return str(path.resolve())
 
 
 class Timeout(object):
@@ -916,36 +918,3 @@ class Alert(object):
         self.handle_next = None
         self.next_text = None
         self.auto = auto
-
-
-def close_privacy_dialog(page, tid):
-    """关闭隐私声明弹窗
-    :param page: ChromiumBase对象
-    :param tid: tab id
-    :return: None
-    """
-    try:
-        driver = page.browser._get_driver(tid)
-        driver.run('Runtime.enable')
-        driver.run('DOM.enable')
-        driver.run('DOM.getDocument')
-        sid = driver.run('DOM.performSearch', query='//*[name()="privacy-sandbox-notice-dialog-app"]',
-                         includeUserAgentShadowDOM=True)['searchId']
-        r = driver.run('DOM.getSearchResults', searchId=sid, fromIndex=0, toIndex=1)['nodeIds'][0]
-        end_time = perf_counter() + 3
-        while perf_counter() < end_time:
-            try:
-                r = driver.run('DOM.describeNode', nodeId=r)['node']['shadowRoots'][0]['backendNodeId']
-                break
-            except KeyError:
-                pass
-            sleep(.05)
-        driver.run('DOM.discardSearchResults', searchId=sid)
-        r = driver.run('DOM.resolveNode', backendNodeId=r)['object']['objectId']
-        r = driver.run('Runtime.callFunctionOn', objectId=r,
-                       functionDeclaration='function(){return this.getElementById("ackButton");}')['result']['objectId']
-        driver.run('Runtime.callFunctionOn', objectId=r, functionDeclaration='function(){return this.click();}')
-        driver.close()
-
-    except:
-        pass

@@ -29,7 +29,7 @@ class SessionOptions(object):
             ini_path = False
             self.ini_path = None
         elif ini_path:
-            ini_path = Path(ini_path).absolute()
+            ini_path = Path(ini_path).resolve()
             if not ini_path.exists():
                 raise FileNotFoundError(_S._lang.join(_S._lang.INI_NOT_FOUND, PATH=ini_path))
             self.ini_path = str(ini_path)
@@ -267,16 +267,16 @@ class SessionOptions(object):
 
     def save(self, path=None):
         if path == 'default':
-            path = (Path(__file__).parent / 'configs.ini').absolute()
+            path = (Path(__file__).parent / 'configs.ini').resolve()
 
         elif path is None:
             if self.ini_path:
-                path = Path(self.ini_path).absolute()
+                path = Path(self.ini_path).resolve()
             else:
-                path = (Path(__file__).parent / 'configs.ini').absolute()
+                path = (Path(__file__).parent / 'configs.ini').resolve()
 
         else:
-            path = Path(path).absolute()
+            path = Path(path).resolve()
 
         path = path / 'config.ini' if path.is_dir() else path
 

@@ -11,7 +11,6 @@ from typing import Union, Optional, Tuple
 from .._base.base import DrissionElement, BaseParser
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
-from .._pages.chromium_page import ChromiumPage
 from .._pages.chromium_tab import ChromiumTab
 
 
@@ -76,7 +75,7 @@ def get_blob(page: ChromiumBase, url: str, as_bytes: bool = True) -> bytes:
     ...
 
 
-def save_page(tab: Union[ChromiumPage, ChromiumTab],
+def save_page(tab: ChromiumTab,
               path: Union[Path, str, None] = None,
               name: Optional[str] = None,
               as_pdf: bool = False,
@@ -92,7 +91,7 @@ def save_page(tab: Union[ChromiumPage, ChromiumTab],
     ...
 
 
-def get_mhtml(page: Union[ChromiumPage, ChromiumTab],
+def get_mhtml(page: ChromiumTab,
               path: Optional[Path] = None,
               name: Optional[str] = None) -> Union[bytes, str]:
     """把当前页面保存为mhtml文件，如果path和name参数都为None，只返回mhtml文本
@@ -104,7 +103,7 @@ def get_mhtml(page: Union[ChromiumPage, ChromiumTab],
     ...
 
 
-def get_pdf(page: Union[ChromiumPage, ChromiumTab],
+def get_pdf(page: ChromiumTab,
             path: Optional[Path] = None,
             name: Optional[str] = None,
             kwargs: dict = None) -> Union[bytes, str]:
@@ -136,5 +135,13 @@ def format_headers(txt: str) -> dict:
     """从浏览器复制的文本生成dict格式headers，文本用换行分隔
     :param txt: 从浏览器复制的原始文本格式headers
     :return: dict格式headers
+    """
+    ...
+
+
+def get_proxy_info(proxy_str: str) -> Tuple[str, Optional[str], Optional[str]]:
+    """解析代理字符串，返回url、用户名、密码
+    :param proxy_str: 代理字符串
+    :return: url、用户名、密码组成的tuple
     """
     ...

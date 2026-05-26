@@ -17,7 +17,10 @@ class BrowserCookiesSetter(object):
         set_browser_cookies(self._owner, cookies)
 
     def clear(self):
-        self._owner._run_cdp('Storage.clearCookies')
+        if self._owner._default_context:
+            self._owner._run_cdp('Storage.clearCookies')
+        else:
+            self._owner._run_cdp('Storage.clearCookies', browserContextId=self._owner._context_id)
 
 
 class CookiesSetter(BrowserCookiesSetter):
@@ -42,6 +45,28 @@ class CookiesSetter(BrowserCookiesSetter):
         self._owner._run_cdp('Network.clearBrowserCookies')
 
 
+class ChromiumTabCookiesSetter(CookiesSetter):
+    def __call__(self, cookies):
+        if self._owner._d_mode and self._owner._messenger_running:
+            super().__call__(cookies)
+        elif not self._owner._d_mode and self._owner._session:
+            set_session_cookies(self._owner.session, cookies)
+
+    def remove(self, name, url=None, domain=None, path=None):
+        if self._owner._d_mode and self._owner._messenger_running:
+            super().remove(name, url, domain, path)
+        elif not self._owner._d_mode and self._owner._session:
+            if url or domain or path:
+                raise ValueError(_S._lang.join(_S._lang.D_MODE_ONLY))
+            self._owner.session.cookies.set(name, None)
+
+    def clear(self):
+        if self._owner._d_mode and self._owner._messenger_running:
+            super().clear()
+        elif not self._owner._d_mode and self._owner._session:
+            self._owner.session.cookies.clear()
+
+
 class SessionCookiesSetter(object):
     def __init__(self, owner):
         self._owner = owner
@@ -54,47 +79,3 @@ class SessionCookiesSetter(object):
 
     def clear(self):
         self._owner.session.cookies.clear()
-
-
-class WebPageCookiesSetter(CookiesSetter):
-    def __call__(self, cookies):
-        if self._owner.mode == 'd' and self._owner._has_driver:
-            super().__call__(cookies)
-        elif self._owner.mode == 's' and self._owner._has_session:
-            set_session_cookies(self._owner.session, cookies)
-
-    def remove(self, name, url=None, domain=None, path=None):
-        if self._owner.mode == 'd' and self._owner._has_driver:
-            super().remove(name, url, domain, path)
-        elif self._owner.mode == 's' and self._owner._has_session:
-            if url or domain or path:
-                raise ValueError(_S._lang.join(_S._lang.D_MODE_ONLY))
-            self._owner.session.cookies.set(name, None)
-
-    def clear(self):
-        if self._owner.mode == 'd' and self._owner._has_driver:
-            super().clear()
-        elif self._owner.mode == 's' and self._owner._has_session:
-            self._owner.session.cookies.clear()
-
-
-class MixTabCookiesSetter(CookiesSetter):
-    def __call__(self, cookies):
-        if self._owner._d_mode and self._owner._driver.is_running:
-            super().__call__(cookies)
-        elif not self._owner._d_mode and self._owner._session:
-            set_session_cookies(self._owner.session, cookies)
-
-    def remove(self, name, url=None, domain=None, path=None):
-        if self._owner._d_mode and self._owner._driver.is_running:
-            super().remove(name, url, domain, path)
-        elif not self._owner._d_mode and self._owner._session:
-            if url or domain or path:
-                raise ValueError(_S._lang.join(_S._lang.D_MODE_ONLY))
-            self._owner.session.cookies.set(name, None)
-
-    def clear(self):
-        if self._owner._d_mode and self._owner._driver.is_running:
-            super().clear()
-        elif not self._owner._d_mode and self._owner._session:
-            self._owner.session.cookies.clear()

@@ -93,12 +93,12 @@ def is_selenium_loc(loc):
             and isinstance(loc[1], str))
 
 
-def get_loc(loc, translate_css=False, css_mode=False):
+def get_loc(loc, translate_css=False):
     if isinstance(loc, tuple):
-        loc = translate_css_loc(loc) if css_mode else translate_loc(loc)
+        loc = translate_loc(loc)
 
     elif isinstance(loc, str):
-        loc = str_to_css_loc(loc) if css_mode else str_to_xpath_loc(loc)
+        loc = str_to_ax_loc(loc) if loc.startswith(('ax:', 'ax=')) else str_to_xpath_loc(loc)
 
     else:
         raise LocatorError(ALLOW_TYPE=_S._lang.LOC_FORMAT, CURR_VAL=loc)
@@ -113,6 +113,35 @@ def get_loc(loc, translate_css=False, css_mode=False):
             pass
 
     return loc
+
+
+def str_to_ax_loc(loc):
+    result = {}
+    for attr in loc[3:].split('@'):
+        if not attr:
+            continue
+
+        eq_pos = attr.find('=')
+        colon_pos = attr.find(':')
+
+        if eq_pos != -1 and colon_pos != -1:
+            sep_pos = min(eq_pos, colon_pos)
+        elif eq_pos != -1:
+            sep_pos = eq_pos
+        elif colon_pos != -1:
+            sep_pos = colon_pos
+        else:
+            continue
+
+        key = attr[:sep_pos].strip()
+        value = attr[sep_pos + 1:].strip()
+
+        if key == 'role':
+            result[key] = value
+        elif key in ('name', 'accessibleName'):
+            result['accessibleName'] = value
+
+    return 'ax', result
 
 
 def str_to_xpath_loc(loc):

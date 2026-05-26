@@ -39,8 +39,8 @@ class NoneElement(object):
                       'offset', 'over', 'after', 'get_frame', 'shadow_root', 'sr'):
             return self
         else:
-            if item in ('size', 'link', 'css_path', 'xpath', 'comments', 'texts', 'tag', 'html', 'inner_html',
-                        'attrs', 'text', 'raw_text', 'value', 'attr', 'style', 'src', 'property'):
+            if item in ('size', 'link', 'css_selector', 'xpath', 'comments', 'texts', 'tag', 'html', 'inner_html',
+                        'attrs', 'text', 'raw_text', 'value', 'attr', 'style', 'src', 'property', 'css_path'):
                 return self._none_ele_value
             else:
                 raise ElementNotFoundError(METHOD=self.method, ARGS=self.args)

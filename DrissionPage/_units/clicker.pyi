@@ -11,7 +11,6 @@ from typing import Union
 from .downloader import DownloadMission
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_tab import ChromiumTab
-from .._pages.mix_tab import MixTab
 
 
 class Clicker(object):
@@ -24,7 +23,7 @@ class Clicker(object):
         ...
 
     def __call__(self, by_js: Union[bool, str, None] = False,
-                 timeout: float = 1.5, wait_stop: bool = True) -> Union[ChromiumElement, False]:
+                 timeout: float = 2, wait_stop: bool = False) -> Union[ChromiumElement, False]:
         """点击元素
         如果遇到遮挡，可选择是否用js点击
         :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
@@ -35,7 +34,7 @@ class Clicker(object):
         ...
 
     def left(self, by_js: Union[bool, str, None] = False,
-             timeout: float = 1.5, wait_stop: bool = True) -> Union[ChromiumElement, False]:
+             timeout: float = 2, wait_stop: bool = False) -> Union[ChromiumElement, False]:
         """点击元素，可选择是否用js点击
         :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
         :param timeout: 模拟点击的超时时间（秒），等待元素可见、可用、进入视口
@@ -48,7 +47,7 @@ class Clicker(object):
         """右键单击"""
         ...
 
-    def middle(self, get_tab: bool = True) -> Union[ChromiumTab, MixTab, None]:
+    def middle(self, get_tab: bool = True) -> Union[ChromiumTab, None]:
         """中键单击，默认返回新出现的tab对象
         :param get_tab: 是否返回新tab对象，为False则返回None
         :return: Tab对象或None
@@ -102,7 +101,7 @@ class Clicker(object):
         """
         ...
 
-    def for_new_tab(self, by_js: bool = False, timeout: float = 3) -> Union[ChromiumTab, MixTab]:
+    def for_new_tab(self, by_js: bool = False, timeout: float = 3) -> ChromiumTab:
         """点击后等待新tab出现并返回其对象
         :param by_js: 是否使用js点击，逻辑与click()一致
         :param timeout: 等待超时时间

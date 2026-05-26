@@ -10,8 +10,8 @@ from time import sleep
 
 from requests.structures import CaseInsensitiveDict
 
-from .cookies_setter import (SessionCookiesSetter, CookiesSetter, WebPageCookiesSetter, BrowserCookiesSetter,
-                             MixTabCookiesSetter)
+from .cookies_setter import SessionCookiesSetter, CookiesSetter, BrowserCookiesSetter, ChromiumTabCookiesSetter
+from .perm_setter import BrowserPermSetter
 from .._functions.settings import Settings as _S
 from .._functions.tools import show_or_hide_browser
 from .._functions.web import format_headers
@@ -35,7 +35,7 @@ class BaseSetter(object):
     def download_path(self, path):
         if path is None:
             path = '.'
-        self._owner._download_path = str(Path(path).absolute())
+        self._owner._download_path = str(Path(path).resolve())
 
 
 class SessionPageSetter(BaseSetter):
@@ -103,6 +103,26 @@ class SessionPageSetter(BaseSetter):
         self._owner.session.mount(url, adapter)
 
 
+class BrowserContextSetter(object):
+    def __init__(self, owner):
+        self._owner = owner
+        self._perm_setter = None
+        self._cookies_setter = None
+
+    @property
+    def perm(self):
+        if self._perm_setter is None:
+            self._perm_setter = BrowserPermSetter(self._owner,
+                                                  None if self._owner._default_context else self._owner._context_id)
+        return self._perm_setter
+
+    @property
+    def cookies(self):
+        if self._cookies_setter is None:
+            self._cookies_setter = BrowserCookiesSetter(self._owner)
+        return self._cookies_setter
+
+
 class BrowserBaseSetter(BaseSetter):
     def __init__(self, owner):
         super().__init__(owner)
@@ -123,14 +143,7 @@ class BrowserBaseSetter(BaseSetter):
             self._owner.timeouts.script = script
 
 
-class BrowserSetter(BrowserBaseSetter):
-
-    @property
-    def cookies(self):
-        if self._cookies_setter is None:
-            self._cookies_setter = BrowserCookiesSetter(self._owner)
-        return self._cookies_setter
-
+class BrowserSetter(BrowserContextSetter, BrowserBaseSetter):
     def auto_handle_alert(self, on_off=True, accept=True):
         self._owner._auto_handle_alert = None if on_off is None else accept if on_off else 'close'
 
@@ -152,6 +165,9 @@ class BrowserSetter(BrowserBaseSetter):
 
 
 class ChromiumBaseSetter(BrowserBaseSetter):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._mouse_trail = False
 
     @property
     def scroll(self):
@@ -197,14 +213,14 @@ class ChromiumBaseSetter(BrowserBaseSetter):
 
     def upload_files(self, files):
         if not self._owner._upload_list:
-            self._owner.driver.set_callback('Page.fileChooserOpened', self._owner._onFileChooserOpened)
+            self._owner._set_callback('Page.fileChooserOpened', self._owner._onFileChooserOpened)
             self._owner._run_cdp('Page.setInterceptFileChooserDialog', enabled=True)
 
         if isinstance(files, str):
             files = files.split('\n')
         elif isinstance(files, Path):
             files = (files,)
-        self._owner._upload_list = [str(Path(i).absolute()) for i in files]
+        self._owner._upload_list = [str(Path(i).resolve()) for i in files]
 
     def auto_handle_alert(self, on_off=True, accept=True):
         self._owner._alert.auto = None if on_off is None else accept if on_off else 'close'
@@ -220,14 +236,163 @@ class ChromiumBaseSetter(BrowserBaseSetter):
         self._owner._run_cdp('Network.enable')
         self._owner._run_cdp('Network.setBlockedURLs', urls=urls)
 
+    def show_trail(self, on_off=True):
+        if not self._mouse_trail:
+            js = '''
+             // 鼠标轨迹跟踪器 - 使用IIFE避免全局变量污染
+            (function () {
+              // 状态变量
+              let enabled = false;
+              let isDragging = false;
 
-class TabSetter(ChromiumBaseSetter):
+              // 配置参数
+              const config = {
+                size: 8,                           // 轨迹点大小
+                color: 'rgba(255, 0, 0, 0.5)',    // 轨迹点颜色
+                duration: 1000,                    // 轨迹点存在时间
+                clickScale: 6,                     // 点击时放大倍数
+                clickDuration: 500                 // 点击效果持续时间
+              };
+
+              const styleId = 'mouse-trail-style';
+
+              // 添加CSS样式
+              function addStyle() {
+                if (document.getElementById(styleId)) return;
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = `
+                  .mouse-trail-dot {
+                    position: absolute;
+                    width: ${config.size}px;
+                    height: ${config.size}px;
+                    background-color: ${config.color};
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 9999;
+                    transition: transform 0.3s ease, opacity 0.3s ease;
+                    opacity: 1;
+                  }
+                `;
+                document.head.appendChild(style);
+              }
+
+              // 创建轨迹点
+              function createDot(x, y, scale = 1) {
+                const dot = document.createElement('div');
+                dot.className = 'mouse-trail-dot';
+                dot.style.left = `${x}px`;
+                dot.style.top = `${y}px`;
+                dot.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                document.body.appendChild(dot);
+
+                // 淡出动画
+                setTimeout(() => {
+                  dot.style.opacity = '0';
+                }, config.duration - 300);
+
+                // 移除元素
+                setTimeout(() => {
+                  dot.remove();
+                }, config.duration);
+
+                return dot;
+              }
+
+              // 鼠标移动事件 - 创建普通轨迹点
+              function onMove(e) {
+                createDot(e.pageX, e.pageY);
+              }
+
+              // 鼠标按下事件 - 标记拖拽开始
+              function onMouseDown(e) {
+                isDragging = true;
+                createDot(e.pageX, e.pageY, 1.5); // 拖拽开始点稍大
+              }
+
+              // 鼠标释放事件 - 标记拖拽结束
+              function onMouseUp(e) {
+                if (isDragging) {
+                  createDot(e.pageX, e.pageY, 1.5); // 拖拽结束点稍大
+                  isDragging = false;
+                }
+              }
+
+              // 鼠标点击事件 - 创建放大轨迹点
+              function onClick(e) {
+                const dot = createDot(e.pageX, e.pageY, config.clickScale);
+                // 点击后缩放动画
+                setTimeout(() => {
+                  dot.style.transform = `translate(-50%, -50%) scale(1)`;
+                }, config.clickDuration);
+              }
+
+              // 全局API
+              window.MouseTrail = {
+                // 启用功能
+                enable() {
+                  if (enabled) return;
+                  enabled = true;
+                  addStyle();
+                  document.addEventListener('mousemove', onMove);
+                  document.addEventListener('click', onClick);
+                  document.addEventListener('mousedown', onMouseDown);
+                  document.addEventListener('mouseup', onMouseUp);
+                },
+
+                // 禁用功能
+                disable() {
+                  if (!enabled) return;
+                  enabled = false;
+                  document.removeEventListener('mousemove', onMove);
+                  document.removeEventListener('click', onClick);
+                  document.removeEventListener('mousedown', onMouseDown);
+                  document.removeEventListener('mouseup', onMouseUp);
+                  const style = document.getElementById(styleId);
+                  if (style) style.remove();
+                }
+              };
+            })();
+            '''
+            self._owner.run_js(js)
+            self._mouse_trail = True
+        js = f'MouseTrail.enable(); ' if on_off else f'MouseTrail.disable();'
+        self._owner.run_js(js)
+        return self
+
+
+class ChromiumTabSetter(ChromiumBaseSetter):
     def __init__(self, owner):
         super().__init__(owner)
+        self._session_setter = SessionPageSetter(self._owner)
+        self._chromium_setter = ChromiumBaseSetter(self._owner)
 
     @property
     def window(self):
         return WindowSetter(self._owner)
+
+    @property
+    def cookies(self):
+        if self._cookies_setter is None:
+            self._cookies_setter = ChromiumTabCookiesSetter(self._owner)
+        return self._cookies_setter
+
+    def headers(self, headers):
+        if self._owner._session:
+            self._session_setter.headers(headers)
+        if self._owner._messenger_running:
+            self._chromium_setter.headers(headers)
+
+    def user_agent(self, ua, platform=None):
+        if self._owner._session:
+            self._session_setter.user_agent(ua)
+        if self._owner._messenger_running:
+            self._chromium_setter.user_agent(ua, platform)
+
+    def timeouts(self, base=None, page_load=None, script=None):
+        super().timeouts(base=base, page_load=page_load, script=script)
+        if base is not None:
+            self._owner._timeout = base
 
     def download_path(self, path):
         super().download_path(path)
@@ -251,7 +416,29 @@ class TabSetter(ChromiumBaseSetter):
         self._owner.browser.activate_tab(self._owner.tab_id)
 
 
-class ChromiumPageSetter(TabSetter):
+class ChromiumPageSetter(ChromiumTabSetter):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._session_setter = SessionPageSetter(self._owner)
+        self._chromium_setter = ChromiumPageSetter(self._owner)
+
+    @property
+    def cookies(self):
+        if self._cookies_setter is None:
+            self._cookies_setter = ChromiumTabCookiesSetter(self._owner)
+        return self._cookies_setter
+
+    def headers(self, headers):
+        if self._owner.mode == 's':
+            self._session_setter.headers(headers)
+        else:
+            self._chromium_setter.headers(headers)
+
+    def user_agent(self, ua, platform=None):
+        if self._owner.mode == 's':
+            self._session_setter.user_agent(ua)
+        else:
+            self._chromium_setter.user_agent(ua, platform)
 
     def NoneElement_value(self, value=None, on_off=True):
         super().NoneElement_value(value, on_off)
@@ -269,7 +456,7 @@ class ChromiumPageSetter(TabSetter):
     def download_path(self, path):
         if path is None:
             path = '.'
-        self._owner._download_path = str(Path(path).absolute())
+        self._owner._download_path = str(Path(path).resolve())
         self._owner.browser.set.download_path(path)
         if self._owner._downloader:
             self._owner._downloader.set.save_path(path)
@@ -279,61 +466,6 @@ class ChromiumPageSetter(TabSetter):
 
     def when_download_file_exists(self, mode):
         self._owner.browser.set.when_download_file_exists(mode)
-
-
-class WebPageSetter(ChromiumPageSetter):
-    def __init__(self, owner):
-        super().__init__(owner)
-        self._session_setter = SessionPageSetter(self._owner)
-        self._chromium_setter = ChromiumPageSetter(self._owner)
-
-    @property
-    def cookies(self):
-        if self._cookies_setter is None:
-            self._cookies_setter = WebPageCookiesSetter(self._owner)
-        return self._cookies_setter
-
-    def headers(self, headers):
-        if self._owner.mode == 's':
-            self._session_setter.headers(headers)
-        else:
-            self._chromium_setter.headers(headers)
-
-    def user_agent(self, ua, platform=None):
-        if self._owner.mode == 's':
-            self._session_setter.user_agent(ua)
-        else:
-            self._chromium_setter.user_agent(ua, platform)
-
-
-class MixTabSetter(TabSetter):
-    def __init__(self, owner):
-        super().__init__(owner)
-        self._session_setter = SessionPageSetter(self._owner)
-        self._chromium_setter = ChromiumBaseSetter(self._owner)
-
-    @property
-    def cookies(self):
-        if self._cookies_setter is None:
-            self._cookies_setter = MixTabCookiesSetter(self._owner)
-        return self._cookies_setter
-
-    def headers(self, headers):
-        if self._owner._session:
-            self._session_setter.headers(headers)
-        if self._owner._driver and self._owner._driver.is_running:
-            self._chromium_setter.headers(headers)
-
-    def user_agent(self, ua, platform=None):
-        if self._owner._session:
-            self._session_setter.user_agent(ua)
-        if self._owner._driver and self._owner._driver.is_running:
-            self._chromium_setter.user_agent(ua, platform)
-
-    def timeouts(self, base=None, page_load=None, script=None):
-        super().timeouts(base=base, page_load=page_load, script=script)
-        if base is not None:
-            self._owner._timeout = base
 
 
 class ChromiumElementSetter(object):
@@ -386,7 +518,7 @@ class LoadMode(object):
             raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'value',
                                            ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
         self._owner._load_mode = value
-        if self._owner._type in ('ChromiumPage', 'WebPage'):
+        if self._owner._type == 'ChromiumPage':
             self._owner.browser._load_mode = value
 
     def normal(self):

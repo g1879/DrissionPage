@@ -78,11 +78,11 @@ class Texts(object):
     INVALID_URL = '无效的url，也许要加上"http://"？'
     INVALID_HEADER_NAME = '无效的header项名。'
     NOT_A_FUNCTION = '传入的js无法解析成函数。'
-    METHOD_NOT_FOUND = '没有找到对应功能，方法错误或你的浏览器太旧。'
+    METHOD_NOT_FOUND = '没有找到对应功能，方法错误或此版本浏览器不支持。'
     NO_RESPONSE = '超时，可能是浏览器卡了。'
     UNKNOWN_ERR = '出现未知错误。'
     FEEDBACK = ('出现这个错误可能意味着程序有bug，请把错误信息和重现方法告知作者，谢谢。\n'
-                '报告网站: https://gitee.com/g1879/DrissionPage/issues')
+                '报告网站: https://gitcode.com/g1879/DrissionPage/issues')
     INI_NOT_FOUND = 'ini文件不存在。'
     EXT_NOT_FOUND = '插件路径不存在。'
     WAITING_FAILED_ = '等待{}失败（等待{}秒）。'
@@ -98,6 +98,7 @@ class Texts(object):
     BROWSER_DISCONNECTED = '浏览器已关闭或链接已断开。'
     BROWSER_NOT_FOR_CONTROL = '浏览器版本太旧或此浏览器不支持接管。'
     UNSUPPORTED_CSS_SYNTAX = '此css selector语法不受支持，请换成xpath。'
+    UNSUPPORTED_AX = 'SessionPage或SessionElement不支持"ax:"方式查找元素。'
     UNSUPPORTED_ARG_TYPE_ = '不支持参数{}的类型: {}。'
     UPGRADE_WS = '请升级websocket-client库。'
     INI_NOT_SET = 'ini_path未设置。'
@@ -124,7 +125,6 @@ class Texts(object):
     D_MODE_ONLY = 'url、domain、path参数只有d模式下有效。'
     S_MODE_ONLY = '以下参数在s模式下才会生效:'
     STATUS_CODE_ = '状态码: {}'
-    TAB_OBJ_EXISTS = '该标签页已有非MixTab版本，如需多对象共用标签页请设置Settings.set_singleton_tab_obj(False)。'
     ONLY_ENGLISH = '转换成视频仅支持英文路径和文件名。'
     SELECT_ONLY = 'select方法只能在<select>元素使用。'
     MULTI_SELECT_ONLY = '只能在多选菜单执行此操作。'
@@ -144,6 +144,10 @@ class Texts(object):
     DOMAIN_NOT_SET = '未设置域名，请设置cookie的domain参数或先访问一个网站。'
     PLUGIN_NEED_FOLDER = '插件需解压为文件夹：{}'
     NEED_FILES_OR_TEXT_ARG = 'files参数和text参数必须至少输入一个。'
+    ZERO_HEIGHT = '元素高度为0，无法截图。'
+    FAILED_TO_GET_SYS_USER_DATA = '获取系统{}用户文件夹路径失败。'
+    SYS_BROWSER_ACTIVATED = '系统的{}已开启，请先关闭。'
+    FAILED_TO_DEL_USER_DIR = '删除已有的用户文件夹失败，请尝试指定其它路径或端口。'
 
     # --------- 参数内容 ---------
     ELE_DISPLAYED = '元素显示'
@@ -257,6 +261,8 @@ class English(Texts):
     TARGETNOTFOUNDERROR = 'The specified page cannot be found.'
     PLUGIN_NEED_FOLDER = 'The plugin needs to be decompressed into a folder：{}'
     NEED_FILES_OR_TEXT_ARG = 'At least one of the "files" parameter and the "text" parameter must be entered.'
+    FAILED_TO_GET_SYS_USER_DATA = 'Failed to obtain the user data path of {} in the system.'
+    SYS_BROWSER_ACTIVATED = 'The {} in the system is already activated. Please turn it off first.'
 
     # --------- 异常信息 ---------
     NO_AVAILABLE_PORT_FOUND = 'No available port found.'
@@ -265,12 +271,12 @@ class English(Texts):
     INVALID_URL = 'Invalid url, maybe add "http://"?'
     INVALID_HEADER_NAME = 'Invalid header name.'
     NOT_A_FUNCTION = 'The passed js cannot be parsed into a function.'
-    METHOD_NOT_FOUND = 'The function is not found, the method is wrong or your browser is too old.'
+    METHOD_NOT_FOUND = 'Method not found, the method was incorrect, or this version of the browser does not support it.'
     NO_RESPONSE = 'Time out. Maybe the browser is stuck.'
     UNKNOWN_ERR = 'An unknown error occurred.'
     FEEDBACK = ('This error may mean that there is a bug in the program, please inform the author of the error '
                 'message and how to reproduce it, thank you.\n'
-                'Report url: https://gitee.com/g1879/DrissionPage/issues')
+                'Report url: https://gitcode.com/g1879/DrissionPage/issues')
     INI_NOT_FOUND = 'The ini file does not exist.'
     EXT_NOT_FOUND = 'The plug-in path does not exist.'
     WAITING_FAILED_ = 'Wait for {} failed ({} seconds).'
@@ -287,6 +293,7 @@ class English(Texts):
     BROWSER_DISCONNECTED = 'The browser is closed or the link is broken.'
     BROWSER_NOT_FOR_CONTROL = 'The browser version is too old or this browser does not support takeover.'
     UNSUPPORTED_CSS_SYNTAX = 'This css selector syntax is not supported, please replace it with xpath.'
+    UNSUPPORTED_AX = 'SessionPage or SessionElement not support "ax:".'
     UNSUPPORTED_ARG_TYPE_ = 'The type of parameter {} is not supported: {}.'
     UPGRADE_WS = 'Upgrade the websocket-client library.'
     INI_NOT_SET = 'ini_path is not set.'
@@ -313,8 +320,6 @@ class English(Texts):
     D_MODE_ONLY = 'The url, domain, and path parameters are valid only in d mode.'
     S_MODE_ONLY = 'The following parameters take effect only in s mode:'
     STATUS_CODE_ = 'Status Code: {}'
-    TAB_OBJ_EXISTS = ('There is already a non-mixtab version of this tab. If multiple objects are common, '
-                      'use Settings.set_singleton_tab_obj(False).')
     ONLY_ENGLISH = 'Only English path and file name are supported when converting to video.'
     SELECT_ONLY = 'The select method can only be used on <select> elements.'
     MULTI_SELECT_ONLY = 'You can only do this from the multiple select element.'
@@ -332,6 +337,8 @@ class English(Texts):
     LOC_LEN = 'The length of the locator must be 2.'
     INCORRECT_SIGN_ = 'Incorrect symbol: {}'
     DOMAIN_NOT_SET = 'No domain name is set, please set the domain parameter of the cookie or visit a website first.'
+    ZERO_HEIGHT = 'Cannot take screenshot with 0 height.'
+    FAILED_TO_DEL_USER_DIR = 'The deletion of the existing user folder failed. Please try specifying another path or port.'
 
     # --------- 参数内容 ---------
     ELE_DISPLAYED = 'element display'

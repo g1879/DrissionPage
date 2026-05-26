@@ -8,7 +8,9 @@
 from abc import abstractmethod
 from copy import copy
 from pathlib import Path
+from queue import Queue, Empty
 from re import sub
+from threading import Thread
 from urllib.parse import quote
 
 from DrissionGet import DrissionGet
@@ -19,6 +21,7 @@ from .._elements.none_element import NoneElement
 from .._functions.elements import get_frame, get_eles
 from .._functions.locator import get_loc
 from .._functions.settings import Settings as _S
+from .._functions.tools import raise_error
 from .._functions.web import format_html
 from ..errors import ElementNotFoundError, LocatorError
 
@@ -120,7 +123,11 @@ class DrissionElement(BaseElement):
         return self.attr('href') or self.attr('src')
 
     @property
-    def css_path(self):
+    def css_selector(self):
+        return self._get_ele_path(xpath=False)
+
+    @property
+    def css_path(self):  # 即将废弃
         return self._get_ele_path(xpath=False)
 
     @property
@@ -261,7 +268,6 @@ class DrissionElement(BaseElement):
 
 
 class BasePage(BaseParser):
-
     def __init__(self):
         self._url = None
         self._url_available = None
@@ -302,7 +308,7 @@ class BasePage(BaseParser):
         if isinstance(url, Path) or ('://' not in url and ':\\\\' not in url):
             p = Path(url)
             if p.exists():
-                url = str(p.absolute())
+                url = str(p.resolve())
                 is_file = True
 
         self._url = url if is_file else quote(url, safe='-_.~!*\'"();:@&=+$,/\\?#[]%')
@@ -312,7 +318,7 @@ class BasePage(BaseParser):
 
     def _set_session_options(self, session_or_options=None):
         if not session_or_options:
-            self._session_options = SessionOptions(session_or_options)
+            self._session_options = SessionOptions(None)
 
         elif isinstance(session_or_options, SessionOptions):
             self._session_options = session_or_options
@@ -322,6 +328,8 @@ class BasePage(BaseParser):
             self._session = copy(session_or_options)
             self._headers = self._session.headers
             self._session.headers = None
+
+        self._timeout = self._session_options.timeout
 
     def _create_session(self):
         if not self._session_options:
@@ -360,3 +368,66 @@ class BasePage(BaseParser):
         r.method = method
         r.args = {'locator': locator, 'index': index, 'timeout': timeout}
         return r
+
+
+class Messenger(object):
+    def __init__(self):
+        self._target_id = None
+        self._session_id = None
+        self._imm_events = set()
+        self._event_queue = Queue()
+        self._messenger_running = False
+        self._recv_th = Thread(target=self._handle_event_loop)
+        self._recv_th.daemon = True
+        self._event_handlers = {}
+        self._debug = False
+
+    def _start_messenger(self):
+        self._messenger_running = True
+        self._session_id = self._browser._get_session_id(self._target_id, obj=self)
+        self._recv_th.start()
+
+    def _stop_messenger(self):
+        self._messenger_running = False
+        self._browser._detach(self._session_id)
+
+    def _run_cdp(self, cmd, _ignore=None, _user=False, _timeout=None, **cmd_args):
+        r = self._driver.run(cmd, _timeout=_timeout, _session_id=self._session_id, _debug=self._debug, **cmd_args)
+        return r if 'error' not in r or _ignore is True else raise_error(r, self._browser, ignore=_ignore, user=_user)
+
+    def _recv_event(self, msg):
+        if self._imm_events and msg.get('method', None) in self._imm_events:
+            func = self._event_handlers.get(msg['method'], None)
+            if func:
+                func(**msg['params'])
+            return
+        self._event_queue.put(msg)
+
+    def _handle_event_loop(self):
+        while self._messenger_running:
+            try:
+                event = self._event_queue.get(timeout=1)
+            except Empty:
+                continue
+            function = self._event_handlers.get(event['method'], None)
+            if function:
+                function(**event['params'])
+
+            self._event_queue.task_done()
+
+    def _debug_recv_event(self, msg):
+        if self._debug and (self._debug is True or msg['method'].startswith(self._debug)):
+            print(f'收 {msg}')
+        self._recv_event(msg)
+
+    def _on_disconnect(self):
+        pass
+
+    def _set_callback(self, event, callback, immediate=False):
+        if callback:
+            self._event_handlers[event] = callback
+            if immediate:
+                self._imm_events.add(event)
+        else:
+            self._event_handlers.pop(event, None)
+            self._imm_events.discard(event)

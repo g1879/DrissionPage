@@ -5,7 +5,7 @@
 @Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-from ._base.chromium import Chromium
+from ._browsers.chromium import Chromium
 from ._configs.chromium_options import ChromiumOptions
 from ._elements.session_element import make_session_ele
 from ._functions.by import By

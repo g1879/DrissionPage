@@ -6,12 +6,13 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from http.cookiejar import Cookie
-from typing import Union
+from typing import Union, Optional
 
 from requests import Session
 from requests.cookies import RequestsCookieJar
 
-from .._base.chromium import Chromium
+from .._browsers.chromium import Chromium
+from .._browsers.chromium_context import ChromiumContext
 from .._pages.chromium_base import ChromiumBase
 
 
@@ -41,10 +42,10 @@ def set_session_cookies(session: Session,
     ...
 
 
-def set_browser_cookies(browser: Chromium,
+def set_browser_cookies(browser: Union[Chromium, ChromiumContext],
                         cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None:
     """设置cookies值
-    :param browser: 页面对象
+    :param browser: 浏览器或浏览器上下文对象
     :param cookies: cookies信息
     :return: None
     """

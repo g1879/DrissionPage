@@ -29,15 +29,20 @@ class Console(object):
 
     def start(self):
         self._caught = Queue(maxsize=0)
-        self._owner._driver.set_callback("Console.messageAdded", self._console)
+        self._owner._set_callback("Log.entryAdded", self._onEntryAdded)
+        self._owner._set_callback("Runtime.consoleAPICalled", self._onConsoleAPICalled)
         if self._not_enabled:
-            self._owner._run_cdp("Console.enable")
+            self._owner._run_cdp("Log.enable")
+            self._owner._run_cdp("Runtime.enable")
             self._not_enabled = False
         self.listening = True
 
     def stop(self):
         if self.listening:
-            self._owner._driver.set_callback('Console.messageAdded', None)
+            self._owner._set_callback('Log.entryAdded', None)
+            self._owner._set_callback("Runtime.consoleAPICalled", None)
+            self._owner._run_cdp("Log.disable")
+            self._owner._run_cdp("Runtime.disable")
             self.listening = False
 
     def clear(self):
@@ -47,13 +52,13 @@ class Console(object):
         if not self.listening:
             raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
         if timeout is None:
-            while self._owner._driver.is_running and self.listening and not self._caught.qsize():
+            while self._owner._messenger_running and self.listening and not self._caught.qsize():
                 sleep(.03)
             return self._caught.get_nowait() if self._caught.qsize() else None
 
         else:
             end = perf_counter() + timeout
-            while self._owner._driver.is_running and self.listening and perf_counter() < end:
+            while self._owner._messenger_running and self.listening and perf_counter() < end:
                 if self._caught.qsize():
                     return self._caught.get_nowait()
                 sleep(0.05)
@@ -61,41 +66,33 @@ class Console(object):
 
     def steps(self, timeout=None):
         if timeout is None:
-            while self._owner._driver.is_running and self.listening:
+            while self._owner._messenger_running and self.listening:
                 if self._caught.qsize():
                     yield self._caught.get_nowait()
                 sleep(0.05)
 
         else:
             end = perf_counter() + timeout
-            while self._owner._driver.is_running and self.listening and perf_counter() < end:
+            while self._owner._messenger_running and self.listening and perf_counter() < end:
                 if self._caught.qsize():
                     yield self._caught.get_nowait()
                     end = perf_counter() + timeout
                 sleep(0.05)
-            return False
 
-    def _console(self, **kwargs):
-        self._caught.put(ConsoleData(kwargs['message']))
+    def _onEntryAdded(self, **kwargs):
+        self._caught.put(ConsoleData(kwargs['entry']))
+
+    def _onConsoleAPICalled(self, **kwargs):
+        self._caught.put(ConsoleData(kwargs))
 
 
 class ConsoleData(object):
-    __slots__ = ('_data', 'source', 'level', 'text', 'url', 'line', 'column')
-
     def __init__(self, data):
         self._data = data
 
     def __getattr__(self, item):
         return self._data.get(item, None)
 
-    def __repr__(self):
-        return (f'<ConsoleData source={self.source} level={self.level} text={self.text} url={self.url} '
-                f'line={self.line} column={self.column} >')
-
     @property
-    def body(self):
-        from json import loads
-        try:
-            return loads(self.text)
-        except:
-            return self._raw_body
+    def data(self):
+        return self._data

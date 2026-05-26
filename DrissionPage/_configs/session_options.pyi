@@ -39,7 +39,7 @@ class SessionOptions(object):
     _retry_interval: float = ...
 
     def __init__(self,
-                 read_file: [bool, None] = True,
+                 read_file: Union[bool, None] = True,
                  ini_path: Union[str, Path] = None):
         """
         :param read_file: 是否从文件读取配置

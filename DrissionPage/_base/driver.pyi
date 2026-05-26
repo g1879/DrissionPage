@@ -5,46 +5,39 @@
 @Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-from queue import Queue
 from threading import Thread
-from typing import Union, Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Set
 
 from requests import Response
 from websocket import WebSocket
 
-from .._base.chromium import Chromium
+from .base import Messenger
 
 
 class Driver(object):
-    id: str
+    _cur_id: int = ...
+    _ws: Optional[WebSocket] = ...
+    _recv_th: Thread = ...
+    _handle_immediate_event_th: Optional[Thread] = ...
+    _session_owner: Dict[str, Messenger] = ...
     address: str
-    owner = ...
-    alert_flag: bool
-    _cur_id: int
-    _ws: Optional[WebSocket]
-    _recv_th: Thread
-    _handle_event_th: Thread
-    _handle_immediate_event_th: Optional[Thread]
-    session_id: Optional[str] = ...
-    is_running: bool
-    event_handlers: dict
-    immediate_event_handlers: dict
-    method_results: dict
-    event_queue: Queue
-    immediate_event_queue: Queue
+    owner: Messenger = ...
+    alert_flag: Set = ...
+    is_running: bool = ...
+    method_results: dict = ...
 
-    def __init__(self, _id: str, address: str, owner=None):
+    def __init__(self, address: str, owner: Messenger = None):
         """
-        :param _id: 标签页id
         :param address: 浏览器连接地址
         :param owner: 创建这个驱动的对象
         """
         ...
 
-    def _send(self, message: dict, timeout: float = None) -> dict:
+    def _send(self, message: dict, timeout: float, ws_id: int) -> dict:
         """发送信息到浏览器，并返回浏览器返回的信息
         :param message: 发送给浏览器的数据
         :param timeout: 超时时间，为None表示无限
+        :param ws_id: 信息id号
         :return: 浏览器返回的数据
         """
         ...
@@ -67,13 +60,19 @@ class Driver(object):
         """
         ...
 
-    def run(self, _method: str, **kwargs) -> dict:
+    def run(self, _method: str, _timeout: Optional[float] = None, _session_id: Optional[str] = None, **kwargs) -> dict:
         """执行cdp方法
         :param _method: cdp方法名
+        :param _timeout: 超时时间
+        :param _session_id: session id
         :param kwargs: cdp参数
         :return: 执行结果
         """
         ...
+
+    def add_session_owner(self, session_id: Optional[str], obj: Messenger) -> None: ...
+
+    def remove_session_owner(self, session_id: str) -> None: ...
 
     def start(self) -> bool:
         """启动连接"""
@@ -87,36 +86,6 @@ class Driver(object):
         """中断连接"""
         ...
 
-    def set_callback(self, event: str, callback: Union[Callable, None], immediate: bool = False) -> None:
-        """绑定cdp event和回调方法
-        :param event: cdp event
-        :param callback: 绑定到cdp event的回调方法
-        :param immediate: 是否要立即处理的动作
-        :return: None
-        """
-        ...
-
-
-class BrowserDriver(Driver):
-    BROWSERS: Dict[str, Driver] = ...
-    owner: Chromium = ...
-
-    def __new__(cls, _id: str, address: str, owner: Chromium):
-        """
-        :param _id: 浏览器id
-        :param address: 浏览器连接地址
-        :param owner: 浏览器对象
-        """
-        ...
-
-    def __init__(self, _id: str, address: str, owner: Optional[Chromium]):
-        """
-        :param _id: 浏览器id
-        :param address: 浏览器连接地址
-        :param owner: 浏览器对象
-        """
-        ...
-
     @staticmethod
     def get(url) -> Response:
         """
@@ -124,3 +93,6 @@ class BrowserDriver(Driver):
         :return: Response对象
         """
         ...
+
+
+class DebugDriver(Driver): ...

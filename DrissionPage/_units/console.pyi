@@ -6,7 +6,7 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from queue import Queue
-from typing import Optional, Iterable, List, Union, Any
+from typing import Optional, Iterable, List, Union
 
 from .._pages.chromium_base import ChromiumBase
 
@@ -54,15 +54,46 @@ class Console(object):
         """
         ...
 
-    def _console(self, **kwargs) -> None: ...
+    def _onEntryAdded(self, **kwargs) -> None: ...
+
+    def _onConsoleAPICalled(self, **kwargs) -> None: ...
 
 
 class ConsoleData(object):
-    __slots__ = ('_data', 'source', 'level', 'text', 'url', 'line', 'column')
+    __slots__ = ('_data', 'source', 'level', 'text', 'url', 'lineNumber', 'column', 'timestamp',
+                 'stackTrace', 'type', 'args')
 
     def __init__(self, data: dict) -> None: ...
 
-    def __getattr__(self, item: str) -> str: ...
+    @property
+    def data(self) -> dict: ...
 
     @property
-    def body(self) -> Any: ...
+    def source(self) -> str: ...
+
+    @property
+    def level(self) -> str: ...
+
+    @property
+    def text(self) -> str: ...
+
+    @property
+    def url(self) -> str: ...
+
+    @property
+    def lineNumber(self) -> int: ...
+
+    @property
+    def column(self) -> int: ...
+
+    @property
+    def timestamp(self) -> float: ...
+
+    @property
+    def stackTrace(self) -> dict: ...
+
+    @property
+    def type(self) -> str: ...
+
+    @property
+    def args(self) -> List[dict]: ...

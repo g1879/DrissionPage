@@ -50,6 +50,7 @@ class OptionsManager(object):
             self.set_item('chromium_options', 'arguments', "['--no-default-browser-check', '--disable-suggestions-ui', "
                                                            "'--no-first-run', '--disable-infobars', "
                                                            "'--disable-popup-blocking', '--hide-crash-restore-bubble', "
+                                                           "'--disable-site-isolation-trials', '--test-type',"
                                                            "'--disable-features=PrivacySandboxSettings4']")
             self.set_item('chromium_options', 'extensions', '[]')
             self.set_item('chromium_options', 'prefs', "{'profile.default_content_settings.popups': 0, "
@@ -108,15 +109,15 @@ class OptionsManager(object):
         return self
 
     def save(self, path=None):
-        default_path = (Path(__file__).parent / 'configs.ini').absolute()
+        default_path = (Path(__file__).parent / 'configs.ini').resolve()
         if path == 'default':
             path = default_path
         elif path is None:
             if self.ini_path is None:
                 raise RuntimeError(_S._lang.join(_S._lang.INI_NOT_SET))
-            path = self.ini_path.absolute()
+            path = self.ini_path.resolve()
         else:
-            path = Path(path).absolute()
+            path = Path(path).resolve()
 
         path = path / 'config.ini' if path.is_dir() else path
         path.parent.mkdir(exist_ok=True, parents=True)

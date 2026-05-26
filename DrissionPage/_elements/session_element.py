@@ -63,7 +63,7 @@ class SessionElement(DrissionElement):
     def attrs(self):
         r = {}
         for attr, val in self.inner_ele.items():
-            r[attr] = val if attr.lower in ('href', 'src') else self.attr(attr)
+            r[attr] = val if attr.lower() in ('href', 'src') else self.attr(attr)
         return r
 
     @property
@@ -197,7 +197,7 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
 
         # 若css以>开头，表示找元素的直接子元素，要用page以绝对路径才能找到
         elif loc[0] == 'css selector' and loc[1].lstrip().startswith('>'):
-            loc_str = f'{html_or_ele.css_path}{loc[1]}'
+            loc_str = f'{html_or_ele.css_selector}{loc[1]}'
             if html_or_ele.owner:
                 html_or_ele = fromstring(html_or_ele.owner.html)
             else:  # 接收html文本，无page的情况
@@ -213,7 +213,7 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
         if loc[0] == 'xpath' and loc[1].lstrip().startswith('/'):
             loc_str = f'.{loc[1]}'
         elif loc[0] == 'css selector' and loc[1].lstrip().startswith('>'):
-            loc_str = f'{html_or_ele.css_path}{loc[1]}'
+            loc_str = f'{html_or_ele.css_selector}{loc[1]}'
         loc = loc[0], loc_str
 
         # 获取整个页面html再定位到当前元素，以实现查找上级元素
@@ -260,8 +260,10 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
     try:
         if loc[0] == 'xpath':  # 用lxml内置方法获取lxml的元素对象列表
             eles = html_or_ele.xpath(loc[1])
-        else:  # 用css selector获取元素对象列表
+        elif loc[0] == 'css selector':  # 用css selector获取元素对象列表
             eles = html_or_ele.cssselect(loc[1])
+        else:  # ax
+            raise ValueError(_S._lang.join(_S._lang.UNSUPPORTED_AX))
 
         if not isinstance(eles, list):  # 结果不是列表，如数字
             return eles

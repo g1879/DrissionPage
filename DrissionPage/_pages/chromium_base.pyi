@@ -10,13 +10,9 @@ from typing import Union, Tuple, Any, Optional, Literal
 
 from requests import Session
 
-from .chromium_page import ChromiumPage
-from .chromium_tab import ChromiumTab
-from .mix_tab import MixTab
-from .web_page import WebPage
-from .._base.base import BasePage
-from .._base.chromium import Chromium
+from .._base.base import BasePage, Messenger
 from .._base.driver import Driver
+from .._browsers.chromium import Chromium
 from .._elements.chromium_element import ChromiumElement
 from .._elements.session_element import SessionElement
 from .._functions.cookies import CookiesList
@@ -35,12 +31,14 @@ from .._units.waiter import BaseWaiter
 PIC_TYPE = Literal['jpg', 'jpeg', 'png', 'webp', True]
 
 
-class ChromiumBase(BasePage):
+class ChromiumBase(BasePage, Messenger):
     """标签页、Frame、Page基类"""
-    _tab: Union[ChromiumTab, MixTab, ChromiumFrame, ChromiumPage, WebPage] = ...
     _browser: Chromium = ...
     _driver: Optional[Driver] = ...
-    _frame_id: str = ...
+    _target_id: str = ...
+    _context_id: Optional[str] = ...
+    _default_context: bool = ...
+    _frame_id: Optional[str] = ...
     _is_reading: bool = ...
     _is_timeout: bool = ...
     _timeouts: Timeout = ...
@@ -68,13 +66,20 @@ class ChromiumBase(BasePage):
     _console: Optional[Console] = ...
     _disconnect_flag: bool = ...
     _type: str = ...
+    _Accessibility_enabled: bool = ...
+    _proxy_usr: Optional[str] = ...
+    _proxy_pwd: Optional[str] = ...
+    _inited: bool = ...
+    _debug: bool = ...
 
     def __init__(self,
                  browser: Chromium,
-                 tab_id: str = None):
+                 tab_id: str,
+                 context_id: str):
         """
         :param browser: Chromium
         :param tab_id: 要控制的tab id，不指定默认为激活的标签页
+        :param context_id: context id
         """
         ...
 
@@ -93,18 +98,12 @@ class ChromiumBase(BasePage):
 
     def _d_set_runtime_settings(self) -> None: ...
 
-    def _connect_browser(self, target_id: str = None) -> None:
-        """连接浏览器，在第一次时运行
-        :param target_id: 要控制的target id，不指定默认为激活的标签页
-        :return: None
-        """
+    def _connect_browser(self) -> None:
+        """连接浏览器，在第一次时运行"""
         ...
 
-    def _driver_init(self, target_id: str) -> None:
-        """新建页面、页面刷新后要进行的cdp参数初始化
-        :param target_id: 要跳转到的target id
-        :return: None
-        """
+    def _driver_init(self) -> None:
+        """新建页面、页面刷新后要进行的cdp参数初始化"""
         ...
 
     def _get_document(self, timeout: float = 10) -> bool:
@@ -140,6 +139,14 @@ class ChromiumBase(BasePage):
 
     def _onFileChooserOpened(self, **kwargs):
         """文件选择框打开时执行"""
+        ...
+
+    def _onAuthRequired(self, **kwargs):
+        """"""
+        ...
+
+    def _onRequestPaused(self, **kwargs):
+        """"""
         ...
 
     def _wait_to_stop(self):
@@ -223,7 +230,7 @@ class ChromiumBase(BasePage):
 
     @property
     def _browser_url(self) -> str:
-        """用于被MixTab覆盖"""
+        """用于被ChromiumTab覆盖"""
         ...
 
     @property
@@ -241,10 +248,10 @@ class ChromiumBase(BasePage):
         """返回当前标签页id"""
         ...
 
-    @property
-    def _target_id(self) -> str:
-        """返回当前标签页id"""
-        ...
+    # @property
+    # def _target_id(self) -> str:
+    #     """返回当前标签页id"""
+    #     ...
 
     @property
     def active_ele(self) -> ChromiumElement:
@@ -286,14 +293,6 @@ class ChromiumBase(BasePage):
 
     def run_cdp_loaded(self, cmd: str, **cmd_args) -> dict:
         """执行Chrome DevTools Protocol语句，执行前等待页面加载完毕
-        :param cmd: 协议项目
-        :param cmd_args: 参数
-        :return: 执行的结果
-        """
-        ...
-
-    def _run_cdp(self, cmd: str, **cmd_args) -> dict:
-        """执行Chrome DevTools Protocol语句
         :param cmd: 协议项目
         :param cmd_args: 参数
         :return: 执行的结果
@@ -431,7 +430,7 @@ class ChromiumBase(BasePage):
         :param locator: 定位符或元素对象
         :param timeout: 查找超时时间（秒）
         :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-        :param relative: MixTab用的表示是否相对定位的参数
+        :param relative: ChromiumTab用的表示是否相对定位的参数
         :param raise_err: 找不到元素是是否抛出异常，为None时根据全局设置
         :return: ChromiumElement对象或元素对象组成的列表
         """
@@ -523,8 +522,13 @@ class ChromiumBase(BasePage):
         """
         ...
 
-    def get_screenshot(self, path: [str, Path] = None, name: str = None, as_bytes: PIC_TYPE = None,
-                       as_base64: PIC_TYPE = None, full_page: bool = False, left_top: Tuple[int, int] = None,
+    def get_screenshot(self,
+                       path: Union[str, Path] = None,
+                       name: str = None,
+                       as_bytes: PIC_TYPE = None,
+                       as_base64: PIC_TYPE = None,
+                       full_page: bool = False,
+                       left_top: Tuple[int, int] = None,
                        right_bottom: Tuple[int, int] = None) -> Union[str, bytes]:
         """对页面进行截图，可对整个网页、可见网页、指定范围截图。对可视范围外截图需要90以上版本浏览器支持
         :param path: 保存路径
@@ -565,13 +569,6 @@ class ChromiumBase(BasePage):
 
     def disconnect(self) -> None:
         """断开与页面的连接，不关闭页面"""
-        ...
-
-    def reconnect(self, wait: float = 0) -> None:
-        """断开与页面原来的页面，重新建立连接
-        :param wait: 断开后等待若干秒再连接
-        :return: None
-        """
         ...
 
     def handle_alert(self,
@@ -617,6 +614,8 @@ class ChromiumBase(BasePage):
         """
         ...
 
+    def _Accessibility_enable(self) -> None: ...
+
     def _d_connect(self, to_url: str, times: int = 0, interval: float = 1, show_errmsg: bool = False,
                    timeout: float = None) -> Union[bool, None]:
         """尝试连接，重试若干次
@@ -629,7 +628,7 @@ class ChromiumBase(BasePage):
         """
         ...
 
-    def _get_screenshot(self, path: [str, Path] = None, name: str = None, as_bytes: PIC_TYPE = None,
+    def _get_screenshot(self, path: Union[str, Path] = None, name: str = None, as_bytes: PIC_TYPE = None,
                         as_base64: PIC_TYPE = None, full_page: bool = False, left_top: Tuple[float, float] = None,
                         right_bottom: Tuple[float, float] = None, ele: ChromiumElement = None) -> Union[str, bytes]:
         """对页面进行截图，可对整个网页、可见网页、指定范围截图。对可视范围外截图需要90以上版本浏览器支持

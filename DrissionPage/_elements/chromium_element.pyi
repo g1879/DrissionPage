@@ -13,9 +13,7 @@ from .._elements.session_element import SessionElement
 from .._functions.elements import SessionElementsList, ChromiumElementsList
 from .._pages.chromium_base import ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
-from .._pages.chromium_page import ChromiumPage
 from .._pages.chromium_tab import ChromiumTab
-from .._pages.web_page import WebPage
 from .._units.clicker import Clicker
 from .._units.rect import ElementRect
 from .._units.scroller import ElementScroller
@@ -29,9 +27,8 @@ PIC_TYPE = Literal['jpg', 'jpeg', 'png', 'webp', True]
 
 class ChromiumElement(DrissionElement):
     _tag: Optional[str] = ...
-    owner: ChromiumBase = ...
-    page: Union[ChromiumPage, WebPage] = ...
-    tab: Union[ChromiumPage, ChromiumTab] = ...
+    owner: Union[ChromiumTab, ChromiumFrame] = ...
+    tab: ChromiumTab = ...
     _node_id: int = ...
     _obj_id: str = ...
     _backend_id: int = ...
@@ -46,7 +43,7 @@ class ChromiumElement(DrissionElement):
     _pseudo: Optional[Pseudo] = ...
 
     def __init__(self,
-                 owner: ChromiumBase,
+                 owner: Union[ChromiumTab, ChromiumFrame],
                  node_id: int = None,
                  obj_id: str = None,
                  backend_id: int = None):
@@ -480,7 +477,7 @@ class ChromiumElement(DrissionElement):
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间（秒）
         :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-        :param relative: MixTab用的表示是否相对定位的参数
+        :param relative: ChromiumTab用的表示是否相对定位的参数
         :param raise_err: 找不到元素是是否抛出异常，为None时根据全局设置
         :return: ChromiumElement对象或文本、属性或其组成的列表
         """
@@ -503,7 +500,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def save(self,
-             path: [str, bool] = None,
+             path: Union[str, bool] = None,
              name: str = None,
              timeout: float = None,
              rename: bool = True) -> str:
@@ -517,7 +514,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def get_screenshot(self,
-                       path: [str, Path] = None,
+                       path: Union[str, Path] = None,
                        name: str = None,
                        as_bytes: PIC_TYPE = None,
                        as_base64: PIC_TYPE = None,
@@ -606,8 +603,8 @@ class ChromiumElement(DrissionElement):
 
 
 class ShadowRoot(BaseElement):
-    owner: ChromiumBase = ...
-    tab: Union[ChromiumPage, ChromiumTab] = ...
+    owner: Union[ChromiumTab, ChromiumFrame] = ...
+    tab: ChromiumTab = ...
     _obj_id: str = ...
     _node_id: int = ...
     _backend_id: int = ...
@@ -845,7 +842,7 @@ class ShadowRoot(BaseElement):
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间（秒）
         :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-        :param relative: MixTab用的表示是否相对定位的参数
+        :param relative: ChromiumTab用的表示是否相对定位的参数
         :param raise_err: 找不到元素是是否抛出异常，为None时根据全局设置
         :return: ChromiumElement对象或其组成的列表
         """
@@ -868,8 +865,24 @@ def find_in_chromium_ele(ele: ChromiumElement,
     :param locator: 元素定位元组
     :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
     :param timeout: 查找元素超时时间（秒）
-    :param relative: MixTab用于标记是否相对定位使用
+    :param relative: ChromiumTab用于标记是否相对定位使用
     :return: 返回ChromiumElement元素或它们组成的列表
+    """
+    ...
+
+
+def find_by_ax(page: Union[ChromiumTab, ChromiumFrame],
+               backend_id: int,
+               args: dict,
+               index: Optional[int],
+               timeout: float) -> Union[ChromiumElement, ChromiumElementsList]:
+    """执行用xpath在元素中查找元素
+    :param page: 元素所在页面对象
+    :param backend_id: 在此元素中查找
+    :param args: {'name': '***', 'role': '***'}
+    :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
+    :param timeout: 超时时间（秒）
+    :return: ChromiumElement或其组成的列表
     """
     ...
 
@@ -878,7 +891,7 @@ def find_by_xpath(ele: ChromiumElement,
                   xpath: str,
                   index: Optional[int],
                   timeout: float,
-                  relative: bool = True) -> Union[ChromiumElement, List[ChromiumElement]]:
+                  relative: bool = True) -> Union[ChromiumElement, ChromiumElementsList]:
     """执行用xpath在元素中查找元素
     :param ele: 在此元素中查找
     :param xpath: 查找语句
@@ -893,7 +906,7 @@ def find_by_xpath(ele: ChromiumElement,
 def find_by_css(ele: ChromiumElement,
                 selector: str,
                 index: Optional[int],
-                timeout: float) -> Union[ChromiumElement, List[ChromiumElement],]:
+                timeout: float) -> Union[ChromiumElement, ChromiumElementsList]:
     """执行用css selector在元素中查找元素
     :param ele: 在此元素中查找
     :param selector: 查找语句
@@ -904,17 +917,17 @@ def find_by_css(ele: ChromiumElement,
     ...
 
 
-def make_chromium_eles(page: Union[ChromiumBase, ChromiumPage, WebPage, ChromiumTab, ChromiumFrame],
+def make_chromium_eles(page: Union[ChromiumTab, ChromiumFrame],
                        _ids: Union[tuple, list, str, int],
                        index: Optional[int] = 1,
-                       is_obj_id: bool = True,
+                       id_type: str = 'obj_id',
                        ele_only: bool = False
                        ) -> Union[ChromiumElement, ChromiumFrame, ChromiumElementsList]:
     """根据node id或object id生成相应元素对象
-    :param page: ChromiumPage对象
+    :param page: ChromiumBase对象
     :param _ids: 元素的id列表
     :param index: 获取第几个，为None返回全部
-    :param is_obj_id: 传入的id是obj id还是node id
+    :param id_type: 可选：'obj_id'、'backend_id'、'node_id'
     :param ele_only: 是否只返回ele，在页面查找元素时生效
     :return: 浏览器元素对象或它们组成的列表，生成失败返回False
     """
@@ -947,7 +960,7 @@ def run_js(page_or_ele: Union[ChromiumBase, ChromiumElement, ShadowRoot],
     ...
 
 
-def parse_js_result(page: ChromiumBase,
+def parse_js_result(page: Union[ChromiumTab, ChromiumFrame],
                     ele: ChromiumElement,
                     result: dict,
                     end_time: float):

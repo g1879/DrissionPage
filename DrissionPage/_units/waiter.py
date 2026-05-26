@@ -25,18 +25,22 @@ class OriginWaiter(object):
         return self._owner
 
 
-class BrowserWaiter(OriginWaiter):
+class BrowserContextWaiter(OriginWaiter):
     def new_tab(self, timeout=None, curr_tab=None, raise_err=None):
+        return self._new_tab(context_id=self._owner._context_id, timeout=timeout, curr_tab=curr_tab,
+                             raise_err=raise_err)
+
+    def _new_tab(self, context_id, timeout=None, curr_tab=None, raise_err=None):
         if not curr_tab:
-            curr_tab = self._owner._newest_tab_id
+            curr_tab = self._owner._browser._tabs.get_newest_tab(context_id)
         elif hasattr(curr_tab, '_type'):
             curr_tab = curr_tab.tab_id
         if timeout is None:
-            timeout = self._owner.timeout
+            timeout = self._owner._browser.timeout
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
-            if curr_tab != self._owner._newest_tab_id:
-                return self._owner._newest_tab_id
+            if curr_tab != self._owner._browser._tabs.get_newest_tab(context_id):
+                return self._owner._browser._tabs.get_newest_tab(context_id)
             sleep(.01)
 
         if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
@@ -44,6 +48,8 @@ class BrowserWaiter(OriginWaiter):
         else:
             return False
 
+
+class BrowserWaiter(BrowserContextWaiter):
     def download_begin(self, timeout=None, cancel_it=False):
         if not self._owner._dl_mgr._running:
             raise RuntimeError(_S._lang.join(_S._lang.NEED_DOWNLOAD_PATH, TIP=_S._lang.SET_DOWNLOAD_PATH))
@@ -109,28 +115,32 @@ class BaseWaiter(OriginWaiter):
     def eles_loaded(self, locators, timeout=None, any_one=False, raise_err=None):
 
         def _find(loc, driver):
-            r = driver.run('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True)
+            r = driver.run('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True,
+                           _debug=self._owner._debug, _session_id=self._owner._session_id)
             if not r or 'error' in r:
                 return False
             elif r['resultCount'] == 0:
-                driver.run('DOM.discardSearchResults', searchId=r['searchId'])
+                driver.run('DOM.discardSearchResults', searchId=r['searchId'],
+                           _debug=self._owner._debug, _session_id=self._owner._session_id)
                 return False
             searchId = r['searchId']
-            ids = driver.run('DOM.getSearchResults', searchId=searchId, fromIndex=0,
-                             toIndex=r['resultCount'])
+            ids = driver.run('DOM.getSearchResults', searchId=searchId, fromIndex=0, toIndex=r['resultCount'],
+                             _debug=self._owner._debug, _session_id=self._owner._session_id)
             if 'error' in ids:
                 return False
 
             ids = ids['nodeIds']
             res = False
             for i in ids:
-                r = driver.run('DOM.describeNode', nodeId=i)
+                r = driver.run('DOM.describeNode', nodeId=i,
+                               _debug=self._owner._debug, _session_id=self._owner._session_id)
                 if 'error' in r or r['node']['nodeName'] in ('#text', '#comment'):
                     continue
                 else:
                     res = True
                     break
-            driver.run('DOM.discardSearchResults', searchId=searchId)
+            driver.run('DOM.discardSearchResults', searchId=searchId,
+                       _debug=self._owner._debug, _session_id=self._owner._session_id)
             return res
 
         by = ('id', 'xpath', 'link text', 'partial link text', 'name', 'tag name', 'class name', 'css selector')
@@ -224,7 +234,7 @@ class BaseWaiter(OriginWaiter):
             return False
 
 
-class TabWaiter(BaseWaiter):
+class ChromiumTabWaiter(BaseWaiter):
     def downloads_done(self, timeout=None, cancel_if_timeout=True):
         if not self._owner.browser._dl_mgr._running:
             raise RuntimeError(_S._lang.join(_S._lang.NEED_DOWNLOAD_PATH, TIP=_S._lang.SET_DOWNLOAD_PATH))
@@ -265,7 +275,7 @@ class TabWaiter(BaseWaiter):
         return False if self._owner.states.has_alert else self._owner
 
 
-class ChromiumPageWaiter(TabWaiter):
+class ChromiumPageWaiter(ChromiumTabWaiter):
     def new_tab(self, timeout=None, raise_err=None):
         return self._owner.browser.wait.new_tab(timeout=timeout, raise_err=raise_err)
 
@@ -347,7 +357,7 @@ class ElementWaiter(OriginWaiter):
                                              err_text=_S._lang.WAITING_FAILED_.format(_S._lang.ELE_HAS_RECT,
                                                                                       timeout)) else False
 
-    def stop_moving(self, timeout=None, gap=.1, raise_err=None):
+    def stop_moving(self, timeout=None, gap=.05, raise_err=None):
         if timeout is None:
             timeout = self._timeout
         if timeout <= 0:
@@ -389,7 +399,7 @@ class ElementWaiter(OriginWaiter):
             a = self._ele.states.__getattribute__(attr)
             if (a and mode) or (not a and not mode):
                 return self._ele if isinstance(a, bool) else a
-            sleep(.05)
+            sleep(.02)
 
         err_text = err_text or _S._lang.ELE_STATE_CHANGED_.format(timeout)
         if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):

@@ -8,9 +8,9 @@
 from os import popen
 from pathlib import Path
 from threading import Lock
-from typing import Union, Tuple
+from typing import Union, Tuple, Callable
 
-from .._base.chromium import Chromium
+from .._browsers.chromium import Chromium
 from .._pages.chromium_base import ChromiumBase
 
 
@@ -28,10 +28,10 @@ class PortFinder(object):
         ...
 
     @staticmethod
-    def get_port(scope: Tuple[int, int] = None) -> Tuple[int, str]:
+    def get_port(scope: Tuple[int, int] = None) -> int:
         """查找一个可用端口
         :param scope: 指定端口范围，不含最后的数字，为None则使用[9600-59600)
-        :return: 可以使用的端口和用户文件夹路径组成的元组
+        :return: 可以使用的端口
         """
         ...
 
@@ -81,7 +81,7 @@ def get_hwnds_from_pid(pid: Union[str, int], title: str) -> list:
     ...
 
 
-def wait_until(function: callable, kwargs: dict = None, timeout: float = 10):
+def wait_until(function: Callable, kwargs: dict = None, timeout: float = 10):
     """等待传入的方法返回值不为假
     :param function: 要执行的方法
     :param kwargs: 方法参数
@@ -99,7 +99,8 @@ def configs_to_here(save_name: Union[Path, str] = None) -> None:
     ...
 
 
-def raise_error(result: dict, browser: Chromium, ignore=None, user: bool = False) -> None:
+def raise_error(result: dict, browser: Chromium,
+                ignore: Union[True, None, Exception] = None, user: bool = False) -> None:
     """抛出error对应报错
     :param result: 包含error的dict
     :param browser: 浏览器对象
@@ -107,4 +108,9 @@ def raise_error(result: dict, browser: Chromium, ignore=None, user: bool = False
     :param user: 是否用户调用的
     :return: None
     """
+    ...
+
+
+def ensure_del_dir(path) -> bool:
+    """保证删除文件夹"""
     ...

@@ -7,7 +7,7 @@
 """
 from typing import Union, Tuple, List, Optional, Literal
 
-from .._base.chromium import Chromium
+from .._browsers.chromium import Chromium
 from .._elements.chromium_element import ShadowRoot, ChromiumElement
 from .._pages.chromium_base import ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
@@ -95,7 +95,6 @@ class ShadowRootStates(object):
 
 class BrowserStates(object):
     _browser: Chromium = ...
-    _incognito: Optional[bool] = ...
 
     def __init__(self, browser: Chromium):
         """

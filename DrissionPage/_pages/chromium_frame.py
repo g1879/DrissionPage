@@ -7,6 +7,7 @@
 """
 from copy import copy
 from re import search, findall, DOTALL
+from threading import Thread
 from time import sleep, perf_counter
 
 from .._elements.chromium_element import ChromiumElement
@@ -53,13 +54,14 @@ class ChromiumFrame(ChromiumBase):
             if self._is_inner_frame():
                 self._is_diff_domain = False
                 self.doc_ele = ChromiumElement(self._target_page, backend_id=node['contentDocument']['backendNodeId'])
-                super().__init__(owner.browser, owner.driver.id)
+                super().__init__(owner.browser, owner._target_id, owner._context_id)
             else:
                 self._is_diff_domain = True
                 delattr(self, '_frame_id')
-                super().__init__(owner.browser, node['frameId'])
+                super().__init__(owner.browser, node['frameId'], owner._context_id)
                 obj_id = super()._run_js('document;', as_expr=True)['objectId']
                 self.doc_ele = ChromiumElement(self, obj_id=obj_id)
+            self._frame_id = node['frameId']
 
         except Exception as e:
             ChromiumFrame._Frames.pop(self._frame_id, None)
@@ -86,23 +88,23 @@ class ChromiumFrame(ChromiumBase):
             self._auto_handle_alert = self._target_page._auto_handle_alert
         self._load_mode = self._target_page._load_mode if not self._is_diff_domain else 'normal'
 
-    def _driver_init(self, target_id, is_init=True):
+    def _driver_init(self):
         try:
-            super()._driver_init(target_id)
+            super()._driver_init()
         except:
             if not self.browser._ws_only:
                 self.browser._driver.get(f'http://{self._browser.address}/json')
-            super()._driver_init(target_id)
-        self._driver.set_callback('Inspector.detached', self._onInspectorDetached, immediate=True)
-        self._driver.set_callback('Page.frameDetached', None)
-        self._driver.set_callback('Page.frameDetached', self._onFrameDetached, immediate=True)
+            super()._driver_init()
+        # self._set_callback('Inspector.detached', self._onInspectorDetached, immediate=True)
+        self._set_callback('Page.frameDetached', self._onFrameDetached, immediate=True)
 
-    def _reload(self):
+    def _do_reload(self):
+        self._messenger_running = True
         self._is_loading = True
         self._reloading = True
         self._doc_got = False
-
-        self._driver.stop()
+        self._browser._detach(session_id=self._session_id)
+        self._browser._tabs.remove_session(self._session_id)
         try:
             self._frame_ele = ChromiumElement(self._target_page, backend_id=self._backend_id)
             end_time = perf_counter() + 2
@@ -111,34 +113,38 @@ class ChromiumFrame(ChromiumBase):
                 if 'frameId' in node:
                     break
                 sleep(.05)
-
             else:
                 return
-
         except (ElementLostError, PageDisconnectedError):
             return
 
         if self._is_inner_frame():
             self._is_diff_domain = False
             self.doc_ele = ChromiumElement(self._target_page, backend_id=node['contentDocument']['backendNodeId'])
-            self._frame_id = node['frameId']
             if self._listener:
-                self._listener._to_target(self._target_page.tab_id, self._browser._ws_address, self)
-            super().__init__(self._browser, self._target_page.tab_id)
+                self._listener._to_target(self._target_page.tab_id, self)
+            super().__init__(self._browser, self._target_page.tab_id, self._context_id)
+            self._frame_id = node['frameId']
+            self._browser._tabs.add_frame(self._frame_id, self._target_page.tab_id)
 
         else:
             self._is_diff_domain = True
             if self._listener:
-                self._listener._to_target(node['frameId'], self._browser.address, self)
+                self._listener._to_target(node['frameId'], self)
             end_time = perf_counter() + self.timeouts.page_load
-            super().__init__(self._browser, node['frameId'])
+            super().__init__(self._browser, node['frameId'], self._context_id)
+            self._browser._tabs.add_frame(self._frame_id, self._target_id)
             timeout = end_time - perf_counter()
             if timeout <= 0:
                 timeout = .5
             self._wait_loaded(timeout)
 
+        self._type = 'ChromiumFrame'
         self._is_loading = False
         self._reloading = False
+
+    def _reload(self):
+        Thread(target=self._do_reload).start()
 
     def _get_document(self, timeout=10):
         if self._is_reading:
@@ -159,7 +165,7 @@ class ChromiumFrame(ChromiumBase):
 
             r = self._run_cdp('Page.getFrameTree', _ignore=PageDisconnectedError)
             for i in findall(r"'id': '(.*?)'", str(r)):
-                self.browser._frames[i] = self.tab_id
+                self.browser._tabs.add_frame(i, self.tab_id)
                 return True
 
         except:
@@ -170,16 +176,30 @@ class ChromiumFrame(ChromiumBase):
                 self._is_loading = False
             self._is_reading = False
 
-    def _onInspectorDetached(self, **kwargs):
-        # 异域转同域或退出
-        self._reload()
+    def _onFrameNavigated(self, **kwargs):
+        if kwargs['frame']['id'] == self._target_id and not self._is_diff_domain:
+            self._stop_messenger()
+            return
+        super()._onFrameNavigated(**kwargs)
+
+    # def _onInspectorDetached(self, **kwargs):
+    #     # 异域转同域或退出
+    #     return
+    #     self._reload()
 
     def _onFrameDetached(self, **kwargs):
-        # 同域变异域
-        self.browser._frames.pop(kwargs['frameId'], None)
-        ChromiumFrame._Frames.pop(kwargs['frameId'], None)
         if kwargs['frameId'] == self._frame_id:
-            self._reload()
+            if kwargs['reason'] == 'remove':  # iframe被删除
+                self.browser._tabs.remove_frame(kwargs['frameId'])
+                ChromiumFrame._Frames.pop(kwargs['frameId'], None)
+                self._stop_messenger()
+            elif kwargs['reason'] == 'swap':  # 同域变异域
+                self._reload()
+
+    def _stop_messenger(self):
+        super()._stop_messenger()
+        if self._is_diff_domain and self._frame_id in str(self.tab._run_cdp('Page.getFrameTree', _ignore=True)):
+            self._do_reload()
 
     # ----------挂件----------
     @property
@@ -281,8 +301,12 @@ class ChromiumFrame(ChromiumBase):
         return self.frame_ele.xpath
 
     @property
-    def css_path(self):
-        return self.frame_ele.css_path
+    def css_selector(self):
+        return self.frame_ele.css_selector
+
+    @property
+    def css_path(self):  # 即将废弃
+        return self.frame_ele.css_selector
 
     @property
     def tab(self):
@@ -378,7 +402,7 @@ class ChromiumFrame(ChromiumBase):
     def get_screenshot(self, path=None, name=None, as_bytes=None, as_base64=None):
         return self.frame_ele.get_screenshot(path=path, name=name, as_bytes=as_bytes, as_base64=as_base64)
 
-    def _get_screenshot(self, path=None, name=None, as_bytes: [bool, str] = None, as_base64: [bool, str] = None,
+    def _get_screenshot(self, path=None, name=None, as_bytes=None, as_base64=None,
                         full_page=False, left_top=None, right_bottom=None, ele=None):
         if not self._is_diff_domain:
             return super().get_screenshot(path=path, name=name, as_bytes=as_bytes, as_base64=as_base64,
@@ -390,7 +414,7 @@ class ChromiumFrame(ChromiumBase):
             else:
                 if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
                     raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_bytes',
-                                     ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
+                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
                 pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
 
         elif as_base64:
@@ -399,7 +423,7 @@ class ChromiumFrame(ChromiumBase):
             else:
                 if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
                     raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_base64',
-                                     ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
+                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
                 pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
 
         else:
@@ -449,9 +473,15 @@ class ChromiumFrame(ChromiumBase):
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
         if isinstance(locator, ChromiumElement):
             return locator
-        self.wait.doc_loaded()
-        return self.doc_ele._ele(locator, index=index, timeout=timeout,
-                                 raise_err=raise_err) if index is not None else self.doc_ele.eles(locator, timeout)
+        timeout = timeout if timeout is not None else self.timeouts.base
+        now = perf_counter()
+        end_time = now + timeout
+        while now <= end_time:
+            try:
+                return self.doc_ele._ele(locator, index=index, timeout=end_time-now, raise_err=raise_err)
+            except ContextLostError:
+                now = perf_counter()
+        return self.doc_ele._ele(locator, index=index, timeout=0, raise_err=raise_err)
 
     def _is_inner_frame(self):
         return self._frame_id in str(self._target_page._run_cdp('Page.getFrameTree')['frameTree'])

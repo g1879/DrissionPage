@@ -6,11 +6,11 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
-from re import search
 from urllib.parse import urlparse
 
 from .options_manage import OptionsManager
 from .._functions.settings import Settings as _S
+from .._functions.web import get_proxy_info
 
 
 class ChromiumOptions(object):
@@ -22,12 +22,15 @@ class ChromiumOptions(object):
         self._is_headless = False
         self._ua_set = False
         self.ws_address = ''
+        self.proxy_url = None
+        self.proxy_usr = None
+        self.proxy_pwd = None
 
         if read_file is False:
             ini_path = False
             self.ini_path = None
         elif ini_path:
-            ini_path = Path(ini_path).absolute()
+            ini_path = Path(ini_path).resolve()
             if not ini_path.exists():
                 raise FileNotFoundError(_S._lang.join(_S._lang.INI_NOT_FOUND, PATH=ini_path))
             self.ini_path = str(ini_path)
@@ -54,7 +57,8 @@ class ChromiumOptions(object):
                 break
 
         self._proxy = om.proxies.get('http', None) or om.proxies.get('https', None)
-        self._proxy_auth = None
+        if self._proxy:
+            self.set_proxy(self._proxy)
 
         user_path = user = False
         for arg in self._arguments:
@@ -114,11 +118,6 @@ class ChromiumOptions(object):
     @property
     def proxy(self):
         return self._proxy
-
-    @property
-    def proxy_auth(self):
-        # 读取代理认证
-        return self._proxy_auth
 
     @property
     def address(self):
@@ -292,56 +291,15 @@ class ChromiumOptions(object):
         return self.set_argument('--user-agent', user_agent)
 
     def set_proxy(self, proxy):
-        if search(r'.*?:.*?@.*?\..*', proxy):
-            print(_S._lang.UNSUPPORTED_USER_PROXY)
-        if proxy.lower().startswith('socks'):
-            print(_S._lang.UNSUPPORTED_SOCKS_PROXY)
         self._proxy = proxy
-        return self.set_argument('--proxy-server', proxy)
-
-    def set_proxy_auth(self, username, password):
-        # 增加代理认证
-        self._proxy_auth = {
-            'username': username,
-            'password': password
-        }
+        self.proxy_url, self.proxy_usr, self.proxy_pwd = get_proxy_info(proxy)
+        return self.set_argument('--proxy-server', self.proxy_url)
 
     def set_load_mode(self, value):
         if value not in ('normal', 'eager', 'none'):
             raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'value',
                                            ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
         self._load_mode = value.lower()
-        return self
-
-    def set_paths(self, browser_path=None, local_port=None, address=None, download_path=None,
-                  user_data_path=None, cache_path=None):
-        """快捷的路径设置函数，即将废弃
-        :param browser_path: 浏览器可执行文件路径
-        :param local_port: 本地端口号
-        :param address: 调试浏览器地址，例：127.0.0.1:9222
-        :param download_path: 下载文件路径
-        :param user_data_path: 用户数据路径
-        :param cache_path: 缓存路径
-        :return: 当前对象
-        """
-        if browser_path is not None:
-            self.set_browser_path(browser_path)
-
-        if local_port is not None:
-            self.set_local_port(local_port)
-
-        if address is not None:
-            self.set_address(address)
-
-        if download_path is not None:
-            self.set_download_path(download_path)
-
-        if user_data_path is not None:
-            self.set_user_data_path(user_data_path)
-
-        if cache_path is not None:
-            self.set_cache_path(cache_path)
-
         return self
 
     def set_local_port(self, port):
@@ -362,8 +320,13 @@ class ChromiumOptions(object):
         self._auto_port = False
         return self
 
-    def set_browser_path(self, path):
-        self._browser_path = str(path)
+    def set_browser_path(self, path=None, edge=False):
+        if path:
+            self._browser_path = str(path)
+        elif edge:
+            self._browser_path = 'msedge'
+        else:
+            self._browser_path = 'chrome'
         return self
 
     def set_download_path(self, path):
@@ -375,10 +338,9 @@ class ChromiumOptions(object):
         return self
 
     def set_user_data_path(self, path):
-        u = str(path)
-        self.set_argument('--user-data-dir', u)
-        self._user_data_path = u
-        self._auto_port = False
+        path = str(path)
+        self.set_argument('--user-data-dir', path)
+        self._user_data_path = path
         return self
 
     def set_cache_path(self, path):
@@ -390,10 +352,7 @@ class ChromiumOptions(object):
         return self
 
     def auto_port(self, on_off=True, scope=None):
-        if on_off:
-            self._auto_port = scope if scope else (9600, 59600)
-        else:
-            self._auto_port = False
+        self._auto_port = (scope if scope else (9600, 59600)) if on_off else False
         self._address = ''
         self.ws_address = ''
         return self
@@ -404,16 +363,16 @@ class ChromiumOptions(object):
 
     def save(self, path=None):
         if path == 'default':
-            path = (Path(__file__).parent / 'configs.ini').absolute()
+            path = (Path(__file__).parent / 'configs.ini').resolve()
 
         elif path is None:
             if self.ini_path:
-                path = Path(self.ini_path).absolute()
+                path = Path(self.ini_path).resolve()
             else:
-                path = (Path(__file__).parent / 'configs.ini').absolute()
+                path = (Path(__file__).parent / 'configs.ini').resolve()
 
         else:
-            path = Path(path).absolute()
+            path = Path(path).resolve()
 
         path = path / 'config.ini' if path.is_dir() else path
 
@@ -450,3 +409,8 @@ class ChromiumOptions(object):
 
     def save_to_default(self):
         return self.save('default')
+
+    def remove_test_type(self):
+        self.set_argument('--test-type', False)
+        self.set_argument('--disable-site-isolation-trials', False)
+        return self

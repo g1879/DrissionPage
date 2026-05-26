@@ -11,7 +11,7 @@ from pathlib import Path
 from re import sub
 from urllib.parse import urlparse, urljoin, urlunparse
 
-from DataRecorder.tools import make_valid_name
+from DrissionRecord.tools import make_valid_name
 from requests.structures import CaseInsensitiveDict
 
 from .._functions.settings import Settings as _S
@@ -249,7 +249,7 @@ def get_pdf(page, path=None, name=None, kwargs=None):
     path = path or '.'
     Path(path).mkdir(parents=True, exist_ok=True)
     name = make_valid_name(name or page.title)
-    with open(f'{path}{sep}{name}.pdf', 'wb') as f:
+    with open(f'{path}{sep}{name}.pdf', 'wb', newline='\n') as f:
         f.write(r)
     return r
 
@@ -317,3 +317,32 @@ def format_headers(txt):
                 headers[name] = value
     return headers
 
+
+def get_proxy_info(proxy_str):
+    proxy_str = proxy_str.strip()
+    url = ""
+    user = None
+    pwd = None
+
+    if "://" in proxy_str:
+        parsed = urlparse(proxy_str)
+        scheme = parsed.scheme
+        host = parsed.hostname
+        port = parsed.port
+        user = parsed.username
+        pwd = parsed.password
+        if host:
+            url = f"{scheme}://{host}"
+            if port:
+                url += f":{port}"
+
+    elif "@" in proxy_str:
+        auth_part, host_part = proxy_str.split("@", 1)
+        if ":" in auth_part:
+            user, pwd = auth_part.split(":", 1)
+        url = host_part
+
+    else:
+        url = proxy_str
+
+    return url, user, pwd

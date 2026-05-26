@@ -6,6 +6,7 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
+from random import randint
 from time import perf_counter, sleep
 
 from .waiter import wait_mission
@@ -19,10 +20,10 @@ class Clicker(object):
     def __init__(self, ele):
         self._ele = ele
 
-    def __call__(self, by_js=False, timeout=1.5, wait_stop=True):
+    def __call__(self, by_js=False, timeout=2, wait_stop=False):
         return self.left(by_js, timeout, wait_stop)
 
-    def left(self, by_js=False, timeout=1.5, wait_stop=True):
+    def left(self, by_js=False, timeout=2, wait_stop=False):
         if self._ele.tag == 'option':
             if not self._ele.states.is_selected:
                 self._ele.parent('t:select').select.by_option(self._ele)
@@ -48,22 +49,13 @@ class Clicker(object):
                         raise
 
             else:
-                rect = self._ele.states.has_rect
                 end_time = perf_counter() + timeout
-                while not rect and perf_counter() < end_time:
-                    rect = self._ele.states.has_rect
-                    sleep(.001)
-
-                if wait_stop and rect:
-                    self._ele.wait.stop_moving(timeout=end_time - perf_counter())
+                rect = self._ele.wait.has_rect(timeout=timeout, raise_err=False)
                 if rect:
                     self._ele.scroll.to_see()
-                    rect = self._ele.rect.corners
-                    while perf_counter() < end_time:
-                        if self._ele.states.is_enabled and self._ele.states.is_displayed:
-                            can_click = True
-                            break
-                        sleep(.001)
+                    rect = self._ele.rect.viewport_corners
+                    can_click = self._ele.wait.clickable(timeout=end_time - perf_counter(),
+                                                         wait_moved=wait_stop, raise_err=False)
 
                 elif by_js is False:
                     raise NoRectError
@@ -72,13 +64,18 @@ class Clicker(object):
                 by_js = True
 
             elif can_click and (by_js is False or not self._ele.states.is_covered):
-                x = rect[1][0] - (rect[1][0] - rect[0][0]) / 2
-                y = rect[0][0] + 3
+                x_start = int(rect[0][0])
+                x_end = int(rect[1][0])
+                y_start = int(rect[0][1])
+                y_end = int(rect[2][1])
                 try:
-                    r = self._ele.owner._run_cdp('DOM.getNodeForLocation', x=int(x), y=int(y),
-                                                 includeUserAgentShadowDOM=True, ignorePointerEventsNone=True)
-                    if r['backendNodeId'] != self._ele._backend_id:
-                        vx, vy = self._ele.rect.viewport_midpoint
+                    for _ in range(20):
+                        vx = randint(x_start, x_end)
+                        vy = randint(y_start, y_end)
+                        if (self._ele.owner._run_cdp('DOM.getNodeForLocation', x=vx, y=vy, ignorePointerEventsNone=True,
+                                                     includeUserAgentShadowDOM=True)['backendNodeId']
+                                == self._ele._backend_id):
+                            break
                     else:
                         vx, vy = self._ele.rect.viewport_click_point
 
@@ -101,13 +98,13 @@ class Clicker(object):
 
     def middle(self, get_tab=True):
         self._ele.owner.scroll.to_see(self._ele)
-        curr_tid = self._ele.tab.browser._newest_tab_id
+        curr_tid = self._ele.tab.browser._tabs.get_newest_tab(self._ele.tab._context_id)
         self._click(*self._ele.rect.viewport_click_point, button='middle')
         if get_tab:
-            tid = self._ele.tab.browser.wait.new_tab(curr_tab=curr_tid)
+            tid = self._ele.tab.browser.wait._new_tab(self._ele.tab._context_id, curr_tab=curr_tid)
             if not tid:
                 raise RuntimeError(_S._lang.join(_S._lang.NO_NEW_TAB))
-            return self._ele.tab.browser._get_tab(tid, mix=self._ele.tab._type == 'MixTab')
+            return self._ele.tab.browser._get_tab(self._ele.tab._context_id, tid)
 
     def at(self, offset_x=None, offset_y=None, button='left', count=1):
         self._ele.owner.scroll.to_see(self._ele)
@@ -154,7 +151,7 @@ class Clicker(object):
 
         if save_path:
             tmp_path = obj.download_path
-            TabDownloadSettings(tid).path = str(Path(save_path).absolute())
+            TabDownloadSettings(tid).path = str(Path(save_path).resolve())
         if rename or suffix:
             obj.set.download_file_name(rename, suffix)
         if timeout is None:
@@ -180,12 +177,12 @@ class Clicker(object):
         self._ele.owner.wait.upload_paths_inputted()
 
     def for_new_tab(self, by_js=False, timeout=3):
-        curr_tid = self._ele.tab.browser._newest_tab_id
+        curr_tid = self._ele.tab.browser._tabs.get_newest_tab(self._ele.tab._context_id)
         self.left(by_js=by_js)
-        tid = self._ele.tab.browser.wait.new_tab(timeout=timeout, curr_tab=curr_tid)
+        tid = self._ele.tab.browser.wait._new_tab(self._ele.tab._context_id, timeout=timeout, curr_tab=curr_tid)
         if not tid:
             raise RuntimeError(_S._lang.join(_S._lang.NO_NEW_TAB))
-        return self._ele.tab.browser._get_tab(tid, mix=self._ele.tab._type == 'MixTab')
+        return self._ele.tab.browser._get_tab(self._ele.tab._context_id, tid)
 
     def for_url_change(self, text=None, exclude=False, by_js=False, timeout=None):
         if text is None:

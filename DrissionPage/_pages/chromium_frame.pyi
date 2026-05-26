@@ -10,7 +10,6 @@ from typing import Union, Tuple, List, Any, Optional, Literal
 
 from .chromium_base import ChromiumBase
 from .chromium_tab import ChromiumTab
-from .mix_tab import MixTab
 from .._elements.chromium_element import ChromiumElement, ShadowRoot
 from .._functions.elements import ChromiumElementsList
 from .._units.listener import FrameListener
@@ -24,7 +23,7 @@ from .._units.waiter import FrameWaiter
 class ChromiumFrame(ChromiumBase):
     _Frames: dict = ...
     _target_page: Union[ChromiumTab, ChromiumFrame] = ...
-    _tab: Union[MixTab, ChromiumTab] = ...
+    _tab: ChromiumTab = ...
     _set: ChromiumFrameSetter = ...
     _frame_ele: ChromiumElement = ...
     _backend_id: int = ...
@@ -35,6 +34,7 @@ class ChromiumFrame(ChromiumBase):
     _reloading: bool = ...
     _rect: Optional[FrameRect] = ...
     _listener: FrameListener = ...
+    _created: bool = ...
 
     def __init__(self,
                  owner: Union[ChromiumTab, ChromiumFrame],
@@ -67,11 +67,12 @@ class ChromiumFrame(ChromiumBase):
         """重写设置浏览器运行参数方法"""
         ...
 
-    def _driver_init(self, target_id: str, is_init: bool = True) -> None:
-        """避免出现服务器500错误
-        :param target_id: 要跳转到的target id
-        :return: None
-        """
+    def _driver_init(self) -> None:
+        """避免出现服务器500错误"""
+        ...
+
+    def _do_reload(self) -> None:
+        """实际执行reload操作"""
         ...
 
     def _reload(self) -> None:
@@ -84,10 +85,6 @@ class ChromiumFrame(ChromiumBase):
         :return: 是否获取成功
         """
         ...
-
-    def _onFrameStoppedLoading(self, **kwargs): ...
-
-    def _onInspectorDetached(self, **kwargs): ...
 
     @property
     def scroll(self) -> FrameScroller:
@@ -181,12 +178,12 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     @property
-    def css_path(self) -> str:
+    def css_selector(self) -> str:
         """返回frame的css selector绝对路径"""
         ...
 
     @property
-    def tab(self) -> Union[ChromiumTab, MixTab]:
+    def tab(self) -> ChromiumTab:
         """返回frame所在的tab对象"""
         ...
 
@@ -402,10 +399,10 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def get_screenshot(self,
-                       path: [str, Path] = None,
+                       path: Union[str, Path] = None,
                        name: str = None,
-                       as_bytes: [bool, str] = None,
-                       as_base64: [bool, str] = None) -> Union[str, bytes]:
+                       as_bytes: Union[bool, str] = None,
+                       as_base64: Union[bool, str] = None) -> Union[str, bytes]:
         """对页面进行截图，可对整个网页、可见网页、指定范围截图。对可视范围外截图需要90以上版本浏览器支持
         :param path: 文件保存路径
         :param name: 完整文件名，后缀可选 'jpg','jpeg','png','webp'
@@ -416,10 +413,10 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def _get_screenshot(self,
-                        path: [str, Path] = None,
+                        path: Union[str, Path] = None,
                         name: str = None,
-                        as_bytes: [bool, str] = None,
-                        as_base64: [bool, str] = None,
+                        as_bytes: Union[bool, str] = None,
+                        as_base64: Union[bool, str] = None,
                         full_page: bool = False,
                         left_top: Tuple[int, int] = None,
                         right_bottom: Tuple[int, int] = None,
@@ -447,7 +444,7 @@ class ChromiumFrame(ChromiumBase):
         :param locator: 定位符或元素对象
         :param timeout: 查找超时时间（秒）
         :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-        :param relative: MixTab用的表示是否相对定位的参数
+        :param relative: ChromiumTab用的表示是否相对定位的参数
         :param raise_err: 找不到元素是是否抛出异常，为None时根据全局设置
         :return: ChromiumElement对象
         """

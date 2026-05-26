@@ -8,14 +8,13 @@
 from typing import Union, Tuple, Any
 
 from .downloader import DownloadMission
-from .._base.chromium import Chromium
+from .._browsers.chromium import Chromium
+from .._browsers.chromium_context import ChromiumContext
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
 from .._pages.chromium_page import ChromiumPage
 from .._pages.chromium_tab import ChromiumTab
-from .._pages.mix_tab import MixTab
-from .._pages.web_page import WebPage
 
 
 class OriginWaiter(object):
@@ -32,7 +31,37 @@ class OriginWaiter(object):
         ...
 
 
-class BrowserWaiter(OriginWaiter):
+class BrowserContextWaiter(OriginWaiter):
+    _owner: ChromiumContext = ...
+
+    def new_tab(self,
+                timeout: float = None,
+                curr_tab: Union[str, ChromiumTab] = None,
+                raise_err: bool = None) -> Union[str, bool]:
+        """等待新标签页出现
+        :param timeout: 超时时间（秒），为None则使用对象timeout属性
+        :param curr_tab: 指定当前最新的tab对象或tab id，用于判断新tab出现，为None自动获取
+        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
+        :return: 等到新标签页返回其id，否则返回False
+        """
+        ...
+
+    def _new_tab(self,
+                 context_id: str,
+                 timeout: float = None,
+                 curr_tab: Union[str, ChromiumTab] = None,
+                 raise_err: bool = None) -> Union[str, bool]:
+        """等待新标签页出现
+        :param context_id: context id
+        :param timeout: 超时时间（秒），为None则使用对象timeout属性
+        :param curr_tab: 指定当前最新的tab对象或tab id，用于判断新tab出现，为None自动获取
+        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
+        :return: 等到新标签页返回其id，否则返回False
+        """
+        ...
+
+
+class BrowserWaiter(BrowserContextWaiter):
     _owner: Chromium = ...
 
     def __init__(self, owner: Chromium):
@@ -46,18 +75,6 @@ class BrowserWaiter(OriginWaiter):
         :param second: 秒数
         :param scope: 随机数范围
         :return: Chromium对象
-        """
-        ...
-
-    def new_tab(self,
-                timeout: float = None,
-                curr_tab: Union[str, ChromiumTab, MixTab] = None,
-                raise_err: bool = None) -> Union[str, bool]:
-        """等待新标签页出现
-        :param timeout: 超时时间（秒），为None则使用对象timeout属性
-        :param curr_tab: 指定当前最新的tab对象或tab id，用于判断新tab出现，为None自动获取
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等到新标签页返回其id，否则返回False
         """
         ...
 
@@ -218,7 +235,7 @@ class BaseWaiter(OriginWaiter):
         ...
 
 
-class TabWaiter(BaseWaiter):
+class ChromiumTabWaiter(BaseWaiter):
     _owner: ChromiumTab = ...
 
     def __init__(self, owner: ChromiumTab):
@@ -283,73 +300,8 @@ class TabWaiter(BaseWaiter):
         ...
 
 
-class MixTabWaiter(BaseWaiter):
-    _owner: MixTab = ...
-
-    def __init__(self, owner: MixTab):
-        """
-        :param owner: Tab对象
-        """
-        ...
-
-    def __call__(self,
-                 second: float,
-                 scope: float = None) -> MixTab:
-        """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
-        :param second: 秒数
-        :param scope: 随机数范围
-        :return: MixTab对象
-        """
-        ...
-
-    def downloads_done(self,
-                       timeout: float = None,
-                       cancel_if_timeout: bool = True) -> Union[False, MixTab]:
-        """等待所有浏览器下载任务结束
-        :param timeout: 超时时间（秒），为None时无限等待
-        :param cancel_if_timeout: 超时时是否取消剩余任务
-        :return: 是否等待成功
-        """
-        ...
-
-    def alert_closed(self, timeout: float = None) -> MixTab:
-        """等待弹出框关闭
-        :param timeout: 超时时间，为None无限等待
-        :return: 标签页对象自己
-        """
-        ...
-
-    def url_change(self,
-                   text: str,
-                   exclude: bool = False,
-                   timeout: float = None,
-                   raise_err: bool = None) -> Union[False, MixTab]:
-        """等待url变成包含或不包含指定文本
-        :param text: 用于识别的文本
-        :param exclude: 是否排除，为True时当url不包含text指定文本时返回True
-        :param timeout: 超时时间（秒）
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等待成功返回页面对象，否则返回False
-        """
-        ...
-
-    def title_change(self,
-                     text: str,
-                     exclude: bool = False,
-                     timeout: float = None,
-                     raise_err: bool = None) -> Union[False, MixTab]:
-        """等待title变成包含或不包含指定文本
-        :param text: 用于识别的文本
-        :param exclude: 是否排除，为True时当title不包含text指定文本时返回True
-        :param timeout: 超时时间（秒），为None使用页面设置
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等待成功返回页面对象，否则返回False
-        """
-        ...
-
-
-class ChromiumPageWaiter(TabWaiter):
-    _owner: Union[ChromiumPage, WebPage] = ...
+class ChromiumPageWaiter(ChromiumTabWaiter):
+    _owner: ChromiumPage = ...
 
     def __init__(self, owner: ChromiumPage):
         """
@@ -406,74 +358,6 @@ class ChromiumPageWaiter(TabWaiter):
                      exclude: bool = False,
                      timeout: float = None,
                      raise_err: bool = None) -> Union[False, ChromiumPage]:
-        """等待title变成包含或不包含指定文本
-        :param text: 用于识别的文本
-        :param exclude: 是否排除，为True时当title不包含text指定文本时返回True
-        :param timeout: 超时时间（秒），为None使用页面设置
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等待成功返回页面对象，否则返回False
-        """
-        ...
-
-
-class WebPageWaiter(TabWaiter):
-    _owner: Union[ChromiumPage, WebPage] = ...
-
-    def __init__(self, owner: WebPage):
-        """
-        :param owner: Page对象
-        """
-        ...
-
-    def __call__(self,
-                 second: float,
-                 scope: float = None) -> WebPage:
-        """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
-        :param second: 秒数
-        :param scope: 随机数范围
-        :return: WebPage对象
-        """
-        ...
-
-    def new_tab(self,
-                timeout: float = None,
-                raise_err: bool = None) -> Union[str, bool]:
-        """等待新标签页出现
-        :param timeout: 超时时间（秒），为None则使用页面对象timeout属性
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等到新标签页返回其id，否则返回False
-        """
-        ...
-
-    def all_downloads_done(self,
-                           timeout: float = None,
-                           cancel_if_timeout: bool = True) -> bool:
-        """等待所有浏览器下载任务结束
-        :param timeout: 超时时间（秒），为None时无限等待
-        :param cancel_if_timeout: 超时时是否取消剩余任务
-        :return: 是否等待成功
-        """
-        ...
-
-    def url_change(self,
-                   text: str,
-                   exclude: bool = False,
-                   timeout: float = None,
-                   raise_err: bool = None) -> Union[False, WebPage]:
-        """等待url变成包含或不包含指定文本
-        :param text: 用于识别的文本
-        :param exclude: 是否排除，为True时当url不包含text指定文本时返回True
-        :param timeout: 超时时间（秒）
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等待成功返回页面对象，否则返回False
-        """
-        ...
-
-    def title_change(self,
-                     text: str,
-                     exclude: bool = False,
-                     timeout: float = None,
-                     raise_err: bool = None) -> Union[False, WebPage]:
         """等待title变成包含或不包含指定文本
         :param text: 用于识别的文本
         :param exclude: 是否排除，为True时当title不包含text指定文本时返回True
@@ -597,7 +481,7 @@ class ElementWaiter(OriginWaiter):
 
     def stop_moving(self,
                     timeout: float = None,
-                    gap: float = .1,
+                    gap: float = .05,
                     raise_err: bool = None) -> Union[ChromiumElement, False]:
         """等待当前元素停止运动
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性

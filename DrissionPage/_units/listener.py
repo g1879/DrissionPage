@@ -13,19 +13,13 @@ from time import perf_counter, sleep
 
 from requests.structures import CaseInsensitiveDict
 
-from .._base.driver import Driver
 from .._functions.settings import Settings as _S
 from ..errors import WaitTimeoutError
 
 
 class Listener(object):
-    """监听器基类"""
-
     def __init__(self, owner):
         self._owner = owner
-        self._address = owner.browser._ws_address
-        self._target_id = owner._target_id
-        self._driver = None
         self._running_requests = 0
         self._running_targets = 0
 
@@ -88,56 +82,45 @@ class Listener(object):
         if targets or is_regex is not None or method or res_type:
             self.set_targets(targets, is_regex, method, res_type)
         self.clear()
-
-        if self.listening:
-            return
-
-        self._driver = Driver(self._target_id, self._address)
-        self._driver.session_id = self._driver.run('Target.attachToTarget', targetId=self._target_id, flatten=True)['sessionId']
-        self._driver.run('Network.enable')
-
-        self._set_callback()
-        self.listening = True
+        self.resume()
+        self._owner._run_cdp('Network.enable')
 
     def wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
         if not self.listening:
             raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
+        success = False
         if not timeout:
-            while self._driver.is_running and self.listening and self._caught.qsize() < count:
-                sleep(.03)
-            fail = False
+            while self._owner._messenger_running and self.listening and self._caught.qsize() < count:
+                sleep(.02)
+            success = self._owner._messenger_running
 
         else:
             end = perf_counter() + timeout
-            while self._driver.is_running and self.listening:
-                if perf_counter() > end:
-                    fail = True
-                    break
+            while self._owner._messenger_running and self.listening and perf_counter() < end:
                 if self._caught.qsize() >= count:
-                    fail = False
+                    success = True
                     break
-                sleep(.03)
+                sleep(.02)
 
-        if fail:
-            if fit_count or not self._caught.qsize():
-                if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
-                    raise WaitTimeoutError(_S._lang.join(_S._lang.WAITING_FAILED_, _S._lang.DATA_PACKET, timeout))
-                else:
-                    return False
+        if success:
+            if count == 1:
+                return self._caught.get_nowait()
+            return [self._caught.get_nowait() for _ in range(count)]
+
+        if fit_count or not self._caught.qsize():
+            if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+                raise WaitTimeoutError(_S._lang.join(_S._lang.WAITING_FAILED_, _S._lang.DATA_PACKET, timeout))
             else:
-                return [self._caught.get_nowait() for _ in range(self._caught.qsize())]
-
-        if count == 1:
-            return self._caught.get_nowait()
-
-        return [self._caught.get_nowait() for _ in range(count)]
+                return False
+        else:
+            return [self._caught.get_nowait() for _ in range(self._caught.qsize())]
 
     def steps(self, count=None, timeout=None, gap=1):
         if not self.listening:
             raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
         caught = 0
         if timeout is None:
-            while self._driver.is_running and self.listening:
+            while self._owner._messenger_running and self.listening:
                 if self._caught.qsize() >= gap:
                     yield self._caught.get_nowait() if gap == 1 else [self._caught.get_nowait() for _ in range(gap)]
                     if count:
@@ -148,7 +131,7 @@ class Listener(object):
 
         else:
             end = perf_counter() + timeout
-            while self._driver.is_running and self.listening and perf_counter() < end:
+            while self._owner._messenger_running and self.listening and perf_counter() < end:
                 if self._caught.qsize() >= gap:
                     yield self._caught.get_nowait() if gap == 1 else [self._caught.get_nowait() for _ in range(gap)]
                     end = perf_counter() + timeout
@@ -161,17 +144,17 @@ class Listener(object):
 
     def stop(self):
         if self.listening:
-            self.pause()
-            self.clear()
-        self._driver.stop()
-        self._driver = None
+            self.pause(clear=True)
+        self._owner._run_cdp('Network.disable')
 
     def pause(self, clear=True):
         if self.listening:
-            self._driver.set_callback('Network.requestWillBeSent', None)
-            self._driver.set_callback('Network.responseReceived', None)
-            self._driver.set_callback('Network.loadingFinished', None)
-            self._driver.set_callback('Network.loadingFailed', None)
+            self._owner._set_callback('Network.requestWillBeSent', None)
+            self._owner._set_callback('Network.responseReceived', None)
+            self._owner._set_callback('Network.loadingFinished', None)
+            self._owner._set_callback('Network.loadingFailed', None)
+            self._owner._set_callback('Network.requestWillBeSentExtraInfo', None)
+            self._owner._set_callback('Network.responseReceivedExtraInfo', None)
             self.listening = False
         if clear:
             self.clear()
@@ -179,7 +162,7 @@ class Listener(object):
     def resume(self):
         if self.listening:
             return
-        self._set_callback()
+        self._init_callback()
         self.listening = True
 
     def clear(self):
@@ -207,26 +190,20 @@ class Listener(object):
         else:
             return False
 
-    def _to_target(self, target_id, address, owner):
+    def _to_target(self, target_id, owner):
         self._target_id = target_id
-        self._address = address
         self._owner = owner
-        if self._driver:
-            self._driver.stop()
         if self.listening:
-            self._driver = Driver(self._target_id, self._address)
-            self._driver.session_id = self._driver.run('Target.attachToTarget',
-                                                       targetId=target_id, flatten=True)['sessionId']
-            self._driver.run('Network.enable')
-            self._set_callback()
+            self.stop()
+            self.start()
 
-    def _set_callback(self):
-        self._driver.set_callback('Network.requestWillBeSent', self._requestWillBeSent)
-        self._driver.set_callback('Network.requestWillBeSentExtraInfo', self._requestWillBeSentExtraInfo)
-        self._driver.set_callback('Network.responseReceived', self._response_received)
-        self._driver.set_callback('Network.responseReceivedExtraInfo', self._responseReceivedExtraInfo)
-        self._driver.set_callback('Network.loadingFinished', self._loading_finished)
-        self._driver.set_callback('Network.loadingFailed', self._loading_failed)
+    def _init_callback(self):
+        self._owner._set_callback('Network.requestWillBeSent', self._requestWillBeSent)
+        self._owner._set_callback('Network.responseReceived', self._response_received)
+        self._owner._set_callback('Network.loadingFinished', self._loading_finished)
+        self._owner._set_callback('Network.loadingFailed', self._loading_failed)
+        self._owner._set_callback('Network.requestWillBeSentExtraInfo', self._requestWillBeSentExtraInfo)
+        self._owner._set_callback('Network.responseReceivedExtraInfo', self._responseReceivedExtraInfo)
 
     def _requestWillBeSent(self, **kwargs):
         self._running_requests += 1
@@ -239,8 +216,8 @@ class Listener(object):
                 p = self._request_ids.setdefault(rid, DataPacket(self._owner.tab_id, True))
                 p._raw_request = kwargs
                 if kwargs['request'].get('hasPostData', None) and not kwargs['request'].get('postData', None):
-                    p._raw_post_data = self._driver.run('Network.getRequestPostData',
-                                                        requestId=rid).get('postData', None)
+                    p._raw_post_data = self._owner._run_cdp('Network.getRequestPostData',
+                                                            requestId=rid).get('postData', None)
 
         else:
             rid = kwargs['requestId']
@@ -285,7 +262,7 @@ class Listener(object):
         rid = kwargs['requestId']
         packet = self._request_ids.get(rid)
         if packet:
-            r = self._driver.run('Network.getResponseBody', requestId=rid)
+            r = self._owner._run_cdp('Network.getResponseBody', requestId=rid, _ignore=True)
             if 'body' in r:
                 packet._raw_body = r['body']
                 packet._base64_body = r['base64Encoded']
@@ -295,7 +272,7 @@ class Listener(object):
 
             if (packet._raw_request['request'].get('hasPostData', None)
                     and not packet._raw_request['request'].get('postData', None)):
-                r = self._driver.run('Network.getRequestPostData', requestId=rid, _timeout=1)
+                r = self._owner._run_cdp('Network.getRequestPostData', requestId=rid, _timeout=1)
                 packet._raw_post_data = r.get('postData', None)
 
         r = self._extra_info_ids.get(kwargs['requestId'], None)

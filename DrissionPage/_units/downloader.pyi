@@ -7,7 +7,7 @@
 """
 from typing import Dict, Optional, Union, Literal, Set
 
-from .._base.chromium import Chromium
+from .._browsers.chromium import Chromium
 from .._pages.chromium_base import ChromiumBase
 
 FILE_EXISTS = Literal['skip', 'rename', 'overwrite', 's', 'r', 'o']
@@ -145,6 +145,7 @@ class TabDownloadSettings(object):
 
 class DownloadMission(object):
     tab_id: str = ...
+    _context_id: str = ...
     from_tab: Optional[str] = ...
     _mgr: DownloadManager = ...
     url: str = ...
@@ -156,27 +157,29 @@ class DownloadMission(object):
     received_bytes: int = ...
     final_path: Optional[str] = ...
     tmp_path: str = ...
-    _overwrite: bool = ...
+    _when_file_exists: str = ...
     _is_done: bool = ...
 
     def __init__(self,
                  mgr: DownloadManager,
+                 context_id: str,
                  tab_id: str,
                  _id: str,
                  folder: str,
                  name: str,
                  url: str,
                  tmp_path: str,
-                 overwrite: bool):
+                 when_file_exists: str):
         """
         :param mgr: BrowserDownloadManager对象
         :param tab_id: 标签页id
+        :param context_id: 上下文id
         :param _id: 任务id
         :param folder: 最终保存文件夹路径
         :param name: 文件名
         :param url: url
         :param tmp_path: 下载临时路径
-        :param overwrite: 是否已存在同名文件，None表示重命名
+        :param when_file_exists: 存在同名文件的处理方式 'skip', 'rename', 'overwrite'
         """
         ...
 

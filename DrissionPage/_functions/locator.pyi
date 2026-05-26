@@ -27,12 +27,10 @@ def is_selenium_loc(loc: tuple) -> bool:
 
 
 def get_loc(loc: Union[tuple, str],
-            translate_css: bool = False,
-            css_mode: bool = False) -> tuple:
+            translate_css: bool = False) -> tuple:
     """接收本库定位语法或selenium定位元组，转换为标准定位元组，可翻译css selector为xpath
     :param loc: 本库定位语法或selenium定位元组
     :param translate_css: 是否翻译css selector为xpath，用于相对定位
-    :param css_mode: 是否尽量用css selector方式
     :return: DrissionPage定位元组
     """
     ...

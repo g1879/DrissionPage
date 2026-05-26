@@ -11,18 +11,18 @@ from typing import Union, Tuple, Literal, Any, Optional
 from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 
-from .cookies_setter import SessionCookiesSetter, CookiesSetter, WebPageCookiesSetter, BrowserCookiesSetter
+from .cookies_setter import SessionCookiesSetter, CookiesSetter, BrowserCookiesSetter, ChromiumTabCookiesSetter
+from .perm_setter import BrowserPermSetter
 from .scroller import PageScroller
 from .._base.base import BasePage
-from .._base.chromium import Chromium
+from .._browsers.chromium import Chromium
+from .._browsers.chromium_context import ChromiumContext
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
 from .._pages.chromium_page import ChromiumPage
 from .._pages.chromium_tab import ChromiumTab
-from .._pages.mix_tab import MixTab
 from .._pages.session_page import SessionPage
-from .._pages.web_page import WebPage
 
 FILE_EXISTS = Literal['skip', 'rename', 'overwrite', 's', 'r', 'o']
 
@@ -156,7 +156,7 @@ class SessionPageSetter(BaseSetter):
         """
         ...
 
-    def verify(self, on_off: Union[bool,str, None]) -> None:
+    def verify(self, on_off: Union[bool, str, None]) -> None:
         """设置是否验证SSL证书
         :param on_off: 是否验证 SSL 证书
         :return: None
@@ -228,9 +228,29 @@ class BrowserBaseSetter(BaseSetter):
         ...
 
 
-class BrowserSetter(BrowserBaseSetter):
+class BrowserContextSetter(object):
+    _owner: ChromiumContext = ...
+    _perm_setter: Optional[BrowserPermSetter] = ...
+    _cookies_setter: Optional[BrowserCookiesSetter] = ...
+
+    def __init__(self, owner: ChromiumContext):
+        ...
+
+    @property
+    def perm(self) -> BrowserPermSetter:
+        """返回用于设置浏览器权限的对象"""
+        ...
+
+    @property
+    def cookies(self) -> BrowserCookiesSetter:
+        """返回用于设置cookies的对象"""
+        ...
+
+
+class BrowserSetter(BrowserContextSetter, BrowserBaseSetter):
     _owner: Chromium = ...
     _cookies_setter: BrowserCookiesSetter = ...
+    _perm_setter: Optional[BrowserPermSetter] = ...
 
     def __init__(self, owner: Chromium):
         """
@@ -239,12 +259,7 @@ class BrowserSetter(BrowserBaseSetter):
         ...
 
     @property
-    def cookies(self) -> BrowserCookiesSetter:
-        """返回用于设置cookies的对象"""
-        ...
-
-    @property
-    def window(self)->WindowSetter:...
+    def window(self) -> WindowSetter: ...
 
     def auto_handle_alert(self,
                           on_off: bool = True,
@@ -283,7 +298,7 @@ class BrowserSetter(BrowserBaseSetter):
 
 class ChromiumBaseSetter(BrowserBaseSetter):
     _owner: ChromiumBase = ...
-    _cookies_setter: CookiesSetter = ...
+    _mouse_trail: bool = ...
 
     def __init__(self, owner): ...
 
@@ -352,9 +367,18 @@ class ChromiumBaseSetter(BrowserBaseSetter):
         """
         ...
 
+    def show_trail(self, on_off: bool = True) -> None:
+        """设置是否显示移动轨迹
+        :param on_off: 开或关
+        :return: None
+        """
+        ...
 
-class TabSetter(ChromiumBaseSetter):
+
+class ChromiumTabSetter(ChromiumBaseSetter):
     _owner: ChromiumTab = ...
+    _session_setter: SessionPageSetter = ...
+    _chromium_setter: ChromiumBaseSetter = ...
 
     def __init__(self, owner: ChromiumTab):
         """
@@ -365,6 +389,35 @@ class TabSetter(ChromiumBaseSetter):
     @property
     def window(self) -> WindowSetter:
         """返回用于设置浏览器窗口的对象"""
+        ...
+
+    @property
+    def cookies(self) -> ChromiumTabCookiesSetter:
+        """返回用于设置cookies的对象"""
+        ...
+
+    def headers(self, headers: Union[dict, str]) -> None:
+        """设置固定发送的headers
+        :param headers: dict格式的headers数据，或从浏览器复制的headers文本（\n分行）
+        :return: None
+        """
+        ...
+
+    def user_agent(self, ua: str, platform: str = None) -> None:
+        """为当前tab设置user agent，只在当前tab有效
+        :param ua: user agent字符串
+        :param platform: platform字符串
+        :return: None
+        """
+        ...
+
+    def timeouts(self, base=None, page_load=None, script=None) -> None:
+        """设置超时时间，单位为秒
+        :param base: 基本等待时间，除页面加载和脚本超时，其它等待默认使用
+        :param page_load: 页面加载超时时间
+        :param script: 脚本运行超时时间
+        :return: None
+        """
         ...
 
     def download_path(self, path: Union[str, Path, None]) -> None:
@@ -396,8 +449,10 @@ class TabSetter(ChromiumBaseSetter):
         ...
 
 
-class ChromiumPageSetter(TabSetter):
+class ChromiumPageSetter(ChromiumTabSetter):
     _owner: ChromiumPage = ...
+    _session_setter: SessionPageSetter = ...
+    _chromium_setter: ChromiumPageSetter = ...
 
     def __init__(self, owner: ChromiumPage):
         """
@@ -405,50 +460,9 @@ class ChromiumPageSetter(TabSetter):
         """
         ...
 
-
-class WebPageSetter(ChromiumPageSetter):
-    _owner: WebPage = ...
-    _session_setter: SessionPageSetter = ...
-    _chromium_setter: ChromiumPageSetter = ...
-
-    def __init__(self, owner: WebPage):
-        """
-        :param owner: WebPage对象
-        """
-        ...
-
     @property
-    def cookies(self) -> WebPageCookiesSetter:
+    def cookies(self) -> ChromiumTabCookiesSetter:
         """返回用于设置cookies的对象"""
-        ...
-
-
-class MixTabSetter(TabSetter):
-    _owner: MixTab = ...
-    _session_setter: SessionPageSetter = ...
-    _chromium_setter: ChromiumBaseSetter = ...
-
-    def __init__(self, owner: MixTab):
-        """
-        :param owner: MixTab对象
-        """
-        ...
-
-    @property
-    def cookies(self) -> WebPageCookiesSetter:
-        """返回用于设置cookies的对象"""
-        ...
-
-    def timeouts(self,
-                 base: float = None,
-                 page_load: float = None,
-                 script: float = None) -> None:
-        """设置超时时间，单位为秒
-        :param base: 基本等待时间，除页面加载和脚本超时，其它等待默认使用
-        :param page_load: 页面加载超时时间
-        :param script: 脚本运行超时时间
-        :return: None
-        """
         ...
 
 
@@ -511,7 +525,7 @@ class ChromiumFrameSetter(ChromiumBaseSetter):
         """
         ...
 
-    def property(self, name, value) -> None:
+    def property(self, name: str, value: str) -> None:
         """设置元素property属性
         :param name: 属性名
         :param value: 属性值
@@ -519,7 +533,7 @@ class ChromiumFrameSetter(ChromiumBaseSetter):
         """
         ...
 
-    def style(self, name, value) -> None:
+    def style(self, name: str, value: str) -> None:
         """设置元素style样式
         :param name: 样式名称
         :param value: 样式值

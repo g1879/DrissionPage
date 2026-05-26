@@ -35,9 +35,12 @@ class ChromiumOptions(object):
     _is_headless: bool = ...
     _ua_set: bool = ...
     ws_address: Optional[str] = ...
+    proxy_url: Optional[str] = ...
+    proxy_usr: Optional[str] = ...
+    proxy_pwd: Optional[str] = ...
 
     def __init__(self,
-                 read_file: [bool, None] = True,
+                 read_file: Union[bool, None] = True,
                  ini_path: Union[str, Path] = None):
         """
         :param read_file: 是否从默认ini文件中读取配置信息
@@ -86,11 +89,6 @@ class ChromiumOptions(object):
         ...
 
     @property
-    def proxy_auth(self) -> dict:
-        """返回代理认证设置"""
-        ...
-
-    @property
     def address(self) -> str:
         """返回浏览器地址，ip:port"""
         ...
@@ -117,7 +115,7 @@ class ChromiumOptions(object):
 
     @property
     def system_user_path(self) -> bool:
-        """返回是否使用系统安装的浏览器所使用的用户数据文件夹"""
+        """返回是否使用系统安装的浏览器所使用的用户数据文件夹，为False时不复制，为True时复制用户文件夹，为None时直接使用"""
         ...
 
     @property
@@ -304,15 +302,7 @@ class ChromiumOptions(object):
 
     def set_proxy(self, proxy: str) -> ChromiumOptions:
         """设置代理
-        :param proxy: 代理url和端口
-        :return: 当前对象
-        """
-        ...
-
-    def set_proxy_auth(self, username: str, password: str) -> ChromiumOptions:
-        """设置代理认证
-        :param username: 用户名
-        :param password: 密码
+        :param proxy: url:port、scheme://username:password@url:port格式
         :return: 当前对象
         """
         ...
@@ -341,9 +331,10 @@ class ChromiumOptions(object):
         """
         ...
 
-    def set_browser_path(self, path: Union[str, Path]) -> ChromiumOptions:
+    def set_browser_path(self, path: Union[str, Path] = None, edge: bool = False) -> ChromiumOptions:
         """设置浏览器可执行文件路径
         :param path: 浏览器路径
+        :param edge: 是否使用edge浏览器，path为None时才生效
         :return: 当前对象
         """
         ...
@@ -409,4 +400,8 @@ class ChromiumOptions(object):
 
     def save_to_default(self) -> str:
         """保存当前配置到默认ini文件"""
+        ...
+
+    def remove_test_type(self) -> ChromiumOptions:
+        """移除测试参数"""
         ...

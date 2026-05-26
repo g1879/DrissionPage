@@ -169,7 +169,7 @@ class TabRect(object):
         return self._owner._run_cdp_loaded('Page.getLayoutMetrics')
 
     def _get_window_rect(self):
-        return self._owner.browser._driver.run('Browser.getWindowForTarget', targetId=self._owner.tab_id)['bounds']
+        return self._owner.browser._run_cdp('Browser.getWindowForTarget', targetId=self._owner.tab_id)['bounds']
 
 
 class FrameRect(object):

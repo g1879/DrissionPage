@@ -19,7 +19,8 @@ class Settings(object):
     browser_connect_timeout = 30
     auto_handle_alert = None
     _lang = get_txt_class(None)
-    suffixes_list = str(Path(__file__).parent.absolute() / 'suffixes.dat').replace('\\', '/')
+    suffixes_list = str(Path(__file__).parent.resolve() / 'suffixes.dat').replace('\\', '/')
+    _debug = None  # 为None时不开启，为True或指定目标时全部开启，为False时由Messenger决定
 
     @classmethod
     def set_raise_when_ele_not_found(cls, on_off=True):
@@ -63,5 +64,5 @@ class Settings(object):
 
     @classmethod
     def set_suffixes_list(cls, path):
-        cls.suffixes_list = str(Path(path).absolute()).replace('\\', '/')
+        cls.suffixes_list = str(Path(path).resolve()).replace('\\', '/')
         return cls

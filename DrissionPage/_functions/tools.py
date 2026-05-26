@@ -25,20 +25,20 @@ class PortFinder(object):
     checked_paths = set()
 
     def __init__(self, path=None):
-        tmp = Path(path) if path else Path(gettempdir()) / 'DrissionPage'
-        self.tmp_dir = tmp / 'autoPortData'
+        self.tmp_dir = Path(path or gettempdir()) / 'DrissionPage' / 'autoPortData'
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
-        if str(self.tmp_dir.absolute()) not in PortFinder.checked_paths:
+        tmp = str(self.tmp_dir.resolve())
+        if tmp not in PortFinder.checked_paths:
             for i in self.tmp_dir.iterdir():
                 if i.is_dir() and not port_is_using('127.0.0.1', i.name):
                     rmtree(i, ignore_errors=True)
-            PortFinder.checked_paths.add(str(self.tmp_dir.absolute()))
+            PortFinder.checked_paths.add(tmp)
 
     def get_port(self, scope=None):
         from random import randint
-        with PortFinder.lock:
-            if PortFinder.prev_time and perf_counter() - PortFinder.prev_time > 60:
-                PortFinder.used_port.clear()
+        with self.lock:
+            if self.prev_time and perf_counter() - self.prev_time > 60:
+                self.used_port.clear()
             if scope in (True, None):
                 scope = (9600, 59600)
             max_times = scope[1] - scope[0]
@@ -46,17 +46,12 @@ class PortFinder(object):
             while times < max_times:
                 times += 1
                 port = randint(*scope)
-                if port in PortFinder.used_port or port_is_using('127.0.0.1', port):
+                if port in self.used_port or (self.tmp_dir / f'{port}').exists() or port_is_using('127.0.0.1', port):
                     continue
-                path = self.tmp_dir / str(port)
-                if path.exists():
-                    try:
-                        rmtree(path)
-                    except:
-                        continue
-                PortFinder.used_port.add(port)
-                PortFinder.prev_time = perf_counter()
-                return port, str(path)
+
+                self.used_port.add(port)
+                self.prev_time = perf_counter()
+                return port
             raise BrowserConnectError(_S._lang.NO_AVAILABLE_PORT_FOUND)
 
 
@@ -168,12 +163,14 @@ def raise_error(result, browser, ignore=None, user=False):
                    'No node with given id found', 'Node with given id does not belong to the document',
                    'No node found for given backend id'):
         r = ElementLostError()
-    elif error in ('connection disconnected', 'No target with given id found'):
+    elif error in ('connection disconnected', 'No target with given id found', 'Session with given id not found.'):
         r = PageDisconnectedError()
     elif error == 'alert exists.':
         r = AlertExistsError()
     elif error in ('Node does not have a layout object', 'Could not compute box model.'):
         r = NoRectError()
+    elif error == 'Cannot take screenshot with 0 height.':
+        r = NoRectError(_S._lang.ZERO_HEIGHT)
     elif error == 'Cannot navigate to invalid URL':
         r = IncorrectURLError(_S._lang.INVALID_URL, url=result["args"]["url"])
     elif error == 'Frame corresponds to an opaque origin and its storage key cannot be serialized':
@@ -186,14 +183,30 @@ def raise_error(result, browser, ignore=None, user=False):
         r = JavaScriptError(_S._lang.NOT_A_FUNCTION, JS=result["args"]["functionDeclaration"])
     elif error.endswith("' wasn't found"):
         r = RuntimeError(_S._lang.join(_S._lang.METHOD_NOT_FOUND, BROWSER_VER=browser.version, METHOD=result["method"]))
-    elif result['type'] == 'timeout':
+    elif error == 'timeout':
         r = TimeoutError(_S._lang.join(_S._lang.NO_RESPONSE, INFO=result["error"],
                                        METHOD=result["method"], ARGS=result["args"]))
-    elif result['type'] == 'call_method_error' and not user:
-        r = CDPError(_S._lang.UNKNOWN_ERR, INFO=result["error"], METHOD=result["method"],
-                     ARGS=result["args"], TIP=_S._lang.FEEDBACK)
-    else:
+    elif user:
         r = RuntimeError(_S._lang.join(_S._lang.UNKNOWN_ERR, INFO=result, TIP=_S._lang.FEEDBACK))
+    else:
+        r = CDPError(_S._lang.UNKNOWN_ERR, INFO=error, METHOD=result["method"],
+                     ARGS=result["args"], TIP=_S._lang.FEEDBACK)
 
-    if not ignore or not isinstance(r, ignore):
-        raise r
+    if ignore is True or (ignore is not None and isinstance(r, ignore)):
+        return result
+    raise r
+
+
+def ensure_del_dir(path):
+    if not Path(path).exists():
+        return True
+    end_time = perf_counter() + 5
+    while perf_counter() < end_time:
+        try:
+            rmtree(path)
+            return True
+        except FileNotFoundError:
+            return True
+        except (PermissionError, OSError):
+            sleep(.01)
+    return False

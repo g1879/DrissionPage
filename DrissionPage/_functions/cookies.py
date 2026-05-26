@@ -7,6 +7,8 @@
 """
 from datetime import datetime
 from http.cookiejar import Cookie, CookieJar
+from ipaddress import ip_address
+from urllib.parse import urlparse
 
 from tldextract import TLDExtract
 
@@ -90,7 +92,10 @@ def set_browser_cookies(browser, cookies):
         if 'domain' not in cookie and 'url' not in cookie:
             raise ValueError(_S._lang.join(_S._lang.NEED_DOMAIN2, cookie=cookie))
         c.append(format_cookie(cookie))
-    browser._run_cdp('Storage.setCookies', cookies=c)
+    if browser._default_context:
+        browser._run_cdp('Storage.setCookies', cookies=c)
+    else:
+        browser._run_cdp('Storage.setCookies', cookies=c, browserContextId=browser._context_id)
 
 
 def set_tab_cookies(page, cookies):
@@ -117,10 +122,16 @@ def set_tab_cookies(page, cookies):
         url = page._browser_url
         if not url.startswith('http'):
             raise ValueError(_S._lang.join(_S._lang.DOMAIN_NOT_SET, cookie=cookie))
-        ex_url = TLDExtract(suffix_list_urls=["https://publicsuffix.org/list/public_suffix_list.dat",
-                                              f"file:///{_S.suffixes_list}"]).extract_str(url)
-        d_list = ex_url.subdomain.split('.')
-        d_list.append(f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain)
+
+        try:
+            host = urlparse(url).hostname
+            ip_address(host)
+            d_list = [host]
+        except ValueError:
+            ex_url = TLDExtract(suffix_list_urls=["https://publicsuffix.org/list/public_suffix_list.dat",
+                                                  f"file:///{_S.suffixes_list}"]).extract_str(url)
+            d_list = ex_url.subdomain.split('.')
+            d_list.append(f'{ex_url.domain}.{ex_url.suffix}' if ex_url.suffix else ex_url.domain)
 
         tmp = [d_list[0]]
         if len(d_list) > 1:
@@ -138,8 +149,8 @@ def set_tab_cookies(page, cookies):
 def is_cookie_in_driver(page, cookie):
     if 'domain' in cookie:
         for c in page.cookies(all_domains=True):
-            if cookie['name'] == c['name'] and cookie['value'] == c['value'] and cookie['domain'] == c.get('domain',
-                                                                                                           None):
+            if (cookie['name'] == c['name'] and cookie['value'] == c['value']
+                    and cookie['domain'] == c.get('domain', None)):
                 return True
     else:
         for c in page.cookies(all_domains=True):

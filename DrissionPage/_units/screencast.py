@@ -44,7 +44,7 @@ class Screencast(object):
             self._tmp_path.mkdir(parents=True, exist_ok=True)
 
         if self._mode.startswith('frugal'):
-            self._owner.driver.set_callback('Page.screencastFrame', self._onScreencastFrame)
+            self._owner._set_callback('Page.screencastFrame', self._onScreencastFrame)
             self._owner._run_cdp('Page.startScreencast', everyNthFrame=1, quality=100)
 
         elif not self._mode.startswith('js'):
@@ -99,7 +99,7 @@ class Screencast(object):
             return path
 
         if self._mode.startswith('frugal'):
-            self._owner.driver.set_callback('Page.screencastFrame', None)
+            self._owner._set_callback('Page.screencastFrame', None)
             self._owner._run_cdp('Page.stopScreencast')
         else:
             self._enable = False
@@ -108,7 +108,7 @@ class Screencast(object):
 
         if self._mode.endswith('imgs'):
             print(_S._lang.STOP_RECORDING)
-            return str(Path(self._path).absolute())
+            return str(Path(self._path).resolve())
 
         if not str(self._path).isascii():
             raise ValueError(_S._lang.join(_S._lang.ONLY_ENGLISH, CURR_VAL=self._path))

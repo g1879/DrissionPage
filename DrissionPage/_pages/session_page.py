@@ -23,17 +23,14 @@ from .._units.setter import SessionPageSetter
 
 
 class SessionPage(BasePage):
-    def __init__(self, session_or_options=None, timeout=None):
+    def __init__(self, session_or_options=None):
         super().__init__()
         self._response = None
         self._set = None
         self._encoding = None
         self._type = 'SessionPage'
-        self._page = self
         self._set_session_options(session_or_options)
         self._s_set_runtime_settings()
-        if timeout is not None:  # 即将废弃
-            self._timeout = timeout
         if not self._session:
             self._create_session()
 
@@ -42,7 +39,7 @@ class SessionPage(BasePage):
 
     def _s_set_runtime_settings(self):
         self._timeout = self._session_options.timeout
-        self._download_path = str(Path(self._session_options.download_path or '.').absolute())
+        self._download_path = str(Path(self._session_options.download_path or '.').resolve())
         self.retry_times = self._session_options.retry_times
         self.retry_interval = self._session_options.retry_interval
 

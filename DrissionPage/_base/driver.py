@@ -16,56 +16,46 @@ from websocket import (WebSocketTimeoutException, WebSocketConnectionClosedExcep
                        WebSocketException, WebSocketBadStatusException)
 
 from .._functions.settings import Settings as _S
-from ..errors import PageDisconnectedError, BrowserConnectError
+from ..errors import BrowserConnectError
 
 adapters.DEFAULT_RETRIES = 5
 
 
 class Driver(object):
-    def __init__(self, _id, address, owner=None):
-        self.id = _id
+    def __init__(self, address, owner=None):
         self.address = address
         self.owner = owner
-        self.alert_flag = False  # 标记alert出现，跳过一条请求后复原
+        self.alert_flag = set()  # 标记alert出现，跳过一条请求后复原
 
         self._cur_id = 0
         self._ws = None
 
         self._recv_th = Thread(target=self._recv_loop)
-        self._handle_event_th = Thread(target=self._handle_event_loop)
         self._recv_th.daemon = True
-        self._handle_event_th.daemon = True
-        self._handle_immediate_event_th = None
+        self._session_owner = {}
 
         self.is_running = False
-        self.session_id = None
-
-        self.event_handlers = {}
-        self.immediate_event_handlers = {}
         self.method_results = {}
         self.event_queue = Queue()
-        self.immediate_event_queue = Queue()
+
+        if owner:
+            self.add_session_owner(None, owner)
 
         self.start()
 
-    def _send(self, message, timeout=None):
-        self._cur_id += 1
-        ws_id = self._cur_id
-        message['id'] = ws_id
-        message_json = dumps(message)
-
-        end_time = perf_counter() + timeout if timeout is not None else None
+    def _send(self, message, timeout, ws_id):
         self.method_results[ws_id] = Queue()
         try:
-            self._ws.send(message_json)
-            if timeout == 0:
+            self._ws.send(dumps(message))
+            if not timeout:
                 self.method_results.pop(ws_id, None)
                 return {'id': ws_id, 'result': {}}
 
         except (OSError, WebSocketConnectionClosedException):
             self.method_results.pop(ws_id, None)
-            return {'error': {'message': 'connection disconnected'}, 'type': 'connection_error'}
+            return {'error': {'message': 'connection disconnected'}}
 
+        end_time = perf_counter() + timeout
         while self.is_running:
             try:
                 result = self.method_results[ws_id].get(timeout=.2)
@@ -73,24 +63,20 @@ class Driver(object):
                 return result
 
             except Empty:
-                if self.alert_flag and message['method'].startswith(('Input.', 'Runtime.')):
-                    return {'error': {'message': 'alert exists.'}, 'type': 'alert_exists'}
+                if (self.alert_flag and message['sessionId'] in self.alert_flag
+                        and message['method'].startswith(('Input.', 'Runtime.'))):
+                    return {'error': {'message': 'alert exists.'}}
 
                 if timeout is not None and perf_counter() > end_time:
                     self.method_results.pop(ws_id, None)
-                    return {'error': {'message': 'alert exists.'}, 'type': 'alert_exists'} \
-                        if self.alert_flag else {'error': {'message': 'timeout'}, 'type': 'timeout'}
+                    return {'error': {'message': 'timeout'}}
 
-                continue
-
-        return {'error': {'message': 'connection disconnected'}, 'type': 'connection_error'}
+        return {'error': {'message': 'connection disconnected'}}
 
     def _recv_loop(self):
         while self.is_running:
             try:
-                # self._ws.settimeout(1)
-                msg_json = self._ws.recv()
-                msg = loads(msg_json)
+                msg = loads(self._ws.recv())
             except WebSocketTimeoutException:
                 continue
             except (WebSocketException, OSError, WebSocketConnectionClosedException, JSONDecodeError):
@@ -99,57 +85,35 @@ class Driver(object):
 
             if 'method' in msg:
                 if msg['method'].startswith('Page.javascriptDialog'):
-                    self.alert_flag = msg['method'].endswith('Opening')
-                function = self.immediate_event_handlers.get(msg['method'])
-                if function:
-                    self._handle_immediate_event(function, msg['params'])
-                else:
-                    self.event_queue.put(msg)
+                    sid = msg.get('sessionId', None)
+                    if sid:
+                        (self.alert_flag.add if msg['method'].endswith('Opening') else self.alert_flag.discard)(sid)
+                self._session_owner.get(msg.get('sessionId', None), NoSession)._recv_event(msg)
 
             elif msg.get('id') in self.method_results:
                 self.method_results[msg['id']].put(msg)
 
-    def _handle_event_loop(self):
-        while self.is_running:
-            try:
-                event = self.event_queue.get(timeout=1)
-            except Empty:
-                continue
+    def add_session_owner(self, session_id, obj):
+        self._session_owner[session_id] = obj
 
-            function = self.event_handlers.get(event['method'])
-            if function:
-                function(**event['params'])
+    def remove_session_owner(self, session_id):
+        self._session_owner.pop(session_id, None)
 
-            self.event_queue.task_done()
-
-    def _handle_immediate_event_loop(self):
-        while not self.immediate_event_queue.empty():
-            function, kwargs = self.immediate_event_queue.get(timeout=1)
-            try:
-                function(**kwargs)
-            except PageDisconnectedError:
-                pass
-
-    def _handle_immediate_event(self, function, kwargs):
-        self.immediate_event_queue.put((function, kwargs))
-        if self._handle_immediate_event_th is None or not self._handle_immediate_event_th.is_alive():
-            self._handle_immediate_event_th = Thread(target=self._handle_immediate_event_loop)
-            self._handle_immediate_event_th.daemon = True
-            self._handle_immediate_event_th.start()
-
-    def run(self, _method, **kwargs):
+    def run(self, _method, _timeout=None, _session_id=None, _debug=False, **kwargs):
         if not self.is_running:
-            return {'error': 'connection disconnected', 'type': 'connection_error'}
+            return {'error': 'connection disconnected'}
 
-        timeout = kwargs.pop('_timeout', _S.cdp_timeout)
-        if self.session_id:
-            result = self._send({'method': _method, 'params': kwargs, 'sessionId': self.session_id}, timeout=timeout)
-        else:
-            result = self._send({'method': _method, 'params': kwargs}, timeout=timeout)
-        if 'result' not in result and 'error' in result:
-            kwargs['_timeout'] = timeout
-            return {'error': result['error']['message'], 'type': result.get('type', 'call_method_error'),
-                    'method': _method, 'args': kwargs, 'data': result['error'].get('data')}
+        if _timeout is None:
+            _timeout = _S.cdp_timeout
+
+        self._cur_id += 1
+        ws_id = self._cur_id
+        result = self._send(({'id': ws_id, 'method': _method, 'params': kwargs, 'sessionId': _session_id}
+                             if _session_id else {'id': ws_id, 'method': _method, 'params': kwargs}),
+                            timeout=_timeout, ws_id=ws_id)
+        if 'error' in result:
+            return {'error': result['error']['message'], 'method': _method,
+                    'args': kwargs, 'data': result['error'].get('data'), 'timeout': _timeout}
         else:
             return result['result']
 
@@ -165,56 +129,27 @@ class Driver(object):
         except ConnectionRefusedError:
             raise BrowserConnectError(_S._lang.BROWSER_NOT_EXIST)
         self._recv_th.start()
-        self._handle_event_th.start()
         return True
 
     def stop(self):
         self._stop()
-        while self._handle_event_th.is_alive() or self._recv_th.is_alive():
+        while self._recv_th.is_alive():
             sleep(.01)
         return True
 
     def _stop(self):
         if not self.is_running:
-            return False
+            return
 
         self.is_running = False
         if self._ws:
             self._ws.close()
             self._ws = None
 
-        self.event_handlers.clear()
         self.method_results.clear()
-        self.event_queue.queue.clear()
-
-        if hasattr(self.owner, '_on_disconnect'):
-            self.owner._on_disconnect()
-
-    def set_callback(self, event, callback, immediate=False):
-        handler = self.immediate_event_handlers if immediate else self.event_handlers
-        if callback:
-            handler[event] = callback
-        else:
-            handler.pop(event, None)
-
-
-class BrowserDriver(Driver):
-    BROWSERS = {}
-
-    def __new__(cls, _id, address, owner):
-        if address in cls.BROWSERS:
-            return cls.BROWSERS[address]
-        return object.__new__(cls)
-
-    def __init__(self, _id, address, owner):
-        if hasattr(self, '_created'):
-            return
-        self._created = True
-        BrowserDriver.BROWSERS[address] = self
-        super().__init__(_id, address, owner)
-
-    def __repr__(self):
-        return f'<BrowserDriver {self.id}>'
+        self._session_owner.clear()
+        self.alert_flag.clear()
+        self.owner._on_disconnect()
 
     @staticmethod
     def get(url):
@@ -225,3 +160,67 @@ class BrowserDriver(Driver):
         r.close()
         s.close()
         return r
+
+
+class DebugDriver(Driver):
+    def __init__(self, address, owner=None):
+        super().__init__(address, owner=None)
+        self._debug = False if _S._debug is None else _S._debug
+
+    def run(self, _method, _timeout=None, _session_id=None, _debug=False, **kwargs):
+        if not self.is_running:
+            return {'error': 'connection disconnected'}
+
+        if _timeout is None:
+            _timeout = _S.cdp_timeout
+
+        self._cur_id += 1
+        ws_id = self._cur_id
+        msg = ({'id': ws_id, 'method': _method, 'params': kwargs, 'sessionId': _session_id}
+               if _session_id else {'id': ws_id, 'method': _method, 'params': kwargs})
+
+        _debug = _debug or self._debug
+        show = False
+        if _debug and (_debug is True or msg['method'].startswith(_debug)):
+            print(f'发 {msg}')
+            show = True
+        result = self._send(msg, timeout=_timeout, ws_id=ws_id)
+        if show:
+            print(f'回 {result}')
+        if 'error' in result and 'result' not in result:
+            return {'error': result['error']['message'], 'method': _method,
+                    'args': kwargs, 'data': result['error'].get('data'), 'timeout': _timeout}
+        else:
+            return result['result']
+
+    def _recv_loop(self):
+        while self.is_running:
+            try:
+                msg = loads(self._ws.recv())
+            except WebSocketTimeoutException:
+                continue
+            except (WebSocketException, OSError, WebSocketConnectionClosedException, JSONDecodeError):
+                self._stop()
+                return
+
+            if 'method' in msg:
+                if self._debug and (self._debug is True or msg['method'].startswith(self._debug)):
+                    print(f'收 {msg}')
+                if msg['method'].startswith('Page.javascriptDialog'):
+                    sid = msg.get('sessionId', None)
+                    if sid:
+                        (self.alert_flag.add if msg['method'].endswith('Opening') else self.alert_flag.discard)(sid)
+                self._session_owner.get(msg.get('sessionId', None), NoSession)._debug_recv_event(msg)
+
+            elif msg.get('id') in self.method_results:
+                self.method_results[msg['id']].put(msg)
+
+
+class NoSession(object):
+    @classmethod
+    def _recv_event(cls, msg):
+        pass
+
+    @classmethod
+    def _debug_recv_event(cls, msg):
+        pass

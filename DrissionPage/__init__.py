@@ -19,10 +19,10 @@
 版权持有人不承担任何使用DrissionPage带来的风险和损失。
 版权持有人不对DrissionPage可能存在的缺陷导致的任何损失负任何责任。
 """
-from ._base.chromium import Chromium
-from ._configs.chromium_options import ChromiumOptions
-from ._configs.session_options import SessionOptions
+from ._browsers.chromium import Chromium
 from ._pages.chromium_page import ChromiumPage
 from ._pages.session_page import SessionPage
-from ._pages.web_page import WebPage
+from ._configs.chromium_options import ChromiumOptions
+from ._configs.session_options import SessionOptions
+
 from .version import __version__

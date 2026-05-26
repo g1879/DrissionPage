@@ -14,14 +14,13 @@ from .._functions.web import location_in_viewport
 
 
 class Actions:
-
     def __init__(self, owner):
         self.owner = owner
-        self._dr = owner.driver
         self.modifier = 0  # 修饰符，Alt=1, Ctrl=2, Meta/Command=4, Shift=8
         self.curr_x = 0  # 视口坐标
         self.curr_y = 0
         self._holding = 'left'
+        self._mouse_trail = False
 
     def move_to(self, ele_or_loc, offset_x=None, offset_y=None, duration=.5):
         is_loc = False
@@ -75,8 +74,8 @@ class Actions:
             t = perf_counter()
             self.curr_x = x
             self.curr_y = y
-            self._dr.run('Input.dispatchMouseEvent', type='mouseMoved', button=self._holding,
-                         x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
+            self.owner._run_cdp('Input.dispatchMouseEvent', type='mouseMoved', button=self._holding,
+                                x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
             ss = .02 - perf_counter() + t
             if ss > 0:
                 sleep(ss)
@@ -128,22 +127,22 @@ class Actions:
     def _hold(self, on_ele=None, button='left', count=1):
         if on_ele:
             self.move_to(on_ele, duration=.2)
-        self._dr.run('Input.dispatchMouseEvent', type='mousePressed', button=button, clickCount=count,
-                     x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
+        self.owner._run_cdp('Input.dispatchMouseEvent', type='mousePressed', button=button, clickCount=count,
+                            x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
         self._holding = button
         return self
 
     def _release(self, button):
-        self._dr.run('Input.dispatchMouseEvent', type='mouseReleased', button=button, clickCount=1,
-                     x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
+        self.owner._run_cdp('Input.dispatchMouseEvent', type='mouseReleased', button=button, clickCount=1,
+                            x=self.curr_x, y=self.curr_y, modifiers=self.modifier)
         self._holding = 'left'
         return self
 
     def scroll(self, delta_y=0, delta_x=0, on_ele=None):
         if on_ele:
             self.move_to(on_ele, duration=.2)
-        self._dr.run('Input.dispatchMouseEvent', type='mouseWheel', x=self.curr_x, y=self.curr_y,
-                     deltaX=delta_x, deltaY=delta_y, modifiers=self.modifier)
+        self.owner._run_cdp('Input.dispatchMouseEvent', type='mouseWheel', x=self.curr_x, y=self.curr_y,
+                            deltaX=delta_x, deltaY=delta_y, modifiers=self.modifier)
         return self
 
     def up(self, pixel):
@@ -160,9 +159,8 @@ class Actions:
 
     def key_down(self, key):
         key = getattr(Keys, key.upper(), key)
-        if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果上修饰符，添加到变量
+        if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果是修饰符，添加到变量
             self.modifier |= modifierBit.get(key, 0)
-            # 同时发送修饰符的 keyDown 事件给浏览器
             data = make_input_data(self.modifier, key, False)
             if data:
                 self.owner._run_cdp('Input.dispatchKeyEvent', **data)
@@ -176,9 +174,8 @@ class Actions:
 
     def key_up(self, key):
         key = getattr(Keys, key.upper(), key)
-        if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果上修饰符，添加到变量
+        if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果是修饰符，添加到变量
             self.modifier ^= modifierBit.get(key, 0)
-            # 同时发送修饰符的 keyUp 事件给浏览器
             data = make_input_data(self.modifier, key, True)
             if data:
                 self.owner._run_cdp('Input.dispatchKeyEvent', **data)
@@ -218,17 +215,22 @@ class Actions:
         input_text_or_keys(self.owner, text)
         return self
 
-    def drag_in(self, ele_or_loc, files=None, text=None, title=None, baseURL=None):
+    def drag_in(self, ele_or_loc, files=None, text=None, title=None, baseURL=None, offset_x=None, offset_y=None):
         ele_or_loc = self.owner(ele_or_loc)
-        x, y = ele_or_loc.rect.viewport_midpoint
+        if offset_x is not None or offset_y is not None:
+            x, y = ele_or_loc.rect.viewport_location
+            x += offset_x if offset_x is not None else 0
+            y += offset_y if offset_y is not None else 0
+        else:
+            x, y = ele_or_loc.rect.viewport_midpoint
         if files:
             items = []
             paths = []
             if isinstance(files, str):
                 files = [files]
             for file in files:
-                path = str(Path(file).absolute())
-                item = {'mimeType': 'text/plain', 'data': path}
+                path = str(Path(file).resolve())
+                item = {'mimeType': 'application/octet-stream', 'data': path}
                 items.append(item)
                 paths.append(path)
             data = {'items': items, 'files': paths, 'dragOperationsMask': 16}
@@ -248,8 +250,8 @@ class Actions:
         else:
             raise ValueError(_S._lang.NEED_FILES_OR_TEXT_ARG)
 
-        self._dr.run('Input.dispatchDragEvent', type='dragEnter', x=x, y=y, data=data, modifiers=self.modifier)
-        self._dr.run('Input.dispatchDragEvent', type='drop', x=x, y=y, data=data, modifiers=self.modifier)
+        self.owner._run_cdp('Input.dispatchDragEvent', type='dragEnter', x=x, y=y, data=data, modifiers=self.modifier)
+        self.owner._run_cdp('Input.dispatchDragEvent', type='drop', x=x, y=y, data=data, modifiers=self.modifier)
         return self
 
     def wait(self, second, scope=None):

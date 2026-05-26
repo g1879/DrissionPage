@@ -6,21 +6,22 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from abc import abstractmethod
-from typing import Union, Tuple, List, Any, Optional, Dict
+from queue import Queue
+from threading import Thread
+from typing import Union, Tuple, List, Any, Optional, Dict, Callable
 
 from DrissionGet import DrissionGet
 from requests import Session
 from requests.structures import CaseInsensitiveDict
 
+from .driver import Driver
+from .._browsers.chromium import Chromium
 from .._configs.session_options import SessionOptions
 from .._elements.chromium_element import ChromiumElement
 from .._elements.none_element import NoneElement
 from .._elements.session_element import SessionElement
 from .._functions.elements import SessionElementsList
 from .._pages.chromium_frame import ChromiumFrame
-from .._pages.chromium_page import ChromiumPage
-from .._pages.session_page import SessionPage
-from .._pages.web_page import WebPage
 
 
 class BaseParser(object):
@@ -147,8 +148,8 @@ class DrissionElement(BaseElement):
         ...
 
     @property
-    def css_path(self) -> str:
-        """返回css path路径"""
+    def css_selector(self) -> str:
+        """返回css selector"""
         ...
 
     @property
@@ -364,7 +365,6 @@ class DrissionElement(BaseElement):
 
 class BasePage(BaseParser):
     """页面类的基类"""
-
     _url_available: Optional[bool] = ...
     retry_times: int = ...
     retry_interval: float = ...
@@ -372,7 +372,6 @@ class BasePage(BaseParser):
     _downloader: Optional[DrissionGet] = ...
     _none_ele_return_value: bool = ...
     _none_ele_value: Any = ...
-    _page: Union[ChromiumPage, SessionPage, WebPage] = ...
     _session: Optional[Session] = ...
     _headers: Optional[CaseInsensitiveDict] = ...
     _session_options: Optional[SessionOptions] = ...
@@ -445,5 +444,66 @@ class BasePage(BaseParser):
         :param raise_err: 找不到时是否抛出异常
         :param method: 调用的方法名
         :return: 元素对象或它们组成的列表
+        """
+        ...
+
+
+class Messenger(object):
+    _driver: Optional[Driver] = ...
+    _browser: Optional[Chromium] = ...
+    _target_id: Optional[str] = ...
+    _session_id: Optional[str] = ...
+    _messenger_running: bool = ...
+    _event_queue: Queue = ...
+    _imm_events: set = ...
+    _event_handlers: Dict[str, Callable] = ...
+    _recv_th: Thread = ...
+    _type: str = ...
+
+    def __init__(self) -> None:
+        """与Driver通讯的方法"""
+        ...
+
+    def _start_messenger(self) -> None:
+        """启动接收Driver信息"""
+        ...
+
+    def _stop_messenger(self) -> None:
+        """停止接收Driver信息"""
+        ...
+
+    def _run_cdp(self, cmd: str, _ignore: Union[True, None, Exception] = None,
+                 _user: bool = False, _timeout: float = None, **cmd_args) -> dict:
+        """执行Chrome DevTools Protocol语句
+        :param cmd: 协议项目
+        :param _ignore: 忽略的报错，为True忽略所有
+        :param _user: 是否用户调用
+        :param _timeout: 超时时间
+        :param cmd_args: 参数
+        :return: 执行的结果
+        """
+        ...
+
+    def _recv_event(self, msg: dict) -> None:
+        """接收从Driver发送过来的信息
+        :param msg: 接收到的信息
+        :return: None
+        """
+        ...
+
+    def _handle_event_loop(self) -> None:
+        """接收到动作时执行相应方法"""
+        ...
+
+    def _on_disconnect(self) -> None:
+        """在断开连接时触发"""
+        ...
+
+    def _set_callback(self, event: str, callback: Optional[Callable], immediate: bool = False) -> None:
+        """设置动作对应触发方法
+        :param event: 动作名称
+        :param callback: 触发的方法，为None时移除该动作的设置
+        :param immediate: 是否不加入队列立即触发
+        :return: None
         """
         ...

@@ -5,15 +5,16 @@
 @Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-from typing import Union
+from pathlib import Path
+from typing import Union, Optional
 
 from .._configs.chromium_options import ChromiumOptions
 
 
-def connect_browser(option: ChromiumOptions) -> bool:
-    """连接或启动浏览器
-    :param option: ChromiumOptions对象
-    :return: 返回是否接管的浏览器
+def connect_browser(opt: ChromiumOptions) -> Optional[str]:
+    """连接浏览器，如浏览器不存在，启动它再连接
+    :param opt: ChromiumOptions对象
+    :return: 新创建的浏览器返回命令行参数，接管的浏览器返回None
     """
     ...
 
@@ -52,9 +53,21 @@ def test_connect(ip: str, port: Union[int, str], timeout: float = 30) -> bool:
     ...
 
 
-def get_chrome_path(ini_path: str) -> Union[str, None]:
-    """从ini文件或系统变量中获取chrome可执行文件的路径
-    :param ini_path: ini文件路径
-    :return: 文件路径
-    """
+def get_chrome_path() -> Optional[str]:
+    """获取chrome可执行文件的路径"""
+    ...
+
+
+def get_edge_path() -> str:
+    """获取edge可执行文件路径"""
+    ...
+
+
+def get_sys_Chrome_user_data_dir() -> Path:
+    """获取系统Chrome用户文件夹路径"""
+    ...
+
+
+def get_edge_user_data_dir() -> Path:
+    """获取系统Chrome用户文件夹路径"""
     ...
