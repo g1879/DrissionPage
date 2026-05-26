@@ -301,30 +301,24 @@ This property returns the page load strategy, which has 3 available options:
 
 ## ✅️️ Cookies and Cache Information
 
-### 📌 `cookies`
+### 📌 `cookies()`
 
-This property returns the cookies used by the current page as a dictionary.
+This method retrieves cookies and returns a `CookiesList` object.
 
-Please note that if different subdomains use the same `name` attribute, the cookies returned by this property may be incomplete.
-
-**Return Type:** `dict`
+You can convert it with `.as_dict()`, `.as_str()`, and `.as_json()`.
 
 ---
 
-### 📌 `get_cookies()`
+### 📌 `cookies()` (options)
 
-This method retrieves cookies and returns them as a list of cookie objects.
+| Parameter Name | Type   | Default | Description |
+|:-------------:|:------:|:-------:|-------------|
+| `all_domains` | `bool` | `False` | Whether to return all cookies. When `False`, only the cookies for the current URL are returned. |
+| `all_info`    | `bool` | `False` | Whether the returned cookies include all information. When `False`, only `name`, `value`, and `domain` are included. |
 
-| Parameter Name | Type   | Default | Description                                                                                   |
-|:-------------:|:------:|:-------:|----------------------------------------------------------------------------------------------|
-| `as_dict`     | `bool` | `False` | Whether to return the results as a dictionary. When `True`, a dictionary of `{name: value}` pairs is returned and the `all_info` parameter is ignored. When `False`, a list of cookie objects is returned. |
-| `all_domains` | `bool` | `False` | Whether to return all cookies. When `False`, only the cookies for the current URL are returned.                                                           |
-| `all_info`    | `bool` | `False` | Whether the returned cookies include all information. When `False`, only `name`, `value`, and `domain` information are included.                                                  |
-
-| Return Type | Description                                        |
-|:------:| -------------------------------------------------- |
-| `dict` | When `as_dict` is `True`, a dictionary of cookies is returned.    |
-| `list` | When `as_dict` is `False`, a list of cookie objects is returned. |
+| Return Type | Description |
+|:------:|-------------|
+| `CookiesList` | Cookie list object. Use `.as_dict()` when a `{name: value}` mapping is needed. |
 
 **Example:**
 
@@ -334,7 +328,7 @@ from DrissionPage import ChromiumPage
 page = ChromiumPage()
 page.get('http://www.baidu.com')
 
-for i in page.get_cookies(as_dict=False):
+for i in page.cookies():
     print(i)
 ```
 
@@ -347,7 +341,7 @@ for i in page.get_cookies(as_dict=False):
 
 ---
 
-### 📌 `get_session_storage()`
+### 📌 `session_storage()`
 
 This method is used to retrieve sessionStorage information, and can retrieve all or a single item.
 
@@ -362,7 +356,7 @@ This method is used to retrieve sessionStorage information, and can retrieve all
 
 ---
 
-### 📌 `get_local_storage()`
+### 📌 `local_storage()`
 
 This method is used to retrieve localStorage information, and can retrieve all or a single item.
 
@@ -377,7 +371,7 @@ This method is used to retrieve localStorage information, and can retrieve all o
 
 ---
 
-## ✅️️ Embeded Objects
+## ✅️️ Embedded Objects
 
 ### 📌 `driver`
 

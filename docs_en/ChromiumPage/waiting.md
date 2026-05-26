@@ -73,28 +73,28 @@ In general, developers don't need to use this method explicitly, as most actions
 
 ---
 
-### 📌 `wait.ele_loaded()`
+### 📌 `wait.eles_loaded()`
 
-This method is used to wait for an element to be loaded in the DOM.
+This method is used to wait for one or more elements to be loaded in the DOM.
 
 Sometimes, the appearance of an element is a prerequisite for the next step of an action. Using this method can prevent inadvertent actions caused by some elements loading slower than the program executes.
 
 | Parameter    | Type                                         | Default | Description                                                |
 |:------------:|:--------------------------------------------:|:-------:| ---------------------------------------------------------- |
-| `locator`    | `str`<br/>`Tuple[str, str]`                   | Required| The element to wait for, specified by locator.              |
+| `locators`   | `str`<br/>`Tuple[str, str]`<br/>`list`<br/>`tuple` | Required| The locator(s) to wait for. |
 | `timeout`    | `float`                                      | `None`  | The timeout duration. If `None`, the page's `timeout` setting will be used. |
+| `any_one`    | `bool`                                       | `False` | If `True`, return success when any locator is loaded. |
 | `raise_err`  | `bool`         | `None`    | Determines whether an error should be raised upon timeout. If `None`, the behavior is determined by `Settings`.          |
 
 | Return Type        | Description                                                |
 |:------------------:| ---------------------------------------------------------- |
-| `ChromiumElement`  | The element object if waiting is successful.               |
-| `False`            | If waiting fails.                                          |
+| `bool`  | Whether waiting succeeded. |
 
 **Example:**
 
 ```python
 ele1.click()  # Click a certain element
-page.wait.ele_loaded('#div1')  # Wait for the element with id 'div1' to load
+page.wait.eles_loaded('#div1')  # Wait for the element with id 'div1' to load
 ele2.click()  # Proceed with the next step after the 'div1' element has finished loading
 ```
 
@@ -463,7 +463,7 @@ page.ele('#button1').click()
 
 ---
 
-### 📌 `wait.disable_or_deleted()`
+### 📌 `wait.disabled_or_deleted()`
 
 This method is used to wait for an element to become disabled or deleted.
 

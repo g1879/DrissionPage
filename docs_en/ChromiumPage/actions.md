@@ -254,7 +254,7 @@ ac.m_click('#div1')
 
 ---
 
-### 📌 `db_click()`
+### 📌 `click(times=2)`
 
 This method is used to double-click the left mouse button, and can be preceded by moving to an element.
 
@@ -265,6 +265,12 @@ This method is used to double-click the left mouse button, and can be preceded b
 | Return Type | Description |
 |:-----------:|-------------|
 | `Actions` | The action chain object itself |
+
+**Example:**
+
+```python
+ac.click('#div1', times=2)
+```
 
 ---
 

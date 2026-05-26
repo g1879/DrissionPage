@@ -164,16 +164,16 @@ page = WebPage()
 ele = page('Homepage')
 ```
 
-`MixPage` (based on Selenium):
+Traditional Selenium workflow:
 
 ```python
-from DrissionPage import MixPage
+from selenium import webdriver
 
-page = MixPage()
-page.to_frame('#iframeResult')
-page.to_frame('#sss')
-ele = page('Homepage')
-page.to_frame.main()
+driver = webdriver.Chrome()
+driver.switch_to.frame('iframeResult')
+driver.switch_to.frame('sss')
+ele = driver.find_element('xpath', '//*[text()=\"Homepage\"]')
+driver.switch_to.default_content()
 ```
 
 As you can see, the original logic of switching in and out is more cumbersome.

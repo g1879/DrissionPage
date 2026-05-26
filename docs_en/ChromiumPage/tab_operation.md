@@ -162,9 +162,9 @@ tab = page.get_tab('5399F4ADFE3A27503FFAA56390344EE5')  # Get the object of the 
 
 ---
 
-### 📌 `find_tabs()`
+### 📌 `get_tabs()`
 
-This method is used to find tabs that meet the specified conditions. Only Page objects have this method.
+This method is used to get tabs that meet the specified conditions. Only Page objects have this method.
 
 The `title`, `url`, and `tab_type` parameters are three search conditions, and they are connected with the "and" relationship.
 
@@ -175,12 +175,11 @@ The parameters `title`, `url`, and `tab_type` are connected with the relationshi
 |     `title`    |       `str`       | `None`  | Match tabs that contain this text in the title, match all when `None` |
 |      `url`     |       `str`       | `None`  | Match tabs that contain this text in the URL, match all when `None` |
 |  `tab_type`    | `str`, `list`, `tuple`, `set` | `None` | Match tabs of this type, you can enter multiple types, match all when `None` |
-|    `single`    |       `bool`      |  `True` | If `True`, return the id of the first result; if `False`, return all information |
+|     `as_id`    |       `bool`      |  `False` | If `True`, return tab IDs; if `False`, return tab objects |
 
-|   Return Type  | Description                                            |
-|:--------------:|--------------------------------------------------------|
-|     `str`      | When `single` is `True`, return the tab id               |
-| `List[dict]`   | When `single` is `False`, return all tab information     |
+|   Return Type  | Description |
+|:--------------:|-------------|
+| `list` | A list of tab objects (`as_id=False`) or tab IDs (`as_id=True`) |
 
 **Example:**
 
@@ -192,8 +191,8 @@ from DrissionPage import ChromiumPage
 page = ChromiumPage()
 page.get('https://www.baidu.com')
 
-tab_id = page.find_tabs(url='baidu.com')
-print(tab_id)
+tabs = page.get_tabs(url='baidu.com')
+print(tabs[0].tab_id)
 ```
 
 **Output:**
@@ -202,43 +201,36 @@ print(tab_id)
 '8460E5D55BCA5798AF83BC4D243652A9'
 ```
 
-Get all tab information:
+Get all tab objects:
 
 ```python
-tabs = page.find_tabs(single=False)
-print(tab)
+tabs = page.get_tabs()
+print(tabs)
 ```
 
 **Output:**
 
 ```shell
-[{'description': '',
-  'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/8460E5D55BCA5798AF83BC4D243652A9',
-  'faviconUrl': 'https://www.baidu.com/img/baidu_85beaf5496f291521eb75ba38eacbd87.svg',
-  'id': '8460E5D55BCA5798AF83BC4D243652A9',
-  'title': '百度一下，你就知道',
-  'type': 'page',
-  'url': 'https://www.baidu.com/',
-  'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/8460E5D55BCA5798AF83BC4D243652A9'}]
+[<ChromiumTab browser_id=... tab_id=...>, <ChromiumTab browser_id=... tab_id=...>]
 ```
 
 ---
 
 ### 📌 `latest_tab`
 
-This property returns the id of the last activated tab, which refers to the most recently appeared or newly activated tab.
+This property returns the tab object of the last activated tab, which refers to the most recently appeared or newly activated tab.
 
 Only Page objects have this property.
 
-**Type:** `str`
+**Type:** `ChromiumTab`
 
 **Example:**
 
 ```python
 # Open a tab
 ele.click()
-# Get the object of the latest tab
-tab = page.get_tab(page.latest_tab)  # Equivalent to page.get_tab(0)
+# Get the latest tab object directly
+tab = page.latest_tab
 ```
 
 ---
@@ -340,7 +332,7 @@ Both the Page, Tab, and `ChromiumFrame` objects have this method.
 
 ### 📌 `close_tabs()`
 
-This method is used to close the specified tabs, and multiple tabs can be closed. The current tab is closed by default.
+This method is used to close the specified tabs, and multiple tabs can be closed.
 
 If the closed tabs include the current tab, it will switch to the first remaining tab, but not necessarily the visually first one.
 
@@ -348,8 +340,8 @@ Only the Page object has this method.
 
 |  Parameter Name   |                                                                                                                                              Type                                                                                                                                               | Default Value |                                  Description                                  |
 |:----------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-------------:|-------------------------------------------------------------------------------|
-|  `tabs_or_ids`   | `str`, `None`, `ChromiumTab`, `List[str, ChromiumTab]`, `Tuple[str, ChromiumTab]`                                                                                                                                                                                                            |     None      | The tab objects or IDs to be processed, can be passed in as a list or tuple, `None` means process the current tab                            |
-|     `others`     |                                                                                                                                               bool                                                                                                                                               |     True      | Whether to close tabs other than the specified ones                                                                                                                                                  |
+|  `tabs_or_ids`   | `str`, `ChromiumTab`, `List[str, ChromiumTab]`, `Tuple[str, ChromiumTab]`                                                                                                                                                                                                            |   Required   | Tab object(s) or tab ID(s) to process |
+|     `others`     | bool | `False` | Whether to close tabs other than the specified ones |
 
 **Returns:** None
 
@@ -357,18 +349,18 @@ Only the Page object has this method.
 
 ```python
 # Close the current tab
-page.close_tabs()
+page.close_tabs(page.tab_id)
 
 # Close the 1st and 3rd tabs
-tabs = page.tabs
+tabs = page.get_tabs()
 page.close_tabs(tabs_or_ids=(tabs[0], tabs[2]))
 ```
 
 ---
 
-### 📌 `close_other_tabs()`
+### 📌 `close_tabs(..., others=True)`
 
-This method is used to close tabs other than the ones passed in, and the current tab is kept by default. Multiple tabs can be passed in.
+Use `close_tabs(..., others=True)` to close tabs other than the passed-in tabs. By default, keep the current tab.
 
 If the closed tabs include the current tab, it will switch to the first remaining tab, but not necessarily the visually first one.
 
@@ -376,7 +368,7 @@ Only the Page object has this method.
 
 |  Parameter Name   |                                                                                                                                              Type                                                                                                                                               | Default Value |                                  Description                                  |
 |:----------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-------------:|-------------------------------------------------------------------------------|
-|  `tabs_or_ids`   | `str`, `None`, `ChromiumTab`, `List[str, ChromiumTab]`, `Tuple[str, ChromiumTab]`                                                                                                                                                                                                            |     None      | The tab objects or IDs to be processed, can be passed in as a list or tuple, `None` means process the current tab                            |
+|  `tabs_or_ids`   | `str`, `None`, `ChromiumTab`, `List[str, ChromiumTab]`, `Tuple[str, ChromiumTab]`                                                                                                                                                                                                            |     None      | The tabs or IDs to keep. `None` means keep the current tab. |
 
 **Returns:** None
 
@@ -384,29 +376,29 @@ Only the Page object has this method.
 
 ```python
 # Close all tabs except the current tab
-page.close_other_tabs()
+page.close_tabs(page.tab_id, others=True)
 
 # Close all tabs except the first tab
-page.close_other_tabs(page.tab[0])
+page.close_tabs(page.get_tab(1), others=True)
 
 # Close tabs except for specified IDs
 reserve_list = ('0B300BEA6F...', 'B838E91...')
-page.close_other_tabs(reserve_list)
+page.close_tabs(reserve_list, others=True)
 ```
 
 ---
 
 ## ✅️ Activate Tab
 
-### 📌 `set.tab_to_front()`
+### 📌 `activate_tab()`
 
-This method is used to activate a tab and bring it to the front. However, it does not shift the focus to the tab.
+This method is used to activate a tab and bring it to the front.
 
 Only the Page object has this method.
 
-|  Parameter Name |         Type         | Default Value |                               Description                               |
-|:--------------:|:--------------------:|:-------------:|:----------------------------------------------------------------------:|
-|  `tab_or_id`   | `str`, `ChromiumTab`, `None` |     None      | The tab object or ID, the default is `None` which means the current tab |
+|  Parameter Name |         Type         | Default Value | Description |
+|:--------------:|:--------------------:|:-------------:|-------------|
+|  `id_ind_tab`   | `str`, `int`, `ChromiumTab` |  Required  | Tab ID, tab index, or tab object |
 
 **Returns:** None
 
@@ -451,7 +443,7 @@ for link in links[:-1]:
     # Print the title of the tab
     print(new_tab.title)
     # Close all tabs except the list page
-    page.close_other_tabs()
+    page.close_tabs(page.tab_id, others=True)
 ```
 
 

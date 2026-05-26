@@ -135,32 +135,24 @@ This property returns the encoding format set by the user.
 
 ## ✅️️ Cookies Information
 
-### 📌 `cookies`
+### 📌 `cookies()`
 
-This property returns the cookies used by the current page as a dictionary.
+This method retrieves cookies and returns a `CookiesList` object.
 
-Note that if different subdomains use the same `name` attribute, the cookies returned by this property may be missing.
-
-**Type:** `dict`
+Note that if different subdomains use the same `name` attribute, conversion to `{name: value}` may overwrite same-name entries.
 
 ---
 
-### 📌 `get_cookies()`
-
-This method retrieves the cookies and returns them in the form of a list of cookies.
-
-**Type:** `dict`, `list`
+### 📌 `cookies()` (options)
 
 | Parameter Name | Type   | Default Value | Description                                                                               |
 |:-------------:|:------:|:-------------:|-------------------------------------------------------------------------------------------|
-| `as_dict`     | `bool` | `False`       | Whether to return the result in dictionary format. When `True`, it returns a `dict` consisting of `{name: value}` key-value pairs, and the `all_info` parameter is invalid. When `False`, it returns a list of cookies. |
 | `all_domains` | `bool` | `False`       | Whether to return cookies of all domains. If `False`, it only returns the cookies of the current domain.                                                       |
 | `all_info`    | `bool` | `False`       | Whether the returned cookies include all information. When `False`, it only includes the `name`, `value`, and `domain` information.                      |
 
-| Return Type | Description                                    |
-|:------:| -------------------------------------------- |
-| `dict` | When `as_dict` is `True`, returns cookies in dictionary format |
-| `list` | When `as_dict` is `False`, returns a list of cookies            |
+| Return Type | Description |
+|:------:|-------------|
+| `CookiesList` | Cookie list object. Use `.as_dict()` when a dictionary is needed. |
 
 **Example:**
 
@@ -171,7 +163,7 @@ page = SessionPage()
 page.get('http://www.baidu.com')
 page.get('http://gitee.com')
 
-for i in page.get_cookies(as_dict=False, all_domains=True):
+for i in page.cookies(all_domains=True):
     print(i)
 ```
 

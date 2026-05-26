@@ -245,7 +245,7 @@ This method is used to execute Chrome DevTools Protocol statements after making 
 
 ## ✅️️ Cookies and Cache
 
-### 📌 `set_cookies()`
+### 📌 `set.cookies()`
 
 This method is used to set cookies.
 
@@ -265,12 +265,12 @@ cookies1 = ['name1=value1', 'name2=value2'],
 cookies2 = ('name1=value1', 'name2=value2', 'secure')
 cookies3 = 'name1=value1; name2=value2; path=/; domain=.example.com; secure'
 cookies4 = {'name1': 'value1', 'name2': 'value2'}
-page.set_cookies(cookies1)
+page.set.cookies(cookies1)
 ```
 
 ---
 
-### 📌 `clear_cookies()`
+### 📌 `set.cookies.clear()`
 
 This method is used to clear all cookies.
 
@@ -280,7 +280,7 @@ This method is used to clear all cookies.
 
 ---
 
-### 📌 `remove_cookies()`
+### 📌 `set.cookies.remove()`
 
 This method is used to delete a cookie.
 
@@ -295,7 +295,7 @@ This method is used to delete a cookie.
 
 ---
 
-### 📌 `set_session_storage()`
+### 📌 `set.session_storage()`
 
 This method is used to set or delete a particular sessionStorage item.
 
@@ -309,12 +309,12 @@ This method is used to set or delete a particular sessionStorage item.
 **Example:**
 
 ```python
-page.set_session_storage(item='abc', value='123')
+page.set.session_storage(item='abc', value='123')
 ```
 
 ---
 
-### 📌 `set_local_storage()`
+### 📌 `set.local_storage()`
 
 This method is used to set or delete a particular localStorage item.
 

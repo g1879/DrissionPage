@@ -319,7 +319,7 @@ The save feature is a unique feature of this library, which can directly read fr
 
 For comparison, Selenium cannot save images by itself, often requiring the use of UI tools for assistance, which is not only inefficient and unreliable but also consumes keyboard and mouse resources.
 
-### 📌 `get_src()`
+### 📌 `src()`
 
 This method returns the resource used by the `src` attribute of the element. Base64 data can be returned as `bytes`, while other resources are returned as `str`. If there is no resource, it returns `None`.
 
@@ -339,14 +339,14 @@ For example, you can retrieve the byte data of an image on the page for content 
 
 ```python
 img = page('tag:img')
-src = img.get_src()
+src = img.src()
 ```
 
 ---
 
 ### 📌 `save()`
 
-This method saves the resource obtained from the `get_src()` method to a file.
+This method saves the resource obtained from the `src()` method to a file.
 
 |     Parameter Name    |         Type         |  Default Value  | Description                                     |
 |:---------------------:|:--------------------:|:--------------:|-------------------------------------------------|

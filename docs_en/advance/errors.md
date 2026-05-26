@@ -69,7 +69,7 @@ Thrown when there is an error connecting to the browser.
 
 ### 📌 `NoResourceError`
 
-Thrown when accessing resources fails for the browser element's `get_src()` and `save()` methods.
+Thrown when accessing resources fails for the browser element's `src()` and `save()` methods.
 
 ---
 
