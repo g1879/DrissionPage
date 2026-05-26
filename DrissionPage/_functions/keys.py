@@ -12,6 +12,17 @@ from ..errors import AlertExistsError
 modifierBit = {'\ue00a': 1, '\ue009': 2, '\ue03d': 4, '\ue008': 8}
 sys = system().lower()
 
+# macOS Meta(Command) 组合键 → CDP editing commands 映射
+# 参考: https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/editing/commands/editor_command_names.h
+_mac_meta_commands = {
+    'a': ['selectAll'],
+    'c': ['copy'],
+    'x': ['cut'],
+    'v': ['paste'],
+    'z': ['undo'],
+    'y': ['redo'],
+}
+
 
 class Keys:
     """特殊按键"""
@@ -378,11 +389,13 @@ def make_input_data(modifiers, key, key_up=False):
     if len(result.get('key', '')) == 1:  # type: ignore
         result['text'] = data['key']
 
-    sys_text = 'windowsVirtualKeyCode' if sys == 'windows' else 'nativeVirtualKeyCode'
+    # CDP 需要同时设置两个虚拟键码字段，否则浏览器无法正确执行编辑命令
     if shift and data.get('shiftKeyCode'):
-        result[sys_text] = data['shiftKeyCode']
+        result['windowsVirtualKeyCode'] = data['shiftKeyCode']
+        result['nativeVirtualKeyCode'] = data['shiftKeyCode']
     elif 'keyCode' in data:
-        result[sys_text] = data['keyCode']
+        result['windowsVirtualKeyCode'] = data['keyCode']
+        result['nativeVirtualKeyCode'] = data['keyCode']
 
     if 'code' in data:
         result['code'] = data['code']
@@ -403,6 +416,14 @@ def make_input_data(modifiers, key, key_up=False):
 
     if modifiers & ~8:
         result['text'] = ''
+
+    # macOS 上 Meta(Command) 组合键需要附加 commands 参数，
+    # 否则 Chrome 会将事件透传给操作系统，触发系统菜单
+    if sys in ('macos', 'darwin') and (modifiers & 4) and not key_up:
+        key_lower = data.get('key', '').lower()
+        cmds = _mac_meta_commands.get(key_lower)
+        if cmds:
+            result['commands'] = cmds
 
     result['type'] = 'keyUp' if key_up else ('keyDown' if result.get('text') else 'rawKeyDown')
     return result

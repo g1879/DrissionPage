@@ -181,7 +181,7 @@ The following diagram lists the generation relationships of various objects used
 ├─ SessionPage
 |     └─ SessionElement
 |           └─ SessionElement
-├─ ChrmoiumPage
+├─ ChromiumPage
 |     ├─ ChromiumTab
 |     |     └─ ChromiumElement
 |     |     └─ SessionElement
@@ -210,7 +210,7 @@ The following diagram lists the generation relationships of various objects used
 |     └─ SessionElement
 |           └─ SessionElement
 ├─ SessionOptions
-└─ ChrmoiumOptions
+└─ ChromiumOptions
 ```
 
 ---

@@ -311,9 +311,9 @@ def handle_options(addr_or_opts):
     ...
 
 
-def run_browser(chromium_options)->Tuple[bool, str, bool, bool]:
+def run_browser(chromium_options)->Tuple[bool, str, bool, bool, BrowserDriver]:
     """连接浏览器
     :param chromium_options: ChromiumOptions对象
-    :return: 返回(是否无头, 浏览器id, 是否接管已存在, 是否只能用ws连接)
+    :return: 返回(是否无头, 浏览器id, 是否接管已存在, 是否只能用ws连接, 浏览器连接驱动)
     """
     ...

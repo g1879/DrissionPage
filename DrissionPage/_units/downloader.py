@@ -276,7 +276,7 @@ class DownloadMission(object):
 
         else:
             end_time = perf_counter() + timeout
-            while perf_counter() < end_time:
+            while not self.is_done and perf_counter() < end_time:  
                 if show:
                     print(f'\r{self.rate}% ', end='')
                 sleep(.2)
@@ -300,3 +300,4 @@ class DownloadMission(object):
             print()
 
         return self.final_path if self.final_path else False
+

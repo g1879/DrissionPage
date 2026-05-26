@@ -101,9 +101,21 @@ class BrowserDriver(Driver):
     BROWSERS: Dict[str, Driver] = ...
     owner: Chromium = ...
 
-    def __new__(cls, _id: str, address: str, owner: Chromium): ...
+    def __new__(cls, _id: str, address: str, owner: Chromium):
+        """
+        :param _id: 浏览器id
+        :param address: 浏览器连接地址
+        :param owner: 浏览器对象
+        """
+        ...
 
-    def __init__(self, _id: str, address: str, owner: Chromium): ...
+    def __init__(self, _id: str, address: str, owner: Optional[Chromium]):
+        """
+        :param _id: 浏览器id
+        :param address: 浏览器连接地址
+        :param owner: 浏览器对象
+        """
+        ...
 
     @staticmethod
     def get(url) -> Response:

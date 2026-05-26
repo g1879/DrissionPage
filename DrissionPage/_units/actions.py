@@ -162,6 +162,10 @@ class Actions:
         key = getattr(Keys, key.upper(), key)
         if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果上修饰符，添加到变量
             self.modifier |= modifierBit.get(key, 0)
+            # 同时发送修饰符的 keyDown 事件给浏览器
+            data = make_input_data(self.modifier, key, False)
+            if data:
+                self.owner._run_cdp('Input.dispatchKeyEvent', **data)
             return self
 
         data = make_input_data(self.modifier, key, False)
@@ -174,6 +178,10 @@ class Actions:
         key = getattr(Keys, key.upper(), key)
         if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果上修饰符，添加到变量
             self.modifier ^= modifierBit.get(key, 0)
+            # 同时发送修饰符的 keyUp 事件给浏览器
+            data = make_input_data(self.modifier, key, True)
+            if data:
+                self.owner._run_cdp('Input.dispatchKeyEvent', **data)
             return self
 
         data = make_input_data(self.modifier, key, True)

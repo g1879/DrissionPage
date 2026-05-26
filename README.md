@@ -10,13 +10,28 @@ DrissionPage 是一个基于 python 的网页自动化工具。
 
 它的语法简洁而优雅，代码量少，对新手友好。
 
----
-
 官方网站：[https://DrissionPage.cn](https://drissionpage.cn)
 
 项目地址：[gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage)     |    [gitcode](https://gitcode.com/g1879/DrissionPage) 
 
 您的星星是对我最大的支持💖
+
+---
+
+## ♾️ 交流群
+
+![](https://drissionpage.cn/img/yrx2.png)
+
+与猿人学平哥建立的 DrissionPage AI 逆向微信交流群。  
+扫码并备注 “dp” 即可申请加入。  
+交流 AI 逆向，dp 使用方法、实践案例，以及后续功能更新，欢迎加入。
+
+---
+
+## IPWO爬虫代理资源为采集、跨境与测试项目提供支持(免费试用，爬虫使用强烈推荐!!!)
+
+<a href="https://www.ipwo.net/?ref=giteeg1879" target="_blank"><img src="https://drissionpage.cn/img/ad.png"/></a>
+<a href="https://www.ipwo.net/?ref=giteeg1879" target="_blank">学习者务必遵循法律！IPWO提供的真实住宅 IP，大幅降低被封禁风险。195 + 国家 / 地区精准定位，轻松应对大型爬虫任务。让爬虫更简单，让数据更安全。戳本信息注册可获得有效保护账号的高匿名ip流量。点击访问IPWO官网</a>
 
 --- 
 
@@ -29,10 +44,6 @@ python 版本：3.6 及以上
 ---
 
 # 🛠 如何使用
-
-**📖 使用文档：**  [点击查看](https://DrissionPage.cn)
-
-**交流 QQ 群：**  见使用文档
 
 ![](https://drissionpage.cn/codes.png)
 
@@ -79,6 +90,16 @@ python 版本：3.6 及以上
 
 --- 
 
+# ☕ 请我喝咖啡
+
+作者是个人开发者，开发和写文档工作量较为繁重。
+
+如果本项目对您有所帮助，不妨打赏一下作者 ：）
+
+![](https://raw.githubusercontent.com/g1879/DrissionPage/refs/heads/master/img/code.jpg)
+
+---  
+
 # 📝 使用条款
 
 允许任何人以个人身份使用或分发本项目源代码，但仅限于学习和合法非盈利目的。
@@ -94,13 +115,3 @@ python 版本：3.6 及以上
 因使用DrissionPage进行任何行为所产生的一切纠纷及后果均与版权持有人无关，
 版权持有人不承担任何使用DrissionPage带来的风险和损失。
 版权持有人不对DrissionPage可能存在的缺陷导致的任何损失负任何责任。
-
----  
-
-# ☕ 请我喝咖啡
-
-作者是个人开发者，开发和写文档工作量较为繁重。
-
-如果本项目对您有所帮助，不妨打赏一下作者 ：）
-
-![](https://drissionpage.cn/code2.jpg)

@@ -85,7 +85,8 @@ class ChromiumBase(BasePage):
                 tabs = self.browser._driver.get(f'http://{self.browser.address}/json').json()
                 _id = 'id'
             tabs = [(i[_id], i['url']) for i in tabs
-                    if i['type'] in ('page', 'webview') and not i['url'].startswith('devtools://')]
+                    if i['type'] in ('page', 'webview') and not i['url'].startswith('devtools://')
+                    and not i['url'].startswith('chrome://newtab-footer')]
             dialog = None
             if len(tabs) > 1:
                 for k, t in enumerate(tabs):

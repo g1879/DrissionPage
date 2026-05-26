@@ -142,6 +142,8 @@ class Texts(object):
     LOC_LEN = '定位符长度必须为2。'
     INCORRECT_SIGN_ = '符号不正确: {}'
     DOMAIN_NOT_SET = '未设置域名，请设置cookie的domain参数或先访问一个网站。'
+    PLUGIN_NEED_FOLDER = '插件需解压为文件夹：{}'
+    NEED_FILES_OR_TEXT_ARG = 'files参数和text参数必须至少输入一个。'
 
     # --------- 参数内容 ---------
     ELE_DISPLAYED = '元素显示'
@@ -253,6 +255,8 @@ class English(Texts):
     STORAGEERROR = 'Cannot manipulate the currently stored data.'
     COOKIEFORMATERROR = 'The cookie format is incorrect.'
     TARGETNOTFOUNDERROR = 'The specified page cannot be found.'
+    PLUGIN_NEED_FOLDER = 'The plugin needs to be decompressed into a folder：{}'
+    NEED_FILES_OR_TEXT_ARG = 'At least one of the "files" parameter and the "text" parameter must be entered.'
 
     # --------- 异常信息 ---------
     NO_AVAILABLE_PORT_FOUND = 'No available port found.'
