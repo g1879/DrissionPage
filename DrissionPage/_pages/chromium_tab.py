@@ -121,12 +121,14 @@ class ChromiumTab(ChromiumBase, SessionPage):
     def activate(self):
         self.browser._run_cdp('Target.activateTarget', targetId=self._target_id)
 
-    def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, **kwargs):
+    def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, return_info=False, **kwargs):
         if self._d_mode:
             if kwargs:
                 raise ValueError(_S._lang.join(_S._lang.S_MODE_ONLY, ARGS=", ".join(kwargs.keys())))
-            return self._mode_obj.get(url, show_errmsg, retry, interval, timeout)
+            return self._mode_obj.get(url, show_errmsg, retry, interval, timeout, return_info=return_info)
 
+        if return_info:
+            raise ValueError('return_info only works in d mode.')
         if timeout is None:
             timeout = self.timeouts.page_load
         return self._mode_obj.get(url, show_errmsg, retry, interval, timeout, **kwargs)
