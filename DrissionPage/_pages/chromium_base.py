@@ -15,6 +15,7 @@ from time import perf_counter, sleep
 from DrissionRecord.tools import make_valid_name
 
 from .._base.base import BasePage, Messenger
+from .navigation_result import make_navigation_result
 from .._elements.chromium_element import run_js, make_chromium_eles, find_by_ax
 from .._elements.none_element import NoneElement
 from .._elements.session_element import make_session_ele
@@ -400,11 +401,14 @@ class ChromiumBase(BasePage, Messenger):
     def run_async_js(self, script, *args, as_expr=False):
         run_js(self, script, as_expr, 0, args)
 
-    def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None):
+    def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, return_info=False):
         retry, interval, is_file = self._before_connect(url, retry, interval)
         self._url_available = self._d_connect(self._url, times=retry, interval=interval,
                                               show_errmsg=show_errmsg, timeout=timeout)
-        return self._url_available
+        if not return_info:
+            return self._url_available
+
+        return make_navigation_result(self, self._url, self._url_available)
 
     def cookies(self, all_domains=False, all_info=False):
         self.wait.doc_loaded()

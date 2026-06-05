@@ -8,12 +8,13 @@
 from http.cookiejar import CookieJar
 from pathlib import Path
 from threading import Lock
-from typing import Union, Tuple, Any, Optional, Literal
+from typing import Union, Tuple, Any, Optional, Literal, overload
 
 from requests import Session, Response
 
 from .chromium_base import ChromiumBase
 from .chromium_frame import ChromiumFrame
+from .navigation_result import NavigationResult
 from .session_page import SessionPage
 from .._browsers.chromium import Chromium
 from .._configs.session_options import SessionOptions
@@ -151,12 +152,14 @@ class ChromiumTab(ChromiumBase, SessionPage):
         """使标签页显示到前端"""
         ...
 
+    @overload
     def get(self,
             url: str,
             show_errmsg: bool = False,
             retry: Optional[int] = None,
             interval: Optional[float] = None,
             timeout: Optional[float] = None,
+            return_info: Literal[False] = False,
             params: Optional[dict] = None,
             data: Any = None,
             json: Any = None,
@@ -170,28 +173,18 @@ class ChromiumTab(ChromiumBase, SessionPage):
             stream: bool = None,
             verify: Union[bool, str] = None,
             cert: Union[str, Tuple[str, str]] = None) -> Union[bool, None]:
-        """跳转到一个url
-        :param url: 目标url
-        :param show_errmsg: 是否显示和抛出异常
-        :param retry: 重试次数，为None时使用页面对象retry_times属性值
-        :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
-        :param timeout: 连接超时时间
-        :param params: url中的参数
-        :param data: 携带的数据
-        :param json: 要发送的 JSON 数据，会自动设置 Content-Type 为 application/json
-        :param headers: 请求头
-        :param cookies: cookies信息
-        :param files: 要上传的文件，可以是一个字典，其中键是文件名，值是文件对象或文件路径
-        :param auth: 身份认证信息
-        :param allow_redirects: 是否允许重定向
-        :param proxies: 代理信息
-        :param hooks: 回调方法
-        :param stream: 是否使用流式传输
-        :param verify: 是否验证 SSL 证书
-        :param cert: SSL客户端证书文件的路径(.pem格式)，或('cert', 'key')元组
-        :return: s模式时返回url是否可用，d模式时返回获取到的Response对象
-        """
         ...
+
+    @overload
+    def get(self,
+            url: str,
+            show_errmsg: bool = False,
+            retry: Optional[int] = None,
+            interval: Optional[float] = None,
+            timeout: Optional[float] = None,
+            return_info: Literal[True] = True) -> NavigationResult:
+        ...
+
 
     def post(self,
              url: str,

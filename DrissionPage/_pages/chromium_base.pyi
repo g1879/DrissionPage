@@ -6,7 +6,7 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
-from typing import Union, Tuple, Any, Optional, Literal
+from typing import Union, Tuple, Any, Optional, Literal, overload
 
 from requests import Session
 
@@ -18,6 +18,7 @@ from .._elements.session_element import SessionElement
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, ChromiumElementsList
 from .._pages.chromium_frame import ChromiumFrame
+from .._pages.navigation_result import NavigationResult
 from .._units.actions import Actions
 from .._units.console import Console
 from .._units.listener import Listener
@@ -356,16 +357,23 @@ class ChromiumBase(BasePage, Messenger):
         """
         ...
 
+    @overload
     def get(self, url: str, show_errmsg: bool = False, retry: int = None,
-            interval: float = None, timeout: float = None) -> Union[None, bool]:
+            interval: float = None, timeout: float = None, return_info: Literal[False] = False) -> Union[None, bool]:
         """访问url
         :param url: 目标url
         :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数，为None时使用页面对象retry_times属性值
         :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
         :param timeout: 连接超时时间（秒），为None时使用页面对象timeouts.page_load属性值
-        :return: 目标url是否可用
+        :param return_info: 是否返回导航结果对象，为False时保持原来的bool返回值
+        :return: 目标url是否可用，或导航结果
         """
+        ...
+
+    @overload
+    def get(self, url: str, show_errmsg: bool = False, retry: int = None,
+            interval: float = None, timeout: float = None, return_info: Literal[True] = True) -> NavigationResult:
         ...
 
     def cookies(self, all_domains: bool = False, all_info: bool = False) -> CookiesList:
