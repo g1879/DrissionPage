@@ -1,14 +1,8 @@
 # ✨️ 概述
 
-DrissionPage 是一个基于 python 的网页自动化工具。
+DrissionPage 是一个基于 Python 的网页自动化工具。
 
-它既能控制浏览器，也能收发数据包，还能把两者合而为一。
-
-可兼顾浏览器自动化的便利性和 requests 的高效率。
-
-它功能强大，内置无数人性化设计和便捷功能。
-
-它的语法简洁而优雅，代码量少，对新手友好。
+简洁优雅，功能强大。
 
 官方网站：[https://DrissionPage.cn](https://drissionpage.cn)
 
@@ -18,7 +12,7 @@ DrissionPage 是一个基于 python 的网页自动化工具。
 
 ---
 
-## ♾️ 交流群
+# ♾️ 交流群
 
 ![](https://drissionpage.cn/img/yrx2.png)
 
@@ -35,6 +29,8 @@ DrissionPage 是一个基于 python 的网页自动化工具。
 
 --- 
 
+# 🛠 运行环境
+
 支持系统：Windows、Linux、Mac
 
 python 版本：3.6 及以上
@@ -45,7 +41,18 @@ python 版本：3.6 及以上
 
 # 🛠 如何使用
 
-![](https://drissionpage.cn/codes.png)
+点击查看：[教程]([https://drissionpage.cn/codes.png](https://drissionpage.cn/tutorials/xingqiu)
+
+---
+
+## DolOffer
+
+<img src="https://drissionpage.cn/img/doloffer.png" alt="DolOffer" width=300/>
+
+感谢 DolOffer 对本项目的支持！DolOffer 是一个专注于数字产品推荐与优惠分享的平台，帮助用户快速发现值得关注的工具、服务和限时福利。平台提供 YouTube Premium、Claude、ChatGPT Plus、Spotify、Apple Music 等多种热门订阅服务，价格低至官方价的 3 折甚至更低，正版稳定，售后无忧。
+现在通过我们的专属链接注册，并在充值时输入优惠码 AI8888，即可额外享受 9 折优惠。
+
+点击查看：<a href="https://doloffer.com/" target="_blank" >🔸官网</a> <a href="https://github.com/Doloffer-g/guide" target="_blank" >🔸详细介绍</a>
 
 ---
 
@@ -96,7 +103,7 @@ python 版本：3.6 及以上
 
 如果本项目对您有所帮助，不妨打赏一下作者 ：）
 
-![](https://raw.githubusercontent.com/g1879/DrissionPage/refs/heads/master/img/code.jpg)
+![](https://drissionpage.cn/img/code.jpg)
 
 ---  
 
