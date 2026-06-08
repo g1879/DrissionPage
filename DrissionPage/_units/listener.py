@@ -24,11 +24,13 @@ class Listener(object):
         self._running_targets = 0
 
         self._caught = None
+        self._caught_sse = None
         self._request_ids = None
         self._extra_info_ids = None
 
         self.listening = False
         self.tab_id = None
+        self._listen_sse = False
 
         self._targets = True
         self._is_regex = False
@@ -76,6 +78,17 @@ class Listener(object):
                                                ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(res_type)))
 
     def start(self, targets=None, is_regex=None, method=None, res_type=None):
+        if self._listen_sse:
+            method = ('GET', 'POST') if method is None else method
+            res_type = True if res_type is None else res_type
+        self._listen_sse = False
+        self._start(targets, is_regex, method, res_type)
+
+    def start_sse(self, targets=True, is_regex=None, method='GET'):
+        self._listen_sse = True
+        self._start(targets, is_regex, method, 'EventSource')
+
+    def _start(self, targets=None, is_regex=None, method=None, res_type=None):
         if targets is not None:
             if is_regex is None:
                 is_regex = False
@@ -83,46 +96,66 @@ class Listener(object):
             self.set_targets(targets, is_regex, method, res_type)
         self.clear()
         self.resume()
+        if self._listen_sse:
+            self._owner._set_callback('Network.eventSourceMessageReceived', self._event_source_message_received)
+        else:
+            self._owner._set_callback('Network.eventSourceMessageReceived', None)
         self._owner._run_cdp('Network.enable')
 
     def wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
         if not self.listening:
             raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
+        return self._wait_queue(self._caught, count, timeout, fit_count, raise_err, _S._lang.DATA_PACKET)
+
+    def wait_sse(self, count=1, timeout=None, fit_count=True, raise_err=None):
+        if not self.listening or not self._listen_sse:
+            raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
+        return self._wait_queue(self._caught_sse, count, timeout, fit_count, raise_err, 'SSE message')
+
+    def _wait_queue(self, queue, count=1, timeout=None, fit_count=True, raise_err=None, item_name=None):
         success = False
         if not timeout:
-            while self._owner._messenger_running and self.listening and self._caught.qsize() < count:
+            while self._owner._messenger_running and self.listening and queue.qsize() < count:
                 sleep(.02)
             success = self._owner._messenger_running
 
         else:
             end = perf_counter() + timeout
             while self._owner._messenger_running and self.listening and perf_counter() < end:
-                if self._caught.qsize() >= count:
+                if queue.qsize() >= count:
                     success = True
                     break
                 sleep(.02)
 
         if success:
             if count == 1:
-                return self._caught.get_nowait()
-            return [self._caught.get_nowait() for _ in range(count)]
+                return queue.get_nowait()
+            return [queue.get_nowait() for _ in range(count)]
 
-        if fit_count or not self._caught.qsize():
+        if fit_count or not queue.qsize():
             if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
-                raise WaitTimeoutError(_S._lang.join(_S._lang.WAITING_FAILED_, _S._lang.DATA_PACKET, timeout))
+                raise WaitTimeoutError(_S._lang.join(_S._lang.WAITING_FAILED_, item_name, timeout))
             else:
                 return False
         else:
-            return [self._caught.get_nowait() for _ in range(self._caught.qsize())]
+            return [queue.get_nowait() for _ in range(queue.qsize())]
 
     def steps(self, count=None, timeout=None, gap=1):
         if not self.listening:
             raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
+        yield from self._steps_queue(self._caught, count, timeout, gap)
+
+    def sse_steps(self, count=None, timeout=None, gap=1):
+        if not self.listening or not self._listen_sse:
+            raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
+        yield from self._steps_queue(self._caught_sse, count, timeout, gap)
+
+    def _steps_queue(self, queue, count=None, timeout=None, gap=1):
         caught = 0
         if timeout is None:
             while self._owner._messenger_running and self.listening:
-                if self._caught.qsize() >= gap:
-                    yield self._caught.get_nowait() if gap == 1 else [self._caught.get_nowait() for _ in range(gap)]
+                if queue.qsize() >= gap:
+                    yield queue.get_nowait() if gap == 1 else [queue.get_nowait() for _ in range(gap)]
                     if count:
                         caught += gap
                         if caught >= count:
@@ -132,8 +165,8 @@ class Listener(object):
         else:
             end = perf_counter() + timeout
             while self._owner._messenger_running and self.listening and perf_counter() < end:
-                if self._caught.qsize() >= gap:
-                    yield self._caught.get_nowait() if gap == 1 else [self._caught.get_nowait() for _ in range(gap)]
+                if queue.qsize() >= gap:
+                    yield queue.get_nowait() if gap == 1 else [queue.get_nowait() for _ in range(gap)]
                     end = perf_counter() + timeout
                     if count:
                         caught += gap
@@ -155,6 +188,7 @@ class Listener(object):
             self._owner._set_callback('Network.loadingFailed', None)
             self._owner._set_callback('Network.requestWillBeSentExtraInfo', None)
             self._owner._set_callback('Network.responseReceivedExtraInfo', None)
+            self._owner._set_callback('Network.eventSourceMessageReceived', None)
             self.listening = False
         if clear:
             self.clear()
@@ -169,6 +203,7 @@ class Listener(object):
         self._request_ids = {}
         self._extra_info_ids = {}
         self._caught = Queue(maxsize=0)
+        self._caught_sse = Queue(maxsize=0)
         self._running_requests = 0
         self._running_targets = 0
 
@@ -194,8 +229,9 @@ class Listener(object):
         self._target_id = target_id
         self._owner = owner
         if self.listening:
+            listen_sse = self._listen_sse
             self.stop()
-            self.start()
+            self.start_sse(targets=None) if listen_sse else self.start()
 
     def _init_callback(self):
         self._owner._set_callback('Network.requestWillBeSent', self._requestWillBeSent)
@@ -204,6 +240,8 @@ class Listener(object):
         self._owner._set_callback('Network.loadingFailed', self._loading_failed)
         self._owner._set_callback('Network.requestWillBeSentExtraInfo', self._requestWillBeSentExtraInfo)
         self._owner._set_callback('Network.responseReceivedExtraInfo', self._responseReceivedExtraInfo)
+        if self._listen_sse:
+            self._owner._set_callback('Network.eventSourceMessageReceived', self._event_source_message_received)
 
     def _requestWillBeSent(self, **kwargs):
         self._running_requests += 1
@@ -256,6 +294,11 @@ class Listener(object):
                 self._extra_info_ids.pop(kwargs['requestId'], None)
             else:
                 r['response'] = kwargs
+
+    def _event_source_message_received(self, **kwargs):
+        packet = self._request_ids.get(kwargs['requestId'], None)
+        if packet:
+            self._caught_sse.put(SSEMessage(packet, kwargs))
 
     def _loading_finished(self, **kwargs):
         self._running_requests -= 1
@@ -330,6 +373,54 @@ class FrameListener(Listener):
         if not self._owner._is_diff_domain and kwargs.get('frameId', None) != self._owner._frame_id:
             return
         super()._response_received(**kwargs)
+
+
+class SSEMessage(object):
+
+    def __init__(self, data_packet, raw_data):
+        self.tab_id = data_packet.tab_id
+        self.target = data_packet.target
+        self._data_packet = data_packet
+        self._raw_data = raw_data
+
+    def __repr__(self):
+        t = f'"{self.target}"' if self.target is not True else True
+        return f'<SSEMessage target={t} eventName="{self.eventName}" data="{self.data}">'
+
+    def __getattr__(self, item):
+        return self._raw_data.get(item, None)
+
+    @property
+    def url(self):
+        return self._data_packet.url
+
+    @property
+    def frameId(self):
+        return self._data_packet.frameId
+
+    @property
+    def requestId(self):
+        return self._raw_data.get('requestId')
+
+    @property
+    def timestamp(self):
+        return self._raw_data.get('timestamp')
+
+    @property
+    def eventName(self):
+        return self._raw_data.get('eventName')
+
+    @property
+    def eventId(self):
+        return self._raw_data.get('eventId')
+
+    @property
+    def data(self):
+        return self._raw_data.get('data')
+
+    @property
+    def raw_data(self):
+        return self._raw_data
 
 
 class DataPacket(object):

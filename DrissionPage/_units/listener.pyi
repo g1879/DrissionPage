@@ -23,12 +23,14 @@ class Listener(object):
     _method: Union[set, True] = ...
     _res_type: Union[set, True] = ...
     _caught: Optional[Queue] = ...
+    _caught_sse: Optional[Queue] = ...
     _is_regex: bool = ...
     _request_ids: Optional[dict] = ...
     _extra_info_ids: Optional[dict] = ...
     _running_requests: int = ...
     _running_targets: int = ...
     listening: bool = ...
+    _listen_sse: bool = ...
 
     def __init__(self, owner: ChromiumBase):
         """
@@ -71,6 +73,18 @@ class Listener(object):
         """
         ...
 
+    def start_sse(self,
+                  targets: Union[str, list, tuple, set, bool, None] = True,
+                  is_regex: Optional[bool] = None,
+                  method: Union[str, list, tuple, set, bool, None] = 'GET') -> None:
+        """监听EventSource消息，每次监听前清空结果
+        :param targets: 要匹配的EventSource请求url特征，可用list等传入多个，为True时获取所有
+        :param is_regex: 设置的target是否正则表达式，为None时保持原来设置
+        :param method: 设置监听的请求类型，默认'GET'，为True时监听全部
+        :return: None
+        """
+        ...
+
     def wait(self,
              count: int = 1,
              timeout: float = None,
@@ -82,6 +96,32 @@ class Listener(object):
         :param fit_count: 是否必须满足总数要求，发生超时，为True返回False，为False返回已捕捉到的数据包
         :param raise_err: 超时时是否抛出错误，为None时根据Settings设置
         :return: count为1时返回数据包对象，大于1时返回列表，超时且fit_count为True时返回False
+        """
+        ...
+
+    def wait_sse(self,
+                 count: int = 1,
+                 timeout: float = None,
+                 fit_count: bool = True,
+                 raise_err: bool = None) -> Union[List[SSEMessage], SSEMessage, None]:
+        """等待符合要求的EventSource消息到达指定数量
+        :param count: 需要捕捉的消息数量
+        :param timeout: 超时时间（秒），为None无限等待
+        :param fit_count: 是否必须满足总数要求，发生超时，为True返回False，为False返回已捕捉到的消息
+        :param raise_err: 超时时是否抛出错误，为None时根据Settings设置
+        :return: count为1时返回消息对象，大于1时返回列表，超时且fit_count为True时返回False
+        """
+        ...
+
+    def sse_steps(self,
+                  count: int = None,
+                  timeout: float = None,
+                  gap=1) -> Iterable[Union[SSEMessage, List[SSEMessage]]]:
+        """用于单步获取EventSource消息
+        :param count: 需捕获的消息总数，为None表示无限
+        :param timeout: 每个消息等待时间（秒），为None表示无限
+        :param gap: 每接收到多少个消息返回一次数据
+        :return: 用于在接收到监听目标时触发动作的可迭代对象
         """
         ...
 
@@ -146,6 +186,8 @@ class Listener(object):
 
     def _responseReceivedExtraInfo(self, **kwargs) -> None: ...
 
+    def _event_source_message_received(self, **kwargs) -> None: ...
+
     def _loading_finished(self, **kwargs) -> None: ...
 
     def _loading_failed(self, **kwargs) -> None: ...
@@ -159,6 +201,62 @@ class FrameListener(Listener):
         """
         :param owner: ChromiumFrame对象
         """
+        ...
+
+
+class SSEMessage(object):
+    """EventSource消息类"""
+
+    tab_id: str = ...
+    target: str = ...
+    _data_packet: DataPacket = ...
+    _raw_data: dict = ...
+
+    def __init__(self, data_packet: DataPacket, raw_data: dict):
+        """
+        :param data_packet: 产生这个消息的请求数据包
+        :param raw_data: CDP返回的EventSource消息数据
+        """
+        ...
+
+    @property
+    def url(self) -> str:
+        """请求网址"""
+        ...
+
+    @property
+    def frameId(self) -> str:
+        """发出请求的frame id"""
+        ...
+
+    @property
+    def requestId(self) -> str:
+        """请求id"""
+        ...
+
+    @property
+    def timestamp(self) -> float:
+        """消息时间戳"""
+        ...
+
+    @property
+    def eventName(self) -> str:
+        """消息类型"""
+        ...
+
+    @property
+    def eventId(self) -> str:
+        """消息id"""
+        ...
+
+    @property
+    def data(self) -> str:
+        """消息内容"""
+        ...
+
+    @property
+    def raw_data(self) -> dict:
+        """原始消息数据"""
         ...
 
 
