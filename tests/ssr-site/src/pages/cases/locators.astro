@@ -1,0 +1,31 @@
+---
+import TestLayout from '../../layouts/TestLayout.astro';
+---
+<TestLayout title="Locator fixture">
+  <section class="panel" data-testid="locator-root">
+    <h1 id="page-title">Locator fixture</h1>
+    <p id="text-collision">//div[@id="target"]</p>
+    <main aria-label="Locator main area">
+      <div id="target" class="needle" data-testid="xpath-target" data-test-highlight="true">target div</div>
+      <div id="123abc" data-testid="numeric-leading-id">numeric id</div>
+      <button id="save" type="button" aria-label="Save Now" data-testid="aria-save-button">Save</button>
+      <p data-testid="unicode-text">中文定位文本 · emoji ✅ · mixed text</p>
+      <svg role="img" aria-label="fixture svg" width="120" height="40" data-testid="svg-fixture">
+        <rect id="svgrect" x="8" y="8" width="80" height="24" fill="#315cff"></rect>
+      </svg>
+    </main>
+  </section>
+  <section class="panel" data-testid="shadow-host-panel">
+    <div id="shadow-host" data-testid="shadow-host"></div>
+  </section>
+  <script>
+    const host = document.querySelector<HTMLElement>('#shadow-host');
+    if (host) {
+      const root = host.attachShadow({ mode: 'open' });
+      root.innerHTML = '<button id="shadow-button" data-testid="shadow-button">shadow action</button>';
+    }
+    const dpWindow = window as unknown as Window & { svgClicked: number };
+    dpWindow.svgClicked = 0;
+    document.querySelector('#svgrect')?.addEventListener('click', () => { dpWindow.svgClicked += 1; });
+  </script>
+</TestLayout>
