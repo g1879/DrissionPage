@@ -9,6 +9,7 @@ from queue import Queue
 from time import perf_counter, sleep
 
 from .._functions.settings import Settings as _S
+from .._functions.tools import wait_until
 
 
 class Console(object):
@@ -50,19 +51,15 @@ class Console(object):
 
     def wait(self, timeout=None):
         if not self.listening:
-            raise RuntimeError(_S._lang.join(_S._lang.NOT_LISTENING))
-        if timeout is None:
-            while self._owner._messenger_running and self.listening and not self._caught.qsize():
-                sleep(.03)
+            raise RuntimeError(_S._lang.joinn(_S._lang.NOT_LISTENING))
+
+        def do():
+            if not self._owner._messenger_running or not self.listening:
+                return False
             return self._caught.get_nowait() if self._caught.qsize() else None
 
-        else:
-            end = perf_counter() + timeout
-            while self._owner._messenger_running and self.listening and perf_counter() < end:
-                if self._caught.qsize():
-                    return self._caught.get_nowait()
-                sleep(0.05)
-            return False
+        r = wait_until(do, timeout=timeout)
+        return r if r is not None else False
 
     def steps(self, timeout=None):
         if timeout is None:
@@ -91,7 +88,7 @@ class ConsoleData(object):
         self._data = data
 
     def __getattr__(self, item):
-        return self._data.get(item, None)
+        return self._data.get(item)
 
     @property
     def data(self):

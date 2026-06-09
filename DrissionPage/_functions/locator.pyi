@@ -52,6 +52,14 @@ def str_to_css_loc(loc: str) -> tuple:
     ...
 
 
+def quotes_escape(search_str: str) -> str:
+    """将"转义，不知何故不能直接用 斜杠 来转义
+    :param search_str: 查询字符串
+    :return: 把"转义后的字符串
+    """
+    ...
+
+
 def translate_loc(loc: tuple) -> tuple:
     """把By类型的loc元组转换为css selector或xpath类型的
     :param loc: By类型的loc元组

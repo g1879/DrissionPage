@@ -168,7 +168,7 @@ def is_js_func(func):
 
 def get_blob(page, url, as_bytes=True):
     if not url.startswith('blob'):
-        raise ValueError(_S._lang.join(_S._lang.NOT_BLOB, url=url))
+        raise ValueError(_S._lang.joinn(_S._lang.NOT_BLOB, url=url))
     js = """
        function fetchData(url) {
       return new Promise((resolve, reject) => {
@@ -187,7 +187,7 @@ def get_blob(page, url, as_bytes=True):
     try:
         result = page._run_js(js, url)
     except:
-        raise RuntimeError(_S._lang.join(_S._lang.GET_BLOB_FAILED))
+        raise RuntimeError(_S._lang.joinn(_S._lang.GET_BLOB_FAILED))
     if as_bytes:
         from base64 import b64decode
         return b64decode(result.split(',', 1)[-1])
@@ -240,7 +240,7 @@ def get_pdf(page, path=None, name=None, kwargs=None):
     try:
         r = page._run_cdp('Page.printToPDF', **kwargs)['data']
     except:
-        raise RuntimeError(_S._lang.join(_S._lang.GET_PDF_FAILED))
+        raise RuntimeError(_S._lang.joinn(_S._lang.GET_PDF_FAILED))
     from base64 import b64decode
     r = b64decode(r)
     if path is None and name is None:
@@ -319,7 +319,7 @@ def format_headers(txt):
 
 
 def get_proxy_info(proxy_str):
-    proxy_str = proxy_str.strip()
+    full = proxy_str = proxy_str.strip()
     url = ""
     user = None
     pwd = None
@@ -345,4 +345,28 @@ def get_proxy_info(proxy_str):
     else:
         url = proxy_str
 
-    return url, user, pwd
+    return url, user, pwd, full
+
+
+class NavResult(object):
+    def __init__(self):
+        self.url = None
+        self.status = None
+        self.headers = None
+        self.request = None
+        self.Response = None
+
+    def __repr__(self):
+        return f'<NavResult url: {self.url}, status: {self.status} >'
+
+    @property
+    def ok(self):
+        if self.status is None:
+            return None
+        elif isinstance(self.status, str):
+            return False
+        return 200 <= self.status <= 299
+
+    def __bool__(self):
+        return self.ok
+

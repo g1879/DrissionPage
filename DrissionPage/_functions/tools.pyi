@@ -8,7 +8,7 @@
 from os import popen
 from pathlib import Path
 from threading import Lock
-from typing import Union, Tuple, Callable
+from typing import Union, Tuple, Callable, Any
 
 from .._browsers.chromium import Chromium
 from .._pages.chromium_base import ChromiumBase
@@ -81,12 +81,13 @@ def get_hwnds_from_pid(pid: Union[str, int], title: str) -> list:
     ...
 
 
-def wait_until(function: Callable, kwargs: dict = None, timeout: float = 10):
+def wait_until(func: Callable, timeout: float, gap: float = .01, err_txt:str=None, **kwargs) -> Any:
     """等待传入的方法返回值不为假
-    :param function: 要执行的方法
-    :param kwargs: 方法参数
+    :param func: 要执行的方法
     :param timeout: 超时时间（秒）
-    :return: 执行结果，超时抛出TimeoutError
+    :param gap: 间隔时间（秒）
+    :param err_txt: 超时抛出异常的文本，不为None时才抛出异常
+    :return: 执行结果
     """
     ...
 

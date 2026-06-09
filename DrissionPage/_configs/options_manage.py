@@ -114,7 +114,7 @@ class OptionsManager(object):
             path = default_path
         elif path is None:
             if self.ini_path is None:
-                raise RuntimeError(_S._lang.join(_S._lang.INI_NOT_SET))
+                raise RuntimeError(_S._lang.joinn(_S._lang.INI_NOT_SET))
             path = self.ini_path.resolve()
         else:
             path = Path(path).resolve()

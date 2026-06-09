@@ -14,7 +14,7 @@ from lxml.html import HtmlElement, fromstring
 from .none_element import NoneElement
 from .._base.base import DrissionElement, BasePage, BaseElement
 from .._functions.elements import SessionElementsList
-from .._functions.locator import get_loc
+from .._functions.locator import get_loc, quotes_escape, is_selenium_loc
 from .._functions.settings import Settings as _S
 from .._functions.web import get_ele_txt, make_absolute_link
 from ..errors import LocatorError
@@ -167,17 +167,20 @@ class SessionElement(DrissionElement):
 
 
 def make_session_ele(html_or_ele, loc=None, index=1, method=None):
+    raw_loc = loc
     # ---------------处理定位符---------------
     if not loc:
         if isinstance(html_or_ele, SessionElement):
             return html_or_ele
-        loc = ('xpath', '.')
-
-    elif isinstance(loc, (str, tuple)):
-        loc = get_loc(loc)
-
+        mode = 'xpath'
+        loc = '.'
+    elif isinstance(loc, str) or is_selenium_loc(loc):
+        mode, loc = get_loc(loc)
     else:
         raise LocatorError(ALLOW_VAL=_S._lang.LOC_FORMAT, CURR_VAL=loc)
+
+    if mode == 'ax':
+        raise ValueError(_S._lang.joinn(_S._lang.UNSUPPORTED_AX))
 
     # ---------------根据传入对象类型获取页面对象和lxml元素对象---------------
     the_type = getattr(html_or_ele, '_type', None)
@@ -190,14 +193,13 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
     elif the_type == 'SessionElement':
         page = html_or_ele.owner
 
-        loc_str = loc[1]
-        if loc[0] == 'xpath' and loc[1].lstrip().startswith('/'):
-            loc_str = f'.{loc[1]}'
+        if mode == 'xpath' and loc.lstrip().startswith('/'):
+            loc = f'.{loc}'
             html_or_ele = html_or_ele.inner_ele
 
         # 若css以>开头，表示找元素的直接子元素，要用page以绝对路径才能找到
-        elif loc[0] == 'css selector' and loc[1].lstrip().startswith('>'):
-            loc_str = f'{html_or_ele.css_selector}{loc[1]}'
+        elif mode == 'css selector' and loc.lstrip().startswith('>'):
+            loc = f'{html_or_ele.css_selector}{loc}'
             if html_or_ele.owner:
                 html_or_ele = fromstring(html_or_ele.owner.html)
             else:  # 接收html文本，无page的情况
@@ -206,15 +208,11 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
         else:
             html_or_ele = html_or_ele.inner_ele
 
-        loc = loc[0], loc_str
-
     elif the_type == 'ChromiumElement':
-        loc_str = loc[1]
-        if loc[0] == 'xpath' and loc[1].lstrip().startswith('/'):
-            loc_str = f'.{loc[1]}'
-        elif loc[0] == 'css selector' and loc[1].lstrip().startswith('>'):
-            loc_str = f'{html_or_ele.css_selector}{loc[1]}'
-        loc = loc[0], loc_str
+        if mode == 'xpath' and loc.lstrip().startswith('/'):
+            loc = f'.{loc}'
+        elif mode == 'css selector' and loc.lstrip().startswith('>'):
+            loc = f'{html_or_ele.css_selector}{loc}'
 
         # 获取整个页面html再定位到当前元素，以实现查找上级元素
         page = html_or_ele.owner
@@ -253,17 +251,30 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
         html_or_ele = fromstring(html)
 
     else:
-        raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'html_or_ele',
-                                       ALLOW_TYPE=_S._lang.HTML_ELE_TYPE, CURR_VAL=html_or_ele))
+        raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'html_or_ele',
+                                        ALLOW_TYPE=_S._lang.HTML_ELE_TYPE, CURR_VAL=html_or_ele))
 
     # ---------------执行查找-----------------
     try:
-        if loc[0] == 'xpath':  # 用lxml内置方法获取lxml的元素对象列表
-            eles = html_or_ele.xpath(loc[1])
-        elif loc[0] == 'css selector':  # 用css selector获取元素对象列表
-            eles = html_or_ele.cssselect(loc[1])
+        if mode == 'xpath':  # 用lxml内置方法获取lxml的元素对象列表
+            eles = html_or_ele.xpath(loc)
+        elif mode == 'css selector':  # 用css selector获取元素对象列表
+            eles = html_or_ele.cssselect(loc)
+        elif mode == 'any':
+            x = f'.//*/text()[contains(., {quotes_escape(loc)})]/..'
+            eles = html_or_ele.xpath(x)
+            if not eles:
+                try:
+                    eles = html_or_ele.cssselect(loc)
+                except:
+                    eles = None
+            if not eles:
+                try:
+                    eles = html_or_ele.xpath(loc)
+                except:
+                    eles = []
         else:  # ax
-            raise ValueError(_S._lang.join(_S._lang.UNSUPPORTED_AX))
+            raise ValueError(_S._lang.joinn(_S._lang.UNSUPPORTED_AX))
 
         if not isinstance(eles, list):  # 结果不是列表，如数字
             return eles
@@ -279,7 +290,7 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
         else:
             eles_count = len(eles)
             if eles_count == 0 or abs(index) > eles_count:
-                return NoneElement(page, method=method, args={'locator': loc, 'index': index})
+                return NoneElement(page, method=method, args={'locator': raw_loc, 'index': index})
             if index < 0:
                 index = eles_count + index + 1
 
@@ -289,12 +300,11 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
             elif isinstance(ele, str):
                 return ele
             else:
-                return NoneElement(page, method=method, args={'locator': loc, 'index': index})
+                return NoneElement(page, method=method, args={'locator': raw_loc, 'index': index})
 
     except Exception as e:
         if 'Invalid expression' in str(e):
-            raise LocatorError(_S._lang.INVALID_XPATH_, loc)
+            raise LocatorError(_S._lang.INVALID_XPATH_, raw_loc)
         elif 'Expected selector' in str(e):
-            raise LocatorError(_S._lang.INVALID_CSS_, loc)
-
+            raise LocatorError(_S._lang.INVALID_CSS_, raw_loc)
         raise e

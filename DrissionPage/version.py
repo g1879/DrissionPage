@@ -5,4 +5,4 @@
 @Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-__version__ = '4.2.0b10'
+__version__ = '4.2.0b18'

@@ -159,8 +159,8 @@ class BrowserSetter(BrowserContextSetter, BrowserBaseSetter):
                  's': 'skip'}
         mode = types.get(mode, mode)
         if mode not in types:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'mode',
-                                           ALLOW_VAL="', '".join(types.keys()), CURR_VAL=mode))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'mode',
+                                            ALLOW_VAL="', '".join(types.keys()), CURR_VAL=mode))
         self._owner._dl_mgr.set_file_exists('browser', mode)
 
 
@@ -180,7 +180,7 @@ class ChromiumBaseSetter(BrowserBaseSetter):
         return self._cookies_setter
 
     def headers(self, headers):
-        self._owner._run_cdp('Network.enable')
+        self._owner._enable_domain('Network')
         self._owner._run_cdp('Network.setExtraHTTPHeaders', headers=format_headers(headers))
 
     def user_agent(self, ua, platform=None):
@@ -190,7 +190,8 @@ class ChromiumBaseSetter(BrowserBaseSetter):
         self._owner._run_cdp('Emulation.setUserAgentOverride', **keys)
 
     def session_storage(self, item, value):
-        self._owner._run_cdp_loaded('DOMStorage.enable')
+        self._owner.wait.doc_loaded()
+        self._owner._enable_domain('DOMStorage')
         i = self._owner._run_cdp('Storage.getStorageKeyForFrame', frameId=self._owner._frame_id)['storageKey']
         if value is False:
             self._owner._run_cdp('DOMStorage.removeDOMStorageItem',
@@ -198,10 +199,12 @@ class ChromiumBaseSetter(BrowserBaseSetter):
         else:
             self._owner._run_cdp('DOMStorage.setDOMStorageItem', storageId={'storageKey': i, 'isLocalStorage': False},
                                  key=item, value=value)
-        self._owner._run_cdp_loaded('DOMStorage.disable')
+        self._owner.wait.doc_loaded()
+        self._owner._disable_domain('DOMStorage')
 
     def local_storage(self, item, value):
-        self._owner._run_cdp_loaded('DOMStorage.enable')
+        self._owner.wait.doc_loaded()
+        self._owner._enable_domain('DOMStorage')
         i = self._owner._run_cdp('Storage.getStorageKeyForFrame', frameId=self._owner._frame_id)['storageKey']
         if value is False:
             self._owner._run_cdp('DOMStorage.removeDOMStorageItem',
@@ -209,7 +212,8 @@ class ChromiumBaseSetter(BrowserBaseSetter):
         else:
             self._owner._run_cdp('DOMStorage.setDOMStorageItem', storageId={'storageKey': i, 'isLocalStorage': True},
                                  key=item, value=value)
-        self._owner._run_cdp_loaded('DOMStorage.disable')
+        self._owner.wait.doc_loaded()
+        self._owner._disable_domain('DOMStorage')
 
     def upload_files(self, files):
         if not self._owner._upload_list:
@@ -231,9 +235,9 @@ class ChromiumBaseSetter(BrowserBaseSetter):
         elif isinstance(urls, str):
             urls = (urls,)
         if not isinstance(urls, (list, tuple)):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'urls',
-                                           ALLOW_TYPE='str, list, tuple', CURR_VAL=urls))
-        self._owner._run_cdp('Network.enable')
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'urls',
+                                            ALLOW_TYPE='str, list, tuple', CURR_VAL=urls))
+        self._owner._enable_domain('Network')
         self._owner._run_cdp('Network.setBlockedURLs', urls=urls)
 
     def show_trail(self, on_off=True):
@@ -408,11 +412,11 @@ class ChromiumTabSetter(ChromiumBaseSetter):
                  'r': 'rename', 'o': 'overwrite', 's': 'skip'}
         mode = types.get(mode, mode)
         if mode not in types:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'mode',
-                                           ALLOW_VAL="', '".join(types.keys()), CURR_VAL=mode))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'mode',
+                                            ALLOW_VAL="', '".join(types.keys()), CURR_VAL=mode))
         self._owner.browser._dl_mgr.set_file_exists(self._owner.tab_id, mode)
 
-    def activate(self):
+    def activate(self):  # 即将废弃
         self._owner.browser.activate_tab(self._owner.tab_id)
 
 
@@ -489,7 +493,7 @@ class ChromiumElementSetter(object):
         try:
             self._ele._run_js(f'this.style.{name}="{value}";')
         except JavaScriptError:
-            raise RuntimeError(_S._lang.join(_S._lang.SET_FAILED_, name, VALUE=value))
+            raise RuntimeError(_S._lang.joinn(_S._lang.SET_FAILED_, name, VALUE=value))
 
     def innerHTML(self, html):
         self.property('innerHTML', html)
@@ -515,10 +519,10 @@ class LoadMode(object):
 
     def __call__(self, value):
         if value.lower() not in ('normal', 'eager', 'none'):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'value',
-                                           ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'value',
+                                            ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
         self._owner._load_mode = value
-        if self._owner._type == 'ChromiumPage':
+        if self._owner._type == 'ChromiumPage':  # 即将废弃
             self._owner.browser._load_mode = value
 
     def normal(self):
@@ -537,14 +541,14 @@ class PageScrollSetter(object):
 
     def wait_complete(self, on_off=True):
         if not isinstance(on_off, bool):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'on_off',
-                                           ALLOW_TYPE='bool', CURR_TYPE=type(on_off)))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'on_off',
+                                            ALLOW_TYPE='bool', CURR_TYPE=type(on_off)))
         self._scroll._wait_complete = on_off
 
     def smooth(self, on_off=True):
         if not isinstance(on_off, bool):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'on_off',
-                                           ALLOW_TYPE='bool', CURR_TYPE=type(on_off)))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'on_off',
+                                            ALLOW_TYPE='bool', CURR_TYPE=type(on_off)))
         b = 'smooth' if on_off else 'auto'
         self._scroll._owner._run_js(f'document.documentElement.style.setProperty("scroll-behavior","{b}");')
         self._scroll._wait_complete = on_off
@@ -609,10 +613,10 @@ class WindowSetter(object):
                 return self._owner._run_cdp('Browser.getWindowForTarget')
             except:
                 sleep(.02)
-        raise RuntimeError(_S._lang.join(_S._lang.GET_WINDOW_SIZE_FAILED))
+        raise RuntimeError(_S._lang.joinn(_S._lang.GET_WINDOW_SIZE_FAILED))
 
     def _perform(self, bounds):
         try:
             self._owner._run_cdp('Browser.setWindowBounds', windowId=self._window_id, bounds=bounds)
         except:
-            raise RuntimeError(_S._lang.join(TIP=_S._lang.SET_WINDOW_NORMAL))
+            raise RuntimeError(_S._lang.joinn(TIP=_S._lang.SET_WINDOW_NORMAL))

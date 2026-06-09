@@ -8,6 +8,10 @@
 from pathlib import Path
 from typing import Union, Optional, Tuple
 
+from requests import Response
+from requests.sessions import Request
+from requests.utils import CaseInsensitiveDict
+
 from .._base.base import DrissionElement, BaseParser
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
@@ -139,9 +143,21 @@ def format_headers(txt: str) -> dict:
     ...
 
 
-def get_proxy_info(proxy_str: str) -> Tuple[str, Optional[str], Optional[str]]:
+def get_proxy_info(proxy_str: str) -> Tuple[str, Optional[str], Optional[str], Optional[str]]:
     """解析代理字符串，返回url、用户名、密码
     :param proxy_str: 代理字符串
-    :return: url、用户名、密码组成的tuple
+    :return: url、用户名、密码、完整信息组成的tuple
     """
     ...
+
+
+class NavResult(object):
+    url: Optional[str] = ...
+    status: Union[str, int, None] = ...
+    headers: Union[CaseInsensitiveDict, dict, None] = ...
+    request: Union[Request, dict, None] = ...
+    Response: Optional[Response] = ...
+
+    @property
+    def ok(self) -> Optional[bool]:
+        ...

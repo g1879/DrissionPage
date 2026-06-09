@@ -15,7 +15,7 @@ class BaseError(Exception):
         self._args = args if args else [_S._lang.get(self.__class__.__name__.upper())]
 
     def __str__(self):
-        return _S._lang.join(*self._args, **self._kwargs)
+        return f'\n{_S._lang._joinv(*self._args, **self._kwargs)}'
 
 
 class ElementNotFoundError(BaseError):

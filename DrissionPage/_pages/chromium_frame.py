@@ -161,7 +161,7 @@ class ChromiumFrame(ChromiumBase):
                 b_id = self._run_cdp('DOM.getDocument', _timeout=timeout)['root']['backendNodeId']
                 self.doc_ele = ChromiumElement(self, backend_id=b_id)
 
-            self._root_id = self.doc_ele._obj_id
+            self._root_oid = self.doc_ele._obj_id
 
             r = self._run_cdp('Page.getFrameTree', _ignore=PageDisconnectedError)
             for i in findall(r"'id': '(.*?)'", str(r)):
@@ -413,8 +413,8 @@ class ChromiumFrame(ChromiumBase):
                 pic_type = 'png'
             else:
                 if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_bytes',
-                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
+                    raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'as_bytes',
+                                                    ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
                 pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
 
         elif as_base64:
@@ -422,8 +422,8 @@ class ChromiumFrame(ChromiumBase):
                 pic_type = 'png'
             else:
                 if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_base64',
-                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
+                    raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'as_base64',
+                                                    ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
                 pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
 
         else:
@@ -478,10 +478,16 @@ class ChromiumFrame(ChromiumBase):
         end_time = now + timeout
         while now <= end_time:
             try:
-                return self.doc_ele._ele(locator, index=index, timeout=end_time-now, raise_err=raise_err)
+                return self.doc_ele._ele(locator, index=index, timeout=end_time - now, raise_err=raise_err)
             except ContextLostError:
                 now = perf_counter()
         return self.doc_ele._ele(locator, index=index, timeout=0, raise_err=raise_err)
 
     def _is_inner_frame(self):
-        return self._frame_id in str(self._target_page._run_cdp('Page.getFrameTree')['frameTree'])
+        end_time = perf_counter() + 3
+        while perf_counter() < end_time:
+            try:
+                return self._frame_id in str(self._target_page._run_cdp('Page.getFrameTree')['frameTree'])
+            except:
+                pass
+        return False

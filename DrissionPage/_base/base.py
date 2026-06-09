@@ -19,11 +19,11 @@ from requests import Session
 from .._configs.session_options import SessionOptions
 from .._elements.none_element import NoneElement
 from .._functions.elements import get_frame, get_eles
-from .._functions.locator import get_loc
+from .._functions.locator import get_loc, quotes_escape
 from .._functions.settings import Settings as _S
 from .._functions.tools import raise_error
 from .._functions.web import format_html
-from ..errors import ElementNotFoundError, LocatorError
+from ..errors import ElementNotFoundError, LocatorError, PageDisconnectedError
 
 
 class BaseParser(object):
@@ -74,8 +74,8 @@ class BaseElement(BaseParser):
 
     def get_frame(self, loc_or_ind, timeout=None):
         if not isinstance(loc_or_ind, (int, str, tuple)):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'loc_or_ind',
-                                           ALLOW_TYPE=_S._lang.LOC_OR_IND, CURR_VAL=loc_or_ind))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'loc_or_ind',
+                                            ALLOW_TYPE=_S._lang.LOC_OR_IND, CURR_VAL=loc_or_ind))
         return get_frame(self, loc_ind_ele=loc_or_ind, timeout=timeout)
 
     def _ele(self, locator, timeout=None, index=1, relative=False, raise_err=None, method=None):
@@ -148,14 +148,15 @@ class DrissionElement(BaseElement):
             loc = f'xpath:./ancestor::*[{level_or_loc}]'
 
         elif isinstance(level_or_loc, (tuple, str)):
-            loc = get_loc(level_or_loc, True)
-            if loc[0] == 'css selector':
-                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-            loc = f'xpath:./ancestor::{loc[1].lstrip(". / ")}[{index}]'
+            mode, loc = get_loc(level_or_loc, True)
+            if mode in ('css selector', 'ax'):
+                raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+            loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
+            loc = f'xpath:./ancestor::{loc}[{index}]'
 
         else:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'level_or_loc', ALLOW_TYPE='tuple, int, str',
-                                           CURR_VAL=level_or_loc))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'level_or_loc', ALLOW_TYPE='tuple, int, str',
+                                            CURR_VAL=level_or_loc))
 
         return self._ele(loc, timeout=timeout, relative=True, raise_err=False, method='parent()')
 
@@ -166,10 +167,10 @@ class DrissionElement(BaseElement):
         if not locator:
             loc = '*' if ele_only else 'node()'
         else:
-            loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if loc[0] == 'css selector':
-                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-            loc = loc[1].lstrip('./')
+            mode, loc = get_loc(locator, True)
+            if mode in ('css selector', 'ax'):
+                raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+            loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 
         node = self._ele(f'xpath:./{loc}', timeout=timeout, index=index, relative=True, raise_err=False)
         return node if node else NoneElement(self.owner, 'child()',
@@ -191,10 +192,10 @@ class DrissionElement(BaseElement):
         if not locator:
             loc = '*' if ele_only else 'node()'
         else:
-            loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if loc[0] == 'css selector':
-                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-            loc = loc[1].lstrip('./')
+            mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
+            if mode in ('css selector', 'ax'):
+                raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+            loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 
         loc = f'xpath:./{loc}'
         nodes = self._ele(loc, timeout=timeout, index=None, relative=True)
@@ -224,18 +225,15 @@ class DrissionElement(BaseElement):
 
     def _get_relatives(self, index=None, locator='', direction='following', brother=True, timeout=.5, ele_only=True):
         brother = '-sibling' if brother else ''
-
         if not locator:
             loc = '*' if ele_only else 'node()'
-
         else:
-            loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if loc[0] == 'css selector':
-                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-            loc = loc[1].lstrip('./')
+            mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
+            if mode in ('css selector', 'ax'):
+                raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+            loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 
         loc = f'xpath:./{direction}{brother}::{loc}'
-
         if index is not None:
             index = index if direction == 'following' else -index
         nodes = self._ele(loc, timeout=timeout, index=index, relative=True, raise_err=False)
@@ -280,6 +278,8 @@ class BasePage(BaseParser):
         self._session = None
         self._headers = None
         self._session_options = None
+        if not hasattr(self, '_nav_result'):
+            self._nav_result = None
         self._type = 'BasePage'
 
     @property
@@ -350,7 +350,7 @@ class BasePage(BaseParser):
         return
 
     @abstractmethod
-    def get(self, url, show_errmsg=False, retry=None, interval=None):
+    def get(self, url, retry=None, interval=None, timeout=None, raise_err=False):
         pass
 
     def _ele(self, locator, timeout=None, index=1, raise_err=None, method=None):
@@ -377,29 +377,39 @@ class Messenger(object):
         self._imm_events = set()
         self._event_queue = Queue()
         self._messenger_running = False
-        self._recv_th = Thread(target=self._handle_event_loop)
-        self._recv_th.daemon = True
+        if not hasattr(self, '_recv_th'):
+            self._recv_th = Thread(target=self._handle_event_loop)
+            self._recv_th.daemon = True
         self._event_handlers = {}
         self._debug = False
+        self._run_func = self._run_cdp_
+        self._enabled = {}
+
+    @property
+    def _run_cdp(self):
+        return self._run_func
 
     def _start_messenger(self):
         self._messenger_running = True
         self._session_id = self._browser._get_session_id(self._target_id, obj=self)
-        self._recv_th.start()
+        if not self._recv_th.is_alive():
+            self._recv_th.start()
 
     def _stop_messenger(self):
         self._messenger_running = False
         self._browser._detach(self._session_id)
+        self._run_func = self._raise_stopped
 
-    def _run_cdp(self, cmd, _ignore=None, _user=False, _timeout=None, **cmd_args):
+    def _run_cdp_(self, cmd, _ignore=None, _user=False, _timeout=None, **cmd_args):
         r = self._driver.run(cmd, _timeout=_timeout, _session_id=self._session_id, _debug=self._debug, **cmd_args)
         return r if 'error' not in r or _ignore is True else raise_error(r, self._browser, ignore=_ignore, user=_user)
 
     def _recv_event(self, msg):
-        if self._imm_events and msg.get('method', None) in self._imm_events:
-            func = self._event_handlers.get(msg['method'], None)
-            if func:
-                func(**msg['params'])
+        if self._imm_events and msg.get('method') in self._imm_events:
+            functions = self._event_handlers.get(msg['method'])
+            if functions:
+                for func in functions:
+                    func(**msg['params'])
             return
         self._event_queue.put(msg)
 
@@ -409,10 +419,10 @@ class Messenger(object):
                 event = self._event_queue.get(timeout=1)
             except Empty:
                 continue
-            function = self._event_handlers.get(event['method'], None)
-            if function:
-                function(**event['params'])
-
+            functions = self._event_handlers.get(event['method'])
+            if functions:
+                for func in functions:
+                    func(**event['params'])
             self._event_queue.task_done()
 
     def _debug_recv_event(self, msg):
@@ -423,11 +433,35 @@ class Messenger(object):
     def _on_disconnect(self):
         pass
 
+    def _enable_domain(self, domain, **kwargs):
+        if domain in self._enabled:
+            self._enabled[domain] += 1
+        else:
+            self._enabled[domain] = 1
+            self._run_cdp(f'{domain}.enable', **kwargs)
+
+    def _disable_domain(self, domain, **kwargs):
+        if domain in self._enabled:
+            self._enabled[domain] -= 1
+            if self._enabled[domain] <= 0:
+                self._run_cdp(f'{domain}.disable', **kwargs)
+                self._enabled.pop(domain, None)
+
     def _set_callback(self, event, callback, immediate=False):
         if callback:
-            self._event_handlers[event] = callback
+            self._event_handlers.setdefault(event, []).append(callback)
             if immediate:
                 self._imm_events.add(event)
         else:
             self._event_handlers.pop(event, None)
             self._imm_events.discard(event)
+
+    def _remove_callback(self, event, callback):
+        functions = self._event_handlers.get(event)
+        try:
+            functions.remove(callback)
+        except (ValueError, AttributeError):
+            pass
+
+    def _raise_stopped(self, *arg, **kwargs):
+        raise PageDisconnectedError

@@ -9,7 +9,6 @@ from copy import copy
 from threading import Lock
 from time import sleep
 
-from .._configs.session_options import SessionOptions
 from .._functions.cookies import set_session_cookies, set_tab_cookies
 from .._functions.settings import Settings as _S
 from .._functions.web import save_page
@@ -121,27 +120,25 @@ class ChromiumTab(ChromiumBase, SessionPage):
     def activate(self):
         self.browser._run_cdp('Target.activateTarget', targetId=self._target_id)
 
-    def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, return_info=False, **kwargs):
+    def get(self, url, retry=None, interval=None, timeout=None, raise_err=False, **kwargs):
         if self._d_mode:
             if kwargs:
-                raise ValueError(_S._lang.join(_S._lang.S_MODE_ONLY, ARGS=", ".join(kwargs.keys())))
-            return self._mode_obj.get(url, show_errmsg, retry, interval, timeout, return_info=return_info)
+                raise ValueError(_S._lang.joinn(_S._lang.S_MODE_ONLY, ARGS=", ".join(kwargs.keys())))
+            return self._mode_obj.get(url=url, retry=retry, interval=interval, timeout=timeout, raise_err=raise_err)
 
-        if return_info:
-            raise ValueError('return_info only works in d mode.')
         if timeout is None:
             timeout = self.timeouts.page_load
-        return self._mode_obj.get(url, show_errmsg, retry, interval, timeout, **kwargs)
+        return self._mode_obj.get(url=url, retry=retry, interval=interval, timeout=timeout,
+                                  raise_err=raise_err, **kwargs)
 
-    def post(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, **kwargs):
+    def post(self, url, retry=None, interval=None, timeout=None, raise_err=False, **kwargs):
         if self.mode == 'd':
             self.cookies_to_session()
         if timeout is None:
             kwargs['timeout'] = self.timeouts.page_load
         if self._session is None:
             self._create_session()
-        self._mode_obj.post(url, show_errmsg, retry, interval, **kwargs)
-        return self.response
+        return self._mode_obj.post(url=url, retry=retry, interval=interval, raise_err=raise_err, **kwargs)
 
     def ele(self, locator, index=1, timeout=None):
         return self._mode_obj.ele(locator, index=index, timeout=timeout)
@@ -181,8 +178,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
 
         # d模式转s模式
         if self._session is None:
-            self._set_session_options(
-                self.browser._session_options or SessionOptions(read_file=self.browser._session_options is None))
+            self._set_session_options()
             self._create_session()
 
         self._url = self._session_url
@@ -224,12 +220,6 @@ class ChromiumTab(ChromiumBase, SessionPage):
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
         return self._mode_obj._find_elements(locator, timeout=timeout, index=index, relative=relative)
-
-    def _set_session_options(self, session_or_options=None):
-        if session_or_options is None:
-            session_or_options = self.browser._session_options or SessionOptions(
-                read_file=self.browser._session_options is None)
-        super(ChromiumBase, self)._set_session_options(session_or_options)
 
     def save(self, path=None, name=None, as_pdf=False, **kwargs):
         return save_page(self, path, name, as_pdf, kwargs)

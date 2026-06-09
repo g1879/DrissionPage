@@ -8,20 +8,19 @@
 from http.cookiejar import CookieJar
 from pathlib import Path
 from threading import Lock
-from typing import Union, Tuple, Any, Optional, Literal, overload
+from typing import Union, Tuple, Any, Optional, Literal
 
 from requests import Session, Response
 
 from .chromium_base import ChromiumBase
 from .chromium_frame import ChromiumFrame
-from .navigation_result import NavigationResult
 from .session_page import SessionPage
 from .._browsers.chromium import Chromium
-from .._configs.session_options import SessionOptions
 from .._elements.chromium_element import ChromiumElement
 from .._elements.session_element import SessionElement
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, ChromiumElementsList
+from .._functions.web import NavResult
 from .._units.rect import TabRect
 from .._units.setter import ChromiumTabSetter
 from .._units.waiter import ChromiumTabWaiter
@@ -152,14 +151,12 @@ class ChromiumTab(ChromiumBase, SessionPage):
         """使标签页显示到前端"""
         ...
 
-    @overload
     def get(self,
             url: str,
-            show_errmsg: bool = False,
             retry: Optional[int] = None,
             interval: Optional[float] = None,
             timeout: Optional[float] = None,
-            return_info: Literal[False] = False,
+            raise_err: bool = False,
             params: Optional[dict] = None,
             data: Any = None,
             json: Any = None,
@@ -172,26 +169,36 @@ class ChromiumTab(ChromiumBase, SessionPage):
             hooks: Optional[Any] = None,
             stream: bool = None,
             verify: Union[bool, str] = None,
-            cert: Union[str, Tuple[str, str]] = None) -> Union[bool, None]:
+            cert: Union[str, Tuple[str, str]] = None) -> NavResult:
+        """跳转到一个url
+        :param url: 目标url
+        :param retry: 重试次数，为None时使用页面对象retry_times属性值
+        :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
+        :param timeout: 连接超时时间
+        :param raise_err: 连接失败是否抛出异常
+        :param params: url中的参数
+        :param data: 携带的数据
+        :param json: 要发送的 JSON 数据，会自动设置 Content-Type 为 application/json
+        :param headers: 请求头
+        :param cookies: cookies信息
+        :param files: 要上传的文件，可以是一个字典，其中键是文件名，值是文件对象或文件路径
+        :param auth: 身份认证信息
+        :param allow_redirects: 是否允许重定向
+        :param proxies: 代理信息
+        :param hooks: 回调方法
+        :param stream: 是否使用流式传输
+        :param verify: 是否验证 SSL 证书
+        :param cert: SSL客户端证书文件的路径(.pem格式)，或('cert', 'key')元组
+        :return: NavResult对象
+        """
         ...
-
-    @overload
-    def get(self,
-            url: str,
-            show_errmsg: bool = False,
-            retry: Optional[int] = None,
-            interval: Optional[float] = None,
-            timeout: Optional[float] = None,
-            return_info: Literal[True] = True) -> NavigationResult:
-        ...
-
 
     def post(self,
              url: str,
-             show_errmsg: bool = False,
              retry: Optional[int] = None,
              interval: Optional[float] = None,
              timeout: Optional[float] = None,
+             raise_err: bool = False,
              params: Optional[dict] = None,
              data: Any = None,
              json: Any = None,
@@ -207,10 +214,10 @@ class ChromiumTab(ChromiumBase, SessionPage):
              cert: Union[str, Tuple[str, str]] = None) -> Response:
         """用post方式跳转到url
         :param url: 目标url
-        :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数，为None时使用页面对象retry_times属性值
         :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
         :param timeout: 连接超时时间
+        :param raise_err: 连接失败是否抛出异常
         :param params: url中的参数
         :param data: 携带的数据
         :param json: 要发送的 JSON 数据，会自动设置 Content-Type 为 application/json
@@ -224,7 +231,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
         :param stream: 是否使用流式传输
         :param verify: 是否验证 SSL 证书
         :param cert: SSL客户端证书文件的路径(.pem格式)，或('cert', 'key')元组
-        :return: 获取到的Response对象
+        :return: NavResult对象
         """
         ...
 
@@ -322,13 +329,6 @@ class ChromiumTab(ChromiumBase, SessionPage):
         :param relative: ChromiumTab用的表示是否相对定位的参数
         :param raise_err: 找不到元素是是否抛出异常，为None时根据全局设置
         :return: 元素对象或属性、文本节点文本
-        """
-        ...
-
-    def _set_session_options(self, session_or_options: Union[Session, SessionOptions] = None) -> None:
-        """
-        :param session_or_options: Session设置
-        :return: None
         """
         ...
 

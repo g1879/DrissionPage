@@ -5,11 +5,10 @@
 @Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-from time import perf_counter, sleep
-
 from .locator import is_str_loc, is_selenium_loc
-from .._functions.settings import Settings as _S
 from .._elements.none_element import NoneElement
+from .._functions.settings import Settings as _S
+from .._functions.tools import wait_until
 from ..errors import LocatorError
 
 
@@ -25,7 +24,7 @@ class SessionElementsList(list):
         elif isinstance(item, int):
             return super().__getitem__(item)
         else:
-            raise ValueError(_S._lang.join(_S._lang.INDEX_FORMAT, CURR_VAL=item))
+            raise ValueError(_S._lang.joinn(_S._lang.INDEX_FORMAT, CURR_VAL=item))
 
     @property
     def get(self):
@@ -274,31 +273,20 @@ class Getter(object):
 
 
 def get_eles(locators, owner, any_one=False, first_ele=True, timeout=10):
-    if is_selenium_loc(locators):
-        locators = (locators,)
-    res = {loc: None for loc in locators}
-
-    if timeout == 0:
-        for loc in locators:
-            ele = owner._ele(loc, timeout=0, raise_err=False, index=1 if first_ele else None, method='find()')
-            res[loc] = ele
-            if ele and any_one:
-                return res
-        return res
-
-    end_time = perf_counter() + timeout
-    while perf_counter() <= end_time:
+    def do():
         for loc in locators:
             if res[loc]:
                 continue
             ele = owner._ele(loc, timeout=0, raise_err=False, index=1 if first_ele else None, method='find()')
             res[loc] = ele
             if ele and any_one:
-                return res
-        if all(res.values()):
-            return res
-        sleep(.05)
+                return True
+        return True if all(res.values()) else None
 
+    if is_selenium_loc(locators):
+        locators = (locators,)
+    res = {loc: None for loc in locators}
+    wait_until(do, timeout=timeout)
     return res
 
 
@@ -329,8 +317,8 @@ def get_frame(owner, loc_ind_ele, timeout=None):
         r = loc_ind_ele
 
     else:
-        raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'loc_ind_ele',
-                                       ALLOW_VAL=_S._lang.FRAME_LOC_FORMAT, CURR_VAL=loc_ind_ele))
+        raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'loc_ind_ele',
+                                        ALLOW_VAL=_S._lang.FRAME_LOC_FORMAT, CURR_VAL=loc_ind_ele))
 
     if isinstance(r, NoneElement):
         r.method = 'get_frame()'

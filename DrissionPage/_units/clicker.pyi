@@ -28,7 +28,7 @@ class Clicker(object):
         如果遇到遮挡，可选择是否用js点击
         :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
         :param timeout: 模拟点击的超时时间（秒），等待元素可见、可用、进入视口
-        :param wait_stop: 是否等待元素运动结束再执行点击
+        :param wait_stop: 是否等待元素运动结束再执行点击，为None时使用Settings设置
         :return: 是否点击成功
         """
         ...
@@ -38,7 +38,7 @@ class Clicker(object):
         """点击元素，可选择是否用js点击
         :param by_js: 是否用js点击，为None时先用模拟点击，遇到遮挡改用js，为True时直接用js点击，为False时只用模拟点击
         :param timeout: 模拟点击的超时时间（秒），等待元素可见、可用、进入视口
-        :param wait_stop: 是否等待元素运动结束再执行点击
+        :param wait_stop: 是否等待元素运动结束再执行点击，为None时使用Settings设置
         :return: 是否点击成功
         """
         ...
@@ -81,7 +81,8 @@ class Clicker(object):
                     suffix: str = None,
                     new_tab: bool = None,
                     by_js: bool = False,
-                    timeout: float = None) -> DownloadMission:
+                    timeout: float = None,
+                    file_exists:str =None) -> Union[DownloadMission, False]:
         """点击触发下载
         :param save_path: 保存路径，为None保存在原来设置的，如未设置保存到当前路径
         :param rename: 重命名文件名
@@ -89,7 +90,8 @@ class Clicker(object):
         :param new_tab: 下载任务是否从新标签页触发，为None会自动获取，如获取不到，设为True
         :param by_js: 是否用js方式点击，逻辑与click()一致
         :param timeout: 等待下载触发的超时时间，为None则使用页面对象设置
-        :return: DownloadMission对象
+        :param file_exists: 可在 'rename', 'overwrite', 'skip', 'r', 'o', 's'中选择
+        :return: DownloadMission对象，任务无触发时返回False
         """
         ...
 

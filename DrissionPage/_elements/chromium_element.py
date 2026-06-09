@@ -19,8 +19,9 @@ from .session_element import make_session_ele
 from .._base.base import DrissionElement, BaseElement
 from .._functions.elements import ChromiumElementsList, SessionElementsList
 from .._functions.keys import input_text_or_keys, Keys
-from .._functions.locator import get_loc, locator_to_tuple
+from .._functions.locator import get_loc, locator_to_tuple, quotes_escape
 from .._functions.settings import Settings as _S
+from .._functions.tools import wait_until
 from .._functions.web import make_absolute_link, get_ele_txt, format_html, is_js_func, get_blob
 from .._units.clicker import Clicker
 from .._units.rect import ElementRect
@@ -143,12 +144,12 @@ class ChromiumElement(DrissionElement):
 
     @property
     def sr(self):
-        end_time = perf_counter() + self.timeout
-        while perf_counter() < end_time:
+        def do():
             info = self.owner._run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
-            if info.get('shadowRoots', None):
-                return ShadowRoot(self, backend_id=info['shadowRoots'][0]['backendNodeId'])
-        return None
+            return (ShadowRoot(self, backend_id=info['shadowRoots'][0]['backendNodeId']) if info.get('shadowRoots')
+                    else None)
+
+        return wait_until(do, timeout=self.timeout)
 
     @property
     def shadow_root(self):
@@ -185,20 +186,19 @@ class ChromiumElement(DrissionElement):
     def value(self):
         return self.property('value')
 
-    def check(self, uncheck=False, by_js=False):
+    def check(self, checked=True, by_js=False):
         is_checked = self.states.is_checked
         if by_js:
             js = None
-            if is_checked and uncheck:
-                js = 'this.checked=false'
-            elif not is_checked and not uncheck:
-                js = 'this.checked=true'
+            if is_checked and not checked:
+                js = 'this.checked=false;'
+            elif not is_checked and checked:
+                js = 'this.checked=true;'
             if js:
-                self._run_js(js)
-                self._run_js('this.dispatchEvent(new Event("change", {bubbles: true}));')
+                self._run_js(f'{js}this.dispatchEvent(new Event("change", {{bubbles: true}}));')
 
         else:
-            if (is_checked and uncheck) or (not is_checked and not uncheck):
+            if (is_checked and not checked) or (not is_checked and checked):
                 self.click()
 
         return self
@@ -264,18 +264,8 @@ class ChromiumElement(DrissionElement):
         loc_data = locator_to_tuple(locator) if locator else None
         if timeout is None:
             timeout = self.timeout
-        end_time = perf_counter() + timeout
-        try:
-            ele = ChromiumElement(owner=self.owner,
-                                  backend_id=self.owner._run_cdp('DOM.getNodeForLocation', x=x, y=y,
-                                                                 includeUserAgentShadowDOM=True,
-                                                                 ignorePointerEventsNone=False)['backendNodeId'])
-        except CDPError:
-            ele = False
-        if ele and (loc_data is None or _check_ele(ele, loc_data)):
-            return ele
 
-        while perf_counter() < end_time:
+        def do():
             try:
                 ele = ChromiumElement(owner=self.owner,
                                       backend_id=self.owner._run_cdp('DOM.getNodeForLocation', x=x, y=y,
@@ -283,13 +273,12 @@ class ChromiumElement(DrissionElement):
                                                                      ignorePointerEventsNone=False)['backendNodeId'])
             except CDPError:
                 ele = False
+            return ele if ele and (loc_data is None or _check_ele(ele, loc_data)) else None
 
-            if ele and (loc_data is None or _check_ele(ele, loc_data)):
-                return ele
-            sleep(.01)
-
-        return NoneElement(page=self.owner, method='offset()',
-                           args={'locator': locator, 'offset_x': x, 'offset_y': y, 'timeout': timeout})
+        r = wait_until(do, timeout=timeout)
+        return r if r is not None else NoneElement(page=self.owner, method='offset()',
+                                                   args={'locator': locator, 'offset_x': x, 'offset_y': y,
+                                                         'timeout': timeout})
 
     def east(self, loc_or_pixel=None, index=1):
         return self._get_relative_eles(mode='east', locator=loc_or_pixel, index=index)
@@ -394,7 +383,7 @@ class ChromiumElement(DrissionElement):
             return self.inner_html
 
         else:
-            return attrs.get(name, None)
+            return attrs.get(name)
 
     def remove_attr(self, name):
         self._run_js(f'this.removeAttribute("{name}");')
@@ -432,6 +421,7 @@ class ChromiumElement(DrissionElement):
                 if self.ele(locator, timeout=timeout) else SessionElementsList())
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
+        self.owner.wait.doc_loaded()
         return find_in_chromium_ele(self, locator, index, timeout, relative=relative)
 
     def style(self, style, pseudo_ele=''):
@@ -447,12 +437,15 @@ class ChromiumElement(DrissionElement):
                   '&& this.naturalWidth > 0 && typeof this.naturalHeight != "undefined" '
                   '&& this.naturalHeight > 0')
             end_time = perf_counter() + timeout
-            while not self._run_js(js) and perf_counter() < end_time:
-                sleep(.05)
+            r = self._run_js(js)
+            while not r and perf_counter() < end_time:
+                sleep(.01)
+                r = self._run_js(js)
+            timeout = end_time - perf_counter()
 
         src = self.attr('href') if self.tag == 'link' else self.attr('src')
         if not src:
-            raise RuntimeError(_S._lang.join(_S._lang.NO_SRC_ATTR))
+            raise RuntimeError(_S._lang.joinn(_S._lang.NO_SRC_ATTR))
         if src.lower().startswith('data:image'):
             if base64_to_bytes:
                 from base64 import b64decode
@@ -461,38 +454,29 @@ class ChromiumElement(DrissionElement):
                 return src.split(',', 1)[-1]
 
         is_blob = src.startswith('blob')
-        result = None
-        end_time = perf_counter() + timeout
-        if is_blob:
-            while perf_counter() < end_time:
-                result = get_blob(self.owner, src, base64_to_bytes)
-                if result:
-                    break
-                sleep(.05)
 
-        else:
-            while perf_counter() < end_time:
-                src = self.attr('href') if self.tag == 'link' else self.property('currentSrc') or self.property('src')
-                if not src:
-                    sleep(.01)
-                    continue
+        def _get_bolb():
+            res = get_blob(self.owner, src, base64_to_bytes)
+            return res if res else None
 
-                node = self.owner._run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
-                frame = node.get('frameId', None) or self.owner._frame_id
+        def _get_src():
+            s = self.attr('href') if self.tag == 'link' else self.property('currentSrc') or self.property('s')
+            if not s:
+                return None
+            node = self.owner._run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
+            frame = node.get('frameId') or self.owner._frame_id
+            try:
+                return self.owner._run_cdp('Page.getResourceContent', frameId=frame, url=s)
+            except CDPError:
+                return None
 
-                try:
-                    result = self.owner._run_cdp('Page.getResourceContent', frameId=frame, url=src)
-                    break
-                except CDPError:
-                    pass
-                sleep(.05)
+        func = _get_bolb if is_blob else _get_src
+        result = wait_until(func, timeout=timeout)
 
         if not result:
             return None
-
         elif is_blob:
             return result
-
         elif result['base64Encoded'] and base64_to_bytes:
             from base64 import b64decode
             return b64decode(result['content'])
@@ -557,7 +541,7 @@ class ChromiumElement(DrissionElement):
             self._run_js('this.dispatchEvent(new Event("change", {bubbles: true}));')
             return self
 
-        self.wait.clickable(wait_moved=False, timeout=.5)
+        self.wait.clickable(wait_stop=False, timeout=.5)
         if clear and vals not in ('\n', '\ue007', '\ue006'):
             self.clear(by_js=False)
         else:
@@ -609,8 +593,8 @@ class ChromiumElement(DrissionElement):
         if isinstance(ele_or_loc, ChromiumElement):
             ele_or_loc = ele_or_loc.rect.midpoint
         elif not isinstance(ele_or_loc, (list, tuple)):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'ele_or_loc',
-                                           ALLOW_TYPE=_S._lang.ELE_LOC_FORMAT, CURR_VAL=ele_or_loc))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'ele_or_loc',
+                                            ALLOW_TYPE=_S._lang.ELE_LOC_FORMAT, CURR_VAL=ele_or_loc))
         self.owner.actions.hold(self).move_to(ele_or_loc, duration=duration).release()
         return self
 
@@ -743,15 +727,15 @@ class ShadowRoot(BaseElement):
             loc = f'xpath:./ancestor-or-self::*[{level_or_loc}]'
 
         elif isinstance(level_or_loc, (tuple, str)):
-            loc = get_loc(level_or_loc, True)
-            if loc[0] == 'css selector':
-                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-
-            loc = f'xpath:./ancestor-or-self::{loc[1].lstrip(". / ")}[{index}]'
+            mode, loc = get_loc(level_or_loc, True)
+            if mode in ('css selector', 'ax'):
+                raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+            loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
+            loc = f'xpath:./ancestor-or-self::{loc}[{index}]'
 
         else:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'level_or_loc',
-                                           ALLOW_TYPE=_S._lang.LOC_OR_IND, CURR_VAL=level_or_loc))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'level_or_loc',
+                                            ALLOW_TYPE=_S._lang.LOC_OR_IND, CURR_VAL=level_or_loc))
 
         return self.parent_ele._ele(loc, timeout=timeout, relative=True, raise_err=False, method='parent()')
 
@@ -759,10 +743,10 @@ class ShadowRoot(BaseElement):
         if not locator:
             loc = '*'
         else:
-            loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if loc[0] == 'css selector':
-                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-            loc = loc[1].lstrip('./')
+            mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
+            if mode in ('css selector', 'ax'):
+                raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+            loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 
         loc = f'xpath:./{loc}'
         ele = self._ele(loc, index=index, relative=True, timeout=timeout)
@@ -771,25 +755,23 @@ class ShadowRoot(BaseElement):
                                            {'locator': locator, 'index': index, 'timeout': timeout})
 
     def next(self, locator='', index=1, timeout=None):
-        loc = get_loc(locator, True)
-        if loc[0] == 'css selector':
-            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-
-        loc = loc[1].lstrip('./')
-        xpath = f'xpath:./{loc}'
-        ele = self.parent_ele._ele(xpath, index=index, relative=True, timeout=timeout)
+        mode, loc = get_loc(locator, True)
+        if mode in ('css selector', 'ax'):
+            raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+        loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
+        loc = f'xpath:./{loc}'
+        ele = self.parent_ele._ele(loc, index=index, relative=True, timeout=timeout)
 
         return ele if ele else NoneElement(self.owner, 'next()',
                                            {'locator': locator, 'index': index, 'timeout': timeout})
 
     def before(self, locator='', index=1, timeout=None):
-        loc = get_loc(locator, True)
-        if loc[0] == 'css selector':
-            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-
-        loc = loc[1].lstrip('./')
-        xpath = f'xpath:./preceding::{loc}'
-        ele = self.parent_ele._ele(xpath, index=index, relative=True, timeout=timeout)
+        mode, loc = get_loc(locator, True)
+        if mode in ('css selector', 'ax'):
+            raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+        loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
+        loc = f'xpath:./preceding::{loc}'
+        ele = self.parent_ele._ele(loc, index=index, relative=True, timeout=timeout)
 
         return ele if ele else NoneElement(self.owner, 'before()',
                                            {'locator': locator, 'index': index, 'timeout': timeout})
@@ -803,37 +785,34 @@ class ShadowRoot(BaseElement):
         if not locator:
             loc = '*'
         else:
-            loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if loc[0] == 'css selector':
-                raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-            loc = loc[1].lstrip('./')
-
+            mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
+            if mode in ('css selector', 'ax'):
+                raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+            loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
         loc = f'xpath:./{loc}'
         return self._ele(loc, index=None, relative=True, timeout=timeout)
 
     def nexts(self, locator='', timeout=None):
-        loc = get_loc(locator, True)
-        if loc[0] == 'css selector':
-            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-
-        loc = loc[1].lstrip('./')
-        xpath = f'xpath:./{loc}'
-        return self.parent_ele._ele(xpath, index=None, relative=True, timeout=timeout)
+        mode, loc = get_loc(locator, True)
+        if mode in ('css selector', 'ax'):
+            raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+        loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
+        loc = f'xpath:./{loc}'
+        return self.parent_ele._ele(loc, index=None, relative=True, timeout=timeout)
 
     def befores(self, locator='', timeout=None):
-        loc = get_loc(locator, True)
-        if loc[0] == 'css selector':
-            raise LocatorError(_S._lang.UNSUPPORTED_CSS_SYNTAX)
-
-        loc = loc[1].lstrip('./')
-        xpath = f'xpath:./preceding::{loc}'
-        return self.parent_ele._ele(xpath, index=None, relative=True, timeout=timeout)
+        mode, loc = get_loc(locator, True)
+        if mode in ('css selector', 'ax'):
+            raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
+        loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
+        loc = f'xpath:./preceding::{loc}'
+        return self.parent_ele._ele(loc, index=None, relative=True, timeout=timeout)
 
     def afters(self, locator='', timeout=None):
         eles1 = self.nexts(locator)
         loc = get_loc(locator, True)[1].lstrip('./')
-        xpath = f'xpath:./following::{loc}'
-        return eles1 + self.parent_ele._ele(xpath, index=None, relative=True, timeout=timeout)
+        loc = f'xpath:./following::{loc}'
+        return eles1 + self.parent_ele._ele(loc, index=None, relative=True, timeout=timeout)
 
     def ele(self, locator, index=1, timeout=None):
         return self._ele(locator, timeout, index=index, method='ele()')
@@ -851,87 +830,20 @@ class ShadowRoot(BaseElement):
                 if self.ele(locator, timeout=timeout) else SessionElementsList())
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
-        loc = get_loc(locator)
-        if loc[0] == 'ax':
-            return find_by_ax(self.owner, self._backend_id, loc[1], index, timeout)
+        mode, loc = get_loc(locator)
+        if mode == 'ax':
+            return find_by_ax(self.owner, self._backend_id, loc, index, timeout)
 
-        if loc[0] == 'css selector' and str(loc[1]).startswith(':root'):
-            loc = loc[0], loc[1][5:]
+        elif mode == 'css selector':
+            if str(loc).startswith(':root'):
+                loc = loc[5:]
+            return find_by_css(self.owner, self._node_id, loc, index, timeout)
 
-        def do_find():
-            if loc[0] == 'css selector':
-                if index == 1:
-                    nod_id = self.owner._run_cdp('DOM.querySelector', nodeId=self._node_id, selector=loc[1])['nodeId']
-                    if nod_id:
-                        r = make_chromium_eles(self.owner, _ids=nod_id, id_type='node_id')
-                        return None if r is False else r
+        elif mode == 'xpath':
+            return find_by_sr_xpath(self.owner, index, timeout, self, loc)
 
-                else:
-                    nod_ids = self.owner._run_cdp('DOM.querySelectorAll',
-                                                  nodeId=self._node_id, selector=loc[1])['nodeIds']
-                    r = make_chromium_eles(self.owner, _ids=nod_ids, index=index, id_type='node_id')
-                    return None if r is False else r
-
-            else:
-                eles = make_session_ele(self, loc, index=None)
-                if isinstance(eles, (float, str, int)):
-                    return eles
-                elif not eles:
-                    return None
-
-                css = []
-                for i in eles:
-                    if hasattr(i, 'css_selector'):
-                        c = i.css_selector
-                        if c in ('html:nth-child(1)', 'html:nth-child(1)>body:nth-child(1)',
-                                 'html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
-                            continue
-                        elif c.startswith('html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
-                            c = c[61:]
-                        css.append((True, c))
-
-                    else:
-                        css.append((False, i))
-
-                if index is not None:
-                    try:
-                        c = css[index - 1]
-                        if c[0] is False:
-                            return c[1]
-                        node_id = self.owner._run_cdp('DOM.querySelector', nodeId=self._node_id,
-                                                      selector=c[1])['nodeId']
-                        r = make_chromium_eles(self.owner, _ids=node_id, id_type='node_id')
-                        return None if r is False else r
-
-                    except IndexError:
-                        return None
-
-                else:
-                    r = []
-                    for i in css:
-                        if i[0] is False:
-                            r.append(i[1])
-
-                        else:
-                            node_id = self.owner._run_cdp('DOM.querySelector', nodeId=self._node_id,
-                                                          selector=i[1])['nodeId']
-                            if node_id:
-                                e = make_chromium_eles(self.owner, _ids=node_id, id_type='node_id')
-                                if e is False:
-                                    return None
-                                r.append(e)
-
-                    return None if not r else r
-
-        end_time = perf_counter() + timeout
-        result = do_find()
-        while result is None and perf_counter() <= end_time:
-            sleep(.01)
-            result = do_find()
-
-        if result or isinstance(result, (str, float, int)):
-            return result
-        return NoneElement(self.owner) if index is not None else ChromiumElementsList(self.owner)
+        else:
+            return find_by_sr_any(self, loc, index, timeout)
 
     def _get_node_id(self, obj_id):
         return self.owner._run_cdp('DOM.requestNode', objectId=obj_id)['nodeId']
@@ -948,166 +860,205 @@ class ShadowRoot(BaseElement):
 def find_in_chromium_ele(ele, locator, index=1, timeout=None, relative=True):
     # ---------------处理定位符---------------
     if isinstance(locator, (str, tuple)):
-        loc = get_loc(locator)
+        mode, loc = get_loc(locator)
     else:
         raise LocatorError(ALLOW_TYPE=_S._lang.LOC_FORMAT, CURR_VAL=locator)
 
-    loc_str = loc[1]
-    if loc[0] == 'xpath' and loc[1].lstrip().startswith('/'):
-        loc_str = f'.{loc_str}'
-    elif loc[0] == 'css selector' and loc[1].lstrip().startswith('>'):
-        loc_str = f'{ele.css_selector}{loc[1]}'
-    loc = loc[0], loc_str
+    if mode == 'xpath' and loc.lstrip().startswith('/'):
+        loc = f'.{loc}'
+    elif mode == 'css selector' and loc.lstrip().startswith('>'):
+        loc = f'{ele.css_selector}{loc}'
 
     if timeout is None:
         timeout = ele.timeout
 
     # ---------------执行查找-----------------
-    if loc[0] == 'xpath':
-        return find_by_xpath(ele, loc[1], index, timeout, relative=relative)
-    elif loc[0] == 'css selector':
-        return find_by_css(ele, loc[1], index, timeout)
-    else:  # ax
-        return find_by_ax(ele.owner, ele._backend_id, loc[1], index, timeout)
+    if mode == 'xpath':
+        return find_by_xpath(ele, loc, index, timeout, relative)
+    elif mode == 'css selector':
+        return find_by_css(ele.owner, ele._node_id, loc, index, timeout)
+    elif mode == 'ax':
+        return find_by_ax(ele.owner, ele._backend_id, loc, index, timeout)
+    else:  # any
+        return find_by_any(ele, loc, index, timeout, relative)
 
 
-def find_by_ax(page, backend_id, args, index, timeout):
-    page.wait.doc_loaded()
+def find_by_ax(page, bid, loc, index, timeout):
     page._Accessibility_enable()
-
-    def do_find():
-        nodes = page._run_cdp('Accessibility.queryAXTree', backendNodeId=backend_id, **args)['nodes']
-        if not nodes or (index and len(nodes) < abs(index)):
-            return None
-        if index == 1:
-            r = make_chromium_eles(page, _ids=nodes[0]['backendDOMNodeId'], id_type='backend_id')
-            return None if r is False else r
-        else:
-            if not index:
-                r = ChromiumElementsList(owner=page)
-                for i in nodes:
-                    r.append(make_chromium_eles(page, _ids=i['backendDOMNodeId'], id_type='backend_id'))
-                return None if False in r else r
-            else:
-                r = make_chromium_eles(page, _ids=[i['backendDOMNodeId'] for i in nodes], id_type='backend_id')
-                return None if r is False else r
-
-    end_time = perf_counter() + timeout
-    result = do_find()
-    while result is None and perf_counter() < end_time:
-        sleep(.01)
-        result = do_find()
-
-    if result:
-        return result
-    return NoneElement(page) if index is not None else ChromiumElementsList(owner=page)
+    return wait_for_ele(do_find_ax, target=page, timeout=timeout, index=index, page=page,
+                        bid=bid, args=loc, ind=index)
 
 
-def find_by_xpath(ele, xpath, index, timeout, relative=True):
+def find_by_xpath(ele, loc, index, timeout, relative):
+    type_txt = '9' if index == 1 else '7'
+    node_txt = 'this.contentDocument' if ele.tag in __FRAME_ELEMENT__ and not relative else 'this'
+    js = make_js_for_find_ele_by_xpath(loc, type_txt, node_txt)
+    return wait_for_ele(do_find_xpath, target=ele.owner, timeout=timeout, index=index, ele=ele, js=js,
+                        xpath=loc, node_txt=node_txt, ind=index)
+
+
+def find_by_css(page, nid, loc, index, timeout):
+    cdp, arg = ('DOM.querySelector', 'nodeId') if index == 1 else ('DOM.querySelectorAll', 'nodeIds')
+    return wait_for_ele(do_find_css, target=page, timeout=timeout, index=index, page=page, cdp=cdp,
+                        css=loc, arg=arg, nid=nid, ind=index)
+
+
+def find_by_any(ele, loc, index, timeout, relative):
+    xpath = f'.//*/text()[contains(., {quotes_escape(loc)})]/..'
     type_txt = '9' if index == 1 else '7'
     node_txt = 'this.contentDocument' if ele.tag in __FRAME_ELEMENT__ and not relative else 'this'
     js = make_js_for_find_ele_by_xpath(xpath, type_txt, node_txt)
-    ele.owner.wait.doc_loaded()
+    js1 = make_js_for_find_ele_by_xpath(loc, type_txt, node_txt)
+    cdp, arg = ('DOM.querySelector', 'nodeId') if index == 1 else ('DOM.querySelectorAll', 'nodeIds')
+    return wait_for_ele(do_find_any, target=ele.owner, timeout=timeout, index=index, ele=ele, loc=loc, js=js, js1=js1,
+                        xpath=xpath, node_txt=node_txt, cdp=cdp, css=loc, arg=arg, nid=ele._node_id, ind=index)
 
-    def do_find():
-        res = ele.owner._run_cdp('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele._obj_id,
-                                 returnByValue=False, awaitPromise=True, userGesture=True)
-        if res['result']['type'] == 'string':
+
+def find_by_sr_any(ele, loc, index, timeout):
+    xpath = f'.//*/text()[contains(., {quotes_escape(loc)})]/..'
+    cdp, arg = ('DOM.querySelector', 'nodeId') if index == 1 else ('DOM.querySelectorAll', 'nodeIds')
+    return wait_for_ele(do_find_sr_any, target=ele.owner, timeout=timeout, index=index, ele=ele, loc=loc,
+                        xpath=xpath, cdp=cdp, css=loc, arg=arg, nid=ele._node_id, ind=index)
+
+
+def find_by_sr_xpath(page, index, timeout, ele, loc):
+    return wait_for_ele(do_find_sr_xpath, target=page, timeout=timeout, index=index, ele=ele, loc=loc, ind=index)
+
+
+def do_find_any(ele, loc, js, js1, xpath, node_txt, cdp, css, arg, nid, ind):
+    return (do_find_xpath(ele, js, xpath, node_txt, ind) or do_find_css(ele.owner, cdp, css, arg, nid, ind)
+            or do_find_xpath(ele, js1, loc, node_txt, ind))
+
+
+def do_find_sr_any(ele, loc, xpath, cdp, css, arg, nid, ind):
+    return (do_find_sr_xpath(ele, xpath, ind) or do_find_css(ele.owner, cdp, css, arg, nid, ind)
+            or do_find_sr_xpath(ele, loc, ind))
+
+
+def do_find_ax(page, bid, args, ind):
+    nodes = page._run_cdp('Accessibility.queryAXTree', backendNodeId=bid, _ignore=True, **args).get('nodes')
+    if not nodes or (ind and len(nodes) < abs(ind)):
+        return None
+    if ind == 1:
+        r = make_chromium_eles(page, _ids=nodes[0]['backendDOMNodeId'], id_type='backend_id')
+        return None if r is False else r
+    else:
+        r = make_chromium_eles(page, _ids=[i['backendDOMNodeId'] for i in nodes], index=ind, id_type='backend_id')
+        return None if r is False else r
+
+
+def do_find_xpath(ele, js, xpath, node_txt, ind):
+    res = ele.owner._run_cdp('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele._obj_id,
+                             returnByValue=False, awaitPromise=True, userGesture=True, _ignore=True)
+    if res['result']['type'] == 'string':
+        return res['result']['value']
+    if 'exceptionDetails' in res:
+        if 'The result is not a node set' in res['result']['description']:
+            js1 = make_js_for_find_ele_by_xpath(xpath, '1', node_txt)
+            res = ele.owner._run_cdp('Runtime.callFunctionOn', functionDeclaration=js1, objectId=ele._obj_id,
+                                     returnByValue=False, awaitPromise=True, userGesture=True, _ignore=True)
             return res['result']['value']
-        if 'exceptionDetails' in res:
-            if 'The result is not a node set' in res['result']['description']:
-                js1 = make_js_for_find_ele_by_xpath(xpath, '1', node_txt)
-                res = ele.owner._run_cdp('Runtime.callFunctionOn', functionDeclaration=js1, objectId=ele._obj_id,
-                                         returnByValue=False, awaitPromise=True, userGesture=True)
-                return res['result']['value']
-            elif 'is not a valid XPath expression' in res['result']['description']:
-                raise LocatorError(_S._lang.INVALID_XPATH_, xpath)
-            else:
-                raise LocatorError(_S._lang.FIND_ELE_ERR, INFO=res)
-
-        if res['result']['subtype'] == 'null' or res['result']['description'] in ('NodeList(0)', 'Array(0)'):
-            return None
-
-        if index == 1:
-            r = make_chromium_eles(ele.owner, _ids=res['result']['objectId'], id_type='obj_id')
-            return None if r is False else r
-
+        elif 'is not a valid XPath expression' in res['result']['description']:
+            raise LocatorError(_S._lang.INVALID_XPATH_, xpath)
         else:
-            res = ele.owner._run_cdp('Runtime.getProperties', objectId=res['result']['objectId'],
-                                     ownProperties=True)['result'][:-1]
-            if index is None:
-                r = ChromiumElementsList(owner=ele.owner)
-                for i in res:
-                    if i['value']['type'] == 'object':
-                        r.append(make_chromium_eles(ele.owner, _ids=i['value']['objectId'], id_type='obj_id'))
-                    else:
-                        r.append(i['value']['value'])
-                return None if False in r else r
+            raise LocatorError(_S._lang.FIND_ELE_ERR, INFO=res)
 
-            else:
-                eles_count = len(res)
-                if eles_count == 0 or abs(index) > eles_count:
-                    return None
+    if res['result']['subtype'] == 'null' or res['result']['description'] in ('NodeList(0)', 'Array(0)'):
+        return None
 
-                index1 = eles_count + index + 1 if index < 0 else index
-                res = res[index1 - 1]
-                if res['value']['type'] == 'object':
-                    r = make_chromium_eles(ele.owner, _ids=res['value']['objectId'], id_type='obj_id')
+    if ind == 1:
+        r = make_chromium_eles(ele.owner, _ids=res['result']['objectId'], id_type='obj_id')
+        return None if r is False else r
+
+    else:
+        res = ele.owner._run_cdp('Runtime.getProperties', objectId=res['result']['objectId'],
+                                 ownProperties=True, _ignore=True)['result'][:-1]
+        if ind is None:
+            r = ChromiumElementsList(owner=ele.owner)
+            for i in res:
+                if i['value']['type'] == 'object':
+                    r.append(make_chromium_eles(ele.owner, _ids=i['value']['objectId'], id_type='obj_id'))
                 else:
-                    r = res['value']['value']
-                return None if r is False else r
-
-    end_time = perf_counter() + timeout
-    result = do_find()
-    while result is None and perf_counter() < end_time:
-        sleep(.01)
-        result = do_find()
-
-    if result:
-        return result
-    return NoneElement(ele.owner) if index is not None else ChromiumElementsList(owner=ele.owner)
-
-
-def find_by_css(ele, selector, index, timeout):
-    selector = selector.replace('"', r'\"')
-    find_all = '' if index == 1 else 'All'
-    node_txt = 'this.contentDocument' if ele.tag in ('iframe', 'frame', 'shadow-root') else 'this'
-    js = f'function(){{return {node_txt}.querySelector{find_all}("{selector}");}}'
-
-    ele.owner.wait.doc_loaded()
-
-    def do_find():
-        res = ele.owner._run_cdp('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele._obj_id,
-                                 returnByValue=False, awaitPromise=True, userGesture=True)
-
-        if 'exceptionDetails' in res:
-            if 'is not a valid selector' in res['result']['description']:
-                raise LocatorError(_S._lang.INVALID_CSS_, selector)
-            else:
-                raise LocatorError(_S._lang.FIND_ELE_ERR, INFO=res)
-        if res['result']['subtype'] == 'null' or res['result']['description'] in ('NodeList(0)', 'Array(0)'):
-            return None
-
-        if index == 1:
-            r = make_chromium_eles(ele.owner, _ids=res['result']['objectId'], id_type='obj_id')
-            return None if r is False else r
+                    r.append(i['value']['value'])
+            return None if False in r else r
 
         else:
-            obj_ids = [i['value']['objectId'] for i in ele.owner._run_cdp('Runtime.getProperties',
-                                                                          objectId=res['result']['objectId'],
-                                                                          ownProperties=True)['result']]
-            r = make_chromium_eles(ele.owner, _ids=obj_ids, index=index, id_type='obj_id')
+            eles_count = len(res)
+            if eles_count == 0 or abs(ind) > eles_count:
+                return None
+
+            ind1 = eles_count + ind + 1 if ind < 0 else ind
+            res = res[ind1 - 1]
+            if res['value']['type'] == 'object':
+                r = make_chromium_eles(ele.owner, _ids=res['value']['objectId'], id_type='obj_id')
+            else:
+                r = res['value']['value']
+        return None if r is False else r
+
+
+def do_find_css(page, cdp, css, arg, nid, ind):
+    r = page._run_cdp(cdp, nodeId=nid, selector=css, _ignore=True).get(arg)
+    if not r or (ind and ind > 1 and len(r) < abs(ind)):
+        return None
+    r = make_chromium_eles(page, _ids=r, index=ind, id_type='node_id')
+    return None if r is False else r
+
+
+def do_find_sr_xpath(ele, loc, ind):
+    eles = make_session_ele(ele, loc, index=None)
+    if isinstance(eles, (float, str, int)):
+        return eles
+    elif not eles:
+        return None
+
+    css = []
+    for i in eles:
+        if hasattr(i, 'css_selector'):
+            c = i.css_selector
+            if c in ('html:nth-child(1)', 'html:nth-child(1)>body:nth-child(1)',
+                     'html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
+                continue
+            elif c.startswith('html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
+                c = c[61:]
+            css.append((True, c))
+
+        else:
+            css.append((False, i))
+
+    if ind is not None:
+        try:
+            c = css[ind - 1]
+            if c[0] is False:
+                return c[1]
+            nid = ele.owner._run_cdp('DOM.querySelector', nodeId=ele._node_id, selector=c[1], _ignore=True)['nodeId']
+            r = make_chromium_eles(ele.owner, _ids=nid, id_type='node_id')
             return None if r is False else r
 
-    end_time = perf_counter() + timeout
-    result = do_find()
-    while result is None and perf_counter() < end_time:
-        sleep(.01)
-        result = do_find()
+        except IndexError:
+            return None
 
-    if result:
-        return result
-    return NoneElement(ele.owner) if index is not None else ChromiumElementsList(owner=ele.owner)
+    else:
+        r = []
+        for i in css:
+            if i[0] is False:
+                r.append(i[1])
+            else:
+                nid = ele.owner._run_cdp('DOM.querySelector',
+                                         nodeId=ele._node_id, selector=i[1], _ignore=True)['nodeId']
+                if nid:
+                    e = make_chromium_eles(ele.owner, _ids=nid, id_type='node_id')
+                    if e is False:
+                        return None
+                    r.append(e)
+
+        return None if not r else r
+
+
+def wait_for_ele(method, target, timeout, index, **kwargs):
+    r = wait_until(method, timeout, **kwargs)
+    if r is not None:
+        return r
+    return NoneElement(target) if index is not None else ChromiumElementsList(owner=target)
 
 
 def make_chromium_eles(page, _ids, index=1, id_type='obj_id', ele_only=False):
@@ -1129,7 +1080,9 @@ def make_chromium_eles(page, _ids, index=1, id_type='obj_id', ele_only=False):
             return False
 
         else:
-            _id = _ids[index - 1]
+            if index > 0:
+                index -= 1
+            _id = _ids[index]
             return get_node_func(page, _id, ele_only)
 
     else:  # 获取全部
@@ -1242,12 +1195,12 @@ def run_js(page_or_ele, script, as_expr, timeout, args=None):
         page = page_or_ele
         end_time = perf_counter() + 5
         while perf_counter() < end_time:
-            obj_id = page_or_ele._root_id
+            obj_id = page_or_ele._root_oid
             if obj_id is not None:
                 break
             sleep(.01)
         else:
-            raise RuntimeError(_S._lang.join(_S._lang.JS_RUNTIME_ERR))
+            raise RuntimeError(_S._lang.joinn(_S._lang.JS_RUNTIME_ERR))
 
     if page.states.has_alert:
         raise AlertExistsError
@@ -1273,7 +1226,7 @@ def run_js(page_or_ele, script, as_expr, timeout, args=None):
                                 arguments=[convert_argument(arg) for arg in args], returnByValue=False,
                                 awaitPromise=True, userGesture=True, _timeout=timeout, _ignore=AlertExistsError)
     except TimeoutError:
-        raise TimeoutError(_S._lang.join(_S._lang.TIMEOUT_, _S._lang.RUN_JS, timeout))
+        raise TimeoutError(_S._lang.joinn(_S._lang.TIMEOUT_, _S._lang.RUN_JS, timeout))
     except ContextLostError:
         raise ContextLostError() if is_page else ElementLostError()
 
@@ -1282,12 +1235,13 @@ def run_js(page_or_ele, script, as_expr, timeout, args=None):
 
     exceptionDetails = res.get('exceptionDetails')
     if exceptionDetails:
-        raise JavaScriptError(JS=script, INFO=exceptionDetails)
+        raise JavaScriptError(INFO=res['result'].get('description').replace('\n', ' '),
+                              JS=script, DETAIL=exceptionDetails)
 
     try:
         return parse_js_result(page, page_or_ele, res.get('result'), end_time)
     except Exception:
-        raise RuntimeError(_S._lang.join(_S._lang.JS_RESULT_ERR, INFO=res, JS=script, TIP=_S._lang.FEEDBACK))
+        raise RuntimeError(_S._lang.joinn(_S._lang.JS_RESULT_ERR, INFO=res, JS=script, TIP=_S._lang.FEEDBACK))
 
 
 def parse_js_result(page, ele, result, end_time):
@@ -1296,7 +1250,7 @@ def parse_js_result(page, ele, result, end_time):
 
     the_type = result['type']
     if the_type == 'object':
-        sub_type = result.get('subtype', None)
+        sub_type = result.get('subtype')
         if sub_type == 'null':
             return None
 
@@ -1330,7 +1284,7 @@ def parse_js_result(page, ele, result, end_time):
             r = page._run_cdp('Runtime.callFunctionOn', functionDeclaration=js, objectId=result['objectId'],
                               returnByValue=False, awaitPromise=True, userGesture=True, _ignore=AlertExistsError,
                               _timeout=timeout)
-            return loads(parse_js_result(page, ele, r.get('result', None), end_time))
+            return loads(parse_js_result(page, ele, r.get('result'), end_time))
 
         else:
             return result.get('value', result)
@@ -1358,7 +1312,7 @@ def convert_argument(arg):
     elif arg == -inf:
         return {'unserializableValue': '-Infinity'}
 
-    raise TypeError(_S._lang.join(_S._lang.UNSUPPORTED_ARG_TYPE_, arg, type(arg)))
+    raise TypeError(_S._lang.joinn(_S._lang.UNSUPPORTED_ARG_TYPE_, arg, type(arg)))
 
 
 class Pseudo(object):
@@ -1436,3 +1390,44 @@ def _check_ele(ele, loc_data):
                 break
 
     return ok
+
+# def find_by_css1(ele, selector, index, timeout):
+#     selector = selector.replace('"', r'\"')
+#     find_all = '' if index == 1 else 'All'
+#     node_txt = 'this.contentDocument' if ele.tag in ('iframe', 'frame', 'shadow-root') else 'this'
+#     js = f'function(){{return {node_txt}.querySelector{find_all}("{selector}");}}'
+#
+#     ele.owner.wait.doc_loaded()
+#
+#     def do_find():
+#         res = ele.owner._run_cdp('Runtime.callFunctionOn', functionDeclaration=js, objectId=ele._obj_id,
+#                                  returnByValue=False, awaitPromise=True, userGesture=True)
+#
+#         if 'exceptionDetails' in res:
+#             if 'is not a valid selector' in res['result']['description']:
+#                 raise LocatorError(_S._lang.INVALID_CSS_, selector)
+#             else:
+#                 raise LocatorError(_S._lang.FIND_ELE_ERR, INFO=res)
+#         if res['result']['subtype'] == 'null' or res['result']['description'] in ('NodeList(0)', 'Array(0)'):
+#             return None
+#
+#         if index == 1:
+#             r = make_chromium_eles(ele.owner, _ids=res['result']['objectId'], id_type='obj_id')
+#             return None if r is False else r
+#
+#         else:
+#             obj_ids = [i['value']['objectId'] for i in ele.owner._run_cdp('Runtime.getProperties',
+#                                                                           objectId=res['result']['objectId'],
+#                                                                           ownProperties=True)['result']]
+#             r = make_chromium_eles(ele.owner, _ids=obj_ids, index=index, id_type='obj_id')
+#             return None if r is False else r
+#
+#     end_time = perf_counter() + timeout
+#     result = do_find()
+#     while result is None and ele.owner._messenger_running and perf_counter() < end_time:
+#         sleep(.01)
+#         result = do_find()
+#
+#     if result:
+#         return result
+#     return NoneElement(ele.owner) if index is not None else ChromiumElementsList(owner=ele.owner)

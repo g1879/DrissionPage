@@ -18,9 +18,15 @@ class Settings(object):
     cdp_timeout = 30
     browser_connect_timeout = 30
     auto_handle_alert = None
-    _lang = get_txt_class(None)
     suffixes_list = str(Path(__file__).parent.resolve() / 'suffixes.dat').replace('\\', '/')
+    wait_stop_before_click = False
+    _lang = get_txt_class(None)
     _debug = None  # 为None时不开启，为True或指定目标时全部开启，为False时由Messenger决定
+
+    @classmethod
+    def set_wait_stop_before_click(cls, on_off=True):
+        cls.wait_stop_before_click = on_off
+        return cls
 
     @classmethod
     def set_raise_when_ele_not_found(cls, on_off=True):

@@ -16,6 +16,7 @@ from .._configs.session_options import SessionOptions
 from .._elements.session_element import SessionElement
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList
+from .._functions.web import NavResult
 from .._units.setter import SessionPageSetter
 
 
@@ -117,10 +118,10 @@ class SessionPage(BasePage):
 
     def get(self,
             url: Union[Path, str],
-            show_errmsg: bool | None = False,
             retry: int | None = None,
             interval: float | None = None,
             timeout: float | None = None,
+            raise_err: bool | None = False,
             params: dict | None = ...,
             data: Any = ...,
             json: Any = ...,
@@ -133,13 +134,13 @@ class SessionPage(BasePage):
             hooks: Any | None = ...,
             stream: Any | None = ...,
             verify: Any | None = ...,
-            cert: Any | None = ...) -> bool:
+            cert: Any | None = ...) -> NavResult:
         """用get方式跳转到url
         :param url: 目标url
-        :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数，为None时使用页面对象retry_times属性值
         :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
-        :param timeout: 连接超时时间
+        :param timeout: 连接超时时间，为None使用内置设置
+        :param raise_err: 连接失败时是否抛出异常
         :param params: url中的参数
         :param data: 携带的数据
         :param json: 要发送的 JSON 数据，会自动设置 Content-Type 为 application/json
@@ -153,16 +154,16 @@ class SessionPage(BasePage):
         :param stream: 是否使用流式传输
         :param verify: 是否验证 SSL 证书
         :param cert: SSL客户端证书文件的路径(.pem格式)，或('cert', 'key')元组
-        :return: s模式时返回url是否可用，d模式时返回获取到的Response对象
+        :return: NavResult对象
         """
         ...
 
     def post(self,
              url: str,
-             show_errmsg: bool = False,
              retry: int | None = None,
              interval: float | None = None,
              timeout: float | None = ...,
+             raise_err: bool = False,
              params: dict | None = ...,
              data: Any = ...,
              json: Any = ...,
@@ -175,13 +176,13 @@ class SessionPage(BasePage):
              hooks: Any | None = ...,
              stream: Any | None = ...,
              verify: Any | None = ...,
-             cert: Any | None = ...) -> bool:
+             cert: Any | None = ...) -> NavResult:
         """用post方式跳转到url
         :param url: 目标url
-        :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数，为None时使用页面对象retry_times属性值
         :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
-        :param timeout: 连接超时时间
+        :param timeout: 连接超时时间，为None使用内置设置
+        :param raise_err: 连接失败时是否抛出异常
         :param params: url中的参数
         :param data: 携带的数据
         :param json: 要发送的 JSON 数据，会自动设置 Content-Type 为 application/json
@@ -195,7 +196,7 @@ class SessionPage(BasePage):
         :param stream: 是否使用流式传输
         :param verify: 是否验证 SSL 证书
         :param cert: SSL客户端证书文件的路径(.pem格式)，或('cert', 'key')元组
-        :return: s模式时返回url是否可用，d模式时返回获取到的Response对象
+        :return: NavResult对象
         """
         ...
 
@@ -270,18 +271,18 @@ class SessionPage(BasePage):
     def _s_connect(self,
                    url: str,
                    mode: str,
-                   show_errmsg: bool = False,
                    retry: int = None,
                    interval: float = None,
-                   **kwargs) -> bool:
+                   raise_err: bool = False,
+                   **kwargs) -> NavResult:
         """执行get或post连接
         :param url: 目标url
         :param mode: 'get' 或 'post'
-        :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数
         :param interval: 重试间隔（秒）
+        :param raise_err: 是否抛出异常
         :param kwargs: 连接参数
-        :return: url是否可用
+        :return: NavResult对象
         """
         ...
 
@@ -290,12 +291,14 @@ class SessionPage(BasePage):
                        mode: str = 'get',
                        retry: int = None,
                        interval: float = None,
-                       show_errmsg: bool = False,
+                       raise_err: bool = False,
                        **kwargs) -> Response:
         """生成Response对象
         :param url: 目标url
         :param mode: 'get' 或 'post'
-        :param show_errmsg: 是否显示和抛出异常
+        :param retry: 重试次数
+        :param interval: 重试间隔（秒）
+        :param raise_err: 是否抛出异常
         :param kwargs: 其它参数
         :return: Response对象
         """

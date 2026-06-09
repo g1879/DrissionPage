@@ -12,12 +12,11 @@ from shutil import copytree, Error as shutilError
 from subprocess import Popen, DEVNULL
 from sys import platform
 from tempfile import gettempdir
-from time import perf_counter, sleep
 
 from requests import Session
 
 from .settings import Settings as _S
-from .tools import port_is_using, PortFinder, ensure_del_dir
+from .tools import port_is_using, PortFinder, ensure_del_dir, wait_until
 from ..errors import BrowserConnectError
 
 
@@ -55,22 +54,26 @@ def connect_browser(opt):
     if not user_path:
         user_path = (Path(opt.tmp_path or gettempdir()) / 'DrissionPage'
                      / ('autoPortData' if opt.is_auto_port else 'userData') / f'{port}')
-        if opt.system_user_path:  # 复制
-            src_path = get_edge_user_data_dir() if is_edge else get_sys_Chrome_user_data_dir()
-            try:
-                ensure_del_dir(user_path)
-                copytree(src_path, user_path)
-            except shutilError:
-                ensure_del_dir(user_path)
-                raise RuntimeError(_S._lang.join(_S._lang.SYS_BROWSER_ACTIVATED, 'edge' if is_edge else 'Chrome'))
+        if opt.system_user_path:
+            if opt._old_browser:
+                user_path = None
+            else:
+                src_path = get_edge_user_data_dir() if is_edge else get_sys_Chrome_user_data_dir()
+                try:
+                    ensure_del_dir(user_path)
+                    copytree(src_path, user_path)
+                except shutilError:
+                    ensure_del_dir(user_path)
+                    raise RuntimeError(_S._lang.joinn(_S._lang.SYS_BROWSER_ACTIVATED, 'edge' if is_edge else 'Chrome'))
 
         elif opt.is_auto_port or opt._new_env:
             if not ensure_del_dir(user_path):
                 raise RuntimeError(_S._lang.FAILED_TO_DEL_USER_DIR)
 
-        user_path = user_path.resolve()
-        opt.set_user_data_path(user_path)
-        args.append(f'--user-data-dir={user_path}')
+        if user_path:
+            user_path = user_path.resolve()
+            opt.set_user_data_path(user_path)
+            args.append(f'--user-data-dir={user_path}')
 
     else:
         opt._auto_port = None  # 自动端口同时指定了文件夹，结束时不删除文件夹
@@ -96,6 +99,7 @@ def get_launch_args(opt):
             continue
         elif i.startswith('--user-data-dir='):
             user_path = Path(i[16:]).resolve()
+            i = f'--user-data-dir={user_path}'
         elif i.startswith('--user-agent='):
             opt._ua_set = True
         result.add(i)
@@ -107,9 +111,9 @@ def get_launch_args(opt):
     if ext:
         for e in ext:
             if e.is_file():
-                raise ValueError(_S._lang.join(_S._lang.PLUGIN_NEED_FOLDER, str(e.resolve())))
+                raise ValueError(_S._lang.joinn(_S._lang.PLUGIN_NEED_FOLDER, str(e.resolve())))
             elif not e.exists():
-                raise FileNotFoundError(_S._lang.join(_S._lang.EXT_NOT_FOUND, PATH=e))
+                raise FileNotFoundError(_S._lang.joinn(_S._lang.EXT_NOT_FOUND, PATH=e))
             else:
                 exts.append(str(e.resolve()))
         ext = ','.join(set(exts))
@@ -190,24 +194,22 @@ def set_flags(opt):
 
 
 def test_connect(ip, port):
-    end_time = perf_counter() + _S.browser_connect_timeout
     s = Session()
     s.trust_env = False
     s.keep_alive = False
-    while perf_counter() < end_time:
-        try:
-            r = s.get(f'http://{ip}:{port}/json', timeout=10, headers={'Connection': 'close'})
-            for tab in r.json():
-                if tab['type'] in ('page', 'webview'):
-                    r.close()
-                    s.close()
-                    return True
-            r.close()
-        except Exception:
-            sleep(.2)
 
+    def do():
+        try:
+            r = s.get(f'http://{ip}:{port}/json/version', timeout=10, headers={'Connection': 'close'})
+            if 'webSocketDebuggerUrl' in r.json():
+                r.close()
+                return True
+        except Exception:
+            return None
+
+    res = wait_until(do, timeout=_S.browser_connect_timeout)
     s.close()
-    return False
+    return True if res else False
 
 
 def _run_browser(port, path: str, args) -> Popen:
@@ -224,7 +226,7 @@ def _run_browser(port, path: str, args) -> Popen:
     try:
         return Popen(arguments, shell=False, stdout=DEVNULL, stderr=DEVNULL)
     except FileNotFoundError:
-        raise FileNotFoundError(_S._lang.join(_S._lang.BROWSER_NOT_FOUND))
+        raise FileNotFoundError(_S._lang.joinn(_S._lang.BROWSER_NOT_FOUND))
 
 
 def _make_leave_in_dict(target_dict: dict, src: list, num: int, end: int) -> None:
@@ -392,7 +394,7 @@ def get_sys_Chrome_user_data_dir():
     if system.startswith("win"):
         local_appdata = environ.get("LOCALAPPDATA")
         if not local_appdata:
-            raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
+            raise RuntimeError(_S._lang.joinn(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
         src_path = os_path.join(local_appdata, "Google", "Chrome", "User Data")
 
     elif system in ('macos', 'darwin'):
@@ -404,10 +406,10 @@ def get_sys_Chrome_user_data_dir():
         src_path = os_path.join(home, ".config", "google-chrome")
 
     else:
-        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
+        raise RuntimeError(_S._lang.joinn(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
 
     if not os_path.exists(src_path):
-        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
+        raise RuntimeError(_S._lang.joinn(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'Chrome'))
 
     return Path(src_path)
 
@@ -418,7 +420,7 @@ def get_edge_user_data_dir():
     if system.startswith("win"):
         local_appdata = environ.get("LOCALAPPDATA")
         if not local_appdata:
-            raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
+            raise RuntimeError(_S._lang.joinn(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
         src_path = os_path.join(local_appdata, "Microsoft", "Edge", "User Data")
 
     elif system in ('macos', 'darwin'):
@@ -430,9 +432,9 @@ def get_edge_user_data_dir():
         src_path = os_path.join(home, ".config", "microsoft-edge")
 
     else:
-        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
+        raise RuntimeError(_S._lang.joinn(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
 
     if not os_path.exists(src_path):
-        raise RuntimeError(_S._lang.join(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
+        raise RuntimeError(_S._lang.joinn(_S._lang.FAILED_TO_GET_SYS_USER_DATA, 'edge'))
 
     return Path(src_path)

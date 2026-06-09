@@ -33,7 +33,7 @@ class Screencast(object):
     def start(self, save_path=None):
         self.set_save_path(save_path)
         if self._path is None:
-            raise RuntimeError(_S._lang.join(_S._lang.NEED_ARG_, 'save_path'))
+            raise RuntimeError(_S._lang.joinn(_S._lang.NEED_ARG_, 'save_path'))
 
         if self._mode in ('frugal_video', 'video'):
             if self._owner.browser._chromium_options.tmp_path:
@@ -111,14 +111,14 @@ class Screencast(object):
             return str(Path(self._path).resolve())
 
         if not str(self._path).isascii():
-            raise ValueError(_S._lang.join(_S._lang.ONLY_ENGLISH, CURR_VAL=self._path))
+            raise ValueError(_S._lang.joinn(_S._lang.ONLY_ENGLISH, CURR_VAL=self._path))
 
         try:
             from cv2 import VideoWriter, imread, VideoWriter_fourcc
             from numpy import fromfile, uint8
         except (ImportError, ModuleNotFoundError):
-            raise EnvironmentError(_S._lang.join(_S._lang.NEED_LIB_, 'cv2, numpy',
-                                                 TIP='pip install opencv-python\npip install numpy'))
+            raise EnvironmentError(_S._lang.joinn(_S._lang.NEED_LIB_, 'cv2, numpy',
+                                                  TIP='pip install opencv-python\npip install numpy'))
 
         pic_list = Path(self._tmp_path or self._path).glob('*.jpg')
         img = imread(str(next(pic_list)))
@@ -140,7 +140,7 @@ class Screencast(object):
         if save_path:
             save_path = Path(save_path)
             if save_path.exists() and save_path.is_file():
-                raise ValueError(_S._lang.join(_S._lang.SAVE_PATH_MUST_BE_FOLDER))
+                raise ValueError(_S._lang.joinn(_S._lang.SAVE_PATH_MUST_BE_FOLDER))
             save_path.mkdir(parents=True, exist_ok=True)
             self._path = save_path
 

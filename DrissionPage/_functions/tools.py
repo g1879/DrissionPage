@@ -15,7 +15,8 @@ from time import perf_counter, sleep
 from .._configs.options_manage import OptionsManager
 from .._functions.settings import Settings as _S
 from ..errors import (ContextLostError, ElementLostError, PageDisconnectedError, NoRectError, BrowserConnectError,
-                      AlertExistsError, IncorrectURLError, StorageError, CookieFormatError, JavaScriptError, CDPError)
+                      AlertExistsError, IncorrectURLError, StorageError, CookieFormatError, JavaScriptError, CDPError,
+                      WaitTimeoutError)
 
 
 class PortFinder(object):
@@ -87,7 +88,7 @@ def show_or_hide_browser(tab, hide=True):
         from win32gui import ShowWindow
         from win32con import SW_HIDE, SW_SHOW
     except (ImportError, ModuleNotFoundError):
-        raise EnvironmentError(_S._lang.join(_S._lang.NEED_LIB_, 'pypiwin32', TIP='pip install pypiwin32'))
+        raise EnvironmentError(_S._lang.joinn(_S._lang.NEED_LIB_, 'pypiwin32', TIP='pip install pypiwin32'))
 
     pid = tab.browser.process_id
     if not pid:
@@ -121,8 +122,8 @@ def get_hwnds_from_pid(pid, title):
         from win32gui import IsWindow, GetWindowText, EnumWindows
         from win32process import GetWindowThreadProcessId
     except (ImportError, ModuleNotFoundError):
-        raise EnvironmentError(_S._lang.join(_S._lang.NEED_LIB_, 'win32gui, win32process',
-                                             TIP='pip install pypiwin32\npip install win32process'))
+        raise EnvironmentError(_S._lang.joinn(_S._lang.NEED_LIB_, 'win32gui, win32process',
+                                              TIP='pip install pypiwin32\npip install win32process'))
 
     def callback(hwnd, hds):
         if IsWindow(hwnd) and title in GetWindowText(hwnd):
@@ -136,16 +137,24 @@ def get_hwnds_from_pid(pid, title):
     return hwnds
 
 
-def wait_until(function, kwargs=None, timeout=10):
-    if kwargs is None:
-        kwargs = {}
+def wait_until(func, timeout, gap=.01, err_txt=None, **kwargs):
+    if timeout is None:
+        r = func(**kwargs)
+        while r is None:
+            sleep(gap)
+            r = func(**kwargs)
+        return r
     end_time = perf_counter() + timeout
-    while perf_counter() < end_time:
-        value = function(**kwargs)
-        if value:
-            return value
-        sleep(.01)
-    raise TimeoutError
+    r = func(**kwargs)
+    if r is None and timeout:
+        while r is None and perf_counter() < end_time:
+            sleep(gap)
+            r = func(**kwargs)
+    if r is not None:
+        return r
+    elif err_txt is not None:
+        raise WaitTimeoutError(err_txt)
+    return None
 
 
 def configs_to_here(save_name=None):
@@ -158,36 +167,36 @@ def raise_error(result, browser, ignore=None, user=False):
     error = result['error']
     if error in ('Cannot find context with specified id', 'Inspected target navigated or closed',
                  'No frame with given id found'):
-        r = ContextLostError()
+        r = ContextLostError(INFO=error)
     elif error in ('Could not find node with given id', 'Could not find object with given id',
                    'No node with given id found', 'Node with given id does not belong to the document',
                    'No node found for given backend id'):
-        r = ElementLostError()
+        r = ElementLostError(INFO=error)
     elif error in ('connection disconnected', 'No target with given id found', 'Session with given id not found.'):
-        r = PageDisconnectedError()
+        r = PageDisconnectedError(INFO=error)
     elif error == 'alert exists.':
-        r = AlertExistsError()
+        r = AlertExistsError(INFO=error)
     elif error in ('Node does not have a layout object', 'Could not compute box model.'):
-        r = NoRectError()
+        r = NoRectError(INFO=error)
     elif error == 'Cannot take screenshot with 0 height.':
-        r = NoRectError(_S._lang.ZERO_HEIGHT)
+        r = NoRectError(_S._lang.ZERO_HEIGHT, INFO=error)
     elif error == 'Cannot navigate to invalid URL':
-        r = IncorrectURLError(_S._lang.INVALID_URL, url=result["args"]["url"])
+        r = IncorrectURLError(_S._lang.INVALID_URL, INFO=error, url=result["args"]["url"])
     elif error == 'Frame corresponds to an opaque origin and its storage key cannot be serialized':
-        r = StorageError()
+        r = StorageError(INFO=error)
     elif error == 'Sanitizing cookie failed':
-        r = CookieFormatError(cookies=result["args"])
+        r = CookieFormatError(INFO=error, cookies=result["args"])
     elif error == 'Invalid header name':
-        r = ValueError(_S._lang.join(_S._lang.INVALID_HEADER_NAME, headers=result["args"]["headers"]))
+        r = ValueError(_S._lang.joinn(_S._lang.INVALID_HEADER_NAME, INFO=error, headers=result["args"]["headers"]))
     elif error == 'Given expression does not evaluate to a function':
-        r = JavaScriptError(_S._lang.NOT_A_FUNCTION, JS=result["args"]["functionDeclaration"])
+        r = JavaScriptError(_S._lang.NOT_A_FUNCTION, INFO=error, JS=result["args"]["functionDeclaration"])
     elif error.endswith("' wasn't found"):
-        r = RuntimeError(_S._lang.join(_S._lang.METHOD_NOT_FOUND, BROWSER_VER=browser.version, METHOD=result["method"]))
+        r = RuntimeError(_S._lang.joinn(_S._lang.METHOD_NOT_FOUND, INFO=error, BROWSER_VER=browser.version,
+                                        METHOD=result["method"]))
     elif error == 'timeout':
-        r = TimeoutError(_S._lang.join(_S._lang.NO_RESPONSE, INFO=result["error"],
-                                       METHOD=result["method"], ARGS=result["args"]))
+        r = TimeoutError(_S._lang.joinn(_S._lang.NO_RESPONSE, INFO=error, METHOD=result["method"], ARGS=result["args"]))
     elif user:
-        r = RuntimeError(_S._lang.join(_S._lang.UNKNOWN_ERR, INFO=result, TIP=_S._lang.FEEDBACK))
+        r = RuntimeError(_S._lang.joinn(_S._lang.UNKNOWN_ERR, DETAIL=result, TIP=_S._lang.FEEDBACK))
     else:
         r = CDPError(_S._lang.UNKNOWN_ERR, INFO=error, METHOD=result["method"],
                      ARGS=result["args"], TIP=_S._lang.FEEDBACK)

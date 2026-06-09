@@ -15,15 +15,16 @@ from time import perf_counter, sleep
 from DrissionRecord.tools import make_valid_name
 
 from .._base.base import BasePage, Messenger
-from .navigation_result import make_navigation_result
-from .._elements.chromium_element import run_js, make_chromium_eles, find_by_ax
+from .._configs.session_options import SessionOptions
+from .._elements.chromium_element import run_js, make_chromium_eles, find_by_ax, wait_for_ele
 from .._elements.none_element import NoneElement
 from .._elements.session_element import make_session_ele
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, get_frame, ChromiumElementsList
-from .._functions.locator import get_loc
+from .._functions.locator import get_loc, quotes_escape
 from .._functions.settings import Settings as _S
-from .._functions.web import location_in_viewport
+from .._functions.tools import wait_until
+from .._functions.web import location_in_viewport, NavResult
 from .._units.actions import Actions
 from .._units.console import Console
 from .._units.listener import Listener
@@ -43,7 +44,9 @@ class ChromiumBase(BasePage, Messenger):
         Messenger.__init__(self)
         self._browser = browser
         self._is_loading = None
-        self._root_id = None  # object id
+        self._root_oid = None  # object id
+        self._root_nid = None
+        self._root_bid = None
         self._context_id = context_id
         self._default_context = context_id == browser._browser_id
         self._target_id = target_id
@@ -70,36 +73,45 @@ class ChromiumBase(BasePage, Messenger):
             self._listener = None
 
         self._event_handlers = {
-            'Page.javascriptDialogOpening': self._on_alert_open,
-            'Page.javascriptDialogClosed': self._on_alert_close,
-            'Page.frameStartedLoading': self._onFrameStartedLoading,
-            'Page.frameNavigated': self._onFrameNavigated,
-            'Page.domContentEventFired': self._onDomContentEventFired,
-            'Page.loadEventFired': self._onLoadEventFired,
-            'Page.frameStoppedLoading': self._onFrameStoppedLoading,
-            'Page.frameAttached': self._onFrameAttached,
-            'Page.frameDetached': self._onFrameDetached,
+            'Page.javascriptDialogOpening': [self._on_alert_open],
+            'Page.javascriptDialogClosed': [self._on_alert_close],
+            'Page.frameStartedLoading': [self._onFrameStartedLoading],
+            'Page.frameNavigated': [self._onFrameNavigated],
+            'Page.domContentEventFired': [self._onDomContentEventFired],
+            'Page.loadEventFired': [self._onLoadEventFired],
+            'Page.frameStoppedLoading': [self._onFrameStoppedLoading],
+            'Page.frameAttached': [self._onFrameAttached],
+            'Page.frameDetached': [self._onFrameDetached],
         }
         self._imm_events = {'Page.javascriptDialogOpening'}
         self._d_set_runtime_settings()
         self._start_messenger()
         self._connect_browser()
-        url, usr, pwd = self._browser._tabs.get_proxy(self._context_id)
+        url, usr, pwd, full = self._browser._tabs.get_proxy(self._context_id)
         if usr:
             self._proxy_usr = usr
             self._proxy_pwd = pwd
-            self._run_cdp('Fetch.enable', handleAuthRequests=True)
+            self._enable_domain('Fetch', handleAuthRequests=True)
             self._set_callback("Fetch.authRequired", self._onAuthRequired)
             self._set_callback("Fetch.requestPaused", self._onRequestPaused)
         else:
             self._proxy_usr = None
             self._proxy_pwd = None
+        self._proxy = full
 
     def __call__(self, locator, index=1, timeout=None):
         return self.ele(locator, index, timeout)
 
     def _d_set_runtime_settings(self):
         pass
+
+    def _set_session_options(self, session_or_options=None):
+        if session_or_options is None:
+            session_or_options = self.browser._session_options or SessionOptions(
+                read_file=self.browser._session_options is None)
+            if self._proxy:
+                session_or_options.set_proxies(self._proxy, self._proxy)
+        super()._set_session_options(session_or_options)
 
     def _connect_browser(self):
         self._is_reading = False
@@ -113,8 +125,8 @@ class ChromiumBase(BasePage, Messenger):
         self._driver = self.browser._driver
 
         self._alert = Alert(self._auto_handle_alert)
-        self._run_cdp('DOM.enable')
-        self._run_cdp('Page.enable')
+        self._enable_domain('Page')
+        self._enable_domain('DOM')
         self._run_cdp('Emulation.setFocusEmulationEnabled', enabled=True)
 
         r = self._run_cdp('Page.getFrameTree')
@@ -132,11 +144,13 @@ class ChromiumBase(BasePage, Messenger):
         end_time = perf_counter() + timeout
         while perf_counter() < end_time:
             try:
-                b_id = self._run_cdp('DOM.getDocument', _timeout=timeout)['root']['backendNodeId']
+                root = self._run_cdp('DOM.getDocument', _timeout=timeout)['root']
+                self._root_bid = root['backendNodeId']
+                self._root_nid = root['nodeId']
                 timeout = end_time - perf_counter()
                 timeout = 1 if timeout <= 1 else timeout
-                self._root_id = self._run_cdp('DOM.resolveNode', backendNodeId=b_id,
-                                              _timeout=timeout)['object']['objectId']
+                self._root_oid = self._run_cdp('DOM.resolveNode', backendNodeId=self._root_bid,
+                                               _timeout=timeout)['object']['objectId']
                 result = True
                 break
 
@@ -183,7 +197,7 @@ class ChromiumBase(BasePage, Messenger):
             self._doc_got = False
             self._ready_state = 'loading'
             self._is_loading = True
-            if kwargs.get('type', None) == 'BackForwardCacheRestore':
+            if kwargs.get('type') == 'BackForwardCacheRestore':
                 self._get_document()
 
     def _onDomContentEventFired(self, **kwargs):
@@ -208,7 +222,7 @@ class ChromiumBase(BasePage, Messenger):
     def _onFileChooserOpened(self, **kwargs):
         if self._upload_list:
             if 'backendNodeId' not in kwargs:
-                raise RuntimeError(_S._lang.join(_S._lang.CANNOT_INPUT_FILE))
+                raise RuntimeError(_S._lang.joinn(_S._lang.CANNOT_INPUT_FILE))
             files = self._upload_list if kwargs['mode'] == 'selectMultiple' else self._upload_list[:1]
             self._run_cdp('DOM.setFileInputFiles', files=files, backendNodeId=kwargs['backendNodeId'])
 
@@ -330,7 +344,7 @@ class ChromiumBase(BasePage, Messenger):
     @property
     def html(self):
         self.wait.doc_loaded()
-        return self._run_cdp('DOM.getOuterHTML', objectId=self._root_id)['outerHTML']
+        return self._run_cdp('DOM.getOuterHTML', objectId=self._root_oid)['outerHTML']
 
     @property
     def json(self):
@@ -401,14 +415,11 @@ class ChromiumBase(BasePage, Messenger):
     def run_async_js(self, script, *args, as_expr=False):
         run_js(self, script, as_expr, 0, args)
 
-    def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, return_info=False):
+    def get(self, url, retry=None, interval=None, timeout=None, raise_err=False):
         retry, interval, is_file = self._before_connect(url, retry, interval)
-        self._url_available = self._d_connect(self._url, times=retry, interval=interval,
-                                              show_errmsg=show_errmsg, timeout=timeout)
-        if not return_info:
-            return self._url_available
-
-        return make_navigation_result(self, self._url, self._url_available)
+        r = self._d_connect(url=self._url, retry=retry, interval=interval, timeout=timeout, raise_err=raise_err)
+        self._url_available = r.ok
+        return r
 
     def cookies(self, all_domains=False, all_info=False):
         self.wait.doc_loaded()
@@ -447,73 +458,20 @@ class ChromiumBase(BasePage, Messenger):
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
         if isinstance(locator, (str, tuple)):
-            loc = get_loc(locator)
+            mode, loc = get_loc(locator)
         elif locator._type in ('ChromiumElement', 'ChromiumFrame'):
             return locator
         else:
-            raise LocatorError(_S._lang.join(ALLOW_TYPE=_S._lang.ELE_OR_LOC, CURR_VAL=locator))
+            raise LocatorError(ALLOW_TYPE=_S._lang.ELE_OR_LOC, CURR_VAL=locator)
+        self.wait.doc_loaded()
 
-        if loc[0] == 'ax':
+        if mode == 'ax':
             self._Accessibility_enable()
             bid = self._run_cdp('Accessibility.getRootAXNode', frameId=self._frame_id)['node']['backendDOMNodeId']
-            return find_by_ax(self, bid, loc[1], index, timeout)
+            return find_by_ax(self, bid, loc, index, timeout)
 
-        loc = loc[1]
-        self.wait.doc_loaded()
-        end_time = perf_counter() + timeout
-
-        search_ids = []
-        timeout = .5 if timeout <= 0 else timeout
-        result = self._run_cdp('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True,
-                               _timeout=timeout, _ignore=True)
-        if 'error' in result:
-            num = 0
         else:
-            num = result['resultCount']
-            search_ids.append(result['searchId'])
-
-        while True:
-            if num > 0:
-                from_index = index_arg = 0
-                if index is None:
-                    end_index = num
-                    index_arg = None
-                elif index < 0:
-                    from_index = index + num
-                    end_index = from_index + 1
-                else:
-                    from_index = index - 1
-                    end_index = from_index + 1
-
-                if from_index <= num - 1:
-                    nIds = self._driver.run('DOM.getSearchResults', searchId=result['searchId'], _debug=self._debug,
-                                            fromIndex=from_index, toIndex=end_index, _session_id=self._session_id)
-                    n = nIds.get('nodeIds', None)
-                    if n and n[0] != 0:
-                        r = make_chromium_eles(self, _ids=n, index=index_arg, id_type='node_id', ele_only=True)
-                        if r is not False:
-                            break
-                    elif nIds.get('error', None) == 'connection disconnected':
-                        raise PageDisconnectedError
-
-            if perf_counter() >= end_time:
-                return NoneElement(self) if index is not None else ChromiumElementsList(owner=self)
-
-            sleep(.01)
-            timeout = end_time - perf_counter()
-            timeout = .5 if timeout <= 0 else timeout
-            result = self._driver.run('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True,
-                                      _timeout=timeout, _session_id=self._session_id, _debug=self._debug)
-            num = result.get('resultCount', 0)
-            if num:
-                search_ids.append(result['searchId'])
-            elif result.get('error', None) == 'connection disconnected':
-                raise PageDisconnectedError
-
-        for _id in search_ids:
-            self._run_cdp('DOM.discardSearchResults', searchId=_id)
-
-        return r
+            return find_by_any(self, loc, index, timeout)
 
     def refresh(self, ignore_cache=False):
         self._is_loading = True
@@ -566,7 +524,10 @@ class ChromiumBase(BasePage, Messenger):
         if ele:
             self._run_cdp('DOM.removeNode', nodeId=ele._node_id, _ignore=ElementLostError)
 
-    def add_ele(self, html_or_info, insert_to=None, before=None):
+    def add_ele(self, html_or_info, insert_to=None, before=None):  # 即将废弃
+        return self.new_ele(html_or_info=html_or_info, insert_to=insert_to, before=before)
+
+    def new_ele(self, html_or_info, insert_to=None, before=None):
         if isinstance(html_or_info, str):
             insert_to = self.ele(insert_to) if insert_to else self.ele('t:body')
             args = [html_or_info, insert_to]
@@ -612,16 +573,16 @@ class ChromiumBase(BasePage, Messenger):
                      '''
 
         else:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'html_or_info', ALLOW_TYPE='html, tuple',
-                                           TIP=_S._lang.NEW_ELE_INFO, CURR_VAL=html_or_info))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'html_or_info', ALLOW_TYPE='html, tuple',
+                                            TIP=_S._lang.NEW_ELE_INFO, CURR_VAL=html_or_info))
 
         try:
             ele = self._run_js(js, *args)
         except JavaScriptError:
-            raise RuntimeError(_S._lang.join(_S._lang.DICT_TO_NEW_ELE))
+            raise RuntimeError(_S._lang.joinn(_S._lang.DICT_TO_NEW_ELE))
         return ele
 
-    def get_frame(self, loc_ind_ele, timeout=None):
+    def get_frame(self, loc_ind_ele='t:iframe', timeout=None):
         timeout = timeout if timeout is not None else self.timeouts.base
         now = perf_counter()
         end_time = now + timeout
@@ -670,13 +631,15 @@ class ChromiumBase(BasePage, Messenger):
             self._run_cdp_loaded("Storage.clearDataForOrigin", origin="*", storageTypes="all")
 
         if session_storage or local_storage:
-            self._run_cdp_loaded('DOMStorage.enable')
+            self.wait.doc_loaded()
+            self._enable_domain('DOMStorage')
             i = self._run_cdp('Storage.getStorageKeyForFrame', frameId=self._frame_id)['storageKey']
             if session_storage:
                 self._run_cdp('DOMStorage.clear', storageId={'storageKey': i, 'isLocalStorage': False})
             if local_storage:
                 self._run_cdp('DOMStorage.clear', storageId={'storageKey': i, 'isLocalStorage': True})
-            self._run_cdp_loaded('DOMStorage.disable')
+            self.wait.doc_loaded()
+            self._disable_domain('DOMStorage')
 
         if cache:
             self._run_cdp_loaded('Network.clearBrowserCache')
@@ -723,7 +686,7 @@ class ChromiumBase(BasePage, Messenger):
         self._alert.activated = True
         self._alert.text = kwargs['message']
         self._alert.type = kwargs['type']
-        self._alert.defaultPrompt = kwargs.get('defaultPrompt', None)
+        self._alert.defaultPrompt = kwargs.get('defaultPrompt')
         self._alert.response_accept = None
         self._alert.response_text = None
         self._has_alert = True
@@ -747,16 +710,16 @@ class ChromiumBase(BasePage, Messenger):
         self._has_alert = False
 
     def _wait_loaded(self, timeout=None):
+        def do():
+            return True if (self._ready_state == 'complete' or (self._load_mode == 'eager'
+                                                                and self._ready_state in ('interactive', 'complete')
+                                                                and not self._is_loading)) else None
+
         if timeout is None:
             timeout = self.timeouts.page_load
-        end_time = perf_counter() + timeout
-        while perf_counter() < end_time:
-            if (self._ready_state == 'complete'
-                    or (self._load_mode == 'eager'
-                        and self._ready_state in ('interactive', 'complete') and not self._is_loading)):
-                return True
-
-            sleep(.01)
+        r = wait_until(do, timeout=timeout)
+        if r is not None:
+            return r
 
         try:
             self.stop_loading()
@@ -766,28 +729,42 @@ class ChromiumBase(BasePage, Messenger):
 
     def _Accessibility_enable(self):
         if not self._Accessibility_enabled:
-            self._run_cdp('Accessibility.enable')
+            self._enable_domain('Accessibility')
             self._Accessibility_enabled = True
 
-    def _d_connect(self, to_url, times=0, interval=1, show_errmsg=False, timeout=None):
+    def _get_status_code(self, **kwargs):
+        if kwargs.get('frameId') == self._frame_id and kwargs['type'] == 'Document':
+            self._nav_result.status = kwargs['response']['status']
+            self._nav_result.url = kwargs['response']['url']
+            self._nav_result.headers = kwargs['response']['headers']
+
+    def _get_request(self, **kwargs):
+        if kwargs.get('frameId') == self._frame_id and kwargs.get('type') == 'Document':
+            self._nav_result.request = kwargs['request']
+
+    def _d_connect(self, url, retry, interval, timeout=None, raise_err=False):
         err = None
         self._is_loading = True
         timeout = timeout if timeout is not None else self.timeouts.page_load
-        for t in range(times + 1):
+        self._enable_domain('Network')
+        self._nav_result = NavResult()
+        self._set_callback('Network.responseReceived', self._get_status_code)
+        self._set_callback('Network.requestWillBeSent', self._get_request)
+        for t in range(retry + 1):
             err = None
             end_time = perf_counter() + timeout
             try:
-                result = self._run_cdp('Page.navigate', frameId=self._frame_id, url=to_url, _timeout=timeout)
+                result = self._run_cdp('Page.navigate', frameId=self._frame_id, url=url, _timeout=timeout)
                 if 'errorText' in result:
-                    err = ConnectionError(_S._lang.join(_S._lang.CONNECT_ERR, INFO=result['errorText']))
+                    self._nav_result.status = result['errorText']
+                    err = ConnectionError(_S._lang.joinn(_S._lang.CONNECT_ERR, INFO=result['errorText']))
             except TimeoutError:
-                err = TimeoutError(_S._lang.join(_S._lang.TIMEOUT_, _S._lang.PAGE_CONNECT, timeout))
+                self._nav_result.status = 'net::ERR_TIMED_OUT'
+                err = TimeoutError(_S._lang.joinn(_S._lang.TIMEOUT_, _S._lang.PAGE_CONNECT, timeout))
 
             if err:
-                if t < times:
+                if t < retry:
                     sleep(interval)
-                    if show_errmsg:
-                        print(f'{_S._lang.RETRY}{t + 1} {to_url}')
                 end_time1 = end_time - perf_counter()
                 while self._ready_state not in ('loading', 'complete') and perf_counter() < end_time1:  # 等待出错信息显示
                     sleep(.01)
@@ -795,27 +772,29 @@ class ChromiumBase(BasePage, Messenger):
                 continue
 
             if self._load_mode == 'none':
-                return True
+                self._remove_callback('Network.responseReceived', self._get_status_code)
+                self._remove_callback('Network.requestWillBeSent', self._get_request)
+                self._disable_domain('Network')
+                return self._nav_result
 
             yu = end_time - perf_counter()
             ok = self._wait_loaded(1 if yu <= 0 else yu)
             if not ok:
-                err = TimeoutError(_S._lang.join(_S._lang.TIMEOUT_, _S._lang.PAGE_CONNECT, timeout))
-                if t < times:
+                err = TimeoutError(_S._lang.joinn(_S._lang.TIMEOUT_, _S._lang.PAGE_CONNECT, timeout))
+                if t < retry:
                     sleep(interval)
-                    if show_errmsg:
-                        print(f'{_S._lang.RETRY}{t + 1} {to_url}')
                 continue
 
             if not err:
                 break
 
-        if err:
-            if show_errmsg:
-                raise err if err is not None else ConnectionError(_S._lang.join(_S._lang.CONNECT_ERR))
-            return False
+        if err and raise_err:
+            raise err if err is not None else ConnectionError(_S._lang.joinn(_S._lang.CONNECT_ERR))
 
-        return True
+        self._remove_callback('Network.responseReceived', self._get_status_code)
+        self._remove_callback('Network.requestWillBeSent', self._get_request)
+        self._disable_domain('Network')
+        return self._nav_result
 
     def _get_screenshot(self, path=None, name=None, as_bytes=None, as_base64=None,
                         full_page=False, left_top=None, right_bottom=None, ele=None):
@@ -824,8 +803,8 @@ class ChromiumBase(BasePage, Messenger):
                 pic_type = 'png'
             else:
                 if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_bytes',
-                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
+                    raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'as_bytes',
+                                                    ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
                 pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
 
         elif as_base64:
@@ -833,8 +812,8 @@ class ChromiumBase(BasePage, Messenger):
                 pic_type = 'png'
             else:
                 if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'as_base64',
-                                                   ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
+                    raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'as_base64',
+                                                    ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
                 pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
 
         else:
@@ -853,7 +832,7 @@ class ChromiumBase(BasePage, Messenger):
         if full_page:
             width, height = self.rect.size
             if width == 0 or height == 0:
-                raise RuntimeError(_S._lang.join(_S._lang.ZERO_PAGE_SIZE))
+                raise RuntimeError(_S._lang.joinn(_S._lang.ZERO_PAGE_SIZE))
             vp = {'x': 0, 'y': 0, 'width': width, 'height': height, 'scale': 1}
             args = {'format': pic_type, 'captureBeyondViewport': True, 'clip': vp}
         else:
@@ -896,6 +875,20 @@ class ChromiumBase(BasePage, Messenger):
             f.write(png)
         return str(path.resolve())
 
+    def _download_by_browser(self, url, save_path=None, rename=None, suffix=None, timeout=None, file_exists=None):
+        if rename:
+            download = rename
+            if suffix:
+                download = f'{download}.{suffix.lstrip(".")}'
+        else:
+            download = ''
+        e = self.new_ele(('a', {'href': url, 'target': '_blank', 'download': download}))
+        m = e.click.to_download(save_path=save_path, rename=rename, suffix=suffix, timeout=timeout, by_js=True,
+                                new_tab=True, file_exists=file_exists)
+        self._run_cdp('Runtime.callFunctionOn', functionDeclaration='function(){arguments[0].remove();}',
+                      arguments=[{'objectId': e._obj_id}], userGesture=True, _timeout=0, _ignore=True)
+        return m
+
 
 class Timeout(object):
     def __init__(self, base=None, page_load=None, script=None):
@@ -922,3 +915,49 @@ class Alert(object):
         self.handle_next = None
         self.next_text = None
         self.auto = auto
+
+
+def do_find_syntax(page, loc, ind):
+    r = page._run_cdp('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True, _ignore=True)
+    searchId = r.get('searchId')
+    resultCount = r.get('resultCount')
+    if not resultCount or (ind and resultCount < abs(ind)):
+        page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
+        return None
+
+    r = page._run_cdp('DOM.getSearchResults', searchId=searchId, _ignore=True,
+                      fromIndex=0, toIndex=resultCount).get('nodeIds')
+    if not r or not r[0]:
+        return None
+
+    if ind is None:
+        r = make_chromium_eles(page, _ids=r, index=None, id_type='node_id', ele_only=True)
+
+    else:
+        eles = []
+        got = 0
+        for i in r:
+            n = page._run_cdp('DOM.describeNode', _ignore=True, nodeId=i).get('node')
+            if not n:
+                page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
+                return None
+            if n['nodeName'] not in ('#text', '#comment'):
+                eles.append(i)
+                got += 1
+                if (0 < ind == got) or (not ind and got == 1):
+                    break
+        if not got:
+            return None
+        r = make_chromium_eles(page, _ids=eles, index=ind, id_type='node_id')
+
+    page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
+    return None if r is False else r
+
+
+def find_by_any(page, loc, index, timeout):
+    return wait_for_ele(do_find_any, target=page, timeout=timeout, index=index, page=page, loc=loc,
+                        xpath=f'//*/text()[contains(., {quotes_escape(loc)})]/..', ind=index)
+
+
+def do_find_any(page, loc, xpath, ind):
+    return do_find_syntax(page, xpath, ind) or do_find_syntax(page, loc, ind)

@@ -444,10 +444,6 @@ class ChromiumTabSetter(ChromiumBaseSetter):
         """
         ...
 
-    def activate(self) -> None:
-        """使标签页处于最前面"""
-        ...
-
 
 class ChromiumPageSetter(ChromiumTabSetter):
     _owner: ChromiumPage = ...
@@ -601,7 +597,7 @@ class WindowSetter(object):
     _owner: ChromiumBase = ...
     _window_id: str = ...
 
-    def __init__(self, owner: Union[ChromiumTab, ChromiumPage]):
+    def __init__(self, owner: ChromiumTab):
         """
         :param owner: Tab或Page对象
         """

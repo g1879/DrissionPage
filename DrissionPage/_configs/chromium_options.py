@@ -32,7 +32,7 @@ class ChromiumOptions(object):
         elif ini_path:
             ini_path = Path(ini_path).resolve()
             if not ini_path.exists():
-                raise FileNotFoundError(_S._lang.join(_S._lang.INI_NOT_FOUND, PATH=ini_path))
+                raise FileNotFoundError(_S._lang.joinn(_S._lang.INI_NOT_FOUND, PATH=ini_path))
             self.ini_path = str(ini_path)
         else:
             self.ini_path = str(Path(__file__).parent / 'configs.ini')
@@ -40,7 +40,7 @@ class ChromiumOptions(object):
         om = OptionsManager(ini_path)
         options = om.chromium_options
         self._download_path = om.paths.get('download_path', '.') or '.'
-        self._tmp_path = om.paths.get('tmp_path', None) or None
+        self._tmp_path = om.paths.get('tmp_path') or None
         self._arguments = options.get('arguments', [])
         self._browser_path = options.get('browser_path', '')
         self._extensions = options.get('extensions', [])
@@ -51,12 +51,13 @@ class ChromiumOptions(object):
         self._system_user_path = options.get('system_user_path', False)
         self._existing_only = options.get('existing_only', False)
         self._new_env = options.get('new_env', False)
+        self._old_browser = False
         for i in self._arguments:
             if i.startswith('--headless'):
                 self._is_headless = True
                 break
 
-        self._proxy = om.proxies.get('http', None) or om.proxies.get('https', None)
+        self._proxy = om.proxies.get('http') or om.proxies.get('https')
         if self._proxy:
             self.set_proxy(self._proxy)
 
@@ -287,18 +288,24 @@ class ChromiumOptions(object):
         on_off = None if on_off else False
         return self.set_argument('--ignore-certificate-errors', on_off)
 
+    def disable_pdf_preview(self, on_off=True):
+        if on_off:
+            self.set_pref('plugins.always_open_pdf_externally', True)
+        else:
+            self.remove_pref('plugins.always_open_pdf_externally')
+        return self
+
     def set_user_agent(self, user_agent):
         return self.set_argument('--user-agent', user_agent)
 
     def set_proxy(self, proxy):
-        self._proxy = proxy
-        self.proxy_url, self.proxy_usr, self.proxy_pwd = get_proxy_info(proxy)
+        self.proxy_url, self.proxy_usr, self.proxy_pwd, self._proxy = get_proxy_info(proxy)
         return self.set_argument('--proxy-server', self.proxy_url)
 
     def set_load_mode(self, value):
         if value not in ('normal', 'eager', 'none'):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'value',
-                                           ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'value',
+                                            ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
         self._load_mode = value.lower()
         return self
 
@@ -347,8 +354,10 @@ class ChromiumOptions(object):
         self.set_argument('--disk-cache-dir', str(path))
         return self
 
-    def use_system_user_path(self, on_off=True):
+    def use_system_user_path(self, on_off=True, old_ver=False):
         self._system_user_path = on_off
+        if on_off:
+            self._old_browser = old_ver
         return self
 
     def auto_port(self, on_off=True, scope=None):

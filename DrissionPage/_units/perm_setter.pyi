@@ -9,7 +9,10 @@ class BrowserPermSetter(object):
     _owner: Union[Chromium, ChromiumContext] = ...
     _context_id: Optional[str] = ...
 
-    def __init__(self, owner:  Union[Chromium, ChromiumContext], context_id: Optional[str] = None):
+    def __init__(self, owner: Union[Chromium, ChromiumContext], context_id: Optional[str] = None):
+        ...
+
+    def _set_perm(self, data: dict, allow: bool = True) -> None:
         ...
 
     def geolocation(self, allow: bool = True) -> None:
@@ -41,7 +44,7 @@ class BrowserPermSetter(object):
         """
         ...
 
-    def camera(self, allow: bool = True, panTiltZoom:bool=None) -> None:
+    def camera(self, allow: bool = True, panTiltZoom: bool = None) -> None:
         """摄像头权限
         :param allow: 允许或禁止
         :param panTiltZoom: 是否允许变焦
@@ -126,7 +129,7 @@ class BrowserPermSetter(object):
         """
         ...
 
-    def clipboard_read(self, allow: bool = True, allowWithoutSanitization:bool=None) -> None:
+    def clipboard_read(self, allow: bool = True, allowWithoutSanitization: bool = None) -> None:
         """剪贴板读取权限
         :param allow: 允许或禁止
         :param allowWithoutSanitization: 是否允许不进行清理操作
@@ -134,7 +137,7 @@ class BrowserPermSetter(object):
         """
         ...
 
-    def clipboard_write(self, allow: bool = True, allowWithoutSanitization:bool=None) -> None:
+    def clipboard_write(self, allow: bool = True, allowWithoutSanitization: bool = None) -> None:
         """剪贴板写入权限
         :param allow: 允许或禁止
         :param allowWithoutSanitization: 是否允许不进行清理操作

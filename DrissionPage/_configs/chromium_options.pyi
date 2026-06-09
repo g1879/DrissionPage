@@ -34,6 +34,7 @@ class ChromiumOptions(object):
     _retry_interval: float = ...
     _is_headless: bool = ...
     _ua_set: bool = ...
+    _old_browser:bool = ...
     ws_address: Optional[str] = ...
     proxy_url: Optional[str] = ...
     proxy_usr: Optional[str] = ...
@@ -286,8 +287,15 @@ class ChromiumOptions(object):
         """
         ...
 
-    def ignore_certificate_errors(self, on_off=True) -> ChromiumOptions:
+    def ignore_certificate_errors(self, on_off: bool = True) -> ChromiumOptions:
         """设置是否忽略证书错误
+        :param on_off: 开或关
+        :return: 当前对象
+        """
+        ...
+
+    def disable_pdf_preview(self, on_off: bool = True) -> ChromiumOptions:
+        """设置是否禁用pdf预览
         :param on_off: 开或关
         :return: 当前对象
         """
@@ -367,9 +375,10 @@ class ChromiumOptions(object):
         """
         ...
 
-    def use_system_user_path(self, on_off: bool = True) -> ChromiumOptions:
+    def use_system_user_path(self, on_off: bool = True, old_ver: bool = False) -> ChromiumOptions:
         """设置是否使用系统安装的浏览器默认用户文件夹
         :param on_off: 开或关
+        :param old_ver: 是否可直接使用系统用户文件夹的旧版浏览器
         :return: 当前对象
         """
         ...

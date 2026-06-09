@@ -38,6 +38,10 @@ class ChromiumPage(ChromiumTab):
         self._type = 'ChromiumPage'
         self._tab = self
         self._browser._dl_mgr._page_id = self.tab_id
+        print('ChromiumPage与以后陆续开发的新功能存在难以调和的冲突，未来将弃用。请用Chromium代替。\n'
+              'The ChromiumPage has inherent conflicts with the new features being developed later on, '
+              'and will be deprecated in the future. Please use Chromium instead.\n'
+              '详见（see）：https://drissionpage.cn/features/4.2')
 
     def __repr__(self):
         return f'<ChromiumPage browser_id={self._browser.id} tab_id={self.tab_id}>'

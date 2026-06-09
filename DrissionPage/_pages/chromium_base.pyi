@@ -6,21 +6,23 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
-from typing import Union, Tuple, Any, Optional, Literal, overload
+from typing import Union, Tuple, Any, Optional, Literal
 
 from requests import Session
 
 from .._base.base import BasePage, Messenger
 from .._base.driver import Driver
 from .._browsers.chromium import Chromium
+from .._configs.session_options import SessionOptions
 from .._elements.chromium_element import ChromiumElement
 from .._elements.session_element import SessionElement
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, ChromiumElementsList
+from .._functions.web import NavResult
 from .._pages.chromium_frame import ChromiumFrame
-from .._pages.navigation_result import NavigationResult
 from .._units.actions import Actions
 from .._units.console import Console
+from .._units.downloader import DownloadMission
 from .._units.listener import Listener
 from .._units.rect import TabRect, FrameRect
 from .._units.screencast import Screencast
@@ -48,7 +50,9 @@ class ChromiumBase(BasePage, Messenger):
     _load_mode: str = ...
     _scroll: Optional[Scroller] = ...
     _url: str = ...
-    _root_id: Optional[str] = ...
+    _root_oid: Optional[str] = ...
+    _root_nid: Optional[str] = ...
+    _root_bid: Optional[str] = ...
     _upload_list: Optional[list] = ...
     _wait: Optional[BaseWaiter] = ...
     _set: Optional[ChromiumBaseSetter] = ...
@@ -70,6 +74,7 @@ class ChromiumBase(BasePage, Messenger):
     _Accessibility_enabled: bool = ...
     _proxy_usr: Optional[str] = ...
     _proxy_pwd: Optional[str] = ...
+    _proxy: Optional[str] = ...
     _inited: bool = ...
     _debug: bool = ...
 
@@ -98,6 +103,13 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def _d_set_runtime_settings(self) -> None: ...
+
+    def _set_session_options(self, session_or_options: Union[Session, SessionOptions] = None) -> None:
+        """
+        :param session_or_options: Session设置
+        :return: None
+        """
+        ...
 
     def _connect_browser(self) -> None:
         """连接浏览器，在第一次时运行"""
@@ -149,6 +161,10 @@ class ChromiumBase(BasePage, Messenger):
     def _onRequestPaused(self, **kwargs):
         """"""
         ...
+
+    def _get_status_code(self, **kwargs): ...
+
+    def _get_request(self, **kwargs): ...
 
     def _wait_to_stop(self):
         """eager策略超时时使页面停止加载"""
@@ -357,23 +373,20 @@ class ChromiumBase(BasePage, Messenger):
         """
         ...
 
-    @overload
-    def get(self, url: str, show_errmsg: bool = False, retry: int = None,
-            interval: float = None, timeout: float = None, return_info: Literal[False] = False) -> Union[None, bool]:
+    def get(self,
+            url: str,
+            retry: int = None,
+            interval: float = None,
+            timeout: float = None,
+            raise_err:bool = False) -> NavResult:
         """访问url
         :param url: 目标url
-        :param show_errmsg: 是否显示和抛出异常
         :param retry: 重试次数，为None时使用页面对象retry_times属性值
         :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
         :param timeout: 连接超时时间（秒），为None时使用页面对象timeouts.page_load属性值
-        :param return_info: 是否返回导航结果对象，为False时保持原来的bool返回值
-        :return: 目标url是否可用，或导航结果
+        :param raise_err: 连接失败是否抛出异常
+        :return: NavResult对象
         """
-        ...
-
-    @overload
-    def get(self, url: str, show_errmsg: bool = False, retry: int = None,
-            interval: float = None, timeout: float = None, return_info: Literal[True] = True) -> NavigationResult:
         ...
 
     def cookies(self, all_domains: bool = False, all_info: bool = False) -> CookiesList:
@@ -483,7 +496,7 @@ class ChromiumBase(BasePage, Messenger):
         """
         ...
 
-    def add_ele(self,
+    def new_ele(self,
                 html_or_info: Union[str, Tuple[str, dict]],
                 insert_to: Union[ChromiumElement, str, Tuple[str, str], None] = None,
                 before: Union[ChromiumElement, str, Tuple[str, str], None] = None) -> Union[
@@ -497,7 +510,7 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def get_frame(self,
-                  loc_ind_ele: Union[str, int, tuple, ChromiumFrame, ChromiumElement],
+                  loc_ind_ele: Union[str, int, tuple, ChromiumFrame, ChromiumElement] = 't:iframe',
                   timeout: float = None) -> ChromiumFrame:
         """获取页面中一个frame对象
         :param loc_ind_ele: 定位符、iframe序号、ChromiumFrame对象，序号从1开始，可传入负数获取倒数第几个
@@ -624,15 +637,19 @@ class ChromiumBase(BasePage, Messenger):
 
     def _Accessibility_enable(self) -> None: ...
 
-    def _d_connect(self, to_url: str, times: int = 0, interval: float = 1, show_errmsg: bool = False,
-                   timeout: float = None) -> Union[bool, None]:
+    def _d_connect(self,
+                   url: str,
+                   retry: int,
+                   interval: float,
+                   timeout: float = None,
+                   raise_err: bool = False) -> NavResult:
         """尝试连接，重试若干次
-        :param to_url: 要访问的url
-        :param times: 重试次数
+        :param url: 要访问的url
+        :param retry: 重试次数
         :param interval: 重试间隔（秒）
-        :param show_errmsg: 是否抛出异常
         :param timeout: 连接超时时间（秒）
-        :return: 是否成功，返回None表示不确定
+        :param raise_err: 连接失败时是否抛出异常
+        :return: NavResult对象
         """
         ...
 
@@ -649,6 +666,22 @@ class ChromiumBase(BasePage, Messenger):
         :param right_bottom: 截取范围右下角角坐标
         :param ele: 为异域iframe内元素截图设置
         :return: 图片完整路径或字节文本
+        """
+        ...
+
+    def _download_by_browser(self, url: str, save_path: Union[str, Path] = None,
+                             rename: str = None, suffix: str = None,
+                             timeout: float = None,
+                             file_exists: Literal['rename', 'overwrite', 'skip', 'r', 'o', 's'] = None) -> Union[
+        DownloadMission, False]:
+        """触发浏览器下载
+        :param url: 下载地址
+        :param save_path: 保存路径，为None保存在原来设置的，如未设置保存到当前路径
+        :param rename: 重命名文件名
+        :param suffix: 指定文件后缀
+        :param timeout: 等待下载触发的超时时间，为None则使用页面对象设置
+        :param file_exists: 可在 'rename', 'overwrite', 'skip', 'r', 'o', 's'中选择
+        :return: DownloadMission对象，任务无触发时返回False
         """
         ...
 
@@ -686,3 +719,9 @@ class Alert(object):
     auto: Optional[bool] = ...
 
     def __init__(self, auto: bool = None): ...
+
+
+def find_by_xpath(page: ChromiumBase,
+                  loc: str,
+                  index: Optional[int],
+                  timeout: Optional[float]): ...

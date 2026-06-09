@@ -7,23 +7,23 @@
 """
 from pathlib import Path
 from random import randint
-from time import perf_counter, sleep
+from time import perf_counter
 
 from .waiter import wait_mission
 from .._functions.settings import Settings as _S
 from .._functions.web import offset_scroll
 from .._units.downloader import TabDownloadSettings
-from ..errors import CanNotClickError, CDPError, NoRectError, AlertExistsError
+from ..errors import CanNotClickError, CDPError, NoRectError, AlertExistsError, JavaScriptError
 
 
 class Clicker(object):
     def __init__(self, ele):
         self._ele = ele
 
-    def __call__(self, by_js=False, timeout=2, wait_stop=False):
+    def __call__(self, by_js=False, timeout=2, wait_stop=None):
         return self.left(by_js, timeout, wait_stop)
 
-    def left(self, by_js=False, timeout=2, wait_stop=False):
+    def left(self, by_js=False, timeout=2, wait_stop=None):
         if self._ele.tag == 'option':
             if not self._ele.states.is_selected:
                 self._ele.parent('t:select').select.by_option(self._ele)
@@ -55,7 +55,7 @@ class Clicker(object):
                     self._ele.scroll.to_see()
                     rect = self._ele.rect.viewport_corners
                     can_click = self._ele.wait.clickable(timeout=end_time - perf_counter(),
-                                                         wait_moved=wait_stop, raise_err=False)
+                                                         wait_stop=wait_stop, raise_err=False)
 
                 elif by_js is False:
                     raise NoRectError
@@ -86,7 +86,11 @@ class Clicker(object):
                 return self._ele
 
         if by_js is not False:
-            self._ele._run_js('this.click();')
+            try:
+                self._ele._run_js('this.click();')
+            except JavaScriptError:
+                self._ele._run_js("function(){this.dispatchEvent(new MouseEvent('click', "
+                                  "{bubbles: true,cancelable: true,view: window}));}")
             return self._ele
         if _S.raise_when_click_failed:
             raise CanNotClickError
@@ -103,7 +107,7 @@ class Clicker(object):
         if get_tab:
             tid = self._ele.tab.browser.wait._new_tab(self._ele.tab._context_id, curr_tab=curr_tid)
             if not tid:
-                raise RuntimeError(_S._lang.join(_S._lang.NO_NEW_TAB))
+                raise RuntimeError(_S._lang.joinn(_S._lang.NO_NEW_TAB))
             return self._ele.tab.browser._get_tab(self._ele.tab._context_id, tid)
 
     def at(self, offset_x=None, offset_y=None, button='left', count=1):
@@ -117,13 +121,14 @@ class Clicker(object):
     def multi(self, times=2):
         return self.at(count=times)
 
-    def to_download(self, save_path=None, rename=None, suffix=None, new_tab=None, by_js=False, timeout=None):
+    def to_download(self, save_path=None, rename=None, suffix=None, new_tab=None, by_js=False, timeout=None,
+                    file_exists=None):
         if not self._ele.tab._browser._dl_mgr._running:
             self._ele.tab._browser.set.download_path('.')
 
         when_file_exists = None
         tmp_path = None
-        if self._ele.tab._type.endswith('Page'):
+        if self._ele.tab._type.endswith('Page'):  # 即将废弃
             obj = browser = self._ele.owner._browser
             tid = 'browser'
 
@@ -160,7 +165,10 @@ class Clicker(object):
         browser._dl_mgr.set_flag(tid, True)
         self.left(by_js=by_js)
         m = wait_mission(browser, tid, timeout)
-
+        types = {'rename': 'rename', 'overwrite': 'overwrite', 'skip': 'skip',
+                 'r': 'rename', 'o': 'overwrite', 's': 'skip'}
+        if file_exists in types:
+            m._when_file_exists = types[file_exists]
         if tmp_path:
             TabDownloadSettings(tid).path = tmp_path
         if when_file_exists:
@@ -181,7 +189,7 @@ class Clicker(object):
         self.left(by_js=by_js)
         tid = self._ele.tab.browser.wait._new_tab(self._ele.tab._context_id, timeout=timeout, curr_tab=curr_tid)
         if not tid:
-            raise RuntimeError(_S._lang.join(_S._lang.NO_NEW_TAB))
+            raise RuntimeError(_S._lang.joinn(_S._lang.NO_NEW_TAB))
         return self._ele.tab.browser._get_tab(self._ele.tab._context_id, tid)
 
     def for_url_change(self, text=None, exclude=False, by_js=False, timeout=None):

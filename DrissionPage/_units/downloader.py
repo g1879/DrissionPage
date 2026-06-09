@@ -13,6 +13,7 @@ from time import sleep, perf_counter
 from DrissionRecord.tools import get_usable_path
 
 from .._functions.settings import Settings as _S
+from .._functions.tools import wait_until
 
 
 class DownloadManager(object):
@@ -69,7 +70,7 @@ class DownloadManager(object):
         self._flags[tab_id] = flag
 
     def get_flag(self, tab_id):
-        return self._flags.get(tab_id, None)
+        return self._flags.get(tab_id)
 
     def get_tab_missions(self, tab_id):
         return self._tab_missions.get(tab_id, set())
@@ -117,7 +118,7 @@ class DownloadManager(object):
         context_id = self._browser._tabs.get_context_id(frame_id=kwargs['frameId'])
         tab_id = self._browser._tabs.frame_ids.get(kwargs['frameId'], 'browser')
         tab = 'browser' if tab_id in ('browser', self._page_id) or self.get_flag('browser') is not None else tab_id
-        opener = self._browser._tabs.openers.get(tab_id, None)
+        opener = self._browser._tabs.openers.get(tab_id)
         from_tab = None
         if opener and opener in self._waiting_tab:
             tab = from_tab = opener
@@ -268,29 +269,26 @@ class DownloadMission(object):
         self._mgr.cancel(self)
 
     def wait(self, show=True, timeout=None, cancel_if_timeout=True):
+        def do():
+            if not self._mgr._browser._messenger_running:
+                return False
+            if show:
+                print(f'\r{self.rate}% ', end='')
+            return None if not self.is_done else True
+
         if show:
             print(f'url: {self.url}')
-            end_time = perf_counter()
+            end_time = perf_counter() + 1
             while self.name is None and perf_counter() < end_time:
                 sleep(0.01)
             print(f'{_S._lang.FILE_NAME}: {self.name or _S._lang.UNKNOWN}')
             print(f'{_S._lang.FOLDER_PATH}: {self.folder}')
+            if timeout is not None:
+                timeout = max(1, timeout - perf_counter())
 
-        if timeout is None:
-            while not self.is_done:
-                if show:
-                    print(f'\r{self.rate}% ', end='')
-                sleep(.2)
-
-        else:
-            end_time = perf_counter() + timeout
-            while not self.is_done and perf_counter() < end_time:
-                if show:
-                    print(f'\r{self.rate}% ', end='')
-                sleep(.2)
-
-            if not self.is_done and cancel_if_timeout:
-                self.cancel()
+        r = wait_until(do, timeout=timeout, gap=.2)
+        if r is None and not self.is_done and cancel_if_timeout:
+            self.cancel()
 
         if show:
             if self.state == 'completed':

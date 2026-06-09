@@ -40,8 +40,8 @@ class Actions:
             lx = x + offset_x
             ly = y + offset_y
         else:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'ele_or_loc',
-                                           ALLOW_TYPE=_S._lang.ELE_LOC_FORMAT, CURR_VAL=ele_or_loc))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'ele_or_loc',
+                                            ALLOW_TYPE=_S._lang.ELE_LOC_FORMAT, CURR_VAL=ele_or_loc))
 
         if not location_in_viewport(self.owner, lx, ly):
             # 把坐标滚动到页面中间
@@ -168,7 +168,7 @@ class Actions:
 
         data = make_input_data(self.modifier, key, False)
         if not data:
-            raise ValueError(_S._lang.join(_S._lang.NO_SUCH_KEY_, key))
+            raise ValueError(_S._lang.joinn(_S._lang.NO_SUCH_KEY_, key))
         self.owner._run_cdp('Input.dispatchKeyEvent', **data)
         return self
 
@@ -183,7 +183,7 @@ class Actions:
 
         data = make_input_data(self.modifier, key, True)
         if not data:
-            raise ValueError(_S._lang.join(_S._lang.NO_SUCH_KEY_, key))
+            raise ValueError(_S._lang.joinn(_S._lang.NO_SUCH_KEY_, key))
         self.owner._run_cdp('Input.dispatchKeyEvent', **data)
         return self
 

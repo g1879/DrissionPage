@@ -45,7 +45,7 @@ def set_session_cookies(session: Session,
 def set_browser_cookies(browser: Union[Chromium, ChromiumContext],
                         cookies: Union[RequestsCookieJar, list, tuple, str, dict]) -> None:
     """设置cookies值
-    :param browser: 浏览器或浏览器上下文对象
+    :param browser: 浏览器或浏览器子环境对象
     :param cookies: cookies信息
     :return: None
     """

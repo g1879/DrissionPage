@@ -13,7 +13,7 @@ from .._elements.chromium_element import ChromiumElement
 class SelectElement(object):
     _ele: ChromiumElement = ...
     def __init__(self, ele: ChromiumElement):
-        """
+        """用于处理 select 标签
         :param ele: <select>元素对象
         """
         ...

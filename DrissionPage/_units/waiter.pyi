@@ -164,8 +164,11 @@ class BaseWaiter(OriginWaiter):
         """
         ...
 
-    def upload_paths_inputted(self) -> bool:
-        """等待自动填写上传文件路径"""
+    def upload_paths_inputted(self, timeout=None) -> bool:
+        """等待自动填写上传文件路径
+        :param timeout: 超时时间（秒），为None时使用页面timeout属性
+        :return: 是否等待成功
+        """
         ...
 
     def download_begin(self, timeout: float = None, cancel_it: bool = False) -> Union[DownloadMission, bool, dict]:
@@ -220,6 +223,14 @@ class BaseWaiter(OriginWaiter):
         """
         ...
 
+    def _do(self, arg, text, exclude):
+        """执行判断变化
+        :param arg: 要被匹配的属性
+        :param text: 用于识别的文本
+        :param exclude: 是否排除，为True时当属性不包含text指定文本时返回True
+        """
+        ...
+
     def _loading(self,
                  timeout: float = None,
                  start: bool = True,
@@ -260,7 +271,7 @@ class ChromiumTabWaiter(BaseWaiter):
         """等待所有浏览器下载任务结束
         :param timeout: 超时时间（秒），为None时无限等待
         :param cancel_if_timeout: 超时时是否取消剩余任务
-        :return: 是否等待成功
+        :return: 等待成功返回Tab对象，否则返回False
         """
         ...
 
@@ -393,11 +404,11 @@ class ElementWaiter(OriginWaiter):
         """返回超时设置"""
         ...
 
-    def deleted(self, timeout: float = None, raise_err: bool = None) -> Union[ChromiumElement, False]:
+    def deleted(self, timeout: float = None, raise_err: bool = None) -> bool:
         """等待元素从dom删除
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 成功返回元素对象，失败返回False
+        :return: 成功返回Tren，失败返回False
         """
         ...
 
@@ -421,7 +432,7 @@ class ElementWaiter(OriginWaiter):
         """等待当前元素被遮盖
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 成功返回覆盖元素id，返回False
+        :return: 成功返回覆盖元素id，失败返回False
         """
         ...
 
@@ -458,11 +469,11 @@ class ElementWaiter(OriginWaiter):
         ...
 
     def clickable(self,
-                  wait_moved: bool = True,
+                  wait_stop: bool = None,
                   timeout: float = None,
                   raise_err: bool = None) -> Union[ChromiumElement, False]:
         """等待当前元素可被点击
-        :param wait_moved: 是否等待元素运动结束
+        :param wait_stop: 是否等待元素运动结束，，为None时使用Settings设置
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 成功返回元素对象，失败返回False
@@ -630,11 +641,11 @@ class FrameWaiter(BaseWaiter, ElementWaiter):
         ...
 
     def clickable(self,
-                  wait_moved: bool = True,
+                  wait_stop: bool = True,
                   timeout: float = None,
                   raise_err: bool = None) -> Union[ChromiumFrame, False]:
         """等待当前元素可被点击
-        :param wait_moved: 是否等待元素运动结束
+        :param wait_stop: 是否等待元素运动结束
         :param timeout: 超时时间（秒），为None使用元素所在页面timeout属性
         :param raise_err: 等待失败时是否报错，为None时根据Settings设置
         :return: 成功返回元素对象，失败返回False
@@ -659,6 +670,20 @@ def wait_mission(browser: Chromium, tid: str, timeout: float = None) -> Union[Do
     :param browser: Chromium对象
     :param tid: 标签页id
     :param timeout: 超时时间
-    :return:
+    :return: 等到任务返回任务对象，否则返回False
+    """
+    ...
+
+
+def get_frame_title(page: ChromiumBase) -> str:
+    """获取title
+    :param page: ChromiumBase对象
+    """
+    ...
+
+
+def get_frame_url(page) -> str:
+    """获取frame的url
+    :param page: ChromiumBase对象
     """
     ...

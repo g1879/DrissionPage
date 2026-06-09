@@ -173,7 +173,7 @@ class DownloadMission(object):
         """
         :param mgr: BrowserDownloadManager对象
         :param tab_id: 标签页id
-        :param context_id: 上下文id
+        :param context_id: 子环境id
         :param _id: 任务id
         :param folder: 最终保存文件夹路径
         :param name: 文件名

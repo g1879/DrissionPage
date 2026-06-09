@@ -23,7 +23,7 @@ def from_selenium(driver):
     """从selenium的WebDriver对象生成Chromium对象"""
     address, port = driver.caps.get('goog:chromeOptions', {}).get('debuggerAddress', ':').split(':')
     if not address:
-        raise RuntimeError(Settings._lang.join(Settings._lang.GET_OBJ_FAILED))
+        raise RuntimeError(Settings._lang.joinn(Settings._lang.GET_OBJ_FAILED))
     co = ChromiumOptions().set_local_port(port)
     co._ua_set = True
     return Chromium(co)
@@ -40,9 +40,9 @@ def from_playwright(page_or_browser):
                 pid = process['id']
                 break
         else:
-            raise RuntimeError(Settings._lang.join(Settings._lang.GET_OBJ_FAILED))
+            raise RuntimeError(Settings._lang.joinn(Settings._lang.GET_OBJ_FAILED))
     except:
-        raise RuntimeError(Settings._lang.join(Settings._lang.GET_OBJ_FAILED))
+        raise RuntimeError(Settings._lang.joinn(Settings._lang.GET_OBJ_FAILED))
 
     from psutil import net_connections
     for con_info in net_connections():
@@ -50,7 +50,7 @@ def from_playwright(page_or_browser):
             port = con_info.laddr.port
             break
     else:
-        raise RuntimeError(Settings._lang.join(Settings._lang.GET_OBJ_FAILED, TIP=Settings._lang.RUN_BY_ADMIN))
+        raise RuntimeError(Settings._lang.joinn(Settings._lang.GET_OBJ_FAILED, TIP=Settings._lang.RUN_BY_ADMIN))
     co = ChromiumOptions().set_local_port(port)
     co._ua_set = True
     return Chromium(co)

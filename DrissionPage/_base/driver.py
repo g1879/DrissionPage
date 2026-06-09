@@ -7,7 +7,7 @@
 """
 from json import dumps, loads, JSONDecodeError
 from queue import Queue, Empty
-from threading import Thread
+from threading import Thread, Lock
 from time import perf_counter, sleep
 
 from requests import Session
@@ -19,6 +19,36 @@ from .._functions.settings import Settings as _S
 from ..errors import BrowserConnectError
 
 adapters.DEFAULT_RETRIES = 5
+
+
+class ThreadSafeDict:
+    def __init__(self):
+        self._dict = {}
+        self._lock = Lock()
+
+    def __getitem__(self, k):
+        with self._lock:
+            return self._dict[k]
+
+    def __setitem__(self, k, v):
+        with self._lock:
+            self._dict[k] = v
+
+    def __delitem__(self, k):
+        with self._lock:
+            del self._dict[k]
+
+    def get(self, k, default=None):
+        with self._lock:
+            return self._dict.get(k, default)
+
+    def pop(self, item, default):
+        with self._lock:
+            self._dict.pop(item, default)
+
+    def clear(self):
+        with self._lock:
+            self._dict.clear()
 
 
 class Driver(object):
@@ -35,7 +65,7 @@ class Driver(object):
         self._session_owner = {}
 
         self.is_running = False
-        self.method_results = {}
+        self.method_results = ThreadSafeDict()
         self.event_queue = Queue()
 
         if owner:
@@ -44,13 +74,16 @@ class Driver(object):
         self.start()
 
     def _send(self, message, timeout, ws_id):
+        if not timeout:
+            try:
+                self._ws.send(dumps(message))
+                return {'id': ws_id, 'result': {}}
+            except (OSError, WebSocketConnectionClosedException):
+                return {'error': {'message': 'connection disconnected'}}
+
         self.method_results[ws_id] = Queue()
         try:
             self._ws.send(dumps(message))
-            if not timeout:
-                self.method_results.pop(ws_id, None)
-                return {'id': ws_id, 'result': {}}
-
         except (OSError, WebSocketConnectionClosedException):
             self.method_results.pop(ws_id, None)
             return {'error': {'message': 'connection disconnected'}}
@@ -69,7 +102,7 @@ class Driver(object):
 
                 if timeout is not None and perf_counter() > end_time:
                     self.method_results.pop(ws_id, None)
-                    return {'error': {'message': 'timeout'}}
+                    return {'id': ws_id, 'error': {'message': 'timeout'}}
 
         return {'error': {'message': 'connection disconnected'}}
 
@@ -85,13 +118,15 @@ class Driver(object):
 
             if 'method' in msg:
                 if msg['method'].startswith('Page.javascriptDialog'):
-                    sid = msg.get('sessionId', None)
+                    sid = msg.get('sessionId')
                     if sid:
                         (self.alert_flag.add if msg['method'].endswith('Opening') else self.alert_flag.discard)(sid)
-                self._session_owner.get(msg.get('sessionId', None), NoSession)._recv_event(msg)
+                self._session_owner.get(msg.get('sessionId'), NoSession)._recv_event(msg)
 
-            elif msg.get('id') in self.method_results:
-                self.method_results[msg['id']].put(msg)
+            else:
+                r = self.method_results.get(msg.get('id'))
+                if r:
+                    r.put(msg)
 
     def add_session_owner(self, session_id, obj):
         self._session_owner[session_id] = obj
@@ -123,7 +158,7 @@ class Driver(object):
             self._ws = create_connection(self.address, enable_multithread=True, suppress_origin=True)
         except WebSocketBadStatusException as e:
             if 'Handshake status 403 Forbidden' in str(e):
-                raise EnvironmentError(_S._lang.join(_S._lang.UPGRADE_WS))
+                raise EnvironmentError(_S._lang.joinn(_S._lang.UPGRADE_WS))
             else:
                 raise
         except ConnectionRefusedError:
@@ -164,7 +199,7 @@ class Driver(object):
 
 class DebugDriver(Driver):
     def __init__(self, address, owner=None):
-        super().__init__(address, owner=None)
+        super().__init__(address, owner=owner)
         self._debug = False if _S._debug is None else _S._debug
 
     def run(self, _method, _timeout=None, _session_id=None, _debug=False, **kwargs):
@@ -207,13 +242,15 @@ class DebugDriver(Driver):
                 if self._debug and (self._debug is True or msg['method'].startswith(self._debug)):
                     print(f'收 {msg}')
                 if msg['method'].startswith('Page.javascriptDialog'):
-                    sid = msg.get('sessionId', None)
+                    sid = msg.get('sessionId')
                     if sid:
                         (self.alert_flag.add if msg['method'].endswith('Opening') else self.alert_flag.discard)(sid)
-                self._session_owner.get(msg.get('sessionId', None), NoSession)._debug_recv_event(msg)
+                self._session_owner.get(msg.get('sessionId'), NoSession)._debug_recv_event(msg)
 
-            elif msg.get('id') in self.method_results:
-                self.method_results[msg['id']].put(msg)
+            else:
+                r = self.method_results.get(msg.get('id'))
+                if r:
+                    r.put(msg)
 
 
 class NoSession(object):

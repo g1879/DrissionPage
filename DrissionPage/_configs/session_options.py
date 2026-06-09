@@ -31,7 +31,7 @@ class SessionOptions(object):
         elif ini_path:
             ini_path = Path(ini_path).resolve()
             if not ini_path.exists():
-                raise FileNotFoundError(_S._lang.join(_S._lang.INI_NOT_FOUND, PATH=ini_path))
+                raise FileNotFoundError(_S._lang.joinn(_S._lang.INI_NOT_FOUND, PATH=ini_path))
             self.ini_path = str(ini_path)
         else:
             self.ini_path = str(Path(__file__).parent / 'configs.ini')
@@ -51,34 +51,34 @@ class SessionOptions(object):
         self._max_redirects = None
 
         options = om.session_options
-        if options.get('headers', None) is not None:
+        if options.get('headers') is not None:
             self.set_headers(options['headers'])
 
-        if options.get('cookies', None) is not None:
+        if options.get('cookies') is not None:
             self.set_cookies(options['cookies'])
 
-        if options.get('auth', None) is not None:
+        if options.get('auth') is not None:
             self._auth = options['auth']
 
-        if options.get('params', None) is not None:
+        if options.get('params') is not None:
             self._params = options['params']
 
-        if options.get('verify', None) is not None:
+        if options.get('verify') is not None:
             self._verify = options['verify']
 
-        if options.get('cert', None) is not None:
+        if options.get('cert') is not None:
             self._cert = options['cert']
 
-        if options.get('stream', None) is not None:
+        if options.get('stream') is not None:
             self._stream = options['stream']
 
-        if options.get('trust_env', None) is not None:
+        if options.get('trust_env') is not None:
             self._trust_env = options['trust_env']
 
-        if options.get('max_redirects', None) is not None:
+        if options.get('max_redirects') is not None:
             self._max_redirects = options['max_redirects']
 
-        self.set_proxies(om.proxies.get('http', None), om.proxies.get('https', None))
+        self.set_proxies(om.proxies.get('http'), om.proxies.get('https'))
         self._timeout = om.timeouts.get('base', 10)
         self._download_path = om.paths.get('download_path', '.') or '.'
 

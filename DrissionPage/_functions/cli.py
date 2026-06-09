@@ -9,7 +9,7 @@ from click import command, option
 
 from .._functions.tools import configs_to_here as ch
 from .._configs.chromium_options import ChromiumOptions
-from .._pages.chromium_page import ChromiumPage
+from .._browsers.chromium import Chromium
 
 
 @command()
@@ -29,7 +29,7 @@ def main(set_browser_path, set_user_path, configs_to_here, launch_browser):
 
     if launch_browser >= 0:
         port = f'127.0.0.1:{launch_browser}' if launch_browser else None
-        ChromiumPage(port)
+        Chromium(port)
 
 
 def set_paths(browser_path=None, user_data_path=None):

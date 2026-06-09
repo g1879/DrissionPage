@@ -8,7 +8,7 @@
 from pathlib import Path
 from re import match
 from threading import Lock
-from time import sleep, perf_counter
+from time import sleep
 
 from requests import Session
 
@@ -19,7 +19,7 @@ from .._configs.chromium_options import ChromiumOptions
 from .._functions.browser import connect_browser
 from .._functions.cookies import CookiesList
 from .._functions.settings import Settings as _S
-from .._functions.tools import ensure_del_dir
+from .._functions.tools import ensure_del_dir, wait_until
 from .._functions.web import get_proxy_info
 from .._pages.chromium_base import Timeout
 from .._pages.chromium_tab import ChromiumTab
@@ -73,9 +73,9 @@ class Chromium(Messenger):
         self.address = self._chromium_options.address
         self._ws_address = self._driver.address
         self._disconnect_flag = False
-        self._event_handlers = {'Target.targetDestroyed': self._onTargetDestroyed,
-                                'Target.targetCreated': self._onTargetCreated,
-                                'Target.detachedFromTarget': self._onDetachedFromTarget}
+        self._event_handlers = {'Target.targetDestroyed': [self._onTargetDestroyed],
+                                'Target.targetCreated': [self._onTargetCreated],
+                                'Target.detachedFromTarget': [self._onDetachedFromTarget]}
         self._context = None
         self._tabs = Tabs()
         self._driver.owner = self
@@ -123,7 +123,7 @@ class Chromium(Messenger):
         self._session_options = session_options
         if self._chromium_options.proxy:
             self._tabs.set_proxy('main', (self._chromium_options.proxy_url, self._chromium_options.proxy_usr,
-                                          self._chromium_options.proxy_pwd))
+                                          self._chromium_options.proxy_pwd, self._chromium_options.proxy))
 
         if 'chrome://privacy-sandbox-dialog/notice' in str(self._run_cdp('Target.getTargets')):
             tab = self.get_tab(url='chrome://privacy-sandbox-dialog/notice')
@@ -211,9 +211,9 @@ class Chromium(Messenger):
     def new_context(self, proxy=None, proxy_bypass=None, auto_close=True):
         args = {'disposeOnDetach': auto_close}
         if proxy:
-            url, usr, pwd = get_proxy_info(proxy)
+            url, usr, pwd, full = get_proxy_info(proxy)
         else:
-            url, usr, pwd = self._tabs.get_proxy('main')
+            url, usr, pwd, full = self._tabs.get_proxy('main')
 
         if url:
             args['proxyServer'] = url
@@ -224,7 +224,7 @@ class Chromium(Messenger):
 
         cid = self._run_cdp('Target.createBrowserContext', **args)['browserContextId']
         if proxy:
-            self._tabs.set_proxy(cid, (url, usr, pwd))
+            self._tabs.set_proxy(cid, (url, usr, pwd, full))
 
         if self._dl_mgr._running:
             self._run_cdp('Browser.setDownloadBehavior', downloadPath=self._download_path,
@@ -268,9 +268,9 @@ class Chromium(Messenger):
             tab.get(url)
         return tab
 
-    def get_tab(self, id_or_num=None, title=None, url=None, tab_type='page'):
+    def get_tab(self, id_or_num=None, title=None, url=None, tab_type='page', as_id=False):
         return self._get_tab(self._browser_id, id_or_num=id_or_num, title=title,
-                             url=url, tab_type=tab_type, as_id=False)
+                             url=url, tab_type=tab_type, as_id=as_id)
 
     def get_tabs(self, title=None, url=None, tab_type='page'):
         return self._get_tabs(self._browser_id, title=title, url=url, tab_type=tab_type, as_id=False)
@@ -283,8 +283,8 @@ class Chromium(Messenger):
         elif isinstance(tabs_or_ids, (list, tuple)):
             tabs = set(i.tab_id if isinstance(i, ChromiumTab) else i for i in tabs_or_ids)
         else:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'tabs_or_ids',
-                                           ALLOW_TYPE=_S._lang.TAB_OR_ID, CURR_VAL=tabs_or_ids))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'tabs_or_ids',
+                                            ALLOW_TYPE=_S._lang.TAB_OR_ID, CURR_VAL=tabs_or_ids))
 
         all_tabs = set(self.tab_ids)
         if others:
@@ -341,7 +341,22 @@ class Chromium(Messenger):
         if not self.address.startswith('127.0.0.1'):
             return
 
+        def do():
+            ok = True
+            for pid in pids:
+                txt = f'tasklist | findstr {pid}' if system().lower() == 'windows' else f'ps -ef | grep {pid}'
+                p = popen(txt)
+                sleep(.05)
+                try:
+                    if f'  {pid} ' in p.read():
+                        ok = False
+                        break
+                except TypeError:
+                    pass
+            return ok if ok else None
+
         if pids:
+            print('sss')
             from psutil import Process
             for pid in pids:
                 try:
@@ -351,27 +366,13 @@ class Chromium(Messenger):
 
             from os import popen
             from platform import system
-            end_time = perf_counter() + timeout
-            while perf_counter() < end_time:
-                ok = True
-                for pid in pids:
-                    txt = f'tasklist | findstr {pid}' if system().lower() == 'windows' else f'ps -ef | grep {pid}'
-                    p = popen(txt)
-                    sleep(.05)
-                    try:
-                        if f'  {pid} ' in p.read():
-                            ok = False
-                            break
-                    except TypeError:
-                        pass
-                if ok:
-                    break
+            wait_until(do, timeout=timeout)
 
         if self._chromium_options.is_auto_port or del_data:
             ensure_del_dir(self._chromium_options.user_data_path)
 
     def _attach(self, target_id):
-        sid = self._run_cdp('Target.attachToTarget', targetId=target_id, flatten=True).get('sessionId', None)
+        sid = self._run_cdp('Target.attachToTarget', targetId=target_id, flatten=True).get('sessionId')
         if not sid:
             raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2)
         return sid
@@ -400,7 +401,7 @@ class Chromium(Messenger):
             else:
                 j = self._run_cdp('Target.getTargets')['targetInfos']
                 if id_or_num not in [i['targetId'] for i in j if i['browserContextId'] == context_id]:
-                    raise RuntimeError(_S._lang.join(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=self.tab_ids))
+                    raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=self.tab_ids))
 
         elif title == url is None and tab_type == 'page':
             id_or_num = self.tab_ids[0]
@@ -410,9 +411,9 @@ class Chromium(Messenger):
             if tabs:
                 id_or_num = tabs[0]
             else:
-                raise RuntimeError(_S._lang.join(_S._lang.NO_SUCH_TAB,
-                                                 ARGS={'id_or_num': id_or_num, 'title': title, 'url': url,
-                                                       'tab_type': tab_type}))
+                raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB,
+                                                  ARGS={'id_or_num': id_or_num, 'title': title, 'url': url,
+                                                        'tab_type': tab_type}))
 
         return id_or_num if as_id else ChromiumTab(self, id_or_num, context_id)
 
@@ -430,8 +431,8 @@ class Chromium(Messenger):
         elif isinstance(tab_type, (list, tuple, set)):
             tab_type = set(tab_type)
         elif tab_type is not None:
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'tab_type',
-                                           ALLOW_TYPE='set, list, tuple, str, None', CURR_VAL=tab_type))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'tab_type',
+                                            ALLOW_TYPE='set, list, tuple, str, None', CURR_VAL=tab_type))
 
         tabs = [i for i in tabs if ((title is None or title in i['title']) and (url is None or url in i['url'])
                                     and (tab_type is None or i['type'] in tab_type)
@@ -445,7 +446,7 @@ class Chromium(Messenger):
             self._tabs.add_frame(tab_id, tab_id)
             sid = self._attach(tab_id)
             cid = kwargs['targetInfo'].get('browserContextId', self._context_id)
-            self._tabs.add(sid, tab_id, context_id=cid, opener=kwargs['targetInfo'].get('openerId', None))
+            self._tabs.add(sid, tab_id, context_id=cid, opener=kwargs['targetInfo'].get('openerId'))
             self._tabs._tab_first_session[tab_id] = sid
             self._tabs.set_newest_tab(cid, tab_id)
 
@@ -484,8 +485,8 @@ def handle_options(addr_or_opts):
         return ChromiumOptions().set_local_port(addr_or_opts)
 
     else:
-        raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'addr_or_opts',
-                                       ALLOW_TYPE=_S._lang.IP_OR_OPTIONS, CURR_VAL=addr_or_opts))
+        raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'addr_or_opts',
+                                        ALLOW_TYPE=_S._lang.IP_OR_OPTIONS, CURR_VAL=addr_or_opts))
 
 
 def run_browser(options):
@@ -496,7 +497,7 @@ def run_browser(options):
         except EnvironmentError:
             raise
         except Exception as e:
-            raise BrowserConnectError(_S._lang.join(_S._lang.BROWSER_CONNECT_ERR2, INFO=str(e)))
+            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=str(e))
         incognito = "'Browser.WindowCount.Incognito'" in str(driver.run('Browser.getHistograms'))
         browser_id = _get_browser_id(driver, incognito)
         is_headless = 'headless' in driver.run('Browser.getVersion', _debug=_S._debug)['userAgent'].lower()
@@ -546,18 +547,18 @@ def _get_browser_id(driver, incognito):
     if incognito:
         browser_id = driver.run('Target.getTargets', _debug=_S._debug)
         if 'error' in browser_id:
-            raise BrowserConnectError(_S._lang.join(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error']))
+            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
         return browser_id['targetInfos'][0]['browserContextId']
 
     browser_id = driver.run('Target.getBrowserContexts', _debug=_S._debug)
     if 'error' in browser_id:
-        raise BrowserConnectError(_S._lang.join(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error']))
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
     if 'defaultBrowserContextId' in browser_id:
         browser_id = browser_id['defaultBrowserContextId']
     else:
         browser_id = driver.run('Target.getTargets', _debug=_S._debug)
         if 'error' in browser_id:
-            raise BrowserConnectError(_S._lang.join(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error']))
+            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
         browser_id = browser_id['targetInfos'][0]['browserContextId']
     return browser_id
 
@@ -615,7 +616,7 @@ class Tabs(object):
         self._frames.pop(frame_id, None)
 
     def remove_session(self, session_id):
-        s = self._targets.get(self._sessions.get(session_id, None), None)
+        s = self._targets.get(self._sessions.get(session_id))
         if s:
             s.discard(session_id)
         self._objects.pop(session_id, None)
@@ -639,25 +640,25 @@ class Tabs(object):
         self._proxies[context_id] = proxy
 
     def get_proxy(self, context_id):
-        return self._proxies.get(context_id, self._proxies.get('main', (None, None, None)))
+        return self._proxies.get(context_id, self._proxies.get('main', (None, None, None, None)))
 
     def set_newest_tab(self, context_id, target_id):
         self._context_newest_tab[context_id] = target_id
 
     def get_newest_tab(self, context_id):
-        return self._context_newest_tab.get(context_id, None)
+        return self._context_newest_tab.get(context_id)
 
     def get_session_ids(self, target_id):
         return self._targets.get(target_id, set())
 
     def get_target_id(self, session_id):
-        return self._sessions.get(session_id, None)
+        return self._sessions.get(session_id)
 
     def get_context_id(self, target_id=None, frame_id=None):
         if frame_id:
-            return self._contexts.get(self._frames.get(frame_id, None), None)
+            return self._contexts.get(self._frames.get(frame_id))
         elif target_id:
-            return self._contexts.get(target_id, None)
+            return self._contexts.get(target_id)
         return None
 
     def get_object(self, session_id, default=None):
@@ -688,14 +689,14 @@ def close_privacy_dialog(tab):
         sid = tab._run_cdp('DOM.performSearch', query='//*[name()="privacy-sandbox-notice-dialog-app"]',
                            includeUserAgentShadowDOM=True)['searchId']
         r = tab._run_cdp('DOM.getSearchResults', searchId=sid, fromIndex=0, toIndex=1)['nodeIds'][0]
-        end_time = perf_counter() + 3
-        while perf_counter() < end_time:
+
+        def do():
             try:
-                r = tab._run_cdp('DOM.describeNode', nodeId=r)['node']['shadowRoots'][0]['backendNodeId']
-                break
+                return tab._run_cdp('DOM.describeNode', nodeId=r)['node']['shadowRoots'][0]['backendNodeId']
             except KeyError:
-                pass
-            sleep(.05)
+                return None
+
+        wait_until(do, timeout=3)
         tab._run_cdp('DOM.discardSearchResults', searchId=sid)
         r = tab._run_cdp('DOM.resolveNode', backendNodeId=r)['object']['objectId']
         r = tab._run_cdp('Runtime.callFunctionOn', objectId=r,

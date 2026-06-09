@@ -168,14 +168,14 @@ def str_to_xpath_loc(loc):
 
     # 根据文本查找
     elif loc.startswith('text='):
-        loc_str = f'//*[text()={_quotes_escape(loc[5:])}]'
+        loc_str = f'//*[text()={quotes_escape(loc[5:])}]'
     elif loc.startswith('text:') and loc != 'text:':
-        loc_str = f'//*/text()[contains(., {_quotes_escape(loc[5:])})]/..'
+        loc_str = f'//*/text()[contains(., {quotes_escape(loc[5:])})]/..'
     elif loc.startswith('text^') and loc != 'text^':
-        loc_str = f'//*/text()[starts-with(., {_quotes_escape(loc[5:])})]/..'
+        loc_str = f'//*/text()[starts-with(., {quotes_escape(loc[5:])})]/..'
     elif loc.startswith('text$') and loc != 'text$':
-        loc_str = (f'//*/text()[substring(., string-length(.) - string-length({_quotes_escape(loc[5:])}) +1) = '
-                   f'{_quotes_escape(loc[5:])}]/..')
+        loc_str = (f'//*/text()[substring(., string-length(.) - string-length({quotes_escape(loc[5:])}) +1) = '
+                   f'{quotes_escape(loc[5:])}]/..')
 
     # 用xpath查找
     elif loc.startswith(('xpath:', 'xpath=')) and loc not in ('xpath:', 'xpath='):
@@ -188,7 +188,8 @@ def str_to_xpath_loc(loc):
 
     # 根据文本模糊查找
     elif loc:
-        loc_str = f'//*/text()[contains(., {_quotes_escape(loc)})]/..'
+        loc_by = 'any'
+        loc_str = loc
     else:
         loc_str = '//*'
 
@@ -235,6 +236,22 @@ def str_to_css_loc(loc):
     return loc_by, loc_str
 
 
+def quotes_escape(search_str):
+    if '"' not in search_str:
+        return f'"{search_str}"'
+
+    parts = search_str.split('"')
+    parts_num = len(parts)
+    search_str = 'concat('
+
+    for key, i in enumerate(parts):
+        search_str += f'"{i}"'
+        search_str += ',' + '\'"\',' if key < parts_num - 1 else ''
+
+    search_str += ',"")'
+    return search_str
+
+
 def _make_single_xpath_str(tag: str, text: str) -> tuple:
     """生成单属性xpath语句
     :param tag: 标签名
@@ -258,30 +275,30 @@ def _make_single_xpath_str(tag: str, text: str) -> tuple:
                 symbol = r[1]
                 if symbol == '=':  # 精确查找
                     arg = 'text()' if r[0] in ('@text()', '@tx()') else r[0]
-                    arg_str = f'{arg}={_quotes_escape(r[2])}'
+                    arg_str = f'{arg}={quotes_escape(r[2])}'
 
                 elif symbol == '^':  # 匹配开头
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = f'/text()[starts-with(., {_quotes_escape(r[2])})]/..'
+                        txt_str = f'/text()[starts-with(., {quotes_escape(r[2])})]/..'
                         arg_str = ''
                     else:
-                        arg_str = f"starts-with({r[0]},{_quotes_escape(r[2])})"
+                        arg_str = f"starts-with({r[0]},{quotes_escape(r[2])})"
 
                 elif symbol == '$':  # 匹配结尾
                     if r[0] in ('@text()', '@tx()'):
                         txt_str = (f'/text()[substring(., string-length(.) - string-length('
-                                   f'{_quotes_escape(r[2])}) +1) = {_quotes_escape(r[2])}]/..')
+                                   f'{quotes_escape(r[2])}) +1) = {quotes_escape(r[2])}]/..')
                         arg_str = ''
                     else:
                         arg_str = (f'substring({r[0]}, string-length({r[0]}) - string-length('
-                                   f'{_quotes_escape(r[2])}) +1) = {_quotes_escape(r[2])}')
+                                   f'{quotes_escape(r[2])}) +1) = {quotes_escape(r[2])}')
 
                 elif symbol == ':':  # 模糊查找
                     if r[0] in ('@text()', '@tx()'):
-                        txt_str = f'/text()[contains(., {_quotes_escape(r[2])})]/..'
+                        txt_str = f'/text()[contains(., {quotes_escape(r[2])})]/..'
                         arg_str = ''
                     else:
-                        arg_str = f"contains({r[0]},{_quotes_escape(r[2])})"
+                        arg_str = f"contains({r[0]},{quotes_escape(r[2])})"
 
                 else:
                     raise LocatorError(_S._lang.INCORRECT_SIGN_, symbol)
@@ -345,17 +362,17 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
                     txt = r[2]
 
                 if symbol == '=':
-                    arg_str = f'{arg}={_quotes_escape(txt)}'
+                    arg_str = f'{arg}={quotes_escape(txt)}'
 
                 elif symbol == ':':
-                    arg_str = f'contains({arg},{_quotes_escape(txt)})'
+                    arg_str = f'contains({arg},{quotes_escape(txt)})'
 
                 elif symbol == '^':
-                    arg_str = f'starts-with({arg},{_quotes_escape(txt)})'
+                    arg_str = f'starts-with({arg},{quotes_escape(txt)})'
 
                 elif symbol == '$':
                     arg_str = (f'substring({arg}, string-length({arg}) - string-length('
-                               f'{_quotes_escape(txt)}) +1) = {_quotes_escape(txt)}')
+                               f'{quotes_escape(txt)}) +1) = {quotes_escape(txt)}')
 
                 else:
                     raise LocatorError(_S._lang.INCORRECT_SIGN_, symbol)
@@ -372,26 +389,6 @@ def _make_multi_xpath_str(tag: str, text: str) -> tuple:
         arg_str = f'({tags_connect.join(tags)}){condition}'
 
     return 'xpath', f'//*[{arg_str}]' if arg_str else f'//*'
-
-
-def _quotes_escape(search_str: str) -> str:
-    """将"转义，不知何故不能直接用 斜杠 来转义
-    :param search_str: 查询字符串
-    :return: 把"转义后的字符串
-    """
-    if '"' not in search_str:
-        return f'"{search_str}"'
-
-    parts = search_str.split('"')
-    parts_num = len(parts)
-    search_str = 'concat('
-
-    for key, i in enumerate(parts):
-        search_str += f'"{i}"'
-        search_str += ',' + '\'"\',' if key < parts_num - 1 else ''
-
-    search_str += ',"")'
-    return search_str
 
 
 def _make_multi_css_str(tag: str, text: str) -> tuple:

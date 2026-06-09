@@ -18,7 +18,7 @@ from .._base.base import BasePage
 from .._elements.session_element import SessionElement, make_session_ele
 from .._functions.cookies import cookie_to_dict, CookiesList
 from .._functions.settings import Settings as _S
-from .._functions.web import format_headers
+from .._functions.web import format_headers, NavResult
 from .._units.setter import SessionPageSetter
 
 
@@ -101,16 +101,7 @@ class SessionPage(BasePage):
     def timeout(self):
         return self._timeout
 
-    def get(self, url, show_errmsg=False, retry=None, interval=None, timeout=None, **kwargs):
-        """用get方式跳转到url，可输入文件路径
-        :param url: 目标url，可指定本地文件路径
-        :param show_errmsg: 是否显示和抛出异常
-        :param retry: 重试次数，为None时使用页面对象retry_times属性值
-        :param interval: 重试间隔（秒），为None时使用页面对象retry_interval属性值
-        :param timeout: 连接超时时间（秒），为None时使用页面对象timeout属性值
-        :param kwargs: 连接参数
-        :return: url是否可用
-        """
+    def get(self, url, retry=None, interval=None, timeout=None, raise_err=False, **kwargs):
         retry, interval, is_file = self._before_connect(url.replace('file:///', '', 1), retry, interval)
         if is_file:
             with open(self._url, 'rb') as f:
@@ -120,18 +111,16 @@ class SessionPage(BasePage):
                 r.url = self._url
                 self._response = r
             return True
-        return self._s_connect(self._url, 'get', show_errmsg, retry, interval, **kwargs)
+        if timeout is None:
+            timeout = self._timeout
+        kwargs['timeout'] = timeout
+        return self._s_connect(url=self._url, mode='get', retry=retry, interval=interval, raise_err=raise_err, **kwargs)
 
-    def post(self, url, show_errmsg=False, retry=None, interval=None, **kwargs):
-        """用post方式跳转到url
-        :param url: 目标url
-        :param show_errmsg: 是否显示和抛出异常
-        :param retry: 重试次数，为None时使用页面对象retry_times属性值
-        :param interval: 重试间隔（秒），为None时使用页面对象timeout属性值
-        :param kwargs: 连接参数
-        :return: url是否可用
-        """
-        return self._s_connect(url, 'post', show_errmsg, retry, interval, **kwargs)
+    def post(self, url, retry=None, interval=None, timeout=None, raise_err=False, **kwargs):
+        if timeout is None:
+            timeout = self._timeout
+        kwargs['timeout'] = timeout
+        return self._s_connect(url=url, mode='post', retry=retry, interval=interval, raise_err=raise_err, **kwargs)
 
     def ele(self, locator, index=1, timeout=None):
         return self._ele(locator, index=index, method='ele()')
@@ -177,25 +166,25 @@ class SessionPage(BasePage):
         if self._response is not None:
             self._response.close()
 
-    def _s_connect(self, url, mode, show_errmsg=False, retry=None, interval=None, **kwargs):
+    def _s_connect(self, url, mode, retry=None, interval=None, raise_err=False, **kwargs):
         retry, interval, is_file = self._before_connect(url, retry, interval)
-        self._response = self._make_response(self._url, mode, retry, interval, show_errmsg, **kwargs)
+        self._response = self._make_response(url=self._url, mode=mode, retry=retry, interval=interval,
+                                             raise_err=raise_err, **kwargs)
 
-        if self._response is None:
-            self._url_available = False
+        self._nav_result = NavResult()
+        if self._response:
+            self._nav_result.status = self._response.status_code
+            self._nav_result.url = self._response.url
+            self._nav_result.headers = self._response.headers
+            self._nav_result.request = self._response.request
+            self._nav_result.Response = self._response
 
-        else:
-            if self._response.ok:
-                self._url_available = True
+        self._url_available = self._nav_result.ok
+        if not self._url_available and raise_err:
+            raise ConnectionError(_S._lang.joinn(_S._lang.STATUS_CODE_, self._response.status_code))
+        return self._nav_result
 
-            else:
-                if show_errmsg:
-                    raise ConnectionError(_S._lang.join(_S._lang.STATUS_CODE_, self._response.status_code))
-                self._url_available = False
-
-        return self._url_available
-
-    def _make_response(self, url, mode='get', retry=None, interval=None, show_errmsg=False, **kwargs):
+    def _make_response(self, url, mode='get', retry=None, interval=None, raise_err=False, **kwargs):
         kwargs = CaseInsensitiveDict(kwargs)
         if 'headers' in kwargs:
             kwargs['headers'] = CaseInsensitiveDict(format_headers(kwargs['headers']))
@@ -246,17 +235,15 @@ class SessionPage(BasePage):
 
             if i < retry:
                 sleep(interval)
-                if show_errmsg:
-                    print(f'{_S._lang.RETRY} {url}')
 
-        if show_errmsg:
+        if raise_err:
             if err:
                 raise err
             elif r is not None:
-                raise (ConnectionError(_S._lang.join(_S._lang.STATUS_CODE_, r.status_code)) if r.content
-                       else ConnectionError(_S._lang.join(_S._lang.CONTENT_IS_EMPTY)))
+                raise (ConnectionError(_S._lang.joinn(_S._lang.STATUS_CODE_, r.status_code)) if r.content
+                       else ConnectionError(_S._lang.joinn(_S._lang.CONTENT_IS_EMPTY)))
             else:
-                raise ConnectionError(_S._lang.join(_S._lang.CONNECT_ERR))
+                raise ConnectionError(_S._lang.joinn(_S._lang.CONNECT_ERR))
 
         else:
             if r is not None:

@@ -36,7 +36,7 @@ class CookiesSetter(BrowserCookiesSetter):
         if not url and not domain:
             d['url'] = self._owner.url
             if not d['url'].startswith('http'):
-                raise ValueError(_S._lang.join(_S._lang.NEED_DOMAIN))
+                raise ValueError(_S._lang.joinn(_S._lang.NEED_DOMAIN))
         if path is not None:
             d['path'] = path
         self._owner._run_cdp('Network.deleteCookies', **d)
@@ -57,7 +57,7 @@ class ChromiumTabCookiesSetter(CookiesSetter):
             super().remove(name, url, domain, path)
         elif not self._owner._d_mode and self._owner._session:
             if url or domain or path:
-                raise ValueError(_S._lang.join(_S._lang.D_MODE_ONLY))
+                raise ValueError(_S._lang.joinn(_S._lang.D_MODE_ONLY))
             self._owner.session.cookies.set(name, None)
 
     def clear(self):

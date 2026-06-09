@@ -38,8 +38,8 @@ def cookie_to_dict(cookie):
         return cookie_dict
 
     else:
-        raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'cookie',
-                                       ALLOW_TYPE='Cookie, str, dict', CURR_TYPE=type(cookie)))
+        raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'cookie',
+                                        ALLOW_TYPE='Cookie, str, dict', CURR_TYPE=type(cookie)))
 
     return cookie_dict
 
@@ -65,8 +65,9 @@ def cookies_to_tuple(cookies):
         cookies = (cookie_to_dict(cookies),)
 
     else:
-        raise ValueError(_S._lang.join(_S._lang.INCORRECT_TYPE_, 'cookies',
-                                       ALLOW_TYPE='Cookie, CookieJar, list, tuple, str, dict', CURR_TYPE=type(cookies)))
+        raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'cookies',
+                                        ALLOW_TYPE='Cookie, CookieJar, list, tuple, str, dict',
+                                        CURR_TYPE=type(cookies)))
 
     return cookies
 
@@ -90,7 +91,7 @@ def set_browser_cookies(browser, cookies):
     c = []
     for cookie in cookies_to_tuple(cookies):
         if 'domain' not in cookie and 'url' not in cookie:
-            raise ValueError(_S._lang.join(_S._lang.NEED_DOMAIN2, cookie=cookie))
+            raise ValueError(_S._lang.joinn(_S._lang.NEED_DOMAIN2, cookie=cookie))
         c.append(format_cookie(cookie))
     if browser._default_context:
         browser._run_cdp('Storage.setCookies', cookies=c)
@@ -110,7 +111,7 @@ def set_tab_cookies(page, cookies):
             page._run_cdp_loaded('Network.setCookie', **cookie)
             continue  # 不用设置域名，可退出
 
-        if cookie.get('domain', None):
+        if cookie.get('domain'):
             try:
                 page._run_cdp_loaded('Network.setCookie', **cookie)
                 if not is_cookie_in_driver(page, cookie):
@@ -121,7 +122,7 @@ def set_tab_cookies(page, cookies):
 
         url = page._browser_url
         if not url.startswith('http'):
-            raise ValueError(_S._lang.join(_S._lang.DOMAIN_NOT_SET, cookie=cookie))
+            raise ValueError(_S._lang.joinn(_S._lang.DOMAIN_NOT_SET, cookie=cookie))
 
         try:
             host = urlparse(url).hostname
@@ -150,7 +151,7 @@ def is_cookie_in_driver(page, cookie):
     if 'domain' in cookie:
         for c in page.cookies(all_domains=True):
             if (cookie['name'] == c['name'] and cookie['value'] == c['value']
-                    and cookie['domain'] == c.get('domain', None)):
+                    and cookie['domain'] == c.get('domain')):
                 return True
     else:
         for c in page.cookies(all_domains=True):
@@ -203,17 +204,17 @@ def format_cookie(cookie):
         if priority in (None, False):
             cookie.pop('priority')
         elif priority not in ('Low', 'Medium', 'High'):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'priority', ALLOW_VAL='"Low", "Medium", "High"',
-                                           CURR_VAL=priority, cookie=cookie))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'priority', ALLOW_VAL='"Low", "Medium", "High"',
+                                            CURR_VAL=priority, cookie=cookie))
 
     if 'sourceScheme' in cookie:
         sourceScheme = cookie['sourceScheme']
         if sourceScheme in (None, False):
             cookie.pop('sourceScheme')
         elif sourceScheme not in ('Unset', 'NonSecure', 'Secure'):
-            raise ValueError(_S._lang.join(_S._lang.INCORRECT_VAL_, 'sourceScheme',
-                                           ALLOW_VAL='"Unset", "NonSecure", "Secure"', CURR_VAL=sourceScheme,
-                                           cookie=cookie))
+            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'sourceScheme',
+                                            ALLOW_VAL='"Unset", "NonSecure", "Secure"', CURR_VAL=sourceScheme,
+                                            cookie=cookie))
 
     return cookie
 

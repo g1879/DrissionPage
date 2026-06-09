@@ -134,31 +134,31 @@ class Chromium(Messenger):
 
     @property
     def tab_ids(self) -> List[str]:
-        """返回默认浏览器上下文所有标签页id组成的列表，只统计page、webview类型"""
+        """返回默认浏览器子环境所有标签页id组成的列表，只统计page、webview类型"""
         ...
 
     @property
     def latest_tab(self) -> Union[ChromiumTab, str]:
-        """返回默认浏览器上下文最新的标签页，最新标签页指最后创建或最后被激活的
+        """返回默认浏览器子环境最新的标签页，最新标签页指最后创建或最后被激活的
         当Settings.singleton_tab_obj==True时返回Tab对象，否则返回tab id"""
         ...
 
     def _tab_ids(self, context_id: str) -> List[str]:
         """执行获取所有id操作
-        :param context_id: 指定上下文id
+        :param context_id: 指定子环境id
         :return: 标签页id组成的列表
         """
         ...
 
     def cookies(self, all_info: bool = False) -> CookiesList:
-        """以list格式返回默认上下文所有域名的cookies
+        """以list格式返回默认子环境所有域名的cookies
         :param all_info: 是否返回所有内容，False则只返回name, value, domain
         :return: cookies组成的列表
         """
         ...
 
     def _cookies(self, all_info: bool = False, context_id: Optional[str] = None) -> CookiesList:
-        """以list格式返回指定上下文所有域名的cookies
+        """以list格式返回指定子环境所有域名的cookies
         :param all_info: 是否返回所有内容，False则只返回name, value, domain
         :param context_id: context id
         :return: cookies组成的列表
@@ -167,7 +167,7 @@ class Chromium(Messenger):
 
     def new_context(self, proxy: str = None, proxy_bypass: Union[str, List[str]] = None,
                     auto_close: bool = True) -> ChromiumContext:
-        """新建一个浏览器上下文
+        """新建一个浏览器子环境
         :param proxy: 代理服务器
         :param proxy_bypass: 不代理的网址，用str传入多个网址时用;分隔
         :param auto_close: 是否随接管结束自动关闭
@@ -201,7 +201,7 @@ class Chromium(Messenger):
         :param new_window: 是否在新窗口打开标签页
         :param background: 是否不激活新标签页，如new_window为True则无效
         :param hidden: 是否隐藏，为True时忽略new_window和background参数
-        :param context_id: 浏览器上下文id
+        :param context_id: 浏览器子环境id
         :param is_browser: 调用此函数的是否浏览器自己
         :return: 新标签页对象
         """
@@ -213,7 +213,7 @@ class Chromium(Messenger):
                 url: str = None,
                 tab_type: Union[str, list, tuple, None] = 'page',
                 as_id: bool = False) -> Union[ChromiumTab, str]:
-        """在默认浏览器上下文获取一个标签页对象，id_or_num不为None时，后面几个参数无效
+        """在默认浏览器子环境获取一个标签页对象，id_or_num不为None时，后面几个参数无效
         :param id_or_num: 要获取的标签页id或序号，序号从1开始，可传入负数获取倒数第几个，不是视觉排列顺序，而是激活顺序
         :param title: 要匹配title的文本，模糊匹配，为None则匹配所有
         :param url: 要匹配url的文本，模糊匹配，为None则匹配所有
@@ -228,7 +228,7 @@ class Chromium(Messenger):
                  url: str = None,
                  tab_type: Union[str, list, tuple] = 'page',
                  as_id: bool = False) -> List[Union[ChromiumTab, str]]:
-        """在默认浏览器上下文查找符合条件的tab，返回它们组成的列表，title和url是与关系
+        """在默认浏览器子环境查找符合条件的tab，返回它们组成的列表，title和url是与关系
         :param title: 要匹配title的文本
         :param url: 要匹配url的文本
         :param tab_type: tab类型，可用列表输入多个
@@ -256,7 +256,7 @@ class Chromium(Messenger):
         ...
 
     def activate_tab(self, id_ind_tab: Union[int, str, ChromiumTab]) -> None:
-        """使默认上下文中一个标签页显示到前端
+        """使默认子环境中一个标签页显示到前端
         :param id_ind_tab: 标签页id（str）、Tab对象或标签页序号（int），序号从1开始
         :return: None
         """
@@ -373,7 +373,7 @@ class Tabs(object):
     _contexts: Dict[str, str] = ...
     _context_newest_tab: Dict[str, str] = ...
     _tab_first_session: Dict[str, str] = ...
-    _proxies: Dict[str, Tuple[str, str, str]] = ...
+    _proxies: Dict[str, Tuple[str, str, str, str]] = ...
 
     def __init__(self):
         """保存tab id、session id、frame与tab关系"""
@@ -436,29 +436,29 @@ class Tabs(object):
         ...
 
     def remove_context(self, context_id: str) -> None:
-        """移除指定上下文
+        """移除指定子环境
         :param context_id: context id
         :return: None
         """
         ...
 
-    def set_proxy(self, context_id: str, proxy: Tuple[str, str, str]) -> None:
-        """设置指定上下文使用的代理用户名密码
+    def set_proxy(self, context_id: str, proxy: Tuple[str, str, str, str]) -> None:
+        """设置指定子环境使用的代理用户名密码
         :param context_id: context id
-        :param proxy: (url, usr, pwd)
+        :param proxy: (url, usr, pwd, full)
         :return: None
         """
         ...
 
-    def get_proxy(self, context_id: str) -> Optional[Tuple[str, str, str]]:
-        """获取指定上下文使用的代理信息，如没有设置，获取浏览器设置
+    def get_proxy(self, context_id: str) -> Optional[Tuple[str, str, str, str]]:
+        """获取指定子环境使用的代理信息，如没有设置，获取浏览器设置
         :param context_id: context id
-        :return: (url, usr, pwd)
+        :return: (url, usr, pwd, full)
         """
         ...
 
     def get_newest_tab(self, context_id: str) -> str:
-        """获取指定上下文中最后创建的tab id
+        """获取指定子环境中最后创建的tab id
         :param context_id: context id
         :return: 最后创建的tab id
         """

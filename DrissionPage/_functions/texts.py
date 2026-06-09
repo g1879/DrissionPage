@@ -26,7 +26,7 @@ def get_txt_class(lang=None):
             lang = 'zh_cn'
     else:
         lang = lang.lower()
-    lang = languages.get(lang, None)
+    lang = languages.get(lang)
     if lang is None:
         raise ValueError(f'lang must be one of {languages.keys()}')
     return lang
@@ -35,7 +35,8 @@ def get_txt_class(lang=None):
 class Texts(object):
     # --------- 参数名 ---------
     VERSION = '版本'
-    INFO = '详情'
+    INFO = '描述'
+    DETAIL = '详情'
     METHOD = '方法'
     ARGS = '参数'
     ARG = '参数'
@@ -66,7 +67,7 @@ class Texts(object):
     GETDOCUMENTERROR = '获取文档失败。'
     WAITTIMEOUTERROR = '等待失败。'
     INCORRECTURLERROR = '无效的url。'
-    LOCATORERROR = '定位符格式不正确。',
+    LOCATORERROR = '定位符格式不正确。'
     STORAGEERROR = '无法操作当前存储数据。'
     COOKIEFORMATERROR = 'cookie格式不正确。'
     TARGETNOTFOUNDERROR = '找不到指定页面。'
@@ -97,7 +98,7 @@ class Texts(object):
     BROWSER_NOT_EXIST = '浏览器未开启或已关闭。'
     BROWSER_DISCONNECTED = '浏览器已关闭或链接已断开。'
     BROWSER_NOT_FOR_CONTROL = '浏览器版本太旧或此浏览器不支持接管。'
-    UNSUPPORTED_CSS_SYNTAX = '此css selector语法不受支持，请换成xpath。'
+    UNSUPPORTED_SYNTAX = '此处不支持css selector和ax语法，请换成xpath。'
     UNSUPPORTED_AX = 'SessionPage或SessionElement不支持"ax:"方式查找元素。'
     UNSUPPORTED_ARG_TYPE_ = '不支持参数{}的类型: {}。'
     UPGRADE_WS = '请升级websocket-client库。'
@@ -213,17 +214,29 @@ class Texts(object):
         return getattr(cls, item, item) if isinstance(item, str) and item.isupper() else item
 
     @classmethod
-    def join(cls, *args, **kwargs):
+    def join(cls, *args, **kwargs):  # dp自带异常使用
+        txt = []
+        if args:
+            txt.append(args[0].format(*[i for i in args[1:]]))
+        if kwargs:
+            txt.append('\n'.join([f'{cls.get(k)}: {v}' for k, v in kwargs.items()]))
+        return '\n'.join(txt)
+
+    @classmethod
+    def joinn(cls, *args, **kwargs):  # 外部异常使用
+        return '\n' + cls._joinv(*args, **kwargs)
+
+    @classmethod
+    def _joinv(cls, *args, **kwargs):
         kwargs['VERSION'] = __version__
-        main = ('\n' + args[0].format(*[i for i in args[1:]])) if args else ''
-        msg = ('\n' + '\n'.join([f'{cls.get(k)}: {v}' for k, v in kwargs.items()]))
-        return f'{main}{msg}'
+        return cls.join(*args, **kwargs)
 
 
 class English(Texts):
     # --------- 参数名 ---------
     VERSION = 'Version'
     INFO = 'Information'
+    DETAIL = 'Details'
     METHOD = 'Method'
     ARGS = 'Arguments'
     ARG = 'Argument'
@@ -292,7 +305,7 @@ class English(Texts):
     BROWSER_NOT_EXIST = 'The browser is not started or closed.'
     BROWSER_DISCONNECTED = 'The browser is closed or the link is broken.'
     BROWSER_NOT_FOR_CONTROL = 'The browser version is too old or this browser does not support takeover.'
-    UNSUPPORTED_CSS_SYNTAX = 'This css selector syntax is not supported, please replace it with xpath.'
+    UNSUPPORTED_SYNTAX = 'This area does not support CSS selectors and AX syntax. Please switch to XPath instead.'
     UNSUPPORTED_AX = 'SessionPage or SessionElement not support "ax:".'
     UNSUPPORTED_ARG_TYPE_ = 'The type of parameter {} is not supported: {}.'
     UPGRADE_WS = 'Upgrade the websocket-client library.'

@@ -43,7 +43,7 @@ class ChromiumElement(DrissionElement):
     _pseudo: Optional[Pseudo] = ...
 
     def __init__(self,
-                 owner: Union[ChromiumTab, ChromiumFrame],
+                 owner: Union[ChromiumBase, ChromiumTab, ChromiumFrame],
                  node_id: int = None,
                  obj_id: str = None,
                  backend_id: int = None):
@@ -365,9 +365,9 @@ class ChromiumElement(DrissionElement):
         """
         ...
 
-    def check(self, uncheck: bool = False, by_js: bool = False) -> None:
+    def check(self, checked: bool = True, by_js: bool = False) -> None:
         """选中或取消选中当前元素
-        :param uncheck: 是否取消选中
+        :param checked: 是否选中，传入False取消选中
         :param by_js: 是否用js执行
         :return: None
         """
@@ -871,53 +871,67 @@ def find_in_chromium_ele(ele: ChromiumElement,
     ...
 
 
-def find_by_ax(page: Union[ChromiumTab, ChromiumFrame],
-               backend_id: int,
+def find_by_ax(page, bid, loc, index, timeout): ...
+
+
+def find_by_xpath(ele, loc, index, timeout, relative): ...
+
+
+def find_by_css(page, nid, loc, index, timeout): ...
+
+
+def find_by_any(ele, loc, index, timeout, relative): ...
+
+
+def do_find_any(ele, loc, js, xpath, node_txt, cdp, css, arg, nid, ind): ...
+
+
+def do_find_ax(page: Union[ChromiumBase, ChromiumTab, ChromiumFrame],
+               bid: int,
                args: dict,
-               index: Optional[int],
-               timeout: float) -> Union[ChromiumElement, ChromiumElementsList]:
+               index: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
     """执行用xpath在元素中查找元素
     :param page: 元素所在页面对象
-    :param backend_id: 在此元素中查找
+    :param bid: 在此元素中查找
     :param args: {'name': '***', 'role': '***'}
     :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-    :param timeout: 超时时间（秒）
     :return: ChromiumElement或其组成的列表
     """
     ...
 
 
-def find_by_xpath(ele: ChromiumElement,
+def do_find_xpath(ele: ChromiumElement,
+                  js: str,
                   xpath: str,
-                  index: Optional[int],
-                  timeout: float,
-                  relative: bool = True) -> Union[ChromiumElement, ChromiumElementsList]:
+                  node_txt: str,
+                  ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList]:
     """执行用xpath在元素中查找元素
     :param ele: 在此元素中查找
+    :param js: 执行的js
     :param xpath: 查找语句
-    :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-    :param timeout: 超时时间（秒）
-    :param relative: 是否相对定位
+    :param node_txt: js中node指代
+    :param ind: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
     :return: ChromiumElement或其组成的列表
     """
     ...
 
 
-def find_by_css(ele: ChromiumElement,
-                selector: str,
-                index: Optional[int],
-                timeout: float) -> Union[ChromiumElement, ChromiumElementsList]:
+def do_find_css(page, cdp, css, arg, nid, ind) -> Union[ChromiumElement, ChromiumElementsList, None]:
     """执行用css selector在元素中查找元素
-    :param ele: 在此元素中查找
-    :param selector: 查找语句
-    :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-    :param timeout: 超时时间（秒）
+    :param page: 元素所在页面
+    :param cdp: cdp命令
+    :param css: 查找语句
+    :param arg: nodeId或nodeIds
+    :param nid: 元素nodeId
+    :param ind: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
     :return: ChromiumElement或其组成的列表
     """
-    ...
 
 
-def make_chromium_eles(page: Union[ChromiumTab, ChromiumFrame],
+def wait_for_ele(method, target, timeout, index, **kwargs): ...
+
+
+def make_chromium_eles(page: Union[ChromiumBase, ChromiumTab, ChromiumFrame],
                        _ids: Union[tuple, list, str, int],
                        index: Optional[int] = 1,
                        id_type: str = 'obj_id',
