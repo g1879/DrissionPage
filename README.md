@@ -1,5 +1,8 @@
 # ✨️ 概述
 
+[![DrissionPage tests verification](https://github.com/jumodada/DrissionPage/actions/workflows/drissionpage-tests.yml/badge.svg)](https://github.com/jumodada/DrissionPage/actions/workflows/drissionpage-tests.yml)
+[![codecov](https://codecov.io/gh/jumodada/DrissionPage/branch/master/graph/badge.svg)](https://codecov.io/gh/jumodada/DrissionPage)
+
 DrissionPage 是一个基于 Python 的网页自动化工具。
 
 简洁优雅，功能强大。

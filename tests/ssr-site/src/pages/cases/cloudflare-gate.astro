@@ -1,0 +1,68 @@
+---
+import TestLayout from '../../layouts/TestLayout.astro';
+const rayId = '79f4c2d4b8b9dp01-SJC';
+---
+<TestLayout title="Cloudflare gate fixture">
+  <section class="panel cf-panel" data-testid="cf-root" data-ray-id={rayId}>
+    <h1 data-testid="cf-title">Cloudflare gate fixture</h1>
+    <p>This local page simulates managed challenge, WAF block, and rate-limit responses without contacting Cloudflare.</p>
+  </section>
+
+  <section class="panel cf-challenge" data-testid="cf-challenge" data-cf-ray={rayId} data-challenge-kind="managed">
+    <p class="eyebrow">Security check</p>
+    <h2 data-testid="cf-challenge-title">Checking your browser before accessing the fixture</h2>
+    <p data-testid="cf-ray">Ray ID: {rayId}</p>
+    <p data-testid="cf-copy">The browser must receive a short-lived clearance token before protected JSON becomes available.</p>
+    <div class="grid">
+      <button type="button" id="issue-clearance" data-testid="issue-clearance">Issue synthetic clearance</button>
+      <button type="button" id="fetch-protected" class="secondary" data-testid="fetch-protected">Fetch protected JSON</button>
+      <button type="button" id="fetch-blocked" class="secondary" data-testid="fetch-blocked">Fetch WAF block</button>
+      <button type="button" id="fetch-rate-limit" class="secondary" data-testid="fetch-rate-limit">Fetch rate limit</button>
+    </div>
+    <output id="cf-output" data-testid="cf-output">challenge=pending; clearance=missing</output>
+  </section>
+
+  <section class="panel cf-block" data-testid="cf-block-preview" data-status="403" data-cf-ray={rayId}>
+    <h2>Access denied</h2>
+    <p>The owner of this website has banned this request pattern.</p>
+    <p>Cloudflare Ray ID: <strong>{rayId}</strong></p>
+  </section>
+
+  <script>
+    const output = document.querySelector<HTMLOutputElement>('#cf-output');
+    const write = (message: string) => { if (output) output.textContent = message; };
+
+    async function readJson(res: Response) {
+      try {
+        return await res.json();
+      } catch {
+        return {};
+      }
+    }
+
+    document.querySelector('#issue-clearance')?.addEventListener('click', async () => {
+      write('challenge=running; clearance=missing');
+      const res = await fetch('/cdn-cgi/challenge-platform/fixture-clearance', { headers: { 'x-dp-test': 'cf-clearance' } });
+      const data = await readJson(res);
+      write(`challenge=${data.challenge}; clearance=${data.clearance}; status=${res.status}`);
+    });
+
+    document.querySelector('#fetch-protected')?.addEventListener('click', async () => {
+      const res = await fetch('/api/cf/protected.json', { headers: { 'x-dp-test': 'cf-protected' } });
+      const data = await readJson(res);
+      write(`protected=${res.status}; ok=${data.ok}; clearance=${data.clearance || 'missing'}`);
+    });
+
+    document.querySelector('#fetch-blocked')?.addEventListener('click', async () => {
+      const res = await fetch('/api/cf/protected.json?mode=blocked', { headers: { 'x-dp-test': 'cf-blocked' } });
+      const data = await readJson(res);
+      write(`blocked=${res.status}; code=${data.code}; ray=${data.rayId}`);
+    });
+
+    document.querySelector('#fetch-rate-limit')?.addEventListener('click', async () => {
+      const res = await fetch('/api/cf/protected.json?mode=rate-limit', { headers: { 'x-dp-test': 'cf-rate-limit' } });
+      const data = await readJson(res);
+      write(`rate=${res.status}; retry=${res.headers.get('retry-after')}; code=${data.code}`);
+    });
+  </script>
+</TestLayout>

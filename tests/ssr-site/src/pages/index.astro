@@ -1,0 +1,54 @@
+---
+import TestLayout from '../layouts/TestLayout.astro';
+---
+<TestLayout title="DrissionPage SSR Test Site">
+  <section class="panel" data-testid="home-summary">
+    <h1>DrissionPage SSR Test Site</h1>
+    <p>
+      This Astro project is a deterministic SSR target for crawler, listener, locator,
+      navigation, iframe, form, and API contract tests.
+    </p>
+    <p><strong>Rendered at:</strong> <time data-testid="server-time" datetime={new Date().toISOString()}>{new Date().toISOString()}</time></p>
+  </section>
+
+  <section class="grid" aria-label="Test cases">
+    <a class="case-link" href="/cases/locators" data-testid="case-locators">Locator fixture page</a>
+    <a class="case-link" href="/cases/navigation" data-testid="case-navigation">Navigation and status fixture page</a>
+    <a class="case-link" href="/cases/network" data-testid="case-network">Fetch, SSE, and optional WebSocket fixture page</a>
+    <a class="case-link" href="/cases/forms" data-testid="case-forms">Form and interaction fixture page</a>
+    <a class="case-link" href="/cases/frames" data-testid="case-frames">Iframe fixture page</a>
+    <a class="case-link" href="/cases/waits" data-testid="case-waits">Wait and stability fixture page</a>
+    <a class="case-link" href="/cases/visual" data-testid="case-visual">Visual screenshot fixture page</a>
+    <a class="case-link" href="/cases/upload-download" data-testid="case-upload-download">Upload and download fixture page</a>
+    <a class="case-link" href="/cases/business-dashboard" data-testid="case-business-dashboard">Business dashboard fixture page</a>
+    <a class="case-link" href="/cases/commerce" data-testid="case-commerce">Commerce workflow fixture page</a>
+    <a class="case-link" href="/cases/cloudflare-gate" data-testid="case-cloudflare-gate">Cloudflare gate fixture page</a>
+    <a class="case-link" href="/cases/dynamic?name=drission" data-testid="case-dynamic">SSR dynamic fixture page</a>
+  </section>
+
+  <section class="panel" data-testid="api-index">
+    <h2>API endpoints</h2>
+    <ul>
+      <li><a href="/api/health.json" data-testid="api-health">/api/health.json</a></li>
+      <li><a href="/api/manifest.json" data-testid="api-manifest">/api/manifest.json</a></li>
+      <li><a href="/api/status/404" data-testid="api-status-404">/api/status/404</a></li>
+      <li><a href="/api/slow.json?delay=250" data-testid="api-slow">/api/slow.json?delay=250</a></li>
+      <li><a href="/api/events" data-testid="api-events">/api/events</a></li>
+      <li><a href="/api/download.txt?name=dp-fixture.txt" data-testid="api-download">/api/download.txt?name=dp-fixture.txt</a></li>
+      <li><a href="/api/activity-batch.json?offset=0&count=3" data-testid="api-activity-batch">/api/activity-batch.json?offset=0&amp;count=3</a></li>
+      <li><a href="/api/commerce/products.json?offset=0&count=3" data-testid="api-commerce-products">/api/commerce/products.json?offset=0&amp;count=3</a></li>
+      <li><a href="/api/cf/protected.json" data-testid="api-cf-protected">/api/cf/protected.json</a></li>
+    </ul>
+  </section>
+
+  <section class="panel" data-testid="verification-contract">
+    <h2>Verification contract</h2>
+    <p>
+      This fixture defines stable pages and API endpoints for automated DrissionPage checks.
+    </p>
+    <p>
+      The machine-readable manifest at <a href="/api/manifest.json" data-testid="manifest-link">/api/manifest.json</a>
+      lists stable fixture pages, API endpoints, and expected status codes.
+    </p>
+  </section>
+</TestLayout>

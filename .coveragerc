@@ -1,0 +1,21 @@
+[run]
+branch = True
+source =
+    DrissionPage
+parallel = True
+omit =
+    tests/*
+    checks/*
+
+[report]
+show_missing = True
+skip_covered = False
+
+[xml]
+output = coverage.xml
+
+[json]
+output = coverage.json
+
+[html]
+directory = htmlcov

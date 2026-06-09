@@ -1,0 +1,21 @@
+---
+import TestLayout from '../../layouts/TestLayout.astro';
+const name = Astro.url.searchParams.get('name') || 'child';
+---
+<TestLayout title="Frame child fixture">
+  <section class="panel" data-testid="frame-child-root" data-frame-name={name}>
+    <h1>Frame child fixture</h1>
+    <p id="inside" data-testid="inside-frame">inside frame: {name}</p>
+    <button id="frame-fetch" data-testid="frame-fetch">Fetch from frame</button>
+    <output id="frame-output" data-testid="frame-output">idle</output>
+  </section>
+  <script>
+    const frameButton = document.querySelector<HTMLButtonElement>('#frame-fetch');
+    const frameOutput = document.querySelector<HTMLOutputElement>('#frame-output');
+    frameButton?.addEventListener('click', async () => {
+      if (!frameOutput) return;
+      const res = await fetch('/api/echo.json?from=iframe');
+      frameOutput.textContent = JSON.stringify(await res.json());
+    });
+  </script>
+</TestLayout>

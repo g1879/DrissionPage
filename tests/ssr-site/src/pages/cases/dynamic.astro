@@ -1,0 +1,16 @@
+---
+import TestLayout from '../../layouts/TestLayout.astro';
+const name = Astro.url.searchParams.get('name') || 'anonymous';
+const cookie = Astro.cookies.get('dp_session')?.value || 'missing';
+const renderedAt = new Date().toISOString();
+---
+<TestLayout title="SSR dynamic fixture">
+  <section class="panel" data-testid="dynamic-page" data-name={name} data-cookie={cookie} data-rendered-at={renderedAt}>
+    <h1>SSR dynamic fixture</h1>
+    <dl>
+      <dt>Query name</dt><dd data-testid="query-name">{name}</dd>
+      <dt>Cookie dp_session</dt><dd data-testid="cookie-value">{cookie}</dd>
+      <dt>Rendered at</dt><dd data-testid="dynamic-rendered-at">{renderedAt}</dd>
+    </dl>
+  </section>
+</TestLayout>

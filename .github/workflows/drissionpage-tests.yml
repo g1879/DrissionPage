@@ -1,0 +1,162 @@
+name: DrissionPage tests verification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+  pull_request:
+    paths:
+      - 'DrissionPage/**'
+      - 'tests/**'
+      - '.github/workflows/drissionpage-tests.yml'
+      - 'requirements.txt'
+  push:
+    branches:
+      - master
+      - main
+      - 'fix/**'
+      - 'feat/**'
+    paths:
+      - 'DrissionPage/**'
+      - 'tests/**'
+      - '.github/workflows/drissionpage-tests.yml'
+      - 'requirements.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drissionpage-tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DP_TESTS_REPORT_DIR: ${{ github.workspace }}/tests-artifacts/reports
+      DP_TESTS_ARTIFACT_DIR: /tmp/dp-tests-artifacts
+      DP_TESTS_PRE_VENV: /tmp/dp-tests-pre-venv
+      DP_TESTS_TIMEOUT: '10'
+      DP_TESTS_REQUIRE_BROWSER: '1'
+      DP_TESTS_RUN_LOCAL_SSR: '1'
+      DP_LOCAL_FIXTURE_URL: http://127.0.0.1:4321
+      HAS_PRIVATE_FIXTURE: ${{ secrets.DP_PRIVATE_FIXTURE_URL != '' }}
+      RUN_PRIVATE_FIXTURE: ${{ github.event_name != 'pull_request' && secrets.DP_PRIVATE_FIXTURE_URL != '' }}
+      HAS_CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          install-dependencies: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/ssr-site/package-lock.json
+
+      - name: Audit workflow quality
+        run: python tests/check_workflow_quality.py
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install coverage[toml]
+
+      - name: Build SSR test site
+        working-directory: tests/ssr-site
+        run: |
+          npm ci
+          npm run build
+
+      - name: Start local SSR test site
+        working-directory: tests/ssr-site
+        run: |
+          nohup npm run dev -- --host 127.0.0.1 --port 4321 > "$RUNNER_TEMP/drissionpage-ssr-site.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/drissionpage-ssr-site.pid"
+          for _ in $(seq 1 60); do
+            if curl -fsS "$DP_LOCAL_FIXTURE_URL/api/health.json" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/drissionpage-ssr-site.log"
+          exit 1
+
+      - name: Run tests verification
+        env:
+          DP_BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: ./tests/ci.sh
+
+      - name: Upload coverage to Codecov
+        if: ${{ always() && env.HAS_CODECOV_TOKEN == 'true' && hashFiles('tests-artifacts/reports/coverage/coverage.xml') != '' }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: tests-artifacts/reports/coverage/coverage.xml
+          flags: drissionpage
+          name: drissionpage-tests
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Record SSR fixture smoke eligibility
+        if: always()
+        run: |
+          mkdir -p "$DP_TESTS_REPORT_DIR"
+          {
+            echo "event_name=$GITHUB_EVENT_NAME"
+            echo "has_private_fixture=$HAS_PRIVATE_FIXTURE"
+            echo "run_private_fixture=$RUN_PRIVATE_FIXTURE"
+            echo "policy=run when event is not pull_request and DP_PRIVATE_FIXTURE_URL is configured"
+          } > "$DP_TESTS_REPORT_DIR/ssr-smoke-eligibility.txt"
+
+      - name: Run SSR fixture smoke
+        if: ${{ env.RUN_PRIVATE_FIXTURE == 'true' }}
+        env:
+          DP_BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          DP_PRIVATE_FIXTURE_URL: ${{ secrets.DP_PRIVATE_FIXTURE_URL }}
+        run: |
+          python - <<'PY'
+          import os
+          from urllib.parse import urlparse
+
+          url = (os.environ.get("DP_PRIVATE_FIXTURE_URL") or "").strip()
+          parsed = urlparse(url)
+          tokens = {url, parsed.netloc}
+          if parsed.scheme and parsed.netloc:
+              tokens.add(f"{parsed.scheme}://{parsed.netloc}")
+          for token in sorted(token for token in tokens if token):
+              print(f"::add-mask::{token}")
+          PY
+          ./tests/run.sh current \
+            --browser-path "$DP_BROWSER_PATH" \
+            --include-online \
+            --case ssr_site_smoke \
+            --fail-on-failures \
+            --report-json "$DP_TESTS_REPORT_DIR/ssr-smoke.json" \
+            --report-md "$DP_TESTS_REPORT_DIR/ssr-smoke.md"
+
+      - name: Upload tests reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drissionpage-tests-reports
+          path: |
+            tests-artifacts/reports
+            /tmp/dp-tests-artifacts
+          if-no-files-found: warn
+          retention-days: 14
