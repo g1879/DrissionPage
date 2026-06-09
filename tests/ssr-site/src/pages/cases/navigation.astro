@@ -1,0 +1,18 @@
+---
+import TestLayout from '../../layouts/TestLayout.astro';
+---
+<TestLayout title="Navigation fixture">
+  <section class="panel" data-testid="navigation-root">
+    <h1>Navigation fixture</h1>
+    <table>
+      <thead><tr><th>Scenario</th><th>Link</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP 200 JSON</td><td><a href="/api/status/200" data-testid="status-200">/api/status/200</a></td></tr>
+        <tr><td>HTTP 404 JSON</td><td><a href="/api/status/404" data-testid="status-404">/api/status/404</a></td></tr>
+        <tr><td>HTTP 500 JSON</td><td><a href="/api/status/500" data-testid="status-500">/api/status/500</a></td></tr>
+        <tr><td>Redirect to home</td><td><a href="/api/redirect?to=/" data-testid="redirect-home">/api/redirect?to=/</a></td></tr>
+        <tr><td>Slow JSON</td><td><a href="/api/slow.json?delay=750" data-testid="slow-json">/api/slow.json?delay=750</a></td></tr>
+      </tbody>
+    </table>
+  </section>
+</TestLayout>

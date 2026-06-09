@@ -1,0 +1,25 @@
+{
+  "name": "drissionpage-ssr-test-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Private Astro SSR fixture for DrissionPage crawler and browser integration tests.",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1",
+    "start": "node ./dist/server/entry.mjs",
+    "check": "astro check && astro build"
+  },
+  "dependencies": {
+    "@astrojs/node": "10.1.4",
+    "astro": "6.4.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.9",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

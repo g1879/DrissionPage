@@ -1,0 +1,10 @@
+---
+import TestLayout from '../../layouts/TestLayout.astro';
+const child = Astro.url.searchParams.get('child') || '/cases/frame-child?name=primary';
+---
+<TestLayout title="Iframe fixture">
+  <section class="panel" data-testid="frame-root" data-child={child}>
+    <h1>Iframe fixture</h1>
+    <iframe id="primary-frame" name="primary-frame" src={child} data-testid="primary-frame" title="Primary fixture frame"></iframe>
+  </section>
+</TestLayout>
