@@ -76,7 +76,7 @@ class Listener(object):
              timeout: float = None,
              fit_count: bool = True,
              raise_err: bool = None) -> Union[List[DataPacket], DataPacket,
-    List[WebSocketPacket], WebSocketPacket, None]:
+    List[WebSocketPacket], WebSocketPacket, List[SSEPacket], SSEPacket, None]:
         """等待符合要求的数据包到达指定数量
         :param count: 需要捕捉的数据包数量
         :param timeout: 超时时间（秒），为None无限等待
