@@ -14,6 +14,7 @@ from ._pages.chromium_frame import ChromiumFrame
 from ._pages.chromium_tab import ChromiumTab
 from ._units.listener import DataPacket
 from ._units.listener import WebSocketPacket
+from ._units.listener import SSEPacket
 
 __all__ = ['ChromiumElement', 'ShadowRoot', 'NoneElement', 'SessionElement', 'NavResult',
-           'ChromiumFrame', 'ChromiumTab', 'ChromiumContext', 'DataPacket', 'WebSocketPacket']
+           'ChromiumFrame', 'ChromiumTab', 'ChromiumContext', 'DataPacket', 'WebSocketPacket', 'SSEPacket']
