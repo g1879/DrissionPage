@@ -6,6 +6,7 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from copy import copy
+from math import ceil, floor
 from re import search, findall, DOTALL
 from threading import Thread
 from time import sleep, perf_counter
@@ -19,7 +20,107 @@ from .._units.scroller import FrameScroller
 from .._units.setter import ChromiumFrameSetter
 from .._units.states import FrameStates
 from .._units.waiter import FrameWaiter
-from ..errors import ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError
+from ..errors import CDPError, ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError
+
+
+# Keep OOPIF viewport expansion below common browser bitmap/GPU limits.
+_MAX_SCREENSHOT_VIEWPORT_SIDE = 16384
+
+
+class _FrameScreenshotContext(object):
+    def __init__(self, owner, frames):
+        self.owner = owner
+        self.frames = frames
+        self._tab_scroll = None
+        self._frame_states = []
+        self._has_device_metrics = False
+
+    def save_tab_scroll(self):
+        if self._tab_scroll is None:
+            self._tab_scroll = self.owner.tab._run_js('return [window.pageXOffset, window.pageYOffset];')
+
+    def save_frame(self, frame):
+        style = frame.frame_ele._run_js('''return {
+            attr: this.getAttribute('style'),
+            width: this.style.getPropertyValue('width'),
+            widthPriority: this.style.getPropertyPriority('width'),
+            height: this.style.getPropertyValue('height'),
+            heightPriority: this.style.getPropertyPriority('height')
+        };''')
+        scroll = frame._run_js('return [window.pageXOffset, window.pageYOffset];')
+        self._frame_states.append({'frame': frame, 'style': style, 'scroll': scroll})
+
+    def set_device_metrics(self, width, height):
+        self._has_device_metrics = True
+        self.owner.tab._run_cdp('Emulation.setDeviceMetricsOverride', width=width, height=height,
+                                deviceScaleFactor=self.owner.tab._run_js('return window.devicePixelRatio;'),
+                                mobile=False)
+
+    def restore(self):
+        self._clear_device_metrics()
+        self.owner._wait_animation_frame(self.owner.tab)
+        self._restore_frame_styles()
+        self._restore_frame_scrolls()
+        self._restore_tab_scroll()
+
+    def _clear_device_metrics(self):
+        if not self._has_device_metrics:
+            return
+        try:
+            self.owner.tab._run_cdp('Emulation.clearDeviceMetricsOverride', _ignore=True)
+        except (ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError):
+            pass
+
+    def _restore_frame_styles(self):
+        for state in reversed(self._frame_states):
+            try:
+                state['frame'].frame_ele._run_js('''const original = arguments[0] || {};
+
+                function styleWithoutSize(styleText) {
+                    const tmp = document.createElement('div');
+                    if (styleText !== null && typeof styleText !== 'undefined') {
+                        tmp.setAttribute('style', styleText);
+                    }
+                    tmp.style.removeProperty('width');
+                    tmp.style.removeProperty('height');
+                    return tmp.getAttribute('style') || '';
+                }
+
+                function restoreStyle(name, value, priority) {
+                    if (value) { this.style.setProperty(name, value, priority || ''); }
+                    else { this.style.removeProperty(name); }
+                }
+
+                if (styleWithoutSize(this.getAttribute('style')) === styleWithoutSize(original.attr)) {
+                    if (original.attr === null || typeof original.attr === 'undefined') {
+                        this.removeAttribute('style');
+                    } else {
+                        this.setAttribute('style', original.attr);
+                    }
+                } else {
+                    restoreStyle.call(this, 'width', original.width, original.widthPriority);
+                    restoreStyle.call(this, 'height', original.height, original.heightPriority);
+                }''', state['style'])
+            except (ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError):
+                pass
+
+    def _restore_frame_scrolls(self):
+        for state in reversed(self._frame_states):
+            try:
+                scroll = state['scroll']
+                state['frame']._run_js('window.scrollTo(arguments[0], arguments[1]);', scroll[0], scroll[1])
+            except (ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError):
+                pass
+
+    def _restore_tab_scroll(self):
+        if self._tab_scroll is None:
+            return
+        try:
+            self.owner.tab._run_js('window.scrollTo(arguments[0], arguments[1]);',
+                                   self._tab_scroll[0], self._tab_scroll[1])
+            self.owner._wait_animation_frame(self.owner.tab)
+        except (ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError):
+            pass
 
 
 class ChromiumFrame(ChromiumBase):
@@ -404,84 +505,249 @@ class ChromiumFrame(ChromiumBase):
 
     def _get_screenshot(self, path=None, name=None, as_bytes=None, as_base64=None,
                         full_page=False, left_top=None, right_bottom=None, ele=None):
-        if not self._is_diff_domain:
-            return super().get_screenshot(path=path, name=name, as_bytes=as_bytes, as_base64=as_base64,
-                                          full_page=full_page, left_top=left_top, right_bottom=right_bottom)
+        if ele is None:
+            if not self._is_diff_domain:
+                return super().get_screenshot(path=path, name=name, as_bytes=as_bytes, as_base64=as_base64,
+                                              full_page=full_page, left_top=left_top, right_bottom=right_bottom)
+            return self.frame_ele.get_screenshot(path=path, name=name, as_bytes=as_bytes, as_base64=as_base64)
 
-        if as_bytes:
-            if as_bytes is True:
-                pic_type = 'png'
-            else:
-                if as_bytes not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'as_bytes',
-                                                    ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_bytes))
-                pic_type = 'jpeg' if as_bytes == 'jpg' else as_bytes
+        frames = self._get_screenshot_frame_chain()
+        context = _FrameScreenshotContext(self, frames)
+        try:
+            self._prepare_frame_element_screenshot(ele, context)
+            left_top, right_bottom = self._get_ele_screenshot_rect(ele)
+            self._ensure_top_viewport_for_screenshot(left_top, right_bottom, context)
+            return self.tab.get_screenshot(path=path, name=name, as_bytes=as_bytes, as_base64=as_base64,
+                                           left_top=left_top, right_bottom=right_bottom)
+        finally:
+            context.restore()
 
-        elif as_base64:
-            if as_base64 is True:
-                pic_type = 'png'
-            else:
-                if as_base64 not in ('jpg', 'jpeg', 'png', 'webp'):
-                    raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'as_base64',
-                                                    ALLOW_VAL='"jpg", "jpeg", "png", "webp"', CURR_VAL=as_base64))
-                pic_type = 'jpeg' if as_base64 == 'jpg' else as_base64
+    def _prepare_frame_element_screenshot(self, ele, context):
+        context.save_tab_scroll()
 
-        else:
-            path = str(path).rstrip('\\/') if path else '.'
-            if path and path.endswith(('.jpg', '.jpeg', '.png', '.webp')):
-                pic_type = path.rsplit('.', 1)[-1]
+        target = ele
+        for frame in context.frames:
+            context.save_frame(frame)
+            box = self._get_target_document_box(target)
+            self._resize_frame_for_screenshot(frame, box)
+            self._scroll_frame_to_box(frame, box)
+            target = frame.frame_ele
 
-            elif name and name.endswith(('.jpg', '.jpeg', '.png', '.webp')):
-                pic_type = name.rsplit('.', 1)[-1]
+        for frame in reversed(context.frames):
+            frame.frame_ele.scroll.to_see(center=False)
+        self._wait_screenshot_chain_stable(ele, context.frames)
 
-            else:
-                pic_type = 'jpeg'
+    def _get_screenshot_frame_chain(self):
+        frames = []
+        frame = self
+        seen = set()
+        while getattr(frame, '_type', None) == 'ChromiumFrame':
+            if id(frame) in seen:
+                break
+            seen.add(id(frame))
+            frames.append(frame)
+            parent_frame = getattr(frame, '_parent_frame', None) or self._get_parent_frame_from_tree(frame)
+            if parent_frame:
+                frame._parent_frame = parent_frame
+            frame = parent_frame or frame._target_page
+        return frames
 
-            if pic_type == 'jpg':
-                pic_type = 'jpeg'
+    def _get_parent_frame_from_tree(self, frame):
+        frame_id = getattr(frame, '_frame_id', None)
+        if not frame_id:
+            return None
 
-        self.frame_ele.scroll.to_see(center=True)
-        self.scroll.to_see(ele, center=True)
-        cx, cy = ele.rect.viewport_location
-        w, h = ele.rect.size
-        img_data = f'data:image/{pic_type};base64,{self.frame_ele.get_screenshot(as_base64=True)}'
-        body = self.tab('t:body')
-        first_child = body('c::first-child')
-        if not isinstance(first_child, ChromiumElement):
-            first_child = first_child.frame_ele
-        js = f'''
-        img = document.createElement('img');
-        img.src = "{img_data}";
-        img.style.setProperty("z-index",9999999);
-        img.style.setProperty("position","fixed");
-        arguments[0].insertBefore(img, this);
-        return img;'''
-        new_ele = first_child._run_js(js, body)
-        new_ele.scroll.to_see(center=True)
-        top = int(self.frame_ele.style('border-top').split('px')[0])
-        left = int(self.frame_ele.style('border-left').split('px')[0])
+        parent_id = self._get_frame_parent_map().get(frame_id)
+        if parent_id == self.tab.tab_id:
+            return None
 
-        r = self.tab._run_cdp('Page.getLayoutMetrics')['visualViewport']
+        if parent_id:
+            parent_frame = self._get_cached_frame(parent_id)
+            if parent_frame:
+                return parent_frame
+
+        self.tab.get_frames(timeout=0)
+        if parent_id:
+            parent_frame = self._get_cached_frame(parent_id)
+            if parent_frame:
+                return parent_frame
+        return self._get_parent_frame_by_element_context(frame)
+
+    def _get_frame_parent_map(self):
+        frame_tree = self.tab._run_cdp('Page.getFrameTree')['frameTree']
+        parent_map = {}
+
+        def collect(node):
+            frame_info = node.get('frame', {})
+            frame_id = frame_info.get('id')
+            parent_id = frame_info.get('parentId')
+            if frame_id and parent_id:
+                parent_map[frame_id] = parent_id
+            for child in node.get('childFrames', ()) or ():
+                collect(child)
+
+        collect(frame_tree)
+        return parent_map
+
+    @staticmethod
+    def _get_cached_frame(frame_id):
+        frame = ChromiumFrame._Frames.get(frame_id)
+        return frame if getattr(frame, '_type', None) == 'ChromiumFrame' else None
+
+    def _get_parent_frame_by_element_context(self, frame):
+        for candidate in list(ChromiumFrame._Frames.values()):
+            if candidate is frame or getattr(candidate, '_type', None) != 'ChromiumFrame':
+                continue
+            if candidate.tab is not self.tab:
+                continue
+            try:
+                if candidate._run_js('return Array.from(document.querySelectorAll("iframe,frame"))'
+                                     '.includes(arguments[0]);', frame.frame_ele):
+                    return candidate
+            except (CDPError, ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError):
+                pass
+        return None
+
+    @staticmethod
+    def _get_target_document_box(ele):
+        return ele._run_js('''const r = this.getBoundingClientRect();
+        return {
+            left: r.left + window.pageXOffset,
+            top: r.top + window.pageYOffset,
+            width: r.width,
+            height: r.height
+        };''')
+
+    def _resize_frame_for_screenshot(self, frame, box):
+        width = max(1, ceil(box['width']))
+        height = max(1, ceil(box['height']))
+        frame.frame_ele._run_js('''const r = this.getBoundingClientRect();
+        const cs = getComputedStyle(this);
+        const borderWidth = (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0) + 1;
+        const borderHeight = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0) + 1;
+        this.style.setProperty('width', Math.ceil(Math.max(r.width, arguments[0] + borderWidth)) + 'px', 'important');
+        const height = Math.ceil(Math.max(r.height, arguments[1] + borderHeight)) + 'px';
+        this.style.setProperty('height', height, 'important');''',
+                                  width, height)
+        self._wait_animation_frame(frame.frame_ele)
+        self._wait_animation_frame(frame)
+
+    @staticmethod
+    def _scroll_frame_to_box(frame, box):
+        frame._run_js('window.scrollTo(arguments[0], arguments[1]);', box['left'], box['top'])
+
+    def _ensure_top_viewport_for_screenshot(self, left_top, right_bottom, context):
+        if not any(frame._is_diff_domain for frame in context.frames):
+            return
+
+        viewport_width, viewport_height = self.tab.rect.viewport_size_with_scrollbar
+        scroll_x, scroll_y = self.tab.rect.scroll_position
+        width = min(_MAX_SCREENSHOT_VIEWPORT_SIDE, max(viewport_width, ceil(right_bottom[0] - scroll_x)))
+        height = min(_MAX_SCREENSHOT_VIEWPORT_SIDE, max(viewport_height, ceil(right_bottom[1] - scroll_y)))
+        if width <= viewport_width and height <= viewport_height:
+            return
+
+        context.set_device_metrics(width, height)
+        self._wait_animation_frame(self.tab)
+
+    @staticmethod
+    def _wait_animation_frame(item):
+        try:
+            item._run_js('''return new Promise(resolve => {
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => requestAnimationFrame(resolve));
+                } else {
+                    setTimeout(resolve, 0);
+                }
+            });''', timeout=.5)
+        except (TimeoutError, ContextLostError, ElementLostError, PageDisconnectedError, JavaScriptError):
+            pass
+
+    def _wait_screenshot_chain_stable(self, ele, frames):
+        items = list(frames)
+        items.append(self.tab)
+
+        previous = None
+        end_time = perf_counter() + .5
+        while perf_counter() < end_time:
+            for item in items:
+                self._wait_animation_frame(item)
+            current = self._get_ele_screenshot_rect(ele)
+            if current == previous:
+                return
+            previous = current
+            sleep(.02)
+
+    def _get_ele_screenshot_rect(self, ele):
+        points = self._get_ele_viewport_points(ele)
+        frame = ele.owner
+        while getattr(frame, '_type', None) == 'ChromiumFrame' and frame._is_diff_domain:
+            points = self._map_frame_points_to_parent(frame, points)
+            frame = frame._target_page
+
+        r = self.tab._run_cdp('Page.getLayoutMetrics')['cssVisualViewport']
         sx = r['pageX']
         sy = r['pageY']
-        r = self.tab.get_screenshot(path=path, name=name, as_bytes=as_bytes, as_base64=as_base64,
-                                    left_top=(cx + left + sx, cy + top + sy),
-                                    right_bottom=(cx + w + left + sx, cy + h + top + sy))
-        self.tab.remove_ele(new_ele)
-        return r
+        xs = [i[0] + sx for i in points]
+        ys = [i[1] + sy for i in points]
+        return (floor(min(xs) + 1e-6), floor(min(ys) + 1e-6)), (ceil(max(xs) - 1e-6), ceil(max(ys) - 1e-6))
+
+    @staticmethod
+    def _get_ele_viewport_points(ele):
+        box = ele.owner._run_cdp('DOM.getBoxModel', backendNodeId=ele._backend_id)['model']['border']
+        return [(box[i], box[i + 1]) for i in range(0, 8, 2)]
+
+    @staticmethod
+    def _get_frame_viewport_size(frame):
+        txt = frame.doc_ele._run_js('return window.innerWidth.toString() + " " + window.innerHeight.toString();')
+        width, height = txt.split(' ')
+        return float(width), float(height)
+
+    def _map_frame_points_to_parent(self, frame, points):
+        content = frame.frame_ele.owner._run_cdp('DOM.getBoxModel',
+                                                backendNodeId=frame.frame_ele._backend_id)['model']['content']
+        content_points = [(content[i], content[i + 1]) for i in range(0, 8, 2)]
+        width, height = self._get_frame_viewport_size(frame)
+        if width == 0 or height == 0:
+            return content_points
+        return [self._map_point_to_quad(x / width, y / height, content_points) for x, y in points]
+
+    @staticmethod
+    def _map_point_to_quad(x_rate, y_rate, quad):
+        top_left, top_right, bottom_right, bottom_left = quad
+        x = (top_left[0] * (1 - x_rate) * (1 - y_rate)
+             + top_right[0] * x_rate * (1 - y_rate)
+             + bottom_right[0] * x_rate * y_rate
+             + bottom_left[0] * (1 - x_rate) * y_rate)
+        y = (top_left[1] * (1 - x_rate) * (1 - y_rate)
+             + top_right[1] * x_rate * (1 - y_rate)
+             + bottom_right[1] * x_rate * y_rate
+             + bottom_left[1] * (1 - x_rate) * y_rate)
+        return x, y
+
+    def _mark_frame_elements(self, result):
+        if getattr(result, '_type', None) == 'ChromiumElement':
+            result._frame_owner = self
+        elif getattr(result, '_type', None) == 'ChromiumFrame':
+            result._parent_frame = self
+        elif isinstance(result, list):
+            for i in result:
+                self._mark_frame_elements(i)
+        return result
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
         if isinstance(locator, ChromiumElement):
-            return locator
+            return self._mark_frame_elements(locator)
         timeout = timeout if timeout is not None else self.timeouts.base
         now = perf_counter()
         end_time = now + timeout
         while now <= end_time:
             try:
-                return self.doc_ele._ele(locator, index=index, timeout=end_time - now, raise_err=raise_err)
+                return self._mark_frame_elements(
+                    self.doc_ele._ele(locator, index=index, timeout=end_time - now, raise_err=raise_err))
             except ContextLostError:
                 now = perf_counter()
-        return self.doc_ele._ele(locator, index=index, timeout=0, raise_err=raise_err)
+        return self._mark_frame_elements(self.doc_ele._ele(locator, index=index, timeout=0, raise_err=raise_err))
 
     def _is_inner_frame(self):
         end_time = perf_counter() + 3

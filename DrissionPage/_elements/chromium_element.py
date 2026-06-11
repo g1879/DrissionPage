@@ -422,7 +422,9 @@ class ChromiumElement(DrissionElement):
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
         self.owner.wait.doc_loaded()
-        return find_in_chromium_ele(self, locator, index, timeout, relative=relative)
+        result = find_in_chromium_ele(self, locator, index, timeout, relative=relative)
+        frame_owner = getattr(self, '_frame_owner', None)
+        return frame_owner._mark_frame_elements(result) if frame_owner else result
 
     def style(self, style, pseudo_ele=''):
         if pseudo_ele:
@@ -515,6 +517,15 @@ class ChromiumElement(DrissionElement):
             end_time = perf_counter() + self.timeout
             while not self._run_js(js) and perf_counter() < end_time:
                 sleep(.05)
+
+        screenshot_owner = getattr(self, '_frame_owner', None) or self.owner
+        if not name:
+            name = f'{self.tag}.jpg'
+
+        if getattr(screenshot_owner, '_type', None) == 'ChromiumFrame':
+            return screenshot_owner._get_screenshot(path, name, as_bytes=as_bytes, as_base64=as_base64,
+                                                    full_page=False, ele=self)
+
         if scroll_to_center:
             self.scroll.to_see(center=True)
 
@@ -522,11 +533,8 @@ class ChromiumElement(DrissionElement):
         width, height = self.rect.size
         left_top = (left, top)
         right_bottom = (left + width, top + height)
-        if not name:
-            name = f'{self.tag}.jpg'
-
-        return self.owner._get_screenshot(path, name, as_bytes=as_bytes, as_base64=as_base64, full_page=False,
-                                          left_top=left_top, right_bottom=right_bottom, ele=self)
+        return screenshot_owner._get_screenshot(path, name, as_bytes=as_bytes, as_base64=as_base64, full_page=False,
+                                                left_top=left_top, right_bottom=right_bottom, ele=self)
 
     def input(self, vals, clear=False, by_js=False):
         if self.tag == 'input' and self.attr('type') == 'file':
