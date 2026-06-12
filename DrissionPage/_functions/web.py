@@ -249,7 +249,7 @@ def get_pdf(page, path=None, name=None, kwargs=None):
     path = path or '.'
     Path(path).mkdir(parents=True, exist_ok=True)
     name = make_valid_name(name or page.title)
-    with open(f'{path}{sep}{name}.pdf', 'wb', newline='\n') as f:
+    with open(f'{path}{sep}{name}.pdf', 'wb') as f:
         f.write(r)
     return r
 
