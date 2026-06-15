@@ -18,6 +18,7 @@ from .._pages.chromium_base import Timeout, ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
 from .._pages.chromium_tab import ChromiumTab
 from .._units.downloader import DownloadManager
+from .._units.listener import BrowserListener
 from .._units.setter import BrowserSetter
 from .._units.states import BrowserStates
 from .._units.waiter import BrowserWaiter
@@ -39,6 +40,7 @@ class Chromium(Messenger):
     _default_context: bool = ...
 
     _set: Optional[BrowserSetter] = ...
+    _listener: Optional[BrowserListener]
     _wait: Optional[BrowserWaiter] = ...
     _states: Optional[BrowserStates] = ...
     _chromium_options: ChromiumOptions = ...
@@ -120,6 +122,11 @@ class Chromium(Messenger):
     @property
     def set(self) -> BrowserSetter:
         """返回用于设置的对象"""
+        ...
+
+    @property
+    def listen(self) -> BrowserListener:
+        """返回用于监听网络数据的对象"""
         ...
 
     @property

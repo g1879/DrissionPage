@@ -48,6 +48,11 @@ class SessionElementsList(list):
         """用于筛选单个元素的对象"""
         ...
 
+    @property
+    def texts(self) -> List[str]:
+        """返回列表中所有元素文本组成的列表"""
+        ...
+
 
 class ChromiumElementsList(SessionElementsList):
     _owner: ChromiumBase = ...

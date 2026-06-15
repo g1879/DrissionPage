@@ -43,6 +43,7 @@ class ChromiumBase(BasePage, Messenger):
         BasePage.__init__(self)
         Messenger.__init__(self)
         self._browser = browser
+        self._driver = self.browser._driver
         self._is_loading = None
         self._root_oid = None  # object id
         self._root_nid = None
@@ -122,7 +123,6 @@ class ChromiumBase(BasePage, Messenger):
 
     def _driver_init(self):
         self._is_loading = True
-        self._driver = self.browser._driver
 
         self._alert = Alert(self._auto_handle_alert)
         self._enable_domain('Page')
@@ -236,13 +236,13 @@ class ChromiumBase(BasePage, Messenger):
             auth = {'response': 'ProvideCredentials', 'username': self._proxy_usr, 'password': self._proxy_pwd}
         else:
             auth = {'response': 'Default'}
-        self._run_cdp("Fetch.continueWithAuth", requestId=request_id, authChallengeResponse=auth)
+        self._run_cdp("Fetch.continueWithAuth", requestId=request_id, authChallengeResponse=auth, _ignore=True)
 
     def _onRequestPaused(self, **kwargs):
         if 'responseErrorReason' in kwargs or 'responseStatusCode' in kwargs:
-            self._run_cdp("Fetch.continueResponse", requestId=kwargs['requestId'])
+            self._run_cdp("Fetch.continueResponse", requestId=kwargs['requestId'], _ignore=True)
         else:
-            self._run_cdp("Fetch.continueRequest", requestId=kwargs['requestId'])
+            self._run_cdp("Fetch.continueRequest", requestId=kwargs['requestId'], _ignore=True)
 
     def _wait_to_stop(self):
         end_time = perf_counter() + self.timeouts.page_load

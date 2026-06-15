@@ -38,6 +38,10 @@ class SessionElementsList(list):
     def filter_one(self):
         return SessionFilterOne(self)
 
+    @property
+    def texts(self):
+        return [t.text for t in self]
+
 
 class ChromiumElementsList(SessionElementsList):
 

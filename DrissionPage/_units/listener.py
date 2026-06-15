@@ -11,6 +11,7 @@ from queue import Queue
 from re import search
 from time import perf_counter, sleep
 
+from ftfy import fix_text
 from requests.structures import CaseInsensitiveDict
 
 from .._functions.settings import Settings as _S
@@ -18,32 +19,22 @@ from .._functions.tools import wait_until
 from ..errors import WaitTimeoutError
 
 
-class Listener(object):
+class BaseListener(object):
     def __init__(self, owner):
         self._owner = owner
-        self._running_requests = 0
-        self._running_targets = 0
-
-        self._caught = None
-        self._request_ids = None
-        self._extra_info_ids = None
-        self._ws_info = {}
-
         self.listening = False
-        self.tab_id = None
 
-        self._targets = True
+        self._urls = True
         self._is_regex = False
         self._method = {'GET', 'POST'}
         self._res_type = True
-        self._listen_ws = False
 
         self._method_setter = None
         self._res_type_setter = None
 
     @property
-    def targets(self):
-        return self._targets
+    def urls(self):
+        return self._urls
 
     @property
     def set_method(self):
@@ -57,36 +48,61 @@ class Listener(object):
             self._res_type_setter = ResTypeSetter(self)
         return self._res_type_setter
 
-    def set_targets(self, targets=True, is_regex=False):
-        if targets is not None:
-            if not isinstance(targets, (str, list, tuple, set)) and targets is not True:
-                raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'targets',
-                                                ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(targets)))
-            if targets is True:
-                self._targets = True
+    def set_urls(self, urls=True, is_regex=False, targets=None):
+        if urls is None and targets is not None:  # 即将废弃
+            print('target参数即将废弃，请改用urls')
+            urls = targets
+        if urls is not None:
+            if not isinstance(urls, (str, list, tuple, set)) and urls is not True:
+                raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'urls',
+                                                ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(urls)))
+            if urls is True:
+                self._urls = True
             else:
-                self._targets = {targets} if isinstance(targets, str) else set(targets)
+                self._urls = {urls} if isinstance(urls, str) else set(urls)
 
         if is_regex is not None:
             self._is_regex = is_regex
 
-    def start(self, targets=None, is_regex=None):
-        if targets is not None:
-            if is_regex is None:
-                is_regex = False
-        if targets or is_regex is not None:
-            self.set_targets(targets, is_regex)
+    def resume(self):
+        self._init_callback()
+        self.listening = True
+
+
+class Listener(BaseListener):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._caught = None
+        self._running_requests = 0
+        self._running_targets = 0
+
+        self._request_ids = None
+        self._extra_info_ids = None
+        self._ws_info = {}
+
+        self.tab_id = None
+
+    def start(self, urls=None, is_regex=None, targets=None):
+        if urls is None and targets is not None:  # 即将废弃
+            print('target参数即将废弃，请改用urls')
+            urls = targets
+
+        if urls is not None and is_regex is None:
+            is_regex = False
+        if urls or is_regex is not None:
+            self.set_urls(urls, is_regex)
         self.clear()
-        self.resume()
-        self._owner._enable_domain('Network')
+        if not self.listening:
+            self.resume()
+            self._owner._enable_domain('Network')
 
     def wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
         if not self.listening:
-            raise RuntimeError(_S._lang.joinn(_S._lang.NOT_LISTENING))
+            self.start()
         success = False
         if not timeout:
             while self._owner._messenger_running and self.listening and self._caught.qsize() < count:
-                sleep(.02)
+                sleep(.01)
             success = self._owner._messenger_running
 
         else:
@@ -95,7 +111,7 @@ class Listener(object):
                 if self._caught.qsize() >= count:
                     success = True
                     break
-                sleep(.02)
+                sleep(.01)
 
         if success:
             if count == 1:
@@ -110,9 +126,45 @@ class Listener(object):
         else:
             return [self._caught.get_nowait() for _ in range(self._caught.qsize())]
 
+    def browser_wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
+        if not self._owner.browser.listen.listening:
+            self._owner.browser.listen.start()
+        self._owner._run_cdp('Network.setCacheDisabled', cacheDisabled=True)
+        success = False
+
+        if not timeout:
+            while (self._owner.browser.listen.listening and
+                   (self._owner.tab_id not in self._owner.browser.listen._caught or
+                    self._owner.browser.listen._caught[self._owner.tab_id].qsize() < count)):
+                sleep(.01)
+            success = self._owner._messenger_running
+
+        else:
+            end = perf_counter() + timeout
+            while self._owner.browser.listen.listening and perf_counter() < end:
+                if (self._owner.tab_id in self._owner.browser.listen._caught and
+                        self._owner.browser.listen._caught[self._owner.tab_id].qsize() >= count):
+                    success = True
+                    break
+                sleep(.01)
+
+        if success:
+            if count == 1:
+                return self._owner.browser.listen._caught[self._owner.tab_id].get_nowait()
+            return [self._owner.browser.listen._caught[self._owner.tab_id].get_nowait() for _ in range(count)]
+
+        if fit_count or not self._owner.browser.listen._caught[self._owner.tab_id].qsize():
+            if raise_err is True or (_S.raise_when_wait_failed is True and raise_err is None):
+                raise WaitTimeoutError(_S._lang.WAITING_FAILED_, _S._lang.DATA_PACKET, timeout)
+            else:
+                return False
+        else:
+            return [self._owner.browser.listen._caught[self._owner.tab_id].get_nowait()
+                    for _ in range(self._owner.browser.listen._caught[self._owner.tab_id].qsize())]
+
     def steps(self, count=None, timeout=None, gap=1):
         if not self.listening:
-            raise RuntimeError(_S._lang.joinn(_S._lang.NOT_LISTENING))
+            self.start()
         caught = 0
         if timeout is None:
             while self._owner._messenger_running and self.listening:
@@ -137,6 +189,36 @@ class Listener(object):
                 sleep(.03)
             return False
 
+    def browser_steps(self, count=None, timeout=None, gap=1):
+        if not self._owner.browser.listen.listening:
+            self._owner.browser.listen.start()
+        self._owner._run_cdp('Network.setCacheDisabled', cacheDisabled=True)
+        caught = 0
+        _caught = self._owner.browser.listen._caught
+        tid = self._owner.tab_id
+        if timeout is None:
+            while self._owner.browser.listen.listening:
+                if tid in _caught and _caught[tid].qsize() >= gap:
+                    yield _caught[tid].get_nowait() if gap == 1 else [_caught[tid].get_nowait() for _ in range(gap)]
+                    if count:
+                        caught += gap
+                        if caught >= count:
+                            return None
+                sleep(.01)
+
+        else:
+            end = perf_counter() + timeout
+            while self._owner.browser.listen.listening and perf_counter() < end:
+                if tid in _caught and _caught[tid].qsize() >= gap:
+                    yield _caught[tid].get_nowait() if gap == 1 else [_caught[tid].get_nowait() for _ in range(gap)]
+                    end = perf_counter() + timeout
+                    if count:
+                        caught += gap
+                        if caught >= count:
+                            return None
+                sleep(.01)
+            return False
+
     def stop(self):
         if self.listening:
             self.pause(clear=True)
@@ -156,15 +238,10 @@ class Listener(object):
             self._owner._set_callback('Network.webSocketHandshakeResponseReceived', None)
             self._owner._set_callback('Network.webSocketWillSendHandshakeRequest', None)
             self._owner._set_callback('Network.webSocketClosed', None)
+            self._owner._set_callback('Network.eventSourceMessageReceived', None)
             self.listening = False
         if clear:
             self.clear()
-
-    def resume(self):
-        if self.listening:
-            return
-        self._init_callback()
-        self.listening = True
 
     def clear(self):
         self._request_ids = {}
@@ -221,7 +298,7 @@ class Listener(object):
 
     def _eventSourceMessageReceived(self, **kwargs):
         i = self._request_ids.get(kwargs['requestId'])
-        if self._targets is True or i:
+        if self._urls is True or i:
             p = SSEPacket(self._owner, i.target if i else None, kwargs)
             if i:
                 p._connect_info = i
@@ -229,7 +306,7 @@ class Listener(object):
 
     def _webSocketFrameSent(self, **kwargs):
         i = self._ws_info.get(kwargs['requestId'])
-        if self._targets is True or i:
+        if self._urls is True or i:
             p = WebSocketPacket(self._owner, i.target if i else None, kwargs, True)
             if i:
                 p._connect_info = i
@@ -237,7 +314,7 @@ class Listener(object):
 
     def _webSocketFrameReceived(self, **kwargs):
         i = self._ws_info.get(kwargs['requestId'])
-        if self._targets is True or i:
+        if self._urls is True or i:
             p = WebSocketPacket(self._owner, i.target if i else None, kwargs, False)
             if i:
                 p._connect_info = i
@@ -271,7 +348,7 @@ class Listener(object):
             rid = kwargs['requestId']
             p = self._request_ids.setdefault(rid, DataPacket(self._owner, target))
             p._raw_request = kwargs
-            if kwargs['request'].get('hasPostData') and not kwargs['request'].get('postData'):
+            if kwargs['request'].get('hasPostData') and not kwargs['request'].get('postDataEntries'):
                 p._raw_post_data = self._owner._run_cdp('Network.getRequestPostData',
                                                         requestId=rid, _ignore=True).get('postData')
         self._extra_info_ids.setdefault(kwargs['requestId'], {})['obj'] = p
@@ -285,6 +362,7 @@ class Listener(object):
         if request:
             request._raw_response = kwargs['response']
             request._resource_type = kwargs['type']
+            request.timestamp = kwargs['timestamp']
 
     def _responseReceivedExtraInfo(self, **kwargs):
         self._running_requests -= 1
@@ -314,7 +392,7 @@ class Listener(object):
                 packet._base64_body = False
 
             if (packet._raw_request['request'].get('hasPostData')
-                    and not packet._raw_request['request'].get('postData')):
+                    and not packet._raw_request['request'].get('postDataEntries')):
                 r = self._owner._run_cdp('Network.getRequestPostData', requestId=rid, _timeout=1, _ignore=True)
                 packet._raw_post_data = r.get('postData')
 
@@ -362,19 +440,100 @@ class Listener(object):
             self._caught.put(data_packet)
             self._running_targets -= 1
 
+    @property
+    def targets(self):  # 即将废弃
+        print('target即将废弃，请改用urls')
+        return self._urls
+
+    def set_targets(self, targets=True, is_regex=False):  # 即将废弃
+        print('set_target参数即将废弃，请改用set_urls')
+        self.set_urls(urls=targets, is_regex=is_regex)
+
+
+class BrowserListener(BaseListener):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._caught = {}
+        self._request_ids = {}
+
+    def start(self, urls=None, is_regex=None):
+        if urls is not None and is_regex is None:
+            is_regex = False
+        if urls or is_regex is not None:
+            self.set_urls(urls, is_regex)
+        self.clear()
+        if not self.listening:
+            self.resume()
+            if self._urls is True or self._is_regex:
+                if self._res_type is True:
+                    patterns = [{'requestStage': 'Response'}]
+                else:
+                    patterns = []
+                    for m in self._res_type:
+                        patterns.append({'resourceType': m, 'requestStage': 'Response'})
+            else:
+                patterns = []
+                if self._res_type is True:
+                    for t in self._urls:
+                        patterns.append({'urlPattern': f'*{t}*', 'requestStage': 'Response'})
+                else:
+                    for t in self._urls:
+                        p = {'urlPattern': f'*{t}*', 'requestStage': 'Response'}
+                        for m in self._res_type:
+                            p['resourceType'] = m
+                            patterns.append(p)
+
+            self._owner._enable_domain('Fetch', patterns=patterns)
+
+    def stop(self):
+        if self.listening:
+            self.pause()
+        self._owner._disable_domain('Fetch')
+
+    def pause(self, clear=True):
+        if self.listening:
+            self._owner._set_callback('Fetch.requestPaused', None)
+            self.listening = False
+        if clear:
+            self.clear()
+
+    def clear(self):
+        self._caught = {}
+        self._request_ids = {}
+
+    def _init_callback(self):
+        self._owner._set_callback('Fetch.requestPaused', self._onRequestPaused)
+
+    def _onRequestPaused(self, **kwargs):
+        target = in_targets(self, kwargs['request']['url'], kwargs['request']['method'], kwargs['resourceType'])
+        if not target:
+            self._owner._run_cdp('Fetch.continueResponse', requestId=kwargs['requestId'], _ignore=True, _timeout=0)
+            return
+
+        tab_id = self._owner._tabs._frames.get(kwargs['frameId'])
+        while not tab_id:
+            tab_id = self._owner._tabs._frames.get(kwargs['frameId'])
+            print('等待')
+            sleep(.001)
+
+        body = self._owner._run_cdp('Fetch.getResponseBody', requestId=kwargs['requestId'], _ignore=True)
+        kwargs['body'] = None if 'error' in body else body
+        self._owner._run_cdp('Fetch.continueResponse', requestId=kwargs['requestId'], _ignore=True, _timeout=0)
+        self._caught.setdefault(tab_id, Queue(maxsize=0)).put(BrowserDataPacket(tab_id, target, kwargs))
+
 
 def in_targets(listener, url, method, res_type):
-    if listener._targets is True:
+    if listener._urls is True:
         if ((listener._method is True or method in listener._method)
-                and (listener._res_type is True or res_type.upper() in listener._res_type)):
-            return True
+                and (listener._res_type is True or res_type in listener._res_type)):
+            return True, method, res_type
     else:
-        for target in listener._targets:
+        for target in listener._urls:
             if (((listener._is_regex and search(target, url))
                  or (not listener._is_regex and target in url))
                     and (listener._method is True or method in listener._method)
-                    and (listener._res_type is True or res_type.upper() in listener._res_type)):
-                return target
+                    and (listener._res_type is True or res_type in listener._res_type)):
+                return target, method, res_type
     return False
 
 
@@ -398,6 +557,7 @@ class DataPacket(object):
         self.tab_id = tab.tab_id
         self.target = target
         self.is_failed = False
+        self.timestamp = None
 
         self._raw_request = None
         self._raw_post_data = None
@@ -451,8 +611,12 @@ class DataPacket(object):
     @property
     def response(self):
         if self._response is None:
-            self._response = Response(self, self._raw_response, self._raw_body, self._base64_body)
+            self._response = Response(self, self._raw_response, self._raw_body, self._base64_body, self.timestamp)
         return self._response
+
+    @property
+    def data(self):
+        return self.response.body
 
     @property
     def fail_info(self):
@@ -502,15 +666,17 @@ class Request(object):
     def postData(self):
         if self._postData is None:
             if self._raw_post_data:
-                postData = self._raw_post_data
-            elif self._request.get('postData'):
-                postData = self._request['postData']
+                try:
+                    self._postData = loads(self._raw_post_data)
+                except (JSONDecodeError, TypeError):
+                    self._postData = self._raw_post_data
+            elif self._request.get('postDataEntries'):
+                if len(self._request['postDataEntries']) == 1:
+                    self._postData = loads(b64decode(self._request['postDataEntries'][0]['bytes']).decode())
+                else:
+                    self._postData = [loads(b64decode(d['bytes']).decode()) for d in self._request['postDataEntries']]
             else:
-                postData = False
-            try:
-                self._postData = loads(postData)
-            except (JSONDecodeError, TypeError):
-                self._postData = postData
+                self._postData = False
         return self._postData
 
     @property
@@ -521,15 +687,20 @@ class Request(object):
     def extra_info(self):
         return RequestExtraInfo(self._data_packet._request_extra_info or {})
 
+    @property
+    def timestamp(self):
+        return self._request['timestamp']
+
 
 class Response(object):
-    def __init__(self, data_packet, raw_response, raw_body, base64_body):
+    def __init__(self, data_packet, raw_response, raw_body, base64_body, timestamp):
         self._data_packet = data_packet
         self._response = raw_response
         self._raw_body = raw_body
         self._is_base64_body = base64_body
         self._body = None
         self._headers = None
+        self._timestamp = timestamp
 
     def __getattr__(self, item):
         return self._response.get(item) if self._response else None
@@ -554,18 +725,23 @@ class Response(object):
         if self._body is None:
             if self._is_base64_body:
                 self._body = b64decode(self._raw_body)
-
             else:
                 try:
                     self._body = loads(self._raw_body)
                 except (JSONDecodeError, TypeError):
-                    self._body = self._raw_body
+                    self._body = fix_text(self._raw_body)
+                    if self._body and 'event-stream' in self.headers.get('content-type', ''):
+                        self._body = sse2list(self._body)
 
         return self._body
 
     @property
     def extra_info(self):
         return ResponseExtraInfo(self._data_packet._response_extra_info or {})
+
+    @property
+    def timestamp(self):
+        return self._timestamp
 
 
 class ExtraInfo(object):
@@ -628,15 +804,11 @@ class WebSocketPacket(object):
         return f'<WebSocketPacket {direction} requestId={self._request_id} timestamp={self.timestamp}>'
 
     @property
-    def connect_info(self):
-        return self._connect_info
-
-    @property
     def timestamp(self):
         return self._raw_data['timestamp']
 
     @property
-    def payload(self):
+    def data(self):
         if self._payload is None:
             payload = self._raw_data['response']
             if payload['opcode'] == 1:
@@ -647,6 +819,30 @@ class WebSocketPacket(object):
             else:
                 self._payload = b64decode(payload['payloadData'])
         return self._payload
+
+    @property
+    def url(self):
+        return self._connect_info.url if self._connect_info else None
+
+    @property
+    def method(self):
+        return None
+
+    @property
+    def frameId(self):
+        return self.tab._frame_id
+
+    @property
+    def request(self):
+        return self._connect_info.request if self._connect_info else None
+
+    @property
+    def response(self):
+        return self._connect_info.response if self._connect_info else None
+
+    @property
+    def is_failed(self):
+        return False
 
 
 class SSEPacket(object):
@@ -681,8 +877,28 @@ class SSEPacket(object):
         return self._raw_data['data']
 
     @property
-    def connect_info(self):
-        return self._connect_info
+    def url(self):
+        return self._connect_info.url if self._connect_info else None
+
+    @property
+    def method(self):
+        return self._connect_info.method if self._connect_info else None
+
+    @property
+    def frameId(self):
+        return self._connect_info.frameId if self._connect_info else self.tab._frame_id
+
+    @property
+    def request(self):
+        return self._connect_info.request if self._connect_info else None
+
+    @property
+    def response(self):
+        return self._connect_info.response if self._connect_info else None
+
+    @property
+    def is_failed(self):
+        return False
 
 
 class MethodSetter(object):
@@ -701,17 +917,15 @@ class MethodSetter(object):
     def __getattr__(self, item):
         def _func(only=False):
             if item in self._ALLOW:
-                i = item.upper()
                 if only:
-                    setattr(self._listener, self._ATTR, {i})
+                    setattr(self._listener, self._ATTR, {item})
                 elif getattr(self._listener, self._ATTR) is not True:
-                    getattr(self._listener, self._ATTR).add(i)
+                    getattr(self._listener, self._ATTR).add(item)
                 return self
             elif item in self._REMOVE:
-                i = item.upper()
                 if getattr(self._listener, self._ATTR) is True:
-                    setattr(self._listener, self._ATTR, {i.upper() for i in self._ALLOW})
-                getattr(self._listener, self._ATTR).discard(i[7:])
+                    setattr(self._listener, self._ATTR, {i for i in self._ALLOW})
+                getattr(self._listener, self._ATTR).discard(item[7:])
                 return self
             raise ValueError()
 
@@ -739,3 +953,130 @@ class ResTypeSetter(MethodSetter):
 
     def remove_sse(self):
         return self.__getattr__('remove_EventSource')()
+
+
+class BrowserDataPacket(object):
+    def __init__(self, tab_id, target, raw_data):
+        self.tab_id = tab_id
+        self.target = target
+        self._raw_data = raw_data
+        self._request = None
+        self._response = None
+        self._data = None
+
+    def __repr__(self):
+        return f'<BrowserDataRacket url={self.url} target={self.target}>'
+
+    @property
+    def url(self):
+        return self._raw_data['request']['url']
+
+    @property
+    def method(self):
+        return self.request.method
+
+    @property
+    def frameId(self):
+        return self._raw_data['frameId']
+
+    @property
+    def request(self):
+        if self._request is None:
+            self._request = BrowserRequest(self._raw_data['request'])
+        return self._request
+
+    @property
+    def response(self):
+        if self._response is None:
+            self._response = BrowserResponse(self._raw_data)
+        return self._response
+
+    @property
+    def data(self):
+        return self.response.body
+
+    @property
+    def resourceType(self):
+        return self._raw_data.get('resourceType')
+
+    @property
+    def is_failed(self):
+        return 'responseErrorReason' in self._raw_data
+
+    @property
+    def timestamp(self):
+        return None
+
+
+class BrowserRequest(object):
+    def __init__(self, request):
+        self._request = request
+        self._headers = None
+        self._postData = None
+
+    def __getattr__(self, item):
+        return self._request.get(item)
+
+    @property
+    def headers(self):
+        if self._headers is None:
+            self._headers = CaseInsensitiveDict(self._info['headers'])
+        return self._headers
+
+    @property
+    def params(self):
+        from urllib.parse import parse_qsl, urlparse
+        return dict(parse_qsl(urlparse(self.url).query, keep_blank_values=True))
+
+    @property
+    def postData(self):
+        if self._postData is None:
+            if self._request.get('postDataEntries'):
+                if len(self._request['postDataEntries']) == 1:
+                    self._postData = loads(b64decode(self._request['postDataEntries'][0]['bytes']).decode())
+                else:
+                    self._postData = [loads(b64decode(d['bytes']).decode()) for d in self._request['postDataEntries']]
+            else:
+                self._postData = False
+        return self._postData
+
+
+class BrowserResponse(object):
+    def __init__(self, response):
+        self.headers = CaseInsensitiveDict({i['name']: i['value'] for i in response.get('responseHeaders', {})})
+        self.statusCode = response.get('responseStatusCode')
+        self.statusText = response.get('responseStatusText')
+        self.errorReason = response.get('responseErrorReason')
+        self._raw_body = response.get('body')
+        self._body = None
+
+    @property
+    def body(self):
+        if self._raw_body and self._body is None:
+            body = None
+            try:
+                body = b64decode(self._raw_body['body']) if self._raw_body['base64Encoded'] else self._raw_body['body']
+                body = body.decode('utf-8')
+                body = loads(body)
+            except:
+                pass
+            if isinstance(body, str) and 'event-stream' in self.headers.get('content-type', ''):
+                body = sse2list(body)
+            self._body = body
+        return self._body
+
+
+def sse2list(raw):
+    body = []
+    for data in raw.split('\n\n'):
+        row = {}
+        for d in data.split('\n'):
+            if not d:
+                continue
+            name, value = d.split(': ', 1)
+            try:
+                row[name] = loads(value)
+            except JSONDecodeError:
+                row[name] = value
+        body.append(row)
+    return body

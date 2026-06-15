@@ -24,6 +24,7 @@ from .._functions.web import get_proxy_info
 from .._pages.chromium_base import Timeout
 from .._pages.chromium_tab import ChromiumTab
 from .._units.downloader import DownloadManager
+from .._units.listener import BrowserListener
 from .._units.setter import BrowserSetter
 from .._units.states import BrowserStates
 from .._units.waiter import BrowserWaiter
@@ -60,6 +61,7 @@ class Chromium(Messenger):
         self._type = 'Chromium'
         self._browser = self  # 用于Messenger兼容
         self._set = None
+        self._listener = None
         self._wait = None
         self._states = None
         self._timeouts = Timeout(**self._chromium_options.timeouts)
@@ -171,6 +173,12 @@ class Chromium(Messenger):
         return self._set
 
     @property
+    def listen(self):
+        if self._listener is None:
+            self._listener = BrowserListener(self)
+        return self._listener
+
+    @property
     def states(self):
         if self._states is None:
             self._states = BrowserStates(self)
@@ -188,7 +196,11 @@ class Chromium(Messenger):
 
     @property
     def latest_tab(self):
-        return self._get_tab(self._browser_id, id_or_num=self.tab_ids[0], as_id=not _S.singleton_tab_obj)
+        ids = self.tab_ids
+        if ids:
+            return self._get_tab(self._browser_id, id_or_num=ids[0], as_id=not _S.singleton_tab_obj)
+        t = self.new_tab()
+        return t if _S.singleton_tab_obj else t.tab_id
 
     def _tab_ids(self, context_id):
         tabs = [i['targetId'] for i in self._run_cdp('Target.getTargets')['targetInfos']
@@ -304,12 +316,15 @@ class Chromium(Messenger):
             sleep(.01)
 
     def activate_tab(self, id_ind_tab):
-        if isinstance(id_ind_tab, int):
-            id_ind_tab += -1 if id_ind_tab else 1
-            id_ind_tab = self.tab_ids[id_ind_tab]
-        elif isinstance(id_ind_tab, ChromiumTab):
-            id_ind_tab = id_ind_tab.tab_id
-        self._run_cdp('Target.activateTarget', targetId=id_ind_tab)
+        try:
+            if isinstance(id_ind_tab, int):
+                id_ind_tab += -1 if id_ind_tab else 1
+                id_ind_tab = self.tab_ids[id_ind_tab]
+            elif isinstance(id_ind_tab, ChromiumTab):
+                id_ind_tab = id_ind_tab.tab_id
+            self._run_cdp('Target.activateTarget', targetId=id_ind_tab)
+        except (PageDisconnectedError, IndexError):
+            raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB))
 
     def reconnect(self):
         self._disconnect_flag = True
@@ -356,7 +371,6 @@ class Chromium(Messenger):
             return ok if ok else None
 
         if pids:
-            print('sss')
             from psutil import Process
             for pid in pids:
                 try:
@@ -378,7 +392,10 @@ class Chromium(Messenger):
         return sid
 
     def _detach(self, session_id):
-        self._run_cdp('Target.detachFromTarget', sessionId=session_id, _timeout=0, _ignore=True)
+        try:
+            self._run_cdp('Target.detachFromTarget', sessionId=session_id, _timeout=0, _ignore=True)
+        except:
+            pass
         self._driver.remove_session_owner(session_id)
 
     def _get_session_id(self, target_id, obj=None):
@@ -393,18 +410,25 @@ class Chromium(Messenger):
         return sid
 
     def _get_tab(self, context_id, id_or_num=None, title=None, url=None, tab_type='page', as_id=False):
+        tab_ids = [t for t in self._run_cdp('Target.getTargets')['targetInfos'] if t['browserContextId'] == context_id]
+        if not self._ws_only:
+            tab_ids = [t for t in self._driver.get(f'http://{self.address}/json').json()
+                       if t['id'] in [i['targetId'] for i in tab_ids]]
+        if not tab_ids:
+            raise RuntimeError(_S._lang.joinn(_S._lang.NO_TAB))
+
         if id_or_num is not None:
             if isinstance(id_or_num, int):
-                id_or_num = self.tab_ids[id_or_num - 1 if id_or_num > 0 else id_or_num]
+                id_or_num = tab_ids[id_or_num - 1 if id_or_num > 0 else id_or_num]
             elif isinstance(id_or_num, ChromiumTab):
                 return id_or_num.tab_id if as_id else ChromiumTab(self, id_or_num.tab_id, context_id)
             else:
                 j = self._run_cdp('Target.getTargets')['targetInfos']
                 if id_or_num not in [i['targetId'] for i in j if i['browserContextId'] == context_id]:
-                    raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=self.tab_ids))
+                    raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=tab_ids))
 
         elif title == url is None and tab_type == 'page':
-            id_or_num = self.tab_ids[0]
+            id_or_num = tab_ids[0]
 
         else:
             tabs = self._get_tabs(context_id, title=title, url=url, tab_type=tab_type, as_id=True)
@@ -425,6 +449,8 @@ class Chromium(Messenger):
             tabs = [t for t in self._driver.get(f'http://{self.address}/json').json()
                     if t['id'] in [i['targetId'] for i in tabs]]
             _id = 'id'
+        if not tabs:
+            raise RuntimeError(_S._lang.joinn(_S._lang.NO_TAB))
 
         if isinstance(tab_type, str):
             tab_type = {tab_type}
@@ -435,8 +461,7 @@ class Chromium(Messenger):
                                             ALLOW_TYPE='set, list, tuple, str, None', CURR_VAL=tab_type))
 
         tabs = [i for i in tabs if ((title is None or title in i['title']) and (url is None or url in i['url'])
-                                    and (tab_type is None or i['type'] in tab_type)
-                                    and i['title'] != 'chrome-extension://neajdppkdcdipfabeoofebfddakdcjhd/audio.html')]
+                                    and (tab_type is None or i['type'] in tab_type))]
 
         return [tab[_id] for tab in tabs] if as_id else [ChromiumTab(self, tab[_id], context_id) for tab in tabs]
 
@@ -454,6 +479,8 @@ class Chromium(Messenger):
         tab_id = kwargs['targetId']
         self._dl_mgr.clear_tab_info(tab_id)
         self._tabs.stop_target(target_id=tab_id)
+        if self._listener:
+            self._listener._caught.pop(tab_id, None)
 
     def _onDetachedFromTarget(self, **kwargs):
         self._tabs.stop_session(kwargs['sessionId'])
@@ -465,6 +492,8 @@ class Chromium(Messenger):
             if self._chromium_options.is_auto_port:
                 ensure_del_dir(self._chromium_options.user_data_path)
         self._stop_messenger()
+        if self._listener:
+            self._listener.listening = False
 
     def _stop(self):
         self._stop_messenger()
@@ -512,6 +541,8 @@ def run_browser(options):
             if not ws:
                 ws_only = True
             else:
+                if ws.json()['webSocketDebuggerUrl'].endswith('browser'):
+                    ws_only = True
                 ws.close()
         except:
             ws_only = True
@@ -526,9 +557,11 @@ def run_browser(options):
         ws = s.get(f'http://{options.address}/json/version', headers={'Connection': 'close'}, timeout=2)
         if not ws and not options.ws_address:
             raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2)
-        json = ws.json()
-        browser_id = json['webSocketDebuggerUrl'].split('/')[-1]
-        is_headless = 'headless' in json['User-Agent'].lower()
+        j = ws.json()
+        browser_id = j['webSocketDebuggerUrl'].split('/')[-1]
+        is_headless = 'headless' in j['User-Agent'].lower()
+        if j['webSocketDebuggerUrl'].endswith('browser'):
+            ws_only = True
         ws.close()
         s.close()
     except KeyError:

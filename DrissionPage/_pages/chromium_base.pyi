@@ -378,7 +378,7 @@ class ChromiumBase(BasePage, Messenger):
             retry: int = None,
             interval: float = None,
             timeout: float = None,
-            raise_err:bool = False) -> NavResult:
+            raise_err: bool = False) -> NavResult:
         """访问url
         :param url: 目标url
         :param retry: 重试次数，为None时使用页面对象retry_times属性值

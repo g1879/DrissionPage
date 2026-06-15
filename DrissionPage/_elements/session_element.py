@@ -150,20 +150,9 @@ class SessionElement(DrissionElement):
         return make_session_ele(self, locator, index=index)
 
     def _get_ele_path(self, xpath=True):
-        if xpath:
-            return self._inner_ele.getroottree().getpath(self._inner_ele)
-
-        path_str = ''
-        ele = self
-        while ele:
-            id_ = ele.attr('id')
-            if id_:
-                path_str = f'>{ele.tag}#{id_}{path_str}'
-            else:
-                path_str = f'>{ele.tag}:nth-child({len(ele.eles("xpath:./preceding-sibling::*")) + 1}){path_str}'
-            ele = ele.parent()
-
-        return path_str[1:]
+        full_xpath = self._inner_ele.getroottree().getpath(self._inner_ele)
+        return (full_xpath if xpath
+                else full_xpath.lstrip('/').replace('/', '>').replace('[', ':nth-of-type(').replace(']', ')'))
 
 
 def make_session_ele(html_or_ele, loc=None, index=1, method=None):

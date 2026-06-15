@@ -1,9 +1,10 @@
 requests
 lxml
 cssselect
-DrissionGet
+DrissionGet>=1.2.1
 DrissionRecord
 websocket-client
 click
 tldextract>=3.4.4
 psutil
+ftfy

@@ -1015,11 +1015,10 @@ def do_find_sr_xpath(ele, loc, ind):
     for i in eles:
         if hasattr(i, 'css_selector'):
             c = i.css_selector
-            if c in ('html:nth-child(1)', 'html:nth-child(1)>body:nth-child(1)',
-                     'html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
+            if c in ('html', 'html>body', 'html>body>shadow_root'):
                 continue
-            elif c.startswith('html:nth-child(1)>body:nth-child(1)>shadow_root:nth-child(1)'):
-                c = c[61:]
+            elif c.startswith('html>body>shadow_root>'):
+                c = c[22:]
             css.append((True, c))
 
         else:
