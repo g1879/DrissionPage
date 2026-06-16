@@ -83,8 +83,9 @@ def _get_arg(text) -> list:
 
 
 def is_str_loc(text):
-    return text.startswith(('.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:', 'text=',
-                            'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:', 'c='))
+    return text.startswith(('/', '.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:',
+                            'text=', 'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:',
+                            'c='))
 
 
 def is_selenium_loc(loc):
@@ -146,6 +147,8 @@ def str_to_ax_loc(loc):
 
 def str_to_xpath_loc(loc):
     loc_by = 'xpath'
+    if loc.startswith(('/', './', '../')):
+        return loc_by, loc
     loc = _preprocess(loc)
 
     # 多属性查找

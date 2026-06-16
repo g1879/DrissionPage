@@ -472,48 +472,83 @@ class ChromiumBase(BasePage, Messenger):
             num = result['resultCount']
             search_ids.append(result['searchId'])
 
-        while True:
-            if num > 0:
-                from_index = index_arg = 0
-                if index is None:
-                    end_index = num
-                    index_arg = None
-                elif index < 0:
-                    from_index = index + num
-                    end_index = from_index + 1
-                else:
-                    from_index = index - 1
-                    end_index = from_index + 1
+        def get_search_result_eles(search_id, count):
+            def get_node_ids(from_index, to_index):
+                nIds = self._driver.run('DOM.getSearchResults', searchId=search_id, _debug=self._debug,
+                                        fromIndex=from_index, toIndex=to_index, _session_id=self._session_id)
+                if nIds.get('error', None) == 'connection disconnected':
+                    raise PageDisconnectedError
+                return [i for i in nIds.get('nodeIds', None) or () if i]
 
-                if from_index <= num - 1:
-                    nIds = self._driver.run('DOM.getSearchResults', searchId=result['searchId'], _debug=self._debug,
-                                            fromIndex=from_index, toIndex=end_index, _session_id=self._session_id)
-                    n = nIds.get('nodeIds', None)
-                    if n and n[0] != 0:
-                        r = make_chromium_eles(self, _ids=n, index=index_arg, id_type='node_id', ele_only=True)
-                        if r is not False:
+            if index is None:
+                node_ids = get_node_ids(0, count)
+                if not node_ids:
+                    return False
+                return make_chromium_eles(self, _ids=node_ids, index=None, id_type='node_id', ele_only=True)
+
+            if index < 0:
+                to_index = count
+                left = -index
+                while to_index > 0:
+                    from_index = max(to_index - 50, 0)
+                    node_ids = get_node_ids(from_index, to_index)
+                    for node_id in reversed(node_ids):
+                        ele = make_chromium_eles(self, _ids=node_id, id_type='node_id', ele_only=True)
+                        if ele is False:
+                            continue
+                        left -= 1
+                        if left == 0:
+                            return ele
+                    to_index = from_index
+                return None
+
+            from_index = 0
+            left = index
+            while from_index < count:
+                to_index = min(from_index + 50, count)
+                node_ids = get_node_ids(from_index, to_index)
+                for node_id in node_ids:
+                    ele = make_chromium_eles(self, _ids=node_id, id_type='node_id', ele_only=True)
+                    if ele is False:
+                        continue
+                    left -= 1
+                    if left == 0:
+                        return ele
+                from_index = to_index
+            return None
+
+        try:
+            while True:
+                if num > 0:
+                    eles = get_search_result_eles(result['searchId'], num)
+                    if eles is not False:
+                        if index is None:
+                            if eles:
+                                r = eles
+                                break
+                        elif eles is not None:
+                            r = eles
                             break
-                    elif nIds.get('error', None) == 'connection disconnected':
-                        raise PageDisconnectedError
 
-            if perf_counter() >= end_time:
-                return NoneElement(self) if index is not None else ChromiumElementsList(owner=self)
+                if perf_counter() >= end_time:
+                    return NoneElement(self) if index is not None else ChromiumElementsList(owner=self)
 
-            sleep(.01)
-            timeout = end_time - perf_counter()
-            timeout = .5 if timeout <= 0 else timeout
-            result = self._driver.run('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True,
-                                      _timeout=timeout, _session_id=self._session_id, _debug=self._debug)
-            num = result.get('resultCount', 0)
-            if num:
-                search_ids.append(result['searchId'])
-            elif result.get('error', None) == 'connection disconnected':
-                raise PageDisconnectedError
+                sleep(.01)
+                timeout = end_time - perf_counter()
+                timeout = .5 if timeout <= 0 else timeout
+                result = self._driver.run('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True,
+                                          _timeout=timeout, _session_id=self._session_id, _debug=self._debug)
+                num = result.get('resultCount', 0)
+                if num:
+                    search_ids.append(result['searchId'])
+                elif result.get('error', None) == 'connection disconnected':
+                    raise PageDisconnectedError
 
-        for _id in search_ids:
-            self._run_cdp('DOM.discardSearchResults', searchId=_id)
+            return r
 
-        return r
+        finally:
+            for _id in search_ids:
+                self._run_cdp('DOM.discardSearchResults', searchId=_id, _ignore=True)
 
     def refresh(self, ignore_cache=False):
         self._is_loading = True
