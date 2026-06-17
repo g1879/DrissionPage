@@ -158,7 +158,11 @@ class Actions:
         return self.move(pixel, 0)
 
     def key_down(self, key):
-        key = getattr(Keys, key.upper(), key)
+        if isinstance(key, (tuple, list)):
+            for i in key:
+                self.key_down(i)
+            return self
+        key = getattr(Keys, key.upper(), key) if isinstance(key, str) else key
         if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果是修饰符，添加到变量
             self.modifier |= modifierBit.get(key, 0)
             data = make_input_data(self.modifier, key, False)
@@ -173,7 +177,11 @@ class Actions:
         return self
 
     def key_up(self, key):
-        key = getattr(Keys, key.upper(), key)
+        if isinstance(key, (tuple, list)):
+            for i in reversed(key):
+                self.key_up(i)
+            return self
+        key = getattr(Keys, key.upper(), key) if isinstance(key, str) else key
         if key in ('\ue009', '\ue008', '\ue00a', '\ue03d'):  # 如果是修饰符，添加到变量
             self.modifier ^= modifierBit.get(key, 0)
             data = make_input_data(self.modifier, key, True)
