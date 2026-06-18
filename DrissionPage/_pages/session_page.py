@@ -172,7 +172,7 @@ class SessionPage(BasePage):
                                              raise_err=raise_err, **kwargs)
 
         self._nav_result = NavResult()
-        if self._response:
+        if self._response is not None:
             self._nav_result.status = self._response.status_code
             self._nav_result.url = self._response.url
             self._nav_result.headers = self._response.headers
@@ -221,7 +221,7 @@ class SessionPage(BasePage):
                 elif mode == 'post':
                     r = self.session.post(url, **kwargs)
 
-                if r and r.content:
+                if r is not None and r.content:
                     if self._encoding:
                         r.encoding = self._encoding
                         return r

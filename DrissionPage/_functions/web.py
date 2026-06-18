@@ -368,5 +368,5 @@ class NavResult(object):
         return 200 <= self.status <= 299
 
     def __bool__(self):
-        return self.ok
+        return self.ok is True
 
