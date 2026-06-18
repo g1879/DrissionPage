@@ -129,7 +129,6 @@ class Listener(BaseListener):
     def browser_wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
         if not self._owner.browser.listen.listening:
             self._owner.browser.listen.start()
-        self._owner._run_cdp('Network.setCacheDisabled', cacheDisabled=True)
         success = False
 
         if not timeout:
@@ -192,7 +191,6 @@ class Listener(BaseListener):
     def browser_steps(self, count=None, timeout=None, gap=1):
         if not self._owner.browser.listen.listening:
             self._owner.browser.listen.start()
-        self._owner._run_cdp('Network.setCacheDisabled', cacheDisabled=True)
         caught = 0
         _caught = self._owner.browser.listen._caught
         tid = self._owner.tab_id
@@ -277,14 +275,18 @@ class Listener(BaseListener):
             self.start()
 
     def _init_callback(self):
-        if self._res_type is True or self._res_type - {'WEBSOCKET'}:
+        if self._res_type is True or self._res_type - {'WebSocket'}:
             self._owner._set_callback('Network.requestWillBeSent', self._requestWillBeSent)
             self._owner._set_callback('Network.responseReceived', self._response_received)
-            self._owner._set_callback('Network.loadingFinished', self._loading_finished)
-            self._owner._set_callback('Network.loadingFailed', self._loading_failed)
             self._owner._set_callback('Network.requestWillBeSentExtraInfo', self._requestWillBeSentExtraInfo)
             self._owner._set_callback('Network.responseReceivedExtraInfo', self._responseReceivedExtraInfo)
-        if self._res_type is True or 'WEBSOCKET' in self._res_type:
+            if self._res_type in ({'EventSource'}, {'EventSource', 'WebSocket'}):
+                self._owner._set_callback('Network.loadingFinished', self._loading_finished_sse)
+                self._owner._set_callback('Network.loadingFailed', self._loading_failed_sse)
+            else:
+                self._owner._set_callback('Network.loadingFinished', self._loading_finished)
+                self._owner._set_callback('Network.loadingFailed', self._loading_failed)
+        if self._res_type is True or 'WebSocket' in self._res_type:
             self._owner._set_callback('Network.webSocketFrameSent', self._webSocketFrameSent)
             self._owner._set_callback('Network.webSocketFrameReceived', self._webSocketFrameReceived)
             self._owner._set_callback('Network.webSocketCreated', self._webSocketCreated)
@@ -293,7 +295,7 @@ class Listener(BaseListener):
             self._owner._set_callback('Network.webSocketWillSendHandshakeRequest',
                                       self._webSocketWillSendHandshakeRequest)
             self._owner._set_callback('Network.webSocketClosed', self._webSocketClosed)
-        if self._res_type is True or 'EVENTSOURCE' in self._res_type:
+        if self._res_type is True or 'EventSource' in self._res_type:
             self._owner._set_callback('Network.eventSourceMessageReceived', self._eventSourceMessageReceived)
 
     def _eventSourceMessageReceived(self, **kwargs):
@@ -378,7 +380,7 @@ class Listener(BaseListener):
             else:
                 r['response'] = kwargs
 
-    def _loading_finished(self, **kwargs):
+    def _loading_finished_sse(self, **kwargs):
         self._running_requests -= 1
         rid = kwargs['requestId']
         packet = self._request_ids.get(rid)
@@ -408,19 +410,22 @@ class Listener(BaseListener):
                 self._extra_info_ids.pop(kwargs['requestId'], None)
 
         self._request_ids.pop(rid, None)
+        return packet
 
+    def _loading_finished(self, **kwargs):
+        packet = self._loading_finished_sse(**kwargs)
         if packet:
             self._caught.put(packet)
             self._running_targets -= 1
 
-    def _loading_failed(self, **kwargs):
+    def _loading_failed_sse(self, **kwargs):
         self._running_requests -= 1
         r_id = kwargs['requestId']
-        data_packet = self._request_ids.get(r_id)
-        if data_packet:
-            data_packet._raw_fail_info = kwargs
-            data_packet._resource_type = kwargs['type']
-            data_packet.is_failed = True
+        packet = self._request_ids.get(r_id)
+        if packet:
+            packet._raw_fail_info = kwargs
+            packet._resource_type = kwargs['type']
+            packet.is_failed = True
 
         r = self._extra_info_ids.get(kwargs['requestId'])
         if r:
@@ -436,8 +441,10 @@ class Listener(BaseListener):
 
         self._request_ids.pop(r_id, None)
 
-        if data_packet:
-            self._caught.put(data_packet)
+    def _loading_failed(self, **kwargs):
+        packet = self._loading_failed_sse(**kwargs)
+        if packet:
+            self._caught.put(packet)
             self._running_targets -= 1
 
     @property
@@ -722,7 +729,7 @@ class Response(object):
 
     @property
     def body(self):
-        if self._body is None:
+        if self._body is None and self._raw_body:
             if self._is_base64_body:
                 self._body = b64decode(self._raw_body)
             else:
@@ -921,13 +928,17 @@ class MethodSetter(object):
                     setattr(self._listener, self._ATTR, {item})
                 elif getattr(self._listener, self._ATTR) is not True:
                     getattr(self._listener, self._ATTR).add(item)
-                return self
             elif item in self._REMOVE:
                 if getattr(self._listener, self._ATTR) is True:
                     setattr(self._listener, self._ATTR, {i for i in self._ALLOW})
                 getattr(self._listener, self._ATTR).discard(item[7:])
-                return self
-            raise ValueError()
+            else:
+                raise ValueError()
+
+            if self._listener.listening:
+                self._listener._init_callback()
+
+            return self
 
         return _func
 
@@ -1073,10 +1084,10 @@ def sse2list(raw):
         for d in data.split('\n'):
             if not d:
                 continue
-            name, value = d.split(': ', 1)
+            name, value = d.split(':', 1)
             try:
-                row[name] = loads(value)
+                row[name] = loads(value.strip())
             except JSONDecodeError:
-                row[name] = value
+                row[name] = value.strip()
         body.append(row)
     return body

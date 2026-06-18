@@ -178,7 +178,7 @@ class Actions:
 
     def key_up(self, key):
         if isinstance(key, (tuple, list)):
-            for i in reversed(key):
+            for i in key:
                 self.key_up(i)
             return self
         key = getattr(Keys, key.upper(), key) if isinstance(key, str) else key

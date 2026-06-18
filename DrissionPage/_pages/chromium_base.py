@@ -960,4 +960,4 @@ def find_by_any(page, loc, index, timeout):
 
 
 def do_find_any(page, loc, xpath, ind):
-    return do_find_syntax(page, xpath, ind) or do_find_syntax(page, loc, ind)
+    return do_find_syntax(page, loc, ind) or do_find_syntax(page, xpath, ind)

@@ -122,6 +122,11 @@ class BrowserStates(object):
         """返回浏览器是否无痕模式"""
         ...
 
+    @property
+    def is_guest(self) -> bool:
+        """返回浏览器是否访客模式"""
+        ...
+
 
 class PageStates(object):
     _owner: ChromiumBase = ...

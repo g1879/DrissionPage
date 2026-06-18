@@ -211,7 +211,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
              hooks: Optional[Any] = None,
              stream: bool = None,
              verify: Union[bool, str] = None,
-             cert: Union[str, Tuple[str, str]] = None) -> Response:
+             cert: Union[str, Tuple[str, str]] = None) -> NavResult:
         """用post方式跳转到url
         :param url: 目标url
         :param retry: 重试次数，为None时使用页面对象retry_times属性值

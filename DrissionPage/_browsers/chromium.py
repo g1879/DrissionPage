@@ -38,7 +38,7 @@ class Chromium(Messenger):
     def __new__(cls, addr_or_opts=None, session_options=None):
         with cls._lock:
             opt = handle_options(addr_or_opts)
-            is_headless, browser_id, command_lines, ws_only, driver, incognito = run_browser(opt)
+            is_headless, browser_id, command_lines, ws_only, driver, incognito, guest = run_browser(opt)
             if browser_id in cls._BROWSERS:
                 return cls._BROWSERS[browser_id]
             o = object.__new__(cls)
@@ -46,6 +46,7 @@ class Chromium(Messenger):
             o._chromium_options = opt
             o._is_headless = is_headless
             o._incognito = incognito
+            o._guest = guest
             o._ws_only = ws_only
             o._browser_id = browser_id
             o._is_exists, o._command_lines = (False, command_lines) if command_lines else (True, '')
@@ -93,7 +94,7 @@ class Chromium(Messenger):
             ws = s.get(f'http://{self.address}/json/version', headers={'Connection': 'close'})
             self._ws_address = ws.json()['webSocketDebuggerUrl']
             self._driver = Driver(self._ws_address, self) if _S._debug is None else DebugDriver(self._ws_address, self)
-            self._browser_id = _get_browser_id(self._driver, self._incognito)
+            self._browser_id = _get_browser_id(self._driver, self._incognito or self._guest)
             ws.close()
             s.close()
             self._is_exists = False
@@ -260,7 +261,7 @@ class Chromium(Messenger):
         if context_id:
             kwargs['browserContextId'] = context_id
 
-        if self.states.is_incognito and is_browser:
+        if self.states.is_incognito or self.states.is_guest and is_browser:
             return _new_tab_by_js(self, url, new_window, context_id)
         else:
             try:
@@ -428,7 +429,7 @@ class Chromium(Messenger):
                     raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=tab_ids))
 
         elif title == url is None and tab_type == 'page':
-            id_or_num = tab_ids[0]
+            id_or_num = tab_ids[0]['id']
 
         else:
             tabs = self._get_tabs(context_id, title=title, url=url, tab_type=tab_type, as_id=True)
@@ -527,11 +528,13 @@ def run_browser(options):
             raise
         except Exception as e:
             raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=str(e))
-        incognito = "'Browser.WindowCount.Incognito'" in str(driver.run('Browser.getHistograms'))
-        browser_id = _get_browser_id(driver, incognito)
+        info = str(driver.run('Browser.getHistograms'))
+        incognito = "'Browser.WindowCount.Incognito'" in info
+        guest = "'Browser.WindowCount.Guest'" in info
+        browser_id = _get_browser_id(driver, incognito or guest)
         is_headless = 'headless' in driver.run('Browser.getVersion', _debug=_S._debug)['userAgent'].lower()
         if 'devtools/browser' not in options.ws_address:
-            return is_headless, browser_id, True, True, driver, incognito
+            return is_headless, browser_id, True, True, driver, incognito, guest
 
         s = Session()
         s.trust_env = False
@@ -547,7 +550,7 @@ def run_browser(options):
         except:
             ws_only = True
         s.close()
-        return is_headless, browser_id, True, ws_only, driver, incognito
+        return is_headless, browser_id, True, ws_only, driver, incognito, guest
 
     command_lines = connect_browser(options)
     try:
@@ -571,9 +574,11 @@ def run_browser(options):
     driver = (Driver(f'ws://{options.address}/devtools/browser/{browser_id}', None) if _S._debug is None
               else DebugDriver(f'ws://{options.address}/devtools/browser/{browser_id}', None))
 
-    incognito = "'Browser.WindowCount.Incognito'" in str(driver.run('Browser.getHistograms'))
-    browser_id = _get_browser_id(driver, incognito)
-    return is_headless, browser_id, command_lines, ws_only, driver, incognito
+    info = str(driver.run('Browser.getHistograms'))
+    incognito = "'Browser.WindowCount.Incognito'" in info
+    guest = "'Browser.WindowCount.Guest'" in info
+    browser_id = _get_browser_id(driver, incognito or guest)
+    return is_headless, browser_id, command_lines, ws_only, driver, incognito, guest
 
 
 def _get_browser_id(driver, incognito):
@@ -750,7 +755,7 @@ def _new_tab_by_js(browser: Chromium, url, new_window, context_id):
     tid = browser._tabs.get_newest_tab(context_id)
     tab.run_js(f'window.open({url}, {new})')
     tid = browser.wait.new_tab(curr_tab=tid)
-    return browser._get_tab(tid)
+    return browser._get_tab(context_id, tid)
 
 # def get_command_line(browser):
 #     try:

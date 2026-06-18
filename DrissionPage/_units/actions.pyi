@@ -5,7 +5,7 @@
 @Website  : https://DrissionPage.cn
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
-from typing import Union, Tuple, Any, Literal
+from typing import Union, Tuple, Any, Literal, List
 
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
@@ -39,6 +39,7 @@ KEYS = Literal['NULL', 'CANCEL', 'HELP', 'BACKSPACE', 'meta',
 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', 'A', 'S', 'D',
 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?'
 ]
+KEY_TYPE = Union[KEYS, str]
 
 
 class Actions:
@@ -200,15 +201,15 @@ class Actions:
         """
         ...
 
-    def key_down(self, key: Union[KEYS, str]) -> Actions:
-        """按下键盘上的按键，
+    def key_down(self, key: Union[KEY_TYPE, List[KEY_TYPE], Tuple[KEY_TYPE, ...]]) -> Actions:
+        """按下键盘上的按键，传入列表按下多个
         :param key: 使用Keys获取的按键，或 'DEL' 形式按键名称
         :return: 动作链对象本身
         """
         ...
 
-    def key_up(self, key: Union[KEYS, str]) -> Actions:
-        """提起键盘上的按键
+    def key_up(self, key: Union[KEY_TYPE, List[KEY_TYPE], Tuple[KEY_TYPE, ...]]) -> Actions:
+        """提起键盘上的按键，传入列表提起多个
         :param key: 按键，特殊字符见Keys
         :return: 动作链对象本身
         """

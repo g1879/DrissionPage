@@ -109,6 +109,10 @@ class BrowserStates(object):
     def is_incognito(self):
         return self._browser._incognito
 
+    @property
+    def is_guest(self):
+        return self._browser._guest
+
 
 class PageStates(object):
     """Page对象、Tab对象使用"""

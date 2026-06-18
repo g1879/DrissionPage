@@ -216,9 +216,6 @@ class TabDownloadSettings(object):
     TABS = {}
 
     def __new__(cls, tab_id):
-        """
-        :param tab_id: tab id
-        """
         if tab_id in cls.TABS:
             return cls.TABS[tab_id]
         return object.__new__(cls)
