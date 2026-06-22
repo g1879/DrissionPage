@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import os
 import sys
 import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from feature_manifest import EXCLUDED, FEATURES
 from support import TestContext, TestResult, SkipTestCase, import_version
@@ -87,6 +89,44 @@ CASE_ALIASES = {
     **LEGACY_CASE_ALIASES,
     **{feature["id"]: feature["case"] for feature in FEATURES},
 }
+
+
+SENSITIVE_ENV_NAMES = (
+    "DP_PRIVATE_FIXTURE_URL",
+    "PUBLIC_OPTIONAL_WS_URL",
+)
+
+
+def _redaction_tokens() -> set[str]:
+    tokens: set[str] = set()
+    for env_name in SENSITIVE_ENV_NAMES:
+        value = (os.environ.get(env_name) or "").strip()
+        if not value:
+            continue
+        tokens.add(value)
+        parsed = urlparse(value)
+        if parsed.netloc:
+            tokens.add(parsed.netloc)
+            tokens.add(f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme else parsed.netloc)
+    return {token for token in tokens if token}
+
+
+def redact_sensitive(value: Any) -> Any:
+    tokens = _redaction_tokens()
+    if not tokens:
+        return value
+    if isinstance(value, str):
+        redacted = value
+        for token in sorted(tokens, key=len, reverse=True):
+            redacted = redacted.replace(token, "<fixture-url-redacted>")
+        return redacted
+    if isinstance(value, dict):
+        return {key: redact_sensitive(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [redact_sensitive(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(redact_sensitive(item) for item in value)
+    return value
 
 
 def normalize_case_names(names: list[str] | None) -> set[str] | None:
@@ -166,14 +206,14 @@ def run_case(case, ctx: TestContext) -> TestResult:
         case.run(ctx)
         return TestResult(case.name, "passed", time.perf_counter() - start)
     except SkipTestCase as exc:
-        return TestResult(case.name, "skipped", time.perf_counter() - start, str(exc))
+        return TestResult(case.name, "skipped", time.perf_counter() - start, redact_sensitive(str(exc)))
     except Exception as exc:
         return TestResult(
             case.name,
             "failed",
             time.perf_counter() - start,
-            str(exc),
-            {"traceback": traceback.format_exc()},
+            redact_sensitive(str(exc)),
+            redact_sensitive({"traceback": traceback.format_exc()}),
         )
 
 
@@ -200,7 +240,7 @@ def build_report(results: list[TestResult], cases, started: float, ctx: TestCont
             **feature,
             "status": feature_status,
             "case_status": result.status if result else "not-run",
-            "message": message,
+            "message": redact_sensitive(message),
         })
     status_counts = {s: sum(1 for result in results if result.status == s) for s in ("passed", "failed", "skipped")}
     covered = [feature for feature in covered_features if feature["status"] in {"covered-passed", "covered-by-failed-case"}]
@@ -228,8 +268,8 @@ def build_report(results: list[TestResult], cases, started: float, ctx: TestCont
                 "title": case_by_name.get(result.name).title if result.name in case_by_name else result.name,
                 "status": result.status,
                 "duration_seconds": round(result.duration, 3),
-                "message": result.message,
-                "details": result.details,
+                "message": redact_sensitive(result.message),
+                "details": redact_sensitive(result.details),
                 "features": list(case_by_name.get(result.name).features) if result.name in case_by_name else [],
             }
             for result in results

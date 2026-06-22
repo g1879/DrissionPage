@@ -1,4 +1,4 @@
-"""Optional deployed Astro SSR test-site smoke checks."""
+"""Optional private Astro SSR fixture smoke checks."""
 from __future__ import annotations
 
 import os
@@ -14,10 +14,12 @@ from support import assert_equal, assert_in, assert_nav_result, assert_true, mak
 FEATURE_ID = 'ssr_site_smoke'
 FEATURES = ('ssr_site_smoke',)
 BROWSER_PHASE = True
+PRIVATE_FIXTURE_URL_ENV = 'DP_PRIVATE_FIXTURE_URL'
+
 
 
 def site_url(path: str = '') -> str:
-    base = (os.environ.get('DP_SSR_SITE_URL') or '').strip().rstrip('/')
+    base = (os.environ.get(PRIVATE_FIXTURE_URL_ENV) or '').strip().rstrip('/')
     if not base:
         return ''
     if not path:
@@ -31,7 +33,7 @@ def run(ctx):
         return
     base = site_url()
     if not base:
-        ctx.skip('SSR site smoke requires DP_SSR_SITE_URL, e.g. https://project.vercel.app')
+        ctx.skip(f'SSR fixture smoke requires {PRIVATE_FIXTURE_URL_ENV}')
         return
 
     session_page = SessionPage()

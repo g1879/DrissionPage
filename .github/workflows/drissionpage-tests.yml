@@ -39,6 +39,7 @@ jobs:
       DP_TESTS_PRE_VENV: ${{ runner.temp }}/dp-tests-pre-venv
       DP_TESTS_TIMEOUT: '10'
       DP_TESTS_REQUIRE_BROWSER: '1'
+      HAS_PRIVATE_FIXTURE: ${{ secrets.DP_PRIVATE_FIXTURE_URL != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,6 +80,32 @@ jobs:
         env:
           DP_BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
         run: ./tests/ci.sh
+
+      - name: Run SSR fixture smoke
+        if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && env.HAS_PRIVATE_FIXTURE == 'true' }}
+        env:
+          DP_BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          DP_PRIVATE_FIXTURE_URL: ${{ secrets.DP_PRIVATE_FIXTURE_URL }}
+        run: |
+          python - <<'PY'
+          import os
+          from urllib.parse import urlparse
+
+          url = (os.environ.get("DP_PRIVATE_FIXTURE_URL") or "").strip()
+          parsed = urlparse(url)
+          tokens = {url, parsed.netloc}
+          if parsed.scheme and parsed.netloc:
+              tokens.add(f"{parsed.scheme}://{parsed.netloc}")
+          for token in sorted(token for token in tokens if token):
+              print(f"::add-mask::{token}")
+          PY
+          ./tests/run.sh current \
+            --browser-path "$DP_BROWSER_PATH" \
+            --include-online \
+            --case ssr_site_smoke \
+            --fail-on-failures \
+            --report-json "$DP_TESTS_REPORT_DIR/ssr-smoke.json" \
+            --report-md "$DP_TESTS_REPORT_DIR/ssr-smoke.md"
 
       - name: Upload tests reports
         if: always()

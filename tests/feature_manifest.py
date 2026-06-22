@@ -74,7 +74,7 @@ FEATURES = [
     {"id": "shadow_root", "title": "shadow_root 等待并查询 shadow DOM", "case": "feature_frame_shadow_setters"},
     {"id": "tab_post_response", "title": "MixTab/ChromiumTab post() 返回 Response 对象", "case": "feature_tab_post_response"},
     {"id": "chromium_options_environment", "title": "ChromiumOptions.new_env/is_headless/auto_port(scope) 行为", "case": "feature_chromium_options_environment"},
-    {"id": "ssr_site_smoke", "title": "部署后的 Astro SSR 测试站点冒烟", "case": "feature_ssr_site_smoke"},
+    {"id": "ssr_site_smoke", "title": "私有 Astro SSR fixture 远端冒烟", "case": "feature_ssr_site_smoke"},
 ]
 
 EXCLUDED = [

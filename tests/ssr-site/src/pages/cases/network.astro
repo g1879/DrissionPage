@@ -1,9 +1,9 @@
 ---
 import TestLayout from '../../layouts/TestLayout.astro';
-const wsUrl = import.meta.env.PUBLIC_TEST_WS_URL || '';
+const wsUrl = import.meta.env.PUBLIC_OPTIONAL_WS_URL || '';
 ---
 <TestLayout title="Network fixture">
-  <section class="panel" data-testid="network-root" data-ws-url={wsUrl}>
+  <section class="panel" data-testid="network-root">
     <h1>Network fixture</h1>
     <p>Buttons below trigger deterministic requests for listener tests.</p>
     <div class="grid">
@@ -43,7 +43,7 @@ const wsUrl = import.meta.env.PUBLIC_TEST_WS_URL || '';
 
     document.querySelector('#start-ws')?.addEventListener('click', () => {
       if (!wsUrl) {
-        write('websocket skipped: PUBLIC_TEST_WS_URL is not configured');
+        write('websocket skipped: optional endpoint is not configured');
         return;
       }
       const socket = new WebSocket(wsUrl);

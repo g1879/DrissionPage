@@ -44,31 +44,11 @@ python tests/run.py --source current --list-cases --browser-only
 
 工作流文件：`.github/workflows/drissionpage-tests.yml`。
 
-触发条件：
+CI 执行本地确定性测试、浏览器测试、coverage 统计，并上传测试报告 artifact。定时任务和手动任务可通过仓库 Secret `DP_PRIVATE_FIXTURE_URL` 运行可选 SSR fixture 冒烟；pull request 不运行该远端检查。
 
-- `workflow_dispatch` 手动触发；
-- 每日 `03:17 UTC` 定时触发；
-- 影响 `DrissionPage/`、`tests/`、工作流文件或 `requirements.txt` 的 push / pull request。
+## SSR fixture 测试站点
 
-CI 执行入口：
-
-```bash
-./tests/ci.sh
-```
-
-CI 批次：
-
-1. 当前源码无浏览器测试；
-2. PyPI 预发布包无浏览器测试；
-3. 当前源码浏览器测试；
-4. PyPI 预发布包浏览器测试。
-
-GitHub Actions 安装 Chrome，并设置 `DP_TESTS_REQUIRE_BROWSER=1`。如果浏览器不可用，工作流失败，不降级为仅无浏览器验证。
-
-
-## SSR 测试站点
-
-`tests/ssr-site/` 是独立的 Astro SSR 项目，用于部署到 Vercel 后作为 DrissionPage 的真实页面测试目标。它提供稳定的 `data-testid`、SSR 时间戳、状态码、重定向、慢响应、POST echo、SSE、表单、iframe、wait、visual、上传下载、Shadow DOM 和 SVG 场景。
+`tests/ssr-site/` 是独立 Astro SSR fixture，提供稳定的 `data-testid`、SSR 时间戳、状态码、重定向、慢响应、POST echo、SSE、表单、iframe、wait、visual、上传下载、Shadow DOM 和 SVG 场景。
 
 本地验证：
 
@@ -78,29 +58,14 @@ npm ci
 npm run build
 ```
 
-Vercel 部署时将项目 Root Directory 设置为 `tests/ssr-site`。该项目使用 Astro Vercel adapter 与 `output: 'server'`，适合验证服务端渲染、API endpoint 与爬取行为。部署后可设置 `DP_SSR_SITE_URL` 并运行可选远端冒烟：
+可选远端冒烟：
 
 ```bash
-export DP_SSR_SITE_URL="https://<your-project>.vercel.app"
-./tests/run.sh current --include-online --case ssr_site_smoke --fail-on-failures
+DP_PRIVATE_FIXTURE_URL="$PRIVATE_FIXTURE_URL" \
+  ./tests/run.sh current --include-online --case ssr_site_smoke --fail-on-failures
 ```
 
-默认 CI 仍使用本地确定性服务；远端 SSR 站点检查必须显式 `--include-online` 才会运行。
-
-## 覆盖率
-
-当前 CLI runner 不依赖 pytest。源码覆盖率使用 `coverage.py`，目标限定为 `DrissionPage/`，配置文件为仓库根目录 `.coveragerc`。CI 只统计当前源码批次；PyPI 预发布包批次用于跨版本行为对比，不计入本仓库覆盖率。
-
-CI 输出：
-
-```text
-tests-artifacts/reports/coverage/coverage.txt
-tests-artifacts/reports/coverage/coverage.xml
-tests-artifacts/reports/coverage/coverage.json
-tests-artifacts/reports/coverage/html/
-```
-
-如果后续将测试用例改造成 pytest 函数和 fixture，可在现有 `.coveragerc` 基础上接入 `pytest-cov`。当前阶段选择 `coverage.py`，因为它能直接覆盖自定义 CLI runner。
+该用例默认跳过，必须同时设置 `--include-online` 和 `DP_PRIVATE_FIXTURE_URL`。测试报告会对该环境变量中的 URL 和 host 做脱敏处理。
 
 ## 环境变量
 
@@ -116,37 +81,4 @@ tests-artifacts/reports/coverage/html/
 | `DP_TESTS_COVERAGE` | `1` | 是否为当前源码批次生成 coverage.py 报告。 |
 | `DP_TESTS_COVERAGE_RCFILE` | `.coveragerc` | coverage.py 配置文件路径。 |
 | `DP_TESTS_COVERAGE_BIN` | `python -m coverage` | coverage.py 执行命令。 |
-| `DP_SSR_SITE_URL` | 空 | 可选远端 Astro SSR 测试站点 URL；配合 `--include-online --case ssr_site_smoke` 使用。 |
-
-## 报告与产物
-
-本地启动脚本默认生成：
-
-```text
-tests/reports/pre-latest.json
-tests/reports/pre-latest.md
-tests/reports/current-latest.json
-tests/reports/current-latest.md
-```
-
-这些运行报告由 `.gitignore` 排除。长期维护文档保留在：
-
-- `tests/reports/regression-repros.md`
-- `tests/reports/listener-ws-sse-regression-spec.md`
-
-## 目录结构
-
-- `run.sh`：本地启动入口，支持预发布包、当前源码或双目标测试。
-- `ci.sh`：CI 入口，编译 tests，列出测试用例，分批运行测试并生成覆盖率报告。
-- `run.py`：选择测试目标、隔离导入路径并转发运行参数。
-- `runner.py`：批量运行器，负责加载测试用例、执行测试并生成报告。
-- `feature_manifest.py`：公开行为与测试用例之间的覆盖关系元数据。
-- `COVERAGE.md`：发布验证覆盖矩阵和默认批次排除说明。
-- `support.py`：本地服务、浏览器启动、断言和辅助工具。
-- `feature_cases/test_*.py`：面向功能行为的测试用例。
-- `regression_cases/test_*.py`：面向回归和问题复现的测试用例。
-- `.coveragerc`：源码行覆盖率统计配置。
-
-## 范围限制
-
-默认批次不覆盖 iframe 元素截图 / OOPIF 截图、录屏编码、真实代理链路、平台敏感指针事件。此类能力应由独立专项测试验证。
+| `DP_PRIVATE_FIXTURE_URL` | 空 | 可选 SSR fixture URL；配合 `--include-online --case ssr_site_smoke` 使用。 |

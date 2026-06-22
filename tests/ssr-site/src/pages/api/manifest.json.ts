@@ -33,6 +33,6 @@ export const GET: APIRoute = () => json({
   endpoints,
   coverage: {
     areas: ['SSR', 'locators', 'navigation', 'status-codes', 'redirects', 'slow-response', 'fetch', 'POST', 'SSE', 'forms', 'iframes', 'waits', 'visual-screenshot', 'upload', 'download', 'shadow-dom', 'svg'],
-    websocket: 'optional via PUBLIC_TEST_WS_URL',
+    websocket: 'optional private WebSocket endpoint',
   },
 });
