@@ -70,6 +70,9 @@ class BaseListener(object):
 
 
 class Listener(BaseListener):
+    _WEBSOCKET_METHOD = 'GET'
+    _WEBSOCKET_RESOURCE_TYPE = 'WebSocket'
+
     def __init__(self, owner):
         super().__init__(owner)
         self._caught = None
@@ -323,7 +326,7 @@ class Listener(BaseListener):
             self._caught.put(p)
 
     def _webSocketCreated(self, **kwargs):
-        target = in_targets(self, kwargs['url'], True, True)
+        target = in_targets(self, kwargs['url'], self._WEBSOCKET_METHOD, self._WEBSOCKET_RESOURCE_TYPE)
         if target:
             self._ws_info[kwargs['requestId']] = WebSocketConnectInfo(self._owner, target, kwargs['requestId'],
                                                                       kwargs['url'], kwargs.get('initiator'))
@@ -828,6 +831,14 @@ class WebSocketPacket(object):
         return self._payload
 
     @property
+    def payload(self):
+        return self.data
+
+    @property
+    def connect_info(self):
+        return self._connect_info
+
+    @property
     def url(self):
         return self._connect_info.url if self._connect_info else None
 
@@ -882,6 +893,10 @@ class SSEPacket(object):
     @property
     def data(self):
         return self._raw_data['data']
+
+    @property
+    def connect_info(self):
+        return self._connect_info
 
     @property
     def url(self):
