@@ -54,6 +54,14 @@ python 版本：3.6 及以上
 
 点击查看：<a href="https://doloffer.com/" target="_blank" >🔸官网</a> <a href="https://github.com/Doloffer-g/guide" target="_blank" >🔸详细介绍</a>
 
+<a href="https://www.lajiaohttp.com/?kwd=hyj-dp" target="_blank"><img src="https://drissionpage.cn/img/lajiao.png"/></a>
+<a href="https://www.lajiaohttp.com/?kwd=hyj-dp" target="_blank">辣椒HTTP｜真实纯净家庭住宅IP｜爬虫/跨境/多账号必备！|行业底价超高性价比方案
+<br/>
+🔥新用户免费试用（最高领10GB），企业也支持测试哦！
+💰动态IP仅3.8元/GB起｜静态长效9.9元/个/7天起
+<br/>
+🌍190+国家/地区｜城市级精准定位｜千万级纯净住宅IP池｜每日更新10万+｜双ISP冗余自动切换｜99.9%连通率｜响应＜0.5秒｜HTTP/HTTPS/SOCKS5全协议</a>
+
 ---
 
 # 💡 理念
