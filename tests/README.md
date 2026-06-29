@@ -58,6 +58,12 @@ python tests/run.py --source current --list-cases --suite all
 
 `tests/ssr-site/` 是用于浏览器冒烟检查的 Astro SSR fixture，覆盖复杂业务流、动态页面和 Cloudflare-like 拦截页模拟。fixture URL 通过 `DP_PRIVATE_FIXTURE_URL` 提供；测试报告会脱敏该 URL 和 host。
 
+主要业务场景：
+
+- `/scenarios/marketplace`：合成电商全流程，覆盖浏览、搜索筛选、商品详情、SKU、购物车、结算和订单结果。
+- `/cases/business-dashboard`：大列表、筛选、批量选择、加载更多和突发请求。
+- `/cases/cloudflare-gate`：托管挑战、clearance cookie、403 和 429 响应模拟。
+
 ```bash 
 cd tests/ssr-site
 npm ci
@@ -70,4 +76,11 @@ npm run dev -- --host 127.0.0.1 --port 4321
 ```bash
 DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current --include-online --case ssr_site_smoke --fail-on-failures
+```
+
+运行 Marketplace 完整业务流：
+
+```bash
+DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+  ./tests/run.sh current --include-online --case ssr_marketplace_flow --fail-on-failures
 ```

@@ -1,0 +1,55 @@
+---
+import ScenarioLayout from '../../../layouts/ScenarioLayout.astro';
+import { marketplaceSteps } from '../../../lib/marketplace';
+
+const orderId = Astro.url.searchParams.get('order') || Astro.cookies.get('marketplace_last_order')?.value || 'TBMOCK-000001';
+const steps = marketplaceSteps(2, orderId);
+const coverage = [
+  { label: '订单结果', value: '订单号、状态、时间线、售后入口' },
+  { label: '状态恢复', value: 'query 参数优先，cookie 兜底' },
+  { label: '定位', value: '结果根节点、状态徽章、步骤列表' },
+  { label: '链路闭环', value: '从结算 POST 返回 nextUrl 后进入结果页' },
+];
+const generatedAt = new Date().toISOString();
+---
+<ScenarioLayout title="Marketplace order result" eyebrow="Step 6" summary="订单结果页模拟支付后状态、履约时间线和售后入口，形成完整业务闭环。" scenarioId="marketplace-result" steps={steps} coverage={coverage}>
+  <section class="panel result-card" data-testid="marketplace-order-result" data-order={orderId}>
+    <div class="success-icon" aria-hidden="true">✓</div>
+    <div>
+      <p class="eyebrow">Order created</p>
+      <h1>订单提交成功</h1>
+      <p>订单号：<strong data-testid="marketplace-result-order-id">{orderId}</strong></p>
+      <p>状态：<span class="status" data-testid="marketplace-result-status">created</span></p>
+      <p>生成时间：<time data-testid="marketplace-result-time" datetime={generatedAt}>{generatedAt}</time></p>
+    </div>
+  </section>
+
+  <section class="panel" data-testid="marketplace-fulfillment-timeline">
+    <h2>履约时间线</h2>
+    <ol class="timeline">
+      <li data-testid="marketplace-timeline-step"><strong>已提交</strong><span>本地接口返回确定性订单号。</span></li>
+      <li data-testid="marketplace-timeline-step"><strong>待支付确认</strong><span>合成支付通道，不访问第三方。</span></li>
+      <li data-testid="marketplace-timeline-step"><strong>仓库处理中</strong><span>用于测试列表、定位和文本断言。</span></li>
+      <li data-testid="marketplace-timeline-step"><strong>物流待揽收</strong><span>用于后续扩展履约查询。</span></li>
+    </ol>
+  </section>
+
+  <section class="panel actions" data-testid="marketplace-result-actions">
+    <a class="button" href="/scenarios/marketplace" data-testid="marketplace-result-back-home">继续浏览</a>
+    <a class="button secondary" href="/scenarios/marketplace/cart" data-testid="marketplace-result-back-cart">返回购物车</a>
+  </section>
+
+  <style>
+    .result-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 18px; align-items: center; border-color: #bbf7d0; background: linear-gradient(135deg, #f0fdf4, #fff); }
+    .success-icon { display: grid; place-items: center; width: 86px; height: 86px; border-radius: 999px; color: #fff; background: #16a34a; font-size: 48px; font-weight: 900; }
+    .result-card h1 { margin: 0 0 8px; font-size: clamp(30px, 5vw, 48px); }
+    .result-card p { margin: 6px 0; }
+    .status { display: inline-block; padding: 4px 10px; border-radius: 999px; color: #166534; background: #dcfce7; font-weight: 800; }
+    .timeline { display: grid; gap: 10px; padding-left: 0; list-style: none; }
+    .timeline li { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .timeline span { color: #64748b; }
+    .actions { display: flex; gap: 10px; }
+    .actions a { text-decoration: none; }
+    @media (max-width: 720px) { .result-card, .timeline li { grid-template-columns: 1fr; } }
+  </style>
+</ScenarioLayout>

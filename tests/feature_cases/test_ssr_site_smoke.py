@@ -72,6 +72,12 @@ def run(ctx):
         'business-dashboard',
         'commerce',
         'cloudflare-gate',
+        'marketplace-flow',
+        'marketplace-search',
+        'marketplace-item-detail',
+        'marketplace-cart',
+        'marketplace-checkout',
+        'marketplace-order-result',
     ):
         assert_in(required, case_ids, 'manifest should include expected fixture case')
 

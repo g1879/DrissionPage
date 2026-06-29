@@ -42,8 +42,9 @@
 | 真实代理认证 | 使用外部代理基础设施或受控集成环境。 |
 | 底层指针事件时序 | 使用有头浏览器或视觉交互专项验证。 |
 | SSR fixture 冒烟 | CI 启动本地 SSR fixture 并计入 coverage；私有远端 fixture 使用 `local` 分组和 `DP_PRIVATE_FIXTURE_URL`。 |
+| SSR Marketplace 全流程 | `feature_ssr_marketplace_flow` 使用合成电商站点覆盖首页、搜索、详情、购物车、结算和订单结果。 |
 
-SSR fixture 额外覆盖商品筛选/排序/购物车/结算弹窗、活动大列表、突发请求、Cloudflare-like 托管挑战、`cf_clearance`、WAF 403 和 429 限流响应。
+SSR fixture 额外覆盖商品筛选/排序/购物车/结算弹窗、Marketplace 浏览到下单完整链路、活动大列表、突发请求、Cloudflare-like 托管挑战、`cf_clearance`、WAF 403 和 429 限流响应。
 
 ## 质量策略
 

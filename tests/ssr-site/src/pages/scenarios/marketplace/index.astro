@@ -1,0 +1,83 @@
+---
+import ScenarioLayout from '../../../layouts/ScenarioLayout.astro';
+import { categoryLabel, makeMarketplaceItems, marketplaceSteps, marketplaceSummary } from '../../../lib/marketplace';
+
+const items = makeMarketplaceItems(18);
+const summary = marketplaceSummary();
+const steps = marketplaceSteps();
+const coverage = [
+  { label: '业务链路', value: '浏览 → 搜索 → 详情 → 购物车 → 结算 → 订单' },
+  { label: '浏览器能力', value: 'click/input/select/wait/scroll/modal' },
+  { label: '网络监听', value: 'search/cart/checkout POST + JSON response' },
+  { label: '状态', value: 'cookie cart count / last order / optimistic UI' },
+];
+---
+<ScenarioLayout title="Marketplace full flow" eyebrow="Business scenario" summary="大型电商全流程模拟。使用合成商品和店铺数据，不依赖真实外部站点。" scenarioId="marketplace" steps={steps} coverage={coverage}>
+  <section class="market-home" data-testid="marketplace-root" data-total={summary.total}>
+    <div class="market-topbar" data-testid="marketplace-topbar">
+      <strong>橙市集</strong>
+      <span>合成电商测试站</span>
+      <a href="/scenarios/marketplace/cart" data-testid="marketplace-cart-link">购物车 <b id="home-cart-count">0</b></a>
+    </div>
+
+    <form class="market-search" action="/scenarios/marketplace/search" method="get" data-testid="marketplace-search-form">
+      <input name="query" data-testid="marketplace-search-input" placeholder="搜索 耳机 / 外套 / 咖啡 / 收纳" autocomplete="off" />
+      <button type="submit" data-testid="marketplace-search-submit">搜索</button>
+    </form>
+
+    <div class="market-shell">
+      <aside class="category-rail" data-testid="marketplace-category-rail">
+        <h2>主题市场</h2>
+        {(['fashion', 'digital', 'home', 'beauty', 'sports', 'food'] as const).map((category) => (
+          <a href={`/scenarios/marketplace/search?category=${category}`} data-testid={`marketplace-category-${category}`}>{categoryLabel(category)}</a>
+        ))}
+      </aside>
+
+      <section class="promo-board" data-testid="marketplace-promo-board">
+        <p class="promo-kicker">确定性活动位</p>
+        <h2>跨店满减、SKU 弹窗、购物车联动，一次测完整链路</h2>
+        <p>页面结构模仿大型电商首页：搜索框、类目侧栏、活动卡片、瀑布流商品、购物车入口。</p>
+        <a class="button" href="/scenarios/marketplace/search?query=耳机" data-testid="marketplace-start-flow">开始浏览商品</a>
+      </section>
+    </div>
+  </section>
+
+  <section class="panel" data-testid="marketplace-home-feed">
+    <h2>猜你喜欢</h2>
+    <div class="market-grid">
+      {items.map((item) => (
+        <a class="market-card" href={`/scenarios/marketplace/item/${item.id}`} data-testid="marketplace-home-card" data-id={item.id} data-category={item.category}>
+          <span class="thumb" style={`--hero:${item.heroColor}`}>{categoryLabel(item.category)}</span>
+          <strong>{item.title}</strong>
+          <small>{item.shop} · {item.location}</small>
+          <span><b>¥{item.price}</b> <del>¥{item.originalPrice}</del></span>
+          <em>{item.sales} 人付款 · {item.services.join(' / ')}</em>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <style>
+    .market-home { display: grid; gap: 16px; }
+    .market-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 16px; background: #fff; border: 1px solid #fed7aa; }
+    .market-topbar strong { color: #ea580c; font-size: 24px; }
+    .market-topbar a { margin-left: auto; color: #9a3412; text-decoration: none; }
+    .market-search { display: grid; grid-template-columns: 1fr 120px; gap: 10px; padding: 14px; border-radius: 18px; background: linear-gradient(90deg, #ff6a00, #fb923c); }
+    .market-search input { border: 0; border-radius: 999px; padding: 14px 18px; font-size: 18px; }
+    .market-search button { border-radius: 999px; background: #111827; }
+    .market-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; }
+    .category-rail, .promo-board { border-radius: 18px; background: #fff; border: 1px solid #fed7aa; padding: 18px; }
+    .category-rail { display: grid; gap: 10px; }
+    .category-rail a { color: #431407; text-decoration: none; padding: 9px 10px; border-radius: 10px; background: #fff7ed; }
+    .promo-board { min-height: 220px; background: radial-gradient(circle at 80% 20%, #fed7aa, transparent 32%), linear-gradient(135deg, #fff7ed, #fff); }
+    .promo-board h2 { max-width: 660px; font-size: clamp(28px, 4vw, 44px); }
+    .promo-kicker { color: #ea580c; font-weight: 800; letter-spacing: .12em; }
+    .market-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .market-card { display: grid; gap: 8px; text-decoration: none; color: #172033; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; background: #fff; }
+    .market-card:hover { border-color: #ff6a00; box-shadow: 0 10px 26px rgba(255,106,0,.12); }
+    .thumb { display: grid; place-items: center; min-height: 110px; border-radius: 14px; color: white; font-weight: 800; background: linear-gradient(135deg, var(--hero), #111827); }
+    .market-card b { color: #ea580c; font-size: 20px; }
+    .market-card em, .market-card small { color: #64748b; font-style: normal; }
+    @media (max-width: 820px) { .market-shell, .market-search { grid-template-columns: 1fr; } }
+  </style>
+</ScenarioLayout>

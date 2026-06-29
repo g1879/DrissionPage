@@ -15,6 +15,12 @@ const cases = [
   { id: 'business-dashboard', path: '/cases/business-dashboard', selectors: ['[data-testid="business-root"]', '[data-testid="activity-row"]', '[data-testid="burst-fetch"]'] },
   { id: 'commerce', path: '/cases/commerce', selectors: ['[data-testid="commerce-root"]', '[data-testid="product-card"]', '[data-testid="cart-drawer"]'] },
   { id: 'cloudflare-gate', path: '/cases/cloudflare-gate', selectors: ['[data-testid="cf-challenge"]', '[data-testid="issue-clearance"]', '[data-testid="cf-block-preview"]'] },
+  { id: 'marketplace-flow', path: '/scenarios/marketplace', selectors: ['[data-testid="marketplace-root"]', '[data-testid="marketplace-start-flow"]', '[data-testid="marketplace-home-card"]'] },
+  { id: 'marketplace-search', path: '/scenarios/marketplace/search?query=耳机', selectors: ['[data-testid="marketplace-search-root"]', '[data-testid="marketplace-result-card"]', '[data-testid="marketplace-load-more"]'] },
+  { id: 'marketplace-item-detail', path: '/scenarios/marketplace/item/2', selectors: ['[data-testid="marketplace-item-root"]', '[data-testid="sku-color"]', '[data-testid="add-marketplace-cart"]'] },
+  { id: 'marketplace-cart', path: '/scenarios/marketplace/cart', selectors: ['[data-testid="marketplace-cart-root"]', '[data-testid="marketplace-cart-line"]', '[data-testid="marketplace-cart-checkout"]'] },
+  { id: 'marketplace-checkout', path: '/scenarios/marketplace/checkout', selectors: ['[data-testid="marketplace-checkout-root"]', '[data-testid="marketplace-address-card"]', '[data-testid="marketplace-submit-order"]'] },
+  { id: 'marketplace-order-result', path: '/scenarios/marketplace/order-result?order=TBMOCK-000001', selectors: ['[data-testid="marketplace-order-result"]', '[data-testid="marketplace-result-order-id"]', '[data-testid="marketplace-fulfillment-timeline"]'] },
 ];
 
 const endpoints = [
@@ -27,6 +33,9 @@ const endpoints = [
   { id: 'download', path: '/api/download.txt?name=dp-fixture.txt', method: 'GET', expectedStatus: 200 },
   { id: 'activity-batch', path: '/api/activity-batch.json?offset=0&count=3', method: 'GET', expectedStatus: 200 },
   { id: 'commerce-products', path: '/api/commerce/products.json?offset=0&count=3', method: 'GET', expectedStatus: 200 },
+  { id: 'marketplace-search', path: '/api/marketplace/search.json?query=耳机&count=3', method: 'GET', expectedStatus: 200 },
+  { id: 'marketplace-cart', path: '/api/marketplace/cart.json', method: 'POST', expectedStatus: 200 },
+  { id: 'marketplace-checkout', path: '/api/marketplace/checkout.json', method: 'POST', expectedStatus: 200 },
   { id: 'cf-protected-blocked', path: '/api/cf/protected.json', method: 'GET', expectedStatus: 403 },
   { id: 'cf-clearance', path: '/cdn-cgi/challenge-platform/fixture-clearance', method: 'GET', expectedStatus: 200 },
 ];
@@ -39,7 +48,7 @@ export const GET: APIRoute = () => json({
   cases,
   endpoints,
   coverage: {
-    areas: ['SSR', 'locators', 'navigation', 'status-codes', 'redirects', 'slow-response', 'fetch', 'POST', 'SSE', 'forms', 'iframes', 'waits', 'visual-screenshot', 'upload', 'download', 'shadow-dom', 'svg', 'business-dashboard', 'large-dom', 'batch-network', 'commerce-facets', 'cart-checkout', 'modal-flow', 'cloudflare-challenge', 'waf-block', 'rate-limit'],
+    areas: ['SSR', 'locators', 'navigation', 'status-codes', 'redirects', 'slow-response', 'fetch', 'POST', 'SSE', 'forms', 'iframes', 'waits', 'visual-screenshot', 'upload', 'download', 'shadow-dom', 'svg', 'business-dashboard', 'large-dom', 'batch-network', 'commerce-facets', 'cart-checkout', 'modal-flow', 'marketplace-home', 'marketplace-search', 'marketplace-item-detail', 'marketplace-cart', 'marketplace-checkout', 'marketplace-order-result', 'cloudflare-challenge', 'waf-block', 'rate-limit'],
     websocket: 'optional private WebSocket endpoint',
   },
 });

@@ -1,0 +1,116 @@
+---
+import ScenarioLayout from '../../../layouts/ScenarioLayout.astro';
+import { categoryLabel, marketplaceSteps, searchMarketplaceItems } from '../../../lib/marketplace';
+import type { MarketplaceCategory, MarketplaceSort } from '../../../lib/marketplace';
+
+const query = Astro.url.searchParams.get('query') || Astro.url.searchParams.get('q') || '';
+const category = (Astro.url.searchParams.get('category') || 'all') as MarketplaceCategory | 'all';
+const sort = (Astro.url.searchParams.get('sort') || 'relevance') as MarketplaceSort;
+const items = searchMarketplaceItems({ query, category, sort, count: 24, offset: 0 });
+const steps = marketplaceSteps();
+const coverage = [
+  { label: '列表行为', value: 'query/category/sort/filter/load-more' },
+  { label: '网络', value: '/api/marketplace/search.json' },
+  { label: '定位', value: '商品卡片、价格、店铺、服务标签' },
+  { label: '等待', value: '加载更多后 DOM 数量与输出变化' },
+];
+---
+<ScenarioLayout title="Marketplace search and listing" eyebrow="Step 2" summary="搜索结果页模拟电商列表：筛选、排序、懒加载和跳转商品详情。" scenarioId="marketplace-search" steps={steps} coverage={coverage}>
+  <section class="panel search-board" data-testid="marketplace-search-root" data-query={query} data-category={category} data-count={items.length}>
+    <form id="marketplace-filter-form" class="filters" data-testid="marketplace-filter-form">
+      <label>关键词 <input id="marketplace-query" data-testid="marketplace-query" value={query} placeholder="耳机" /></label>
+      <label>类目
+        <select id="marketplace-category" data-testid="marketplace-category">
+          <option value="all" selected={category === 'all'}>全部</option>
+          {(['fashion', 'digital', 'home', 'beauty', 'sports', 'food'] as const).map((item) => (
+            <option value={item} selected={category === item}>{categoryLabel(item)}</option>
+          ))}
+        </select>
+      </label>
+      <label>排序
+        <select id="marketplace-sort" data-testid="marketplace-sort">
+          <option value="relevance" selected={sort === 'relevance'}>综合</option>
+          <option value="sales-desc" selected={sort === 'sales-desc'}>销量优先</option>
+          <option value="price-asc" selected={sort === 'price-asc'}>价格升序</option>
+          <option value="price-desc" selected={sort === 'price-desc'}>价格降序</option>
+        </select>
+      </label>
+      <button type="submit" data-testid="marketplace-apply-filter">应用筛选</button>
+      <button type="button" class="secondary" id="marketplace-load-more" data-testid="marketplace-load-more">加载更多</button>
+      <output id="marketplace-search-output" data-testid="marketplace-search-output">visible={items.length}; loaded={items.length}</output>
+    </form>
+  </section>
+
+  <section class="panel" data-testid="marketplace-result-panel">
+    <h2>搜索结果</h2>
+    <div id="marketplace-result-grid" class="result-grid" data-testid="marketplace-result-grid">
+      {items.map((item) => (
+        <a class="result-card" href={`/scenarios/marketplace/item/${item.id}`} data-testid="marketplace-result-card" data-id={item.id} data-category={item.category} data-price={item.price} data-sales={item.sales}>
+          <span class="thumb" style={`--hero:${item.heroColor}`}>{categoryLabel(item.category)}</span>
+          <strong data-testid="marketplace-result-title">{item.title}</strong>
+          <span><b data-testid="marketplace-result-price">¥{item.price}</b> <small>{item.sales} 人付款</small></span>
+          <small>{item.shop} · {item.location}</small>
+          <em>{item.tags.join(' · ')} · {item.services.join(' / ')}</em>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <script>
+    const queryInput = document.querySelector<HTMLInputElement>('#marketplace-query');
+    const categorySelect = document.querySelector<HTMLSelectElement>('#marketplace-category');
+    const sortSelect = document.querySelector<HTMLSelectElement>('#marketplace-sort');
+    const form = document.querySelector<HTMLFormElement>('#marketplace-filter-form');
+    const grid = document.querySelector<HTMLElement>('#marketplace-result-grid');
+    const output = document.querySelector<HTMLOutputElement>('#marketplace-search-output');
+    const loadMore = document.querySelector<HTMLButtonElement>('#marketplace-load-more');
+    let loaded = document.querySelectorAll('[data-testid="marketplace-result-card"]').length;
+
+    function cardHtml(item: any) {
+      return `<a class="result-card" href="/scenarios/marketplace/item/${item.id}" data-testid="marketplace-result-card" data-id="${item.id}" data-category="${item.category}" data-price="${item.price}" data-sales="${item.sales}"><span class="thumb" style="--hero:${item.heroColor}">${item.category}</span><strong data-testid="marketplace-result-title">${item.title}</strong><span><b data-testid="marketplace-result-price">¥${item.price}</b> <small>${item.sales} 人付款</small></span><small>${item.shop} · ${item.location}</small><em>${item.tags.join(' · ')} · ${item.services.join(' / ')}</em></a>`;
+    }
+
+    async function fetchResults(offset = 0, append = false) {
+      const params = new URLSearchParams({
+        query: queryInput?.value || '',
+        category: categorySelect?.value || 'all',
+        sort: sortSelect?.value || 'relevance',
+        count: append ? '12' : '24',
+        offset: String(offset),
+        delay: '20',
+      });
+      const res = await fetch(`/api/marketplace/search.json?${params.toString()}`, { headers: { 'x-dp-test': append ? 'marketplace-load-more' : 'marketplace-filter' } });
+      const data = await res.json();
+      if (!grid) return;
+      if (!append) {
+        grid.innerHTML = '';
+        loaded = 0;
+      }
+      for (const item of data.items) grid.insertAdjacentHTML('beforeend', cardHtml(item));
+      loaded += data.items.length;
+      if (output) output.textContent = `visible=${document.querySelectorAll('[data-testid="marketplace-result-card"]').length}; loaded=${loaded}; next=${data.nextOffset}`;
+    }
+
+    form?.addEventListener('submit', async (event: SubmitEvent) => {
+      event.preventDefault();
+      await fetchResults(0, false);
+    });
+
+    loadMore?.addEventListener('click', async () => {
+      await fetchResults(loaded, true);
+    });
+  </script>
+
+  <style>
+    .filters { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto auto; gap: 10px; align-items: end; }
+    .filters label { display: grid; gap: 5px; color: #475569; }
+    .filters input, .filters select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; }
+    .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+    .result-card { display: grid; gap: 8px; padding: 12px; border-radius: 16px; border: 1px solid #e2e8f0; background: #fff; color: #172033; text-decoration: none; }
+    .result-card:hover { border-color: #ff6a00; box-shadow: 0 10px 26px rgba(255,106,0,.12); }
+    .thumb { display: grid; place-items: center; min-height: 116px; border-radius: 14px; color: #fff; font-weight: 800; background: linear-gradient(135deg, var(--hero), #111827); }
+    .result-card b { color: #ea580c; font-size: 20px; }
+    .result-card em, .result-card small { color: #64748b; font-style: normal; }
+    @media (max-width: 920px) { .filters { grid-template-columns: 1fr; } }
+  </style>
+</ScenarioLayout>

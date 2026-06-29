@@ -1,54 +1,139 @@
 ---
 import TestLayout from '../layouts/TestLayout.astro';
+
+const renderedAt = new Date().toISOString();
+const businessScenarios = [
+  {
+    id: 'marketplace',
+    title: 'Marketplace full flow',
+    href: '/scenarios/marketplace',
+    summary: '大型电商式商品浏览、搜索筛选、详情 SKU、购物车、结算和订单结果。',
+    tests: ['navigation', 'locator', 'listener', 'forms', 'waits', 'cookies'],
+  },
+  {
+    id: 'rednote-planned',
+    title: 'Social notes flow',
+    href: '#planned-social-notes',
+    summary: '社区笔记式瀑布流、笔记详情、点赞、收藏、关注和评论。',
+    tests: ['scroll', 'modal', 'optimistic-ui'],
+  },
+  {
+    id: 'timeline-planned',
+    title: 'Timeline interaction flow',
+    href: '#planned-timeline',
+    summary: '社交时间线式动态流、发帖、点赞、回复、转发和 thread。',
+    tests: ['contenteditable', 'nested-comments', 'network'],
+  },
+];
+
+const fixtureGroups = [
+  {
+    title: 'Feature fixtures',
+    items: [
+      ['Locators', '/cases/locators', 'XPath / CSS / text / AX / shadow / SVG'],
+      ['Navigation', '/cases/navigation', 'status / redirect / slow response'],
+      ['Network', '/cases/network', 'fetch / POST / SSE / optional WS'],
+      ['Forms', '/cases/forms', 'input / select / checkbox / submit'],
+      ['Frames', '/cases/frames', 'iframe DOM and iframe fetch'],
+      ['Waits', '/cases/waits', 'visibility / text / attrs / stable HTML'],
+    ],
+  },
+  {
+    title: 'Business and security fixtures',
+    items: [
+      ['Business dashboard', '/cases/business-dashboard', 'large table / filters / batch / burst fetch'],
+      ['Commerce legacy case', '/cases/commerce', 'compact commerce smoke retained for compatibility'],
+      ['Cloudflare-like gate', '/cases/cloudflare-gate', 'challenge / cf_clearance / 403 / 429'],
+      ['Visual', '/cases/visual', 'bands / green dots / long target'],
+      ['Upload & download', '/cases/upload-download', 'file metadata / attachment response'],
+      ['Dynamic SSR', '/cases/dynamic?name=drission', 'query / cookie / rendered timestamp'],
+    ],
+  },
+];
 ---
 <TestLayout title="DrissionPage SSR Test Site">
-  <section class="panel" data-testid="home-summary">
-    <h1>DrissionPage SSR Test Site</h1>
-    <p>
-      This Astro project is a deterministic SSR target for crawler, listener, locator,
-      navigation, iframe, form, and API contract tests.
-    </p>
-    <p><strong>Rendered at:</strong> <time data-testid="server-time" datetime={new Date().toISOString()}>{new Date().toISOString()}</time></p>
+  <section class="portal-hero" data-testid="home-summary">
+    <div>
+      <p class="eyebrow">Deterministic SSR scenario portal</p>
+      <h1>DrissionPage SSR Test Site</h1>
+      <p>
+        面向 DrissionPage 的浏览器、爬取、监听、等待和复杂业务流程验证。首页按业务场景、风控场景和基础能力分区，避免 fixture 入口混乱。
+      </p>
+      <p><strong>Rendered at:</strong> <time data-testid="server-time" datetime={renderedAt}>{renderedAt}</time></p>
+    </div>
+    <aside data-testid="portal-contract">
+      <strong>Contract</strong>
+      <span>stable selectors: <code>data-testid</code></span>
+      <span>machine manifest: <a href="/api/manifest.json" data-testid="api-manifest">/api/manifest.json</a></span>
+      <span>private URLs are redacted by runner</span>
+    </aside>
   </section>
 
-  <section class="grid" aria-label="Test cases">
-    <a class="case-link" href="/cases/locators" data-testid="case-locators">Locator fixture page</a>
-    <a class="case-link" href="/cases/navigation" data-testid="case-navigation">Navigation and status fixture page</a>
-    <a class="case-link" href="/cases/network" data-testid="case-network">Fetch, SSE, and optional WebSocket fixture page</a>
-    <a class="case-link" href="/cases/forms" data-testid="case-forms">Form and interaction fixture page</a>
-    <a class="case-link" href="/cases/frames" data-testid="case-frames">Iframe fixture page</a>
-    <a class="case-link" href="/cases/waits" data-testid="case-waits">Wait and stability fixture page</a>
-    <a class="case-link" href="/cases/visual" data-testid="case-visual">Visual screenshot fixture page</a>
-    <a class="case-link" href="/cases/upload-download" data-testid="case-upload-download">Upload and download fixture page</a>
-    <a class="case-link" href="/cases/business-dashboard" data-testid="case-business-dashboard">Business dashboard fixture page</a>
-    <a class="case-link" href="/cases/commerce" data-testid="case-commerce">Commerce workflow fixture page</a>
-    <a class="case-link" href="/cases/cloudflare-gate" data-testid="case-cloudflare-gate">Cloudflare gate fixture page</a>
-    <a class="case-link" href="/cases/dynamic?name=drission" data-testid="case-dynamic">SSR dynamic fixture page</a>
+  <section class="panel" data-testid="business-scenarios">
+    <h2>复杂业务场景</h2>
+    <p>这些页面模拟真实产品的完整操作链路，不只是单点 API 或元素 fixture。</p>
+    <div class="scenario-grid">
+      {businessScenarios.map((scenario) => (
+        <a class="scenario-card" href={scenario.href} data-testid={`scenario-${scenario.id}`}>
+          <strong>{scenario.title}</strong>
+          <span>{scenario.summary}</span>
+          <small>{scenario.tests.join(' · ')}</small>
+        </a>
+      ))}
+    </div>
   </section>
+
+  <section class="panel" data-testid="scenario-roadmap">
+    <h2>测试路线图</h2>
+    <table>
+      <thead><tr><th>场景</th><th>状态</th><th>核心测试点</th></tr></thead>
+      <tbody>
+        <tr><td>Marketplace full flow</td><td data-testid="marketplace-status">ready</td><td>浏览、搜索、详情、购物车、结算、订单。</td></tr>
+        <tr id="planned-social-notes"><td>Social notes flow</td><td>planned</td><td>瀑布流、详情弹窗、点赞、收藏、评论。</td></tr>
+        <tr id="planned-timeline"><td>Timeline interaction flow</td><td>planned</td><td>时间线、发帖、点赞、回复、转发。</td></tr>
+        <tr><td>Security gates</td><td>ready</td><td>Cloudflare-like challenge、403、429、clearance cookie。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  {fixtureGroups.map((group) => (
+    <section class="panel" data-testid={`fixture-group-${group.title.toLowerCase().replaceAll(' ', '-')}`}>
+      <h2>{group.title}</h2>
+      <div class="fixture-list">
+        {group.items.map(([title, href, summary]) => (
+          <a class="case-link" href={href} data-testid={`case-${title.toLowerCase().replaceAll(' ', '-').replaceAll('&', 'and')}`}>
+            <strong>{title}</strong>
+            <span>{summary}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  ))}
 
   <section class="panel" data-testid="api-index">
     <h2>API endpoints</h2>
-    <ul>
-      <li><a href="/api/health.json" data-testid="api-health">/api/health.json</a></li>
-      <li><a href="/api/manifest.json" data-testid="api-manifest">/api/manifest.json</a></li>
-      <li><a href="/api/status/404" data-testid="api-status-404">/api/status/404</a></li>
-      <li><a href="/api/slow.json?delay=250" data-testid="api-slow">/api/slow.json?delay=250</a></li>
-      <li><a href="/api/events" data-testid="api-events">/api/events</a></li>
-      <li><a href="/api/download.txt?name=dp-fixture.txt" data-testid="api-download">/api/download.txt?name=dp-fixture.txt</a></li>
-      <li><a href="/api/activity-batch.json?offset=0&count=3" data-testid="api-activity-batch">/api/activity-batch.json?offset=0&amp;count=3</a></li>
-      <li><a href="/api/commerce/products.json?offset=0&count=3" data-testid="api-commerce-products">/api/commerce/products.json?offset=0&amp;count=3</a></li>
-      <li><a href="/api/cf/protected.json" data-testid="api-cf-protected">/api/cf/protected.json</a></li>
-    </ul>
+    <div class="api-grid">
+      <a href="/api/health.json" data-testid="api-health">/api/health.json</a>
+      <a href="/api/manifest.json" data-testid="manifest-link">/api/manifest.json</a>
+      <a href="/api/status/404" data-testid="api-status-404">/api/status/404</a>
+      <a href="/api/marketplace/search.json?query=耳机&count=3" data-testid="api-marketplace-search">/api/marketplace/search.json</a>
+      <a href="/api/commerce/products.json?offset=0&count=3" data-testid="api-commerce-products">/api/commerce/products.json</a>
+      <a href="/api/cf/protected.json" data-testid="api-cf-protected">/api/cf/protected.json</a>
+    </div>
   </section>
 
-  <section class="panel" data-testid="verification-contract">
-    <h2>Verification contract</h2>
-    <p>
-      This fixture defines stable pages and API endpoints for automated DrissionPage checks.
-    </p>
-    <p>
-      The machine-readable manifest at <a href="/api/manifest.json" data-testid="manifest-link">/api/manifest.json</a>
-      lists stable fixture pages, API endpoints, and expected status codes.
-    </p>
-  </section>
+  <style>
+    .portal-hero { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; padding: 28px; border-radius: 22px; background: linear-gradient(135deg, #172033, #263855); color: #fff; box-shadow: 0 18px 44px rgba(23, 32, 51, .18); }
+    .portal-hero h1 { font-size: clamp(32px, 5vw, 56px); margin: 4px 0 10px; }
+    .portal-hero aside { display: grid; gap: 8px; align-content: center; border: 1px solid rgba(255,255,255,.18); border-radius: 16px; padding: 16px; background: rgba(255,255,255,.08); }
+    .portal-hero a { color: #ffedd5; }
+    .eyebrow { margin: 0; color: #fed7aa; letter-spacing: .12em; text-transform: uppercase; font-weight: 800; }
+    .scenario-grid, .fixture-list, .api-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .scenario-card, .fixture-list a, .api-grid a { display: grid; gap: 8px; min-height: 92px; padding: 16px; border-radius: 14px; text-decoration: none; color: #172033; background: #fff; border: 1px solid #d8deea; }
+    .scenario-card { border-color: #fed7aa; background: #fff7ed; }
+    .scenario-card:hover, .fixture-list a:hover, .api-grid a:hover { border-color: #ff6a00; box-shadow: 0 8px 24px rgba(255, 106, 0, .12); }
+    .scenario-card small { color: #9a3412; }
+    .fixture-list span { color: #64748b; }
+    @media (max-width: 820px) { .portal-hero { grid-template-columns: 1fr; } }
+  </style>
 </TestLayout>

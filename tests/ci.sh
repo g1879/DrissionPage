@@ -181,8 +181,11 @@ if [[ -n "$BROWSER_PATH" && -x "$BROWSER_PATH" ]]; then
   if [[ "$RUN_LOCAL_SSR" == "1" && -n "$LOCAL_SSR_URL" ]]; then
     (
       export DP_PRIVATE_FIXTURE_URL="$LOCAL_SSR_URL"
-      run_case_batch "current local SSR fixture smoke gate" current current-local-ssr \
-        --suite local --browser-path "$BROWSER_PATH" --include-online --case ssr_site_smoke --fail-on-failures
+      run_case_batch "current local SSR fixture scenarios gate" current current-local-ssr \
+        --suite local --browser-path "$BROWSER_PATH" --include-online \
+        --case ssr_site_smoke \
+        --case ssr_marketplace_flow \
+        --fail-on-failures
     )
   fi
 else

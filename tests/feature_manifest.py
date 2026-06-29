@@ -75,6 +75,7 @@ FEATURES = [
     {"id": "tab_post_response", "title": "MixTab/ChromiumTab post() 返回 Response 对象", "case": "feature_tab_post_response"},
     {"id": "chromium_options_environment", "title": "ChromiumOptions.new_env/is_headless/auto_port(scope) 行为", "case": "feature_chromium_options_environment"},
     {"id": "ssr_site_smoke", "title": "可选 Astro SSR fixture 远端冒烟", "case": "feature_ssr_site_smoke"},
+    {"id": "ssr_marketplace_flow", "title": "SSR Marketplace 浏览到下单完整业务流", "case": "feature_ssr_marketplace_flow"},
 ]
 
 EXCLUDED = [

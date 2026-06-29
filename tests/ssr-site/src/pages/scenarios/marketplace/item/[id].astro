@@ -1,0 +1,108 @@
+---
+import ScenarioLayout from '../../../../layouts/ScenarioLayout.astro';
+import { categoryLabel, makeMarketplaceItem, marketplaceSteps } from '../../../../lib/marketplace';
+
+export const prerender = false;
+const id = Math.max(Number(Astro.params.id || 1), 1);
+const item = makeMarketplaceItem(id);
+const steps = marketplaceSteps(id);
+const coverage = [
+  { label: '详情页', value: 'gallery / SKU / coupons / seller / reviews' },
+  { label: '操作', value: '选择颜色规格、加入购物车、立即购买' },
+  { label: '网络', value: '/api/marketplace/cart.json POST' },
+  { label: '状态', value: 'cart cookie + output + sticky action bar' },
+];
+---
+<ScenarioLayout title="Marketplace item detail" eyebrow="Step 3" summary="商品详情页模拟大型电商 SKU、优惠券、店铺、评价和购买按钮。" scenarioId="marketplace-item" steps={steps} coverage={coverage}>
+  <section class="detail-shell" data-testid="marketplace-item-root" data-id={item.id} data-category={item.category}>
+    <div class="gallery" data-testid="marketplace-gallery">
+      <div class="hero-image" style={`--hero:${item.heroColor}`} data-testid="marketplace-hero-image">{categoryLabel(item.category)}</div>
+      <div class="thumbs">
+        <button type="button" data-testid="marketplace-thumb">主图</button>
+        <button type="button" data-testid="marketplace-thumb">细节</button>
+        <button type="button" data-testid="marketplace-thumb">评价</button>
+      </div>
+    </div>
+
+    <div class="purchase-panel">
+      <p class="shop" data-testid="marketplace-shop">{item.shop} · {item.location}</p>
+      <h1 data-testid="marketplace-item-title">{item.title}</h1>
+      <p class="price"><strong data-testid="marketplace-item-price">¥{item.price}</strong><del>¥{item.originalPrice}</del><span>{item.sales} 人付款</span></p>
+      <div class="coupon" data-testid="marketplace-coupon">店铺券：满 199 减 {item.coupon}</div>
+      <div class="service" data-testid="marketplace-services">{item.services.join(' · ')}</div>
+
+      <div class="sku-box" data-testid="marketplace-sku-box">
+        <label>颜色
+          <select id="sku-color" data-testid="sku-color">
+            {item.colors.map((color) => <option value={color}>{color}</option>)}
+          </select>
+        </label>
+        <label>规格
+          <select id="sku-spec" data-testid="sku-spec">
+            {item.specs.map((spec) => <option value={spec}>{spec}</option>)}
+          </select>
+        </label>
+        <label>数量 <input id="sku-quantity" data-testid="sku-quantity" type="number" min="1" max="9" value="1" /></label>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="add-marketplace-cart" data-testid="add-marketplace-cart">加入购物车</button>
+        <button type="button" class="secondary" id="buy-now" data-testid="buy-now">立即购买</button>
+      </div>
+      <output id="marketplace-item-output" data-testid="marketplace-item-output">cart=0; status=idle</output>
+    </div>
+  </section>
+
+  <section class="panel tabs" data-testid="marketplace-detail-tabs">
+    <h2>详情与评价</h2>
+    <div class="tab-grid">
+      <article><strong>商品详情</strong><p>合成详情图、参数表和服务承诺，保证可稳定定位。</p></article>
+      <article><strong>买家评价</strong><p data-testid="marketplace-review">4.9 分 · 追评稳定 · 图片评价占位</p></article>
+      <article><strong>问大家</strong><p>配送、规格、售后问题占位。</p></article>
+    </div>
+  </section>
+
+  <script define:vars={{ itemId: item.id }} is:inline>
+    const output = document.querySelector('#marketplace-item-output');
+    const color = document.querySelector('#sku-color');
+    const spec = document.querySelector('#sku-spec');
+    const quantity = document.querySelector('#sku-quantity');
+
+    async function addCart(action) {
+      const res = await fetch('/api/marketplace/cart.json', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-dp-test': `marketplace-${action}` },
+        body: JSON.stringify({ id: itemId, color: color.value, spec: spec.value, quantity: Number(quantity.value || 1) }),
+      });
+      const data = await res.json();
+      output.textContent = `cart=${data.cartCount}; status=${action}; title=${data.line.title}`;
+      return data;
+    }
+
+    document.querySelector('#add-marketplace-cart')?.addEventListener('click', async () => { await addCart('add-cart'); });
+    document.querySelector('#buy-now')?.addEventListener('click', async () => {
+      await addCart('buy-now');
+      window.location.href = '/scenarios/marketplace/checkout?from=buy-now';
+    });
+  </script>
+
+  <style>
+    .detail-shell { display: grid; grid-template-columns: minmax(280px, 430px) minmax(0, 1fr); gap: 18px; }
+    .gallery, .purchase-panel { border: 1px solid #fed7aa; border-radius: 18px; padding: 16px; background: #fff; }
+    .hero-image { display: grid; place-items: center; min-height: 360px; border-radius: 18px; color: #fff; font-size: 30px; font-weight: 900; background: linear-gradient(135deg, var(--hero), #111827); }
+    .thumbs { display: flex; gap: 8px; margin-top: 12px; }
+    .thumbs button { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+    .shop { color: #64748b; }
+    .purchase-panel h1 { font-size: clamp(26px, 4vw, 42px); }
+    .price { display: flex; align-items: baseline; gap: 12px; }
+    .price strong { color: #ea580c; font-size: 34px; }
+    .coupon, .service { padding: 10px; border-radius: 12px; background: #fff7ed; color: #9a3412; margin: 10px 0; }
+    .sku-box { display: grid; gap: 10px; margin: 14px 0; }
+    .sku-box label { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; gap: 8px; }
+    .sku-box select, .sku-box input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 10px; }
+    .actions { display: flex; gap: 10px; }
+    .tab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .tab-grid article { border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; }
+    @media (max-width: 860px) { .detail-shell { grid-template-columns: 1fr; } }
+  </style>
+</ScenarioLayout>

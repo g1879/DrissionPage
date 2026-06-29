@@ -24,6 +24,12 @@ npm run dev -- --host 127.0.0.1 --port 4321
 | 路径 | 用途 |
 | --- | --- |
 | `/` | 首页、SSR 时间戳和 fixture 索引。 |
+| `/scenarios/marketplace` | 合成电商首页，包含搜索框、类目、活动位和商品流。 |
+| `/scenarios/marketplace/search?query=耳机` | 商品搜索、类目筛选、排序和加载更多。 |
+| `/scenarios/marketplace/item/2` | 商品详情、SKU、优惠、店铺信息和加入购物车。 |
+| `/scenarios/marketplace/cart` | 购物车商品行、勾选、数量调整、金额汇总和结算入口。 |
+| `/scenarios/marketplace/checkout` | 地址、支付、发票、备注和提交订单。 |
+| `/scenarios/marketplace/order-result?order=TBMOCK-000001` | 订单结果、状态和履约时间线。 |
 | `/cases/locators` | XPath、CSS、文本、ARIA、Shadow DOM 和 SVG 目标。 |
 | `/cases/navigation` | 状态码、重定向和慢响应。 |
 | `/cases/network` | Fetch、POST、SSE 和可选 WebSocket 触发页面。 |
@@ -48,6 +54,9 @@ npm run dev -- --host 127.0.0.1 --port 4321
 | `/api/commerce/products.json?offset=0&count=3` | 确定性商品列表 JSON。 |
 | `/api/commerce/cart.json` | 购物车 POST 回显。 |
 | `/api/commerce/checkout.json` | 结算 POST 回显。 |
+| `/api/marketplace/search.json?query=耳机&count=3` | Marketplace 商品搜索 JSON。 |
+| `/api/marketplace/cart.json` | Marketplace 加入购物车 POST。 |
+| `/api/marketplace/checkout.json` | Marketplace 提交订单 POST。 |
 | `/api/cf/protected.json` | 需要 `cf_clearance` 的受保护 JSON；支持 403/429 模式。 |
 | `/cdn-cgi/challenge-platform/fixture-clearance` | 设置合成 `cf_clearance` cookie。 |
 
@@ -56,6 +65,13 @@ npm run dev -- --host 127.0.0.1 --port 4321
 ```bash
 DP_PRIVATE_FIXTURE_URL="$PRIVATE_FIXTURE_URL" \
   ./tests/run.sh current --include-online --case ssr_site_smoke --fail-on-failures
+```
+
+Marketplace 完整业务流：
+
+```bash
+DP_PRIVATE_FIXTURE_URL="$PRIVATE_FIXTURE_URL" \
+  ./tests/run.sh current --include-online --case ssr_marketplace_flow --fail-on-failures
 ```
 
 只有同时提供 `--include-online` 和 `DP_PRIVATE_FIXTURE_URL` 时，该命令才会执行检查。

@@ -1,0 +1,65 @@
+---
+import TestLayout from './TestLayout.astro';
+
+interface StepLink {
+  label: string;
+  href: string;
+  testid: string;
+}
+
+interface CoverageItem {
+  label: string;
+  value: string;
+}
+
+interface Props {
+  title: string;
+  eyebrow: string;
+  summary: string;
+  scenarioId: string;
+  steps: StepLink[];
+  coverage: CoverageItem[];
+}
+
+const { title, eyebrow, summary, scenarioId, steps, coverage } = Astro.props;
+---
+<TestLayout title={title} description={summary}>
+  <section class="scenario-hero" data-testid={`${scenarioId}-scenario-hero`}>
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{title}</h1>
+    <p>{summary}</p>
+    <nav class="scenario-steps" aria-label="Scenario steps" data-testid={`${scenarioId}-step-nav`}>
+      {steps.map((step, index) => (
+        <a href={step.href} data-testid={step.testid}><span>{index + 1}</span>{step.label}</a>
+      ))}
+    </nav>
+  </section>
+
+  <section class="panel scenario-matrix" data-testid={`${scenarioId}-coverage-matrix`}>
+    <h2>测试覆盖点</h2>
+    <div class="matrix-grid">
+      {coverage.map((item) => (
+        <article>
+          <strong>{item.label}</strong>
+          <span>{item.value}</span>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <slot />
+
+  <style>
+    .scenario-hero { margin: 18px 0; padding: 26px; border-radius: 22px; color: #fff; background: linear-gradient(135deg, #111827, #ea580c 58%, #fb923c); box-shadow: 0 18px 40px rgba(234, 88, 12, .18); }
+    .scenario-hero h1 { margin: 4px 0 8px; font-size: clamp(30px, 4vw, 48px); }
+    .eyebrow { margin: 0; text-transform: uppercase; letter-spacing: .12em; font-weight: 800; color: #fed7aa; }
+    .scenario-steps { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .scenario-steps a { display: inline-flex; align-items: center; gap: 8px; color: #fff7ed; text-decoration: none; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 8px 12px; background: rgba(255,255,255,.12); }
+    .scenario-steps span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: #fff; color: #ea580c; font-weight: 800; }
+    .scenario-matrix h2 { margin-top: 0; }
+    .matrix-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .matrix-grid article { border: 1px solid #fed7aa; border-radius: 12px; padding: 12px; background: #fff7ed; }
+    .matrix-grid strong { display: block; color: #9a3412; }
+    .matrix-grid span { color: #431407; }
+  </style>
+</TestLayout>
