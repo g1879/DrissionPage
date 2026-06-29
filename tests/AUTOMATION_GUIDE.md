@@ -75,9 +75,9 @@ workflow 文件：
 4. 安装 Python 依赖和 coverage 工具。
 5. 构建 SSR fixture 包。
 6. 启动本地 SSR fixture，并把 `DP_LOCAL_FIXTURE_URL` 传给 `tests/ci.sh`。
-7. 运行 `tests/ci.sh`，其中本地 SSR 冒烟和 Marketplace 全流程会计入当前源码 coverage。
+7. 运行 `tests/ci.sh`，其中本地 SSR 冒烟、Marketplace 全流程和社区笔记移动端流程会计入当前源码 coverage。
 8. 配置 `CODECOV_TOKEN` 时上传覆盖率到 Codecov。
-9. 在非 pull request 事件中，如果配置了 `DP_PRIVATE_FIXTURE_URL`，执行私有 SSR 冒烟和 Marketplace 全流程检查。
+9. 在非 pull request 事件中，如果配置了 `DP_PRIVATE_FIXTURE_URL`，执行私有 SSR 冒烟、Marketplace 全流程和社区笔记移动端检查。
 10. 上传测试报告和运行时产物。
 
 `stable` 分组失败会导致工作流失败。`known` 分组失败只写入报告，不改变工作流结果。
@@ -134,6 +134,17 @@ DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
     --include-online \
     --browser-path "$DP_BROWSER_PATH" \
     --case ssr_marketplace_flow \
+    --fail-on-failures
+```
+
+社区笔记移动端流程：
+
+```bash
+DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+  ./tests/run.sh current \
+    --include-online \
+    --browser-path "$DP_BROWSER_PATH" \
+    --case ssr_social_notes_mobile \
     --fail-on-failures
 ```
 

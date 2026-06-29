@@ -1,0 +1,33 @@
+---
+import ScenarioLayout from '../../../layouts/ScenarioLayout.astro';
+import { socialSteps } from '../../../lib/socialNotes';
+
+const original = Astro.url.searchParams.get('original') || '/explore/unknown';
+const steps = socialSteps();
+const coverage = [
+  { label: '安全落地页', value: '模拟公开 H5 笔记深链可能进入安全/不可用页' },
+  { label: '定位', value: 'not-found-container、originalUrl、打开 App CTA' },
+  { label: '兼容性', value: '不访问真实风控接口，不依赖第三方响应' },
+  { label: '监控', value: '用于验证爬虫遇到受限落地页时的分支处理' },
+];
+---
+<ScenarioLayout title="Social notes security landing" eyebrow="Mobile guard" summary="合成安全落地页，模拟移动 H5 深链被安全策略或不可用页接管后的 DOM 结构。" scenarioId="social-security" steps={steps} coverage={coverage}>
+  <section class="not-found-container" data-testid="social-security-root" data-original-url={original}>
+    <div class="app-icon">R</div>
+    <h1 data-testid="social-security-title">内容暂时无法查看</h1>
+    <p data-testid="social-security-desc">检测到移动端深链需要额外校验，当前展示合成安全落地页。</p>
+    <code data-testid="social-security-original">originalUrl={original}</code>
+    <div class="bottom-button-box" data-testid="social-security-actions">
+      <a class="button" href="/scenarios/social-notes" data-testid="social-security-back">返回笔记首页</a>
+      <button type="button" class="secondary" data-testid="social-security-open-app">打开 App</button>
+    </div>
+  </section>
+
+  <style>
+    .not-found-container { max-width: 430px; min-height: 560px; margin: 0 auto; display: grid; align-content: center; gap: 14px; padding: 28px; text-align: center; border: 1px solid #fecdd3; border-radius: 26px; background: linear-gradient(180deg, #fff1f2, #fff); }
+    .app-icon { display: grid; place-items: center; width: 82px; height: 82px; margin: 0 auto; border-radius: 24px; color: #fff; background: #ff2442; font-size: 42px; font-weight: 900; }
+    code { display: block; word-break: break-all; padding: 10px; color: #9f1239; background: #ffe4e6; }
+    .bottom-button-box { display: grid; gap: 10px; }
+    .bottom-button-box a { text-decoration: none; }
+  </style>
+</ScenarioLayout>

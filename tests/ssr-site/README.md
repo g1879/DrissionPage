@@ -9,6 +9,7 @@
 - 页面和 API 端点使用 Astro `output: 'server'` 运行。
 - `/api/manifest.json` 暴露 fixture 清单，便于自动化检查。
 - 报告会脱敏 `DP_PRIVATE_FIXTURE_URL` 及其 host。
+- 社区笔记场景只保留公开移动 H5 的结构抽象，例如打开 App 条、频道 filters、双列瀑布流、详情/评论和安全落地页；不包含真实站点内容、素材或接口。
 
 ## 本地验证
 
@@ -30,6 +31,9 @@ npm run dev -- --host 127.0.0.1 --port 4321
 | `/scenarios/marketplace/cart` | 购物车商品行、勾选、数量调整、金额汇总和结算入口。 |
 | `/scenarios/marketplace/checkout` | 地址、支付、发票、备注和提交订单。 |
 | `/scenarios/marketplace/order-result?order=TBMOCK-000001` | 订单结果、状态和履约时间线。 |
+| `/scenarios/social-notes` | 社区笔记移动端首页，包含打开 App 条、频道 tab、搜索、双列瀑布流、详情弹层、互动操作和评论。 |
+| `/scenarios/social-notes/note/note-002` | 社区笔记移动详情页。 |
+| `/scenarios/social-notes/security-check?original=/explore/note-404` | 社区笔记安全/不可用落地页模拟。 |
 | `/cases/locators` | XPath、CSS、文本、ARIA、Shadow DOM 和 SVG 目标。 |
 | `/cases/navigation` | 状态码、重定向和慢响应。 |
 | `/cases/network` | Fetch、POST、SSE 和可选 WebSocket 触发页面。 |
@@ -57,6 +61,9 @@ npm run dev -- --host 127.0.0.1 --port 4321
 | `/api/marketplace/search.json?query=耳机&count=3` | Marketplace 商品搜索 JSON。 |
 | `/api/marketplace/cart.json` | Marketplace 加入购物车 POST。 |
 | `/api/marketplace/checkout.json` | Marketplace 提交订单 POST。 |
+| `/api/social-notes/feed.json?channel=food&count=3` | 社区笔记移动端 feed JSON。 |
+| `/api/social-notes/actions.json` | 社区笔记点赞、收藏、关注、分享 POST。 |
+| `/api/social-notes/comments.json?noteId=note-002` | 社区笔记评论 GET/POST。 |
 | `/api/cf/protected.json` | 需要 `cf_clearance` 的受保护 JSON；支持 403/429 模式。 |
 | `/cdn-cgi/challenge-platform/fixture-clearance` | 设置合成 `cf_clearance` cookie。 |
 
@@ -72,6 +79,13 @@ Marketplace 完整业务流：
 ```bash
 DP_PRIVATE_FIXTURE_URL="$PRIVATE_FIXTURE_URL" \
   ./tests/run.sh current --include-online --case ssr_marketplace_flow --fail-on-failures
+```
+
+社区笔记移动端流程：
+
+```bash
+DP_PRIVATE_FIXTURE_URL="$PRIVATE_FIXTURE_URL" \
+  ./tests/run.sh current --include-online --case ssr_social_notes_mobile --fail-on-failures
 ```
 
 只有同时提供 `--include-online` 和 `DP_PRIVATE_FIXTURE_URL` 时，该命令才会执行检查。

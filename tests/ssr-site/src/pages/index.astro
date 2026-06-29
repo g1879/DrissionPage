@@ -11,11 +11,11 @@ const businessScenarios = [
     tests: ['navigation', 'locator', 'listener', 'forms', 'waits', 'cookies'],
   },
   {
-    id: 'rednote-planned',
+    id: 'social-notes',
     title: 'Social notes flow',
-    href: '#planned-social-notes',
-    summary: '社区笔记式瀑布流、笔记详情、点赞、收藏、关注和评论。',
-    tests: ['scroll', 'modal', 'optimistic-ui'],
+    href: '/scenarios/social-notes',
+    summary: '移动端社区笔记瀑布流、详情弹层、点赞、收藏、关注和评论。',
+    tests: ['mobile', 'waterfall', 'modal', 'listener', 'comments'],
   },
   {
     id: 'timeline-planned',
@@ -89,7 +89,7 @@ const fixtureGroups = [
       <thead><tr><th>场景</th><th>状态</th><th>核心测试点</th></tr></thead>
       <tbody>
         <tr><td>Marketplace full flow</td><td data-testid="marketplace-status">ready</td><td>浏览、搜索、详情、购物车、结算、订单。</td></tr>
-        <tr id="planned-social-notes"><td>Social notes flow</td><td>planned</td><td>瀑布流、详情弹窗、点赞、收藏、评论。</td></tr>
+        <tr><td>Social notes flow</td><td data-testid="social-notes-status">ready</td><td>移动瀑布流、详情弹层、点赞、收藏、评论、安全落地页。</td></tr>
         <tr id="planned-timeline"><td>Timeline interaction flow</td><td>planned</td><td>时间线、发帖、点赞、回复、转发。</td></tr>
         <tr><td>Security gates</td><td>ready</td><td>Cloudflare-like challenge、403、429、clearance cookie。</td></tr>
       </tbody>

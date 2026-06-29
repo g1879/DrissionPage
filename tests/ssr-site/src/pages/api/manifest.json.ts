@@ -21,6 +21,9 @@ const cases = [
   { id: 'marketplace-cart', path: '/scenarios/marketplace/cart', selectors: ['[data-testid="marketplace-cart-root"]', '[data-testid="marketplace-cart-line"]', '[data-testid="marketplace-cart-checkout"]'] },
   { id: 'marketplace-checkout', path: '/scenarios/marketplace/checkout', selectors: ['[data-testid="marketplace-checkout-root"]', '[data-testid="marketplace-address-card"]', '[data-testid="marketplace-submit-order"]'] },
   { id: 'marketplace-order-result', path: '/scenarios/marketplace/order-result?order=TBMOCK-000001', selectors: ['[data-testid="marketplace-order-result"]', '[data-testid="marketplace-result-order-id"]', '[data-testid="marketplace-fulfillment-timeline"]'] },
+  { id: 'social-notes-mobile', path: '/scenarios/social-notes', selectors: ['[data-testid="social-mobile-root"]', '[data-testid="social-channel-tabs"]', '[data-testid="social-note-card"]'] },
+  { id: 'social-note-detail', path: '/scenarios/social-notes/note/note-002', selectors: ['[data-testid="social-note-detail-root"]', '[data-testid="social-detail-title"]', '[data-testid="social-detail-action-bar"]'] },
+  { id: 'social-security-landing', path: '/scenarios/social-notes/security-check?original=/explore/note-404', selectors: ['[data-testid="social-security-root"]', '[data-testid="social-security-original"]', '[data-testid="social-security-actions"]'] },
 ];
 
 const endpoints = [
@@ -36,6 +39,9 @@ const endpoints = [
   { id: 'marketplace-search', path: '/api/marketplace/search.json?query=耳机&count=3', method: 'GET', expectedStatus: 200 },
   { id: 'marketplace-cart', path: '/api/marketplace/cart.json', method: 'POST', expectedStatus: 200 },
   { id: 'marketplace-checkout', path: '/api/marketplace/checkout.json', method: 'POST', expectedStatus: 200 },
+  { id: 'social-notes-feed', path: '/api/social-notes/feed.json?channel=food&count=3', method: 'GET', expectedStatus: 200 },
+  { id: 'social-notes-actions', path: '/api/social-notes/actions.json', method: 'POST', expectedStatus: 200 },
+  { id: 'social-notes-comments', path: '/api/social-notes/comments.json?noteId=note-002', method: 'GET', expectedStatus: 200 },
   { id: 'cf-protected-blocked', path: '/api/cf/protected.json', method: 'GET', expectedStatus: 403 },
   { id: 'cf-clearance', path: '/cdn-cgi/challenge-platform/fixture-clearance', method: 'GET', expectedStatus: 200 },
 ];
@@ -48,7 +54,7 @@ export const GET: APIRoute = () => json({
   cases,
   endpoints,
   coverage: {
-    areas: ['SSR', 'locators', 'navigation', 'status-codes', 'redirects', 'slow-response', 'fetch', 'POST', 'SSE', 'forms', 'iframes', 'waits', 'visual-screenshot', 'upload', 'download', 'shadow-dom', 'svg', 'business-dashboard', 'large-dom', 'batch-network', 'commerce-facets', 'cart-checkout', 'modal-flow', 'marketplace-home', 'marketplace-search', 'marketplace-item-detail', 'marketplace-cart', 'marketplace-checkout', 'marketplace-order-result', 'cloudflare-challenge', 'waf-block', 'rate-limit'],
+    areas: ['SSR', 'locators', 'navigation', 'status-codes', 'redirects', 'slow-response', 'fetch', 'POST', 'SSE', 'forms', 'iframes', 'waits', 'visual-screenshot', 'upload', 'download', 'shadow-dom', 'svg', 'business-dashboard', 'large-dom', 'batch-network', 'commerce-facets', 'cart-checkout', 'modal-flow', 'marketplace-home', 'marketplace-search', 'marketplace-item-detail', 'marketplace-cart', 'marketplace-checkout', 'marketplace-order-result', 'social-notes-mobile', 'social-notes-waterfall', 'social-note-detail', 'social-actions', 'social-comments', 'social-security-landing', 'cloudflare-challenge', 'waf-block', 'rate-limit'],
     websocket: 'optional private WebSocket endpoint',
   },
 });

@@ -52,6 +52,7 @@ FEATURE_CASE_MODULES = [
     "feature_cases.test_optional_online_smoke",
     "feature_cases.test_ssr_site_smoke",
     "feature_cases.test_ssr_marketplace_flow",
+    "feature_cases.test_ssr_social_notes_mobile",
 ]
 
 REGRESSION_CASE_MODULES = [
@@ -117,6 +118,7 @@ LOCAL_ONLY_CASES: dict[str, str] = {
     "feature_optional_online_smoke": "Requires live public websites and is intentionally opt-in.",
     "feature_ssr_site_smoke": "Requires a local or private SSR fixture URL and is run by a guarded workflow step.",
     "feature_ssr_marketplace_flow": "Requires a local or private SSR fixture URL and validates the marketplace full-flow scenario.",
+    "feature_ssr_social_notes_mobile": "Requires a local or private SSR fixture URL and validates the social-notes mobile scenario.",
 }
 
 

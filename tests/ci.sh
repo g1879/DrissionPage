@@ -185,6 +185,7 @@ if [[ -n "$BROWSER_PATH" && -x "$BROWSER_PATH" ]]; then
         --suite local --browser-path "$BROWSER_PATH" --include-online \
         --case ssr_site_smoke \
         --case ssr_marketplace_flow \
+        --case ssr_social_notes_mobile \
         --fail-on-failures
     )
   fi

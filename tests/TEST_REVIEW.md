@@ -12,7 +12,7 @@
 | 维度 | 评分 | 说明 |
 |------|------|------|
 | **架构设计** | 8.5/10 | 工程化成熟，分组清晰，环境隔离严格 |
-| **场景覆盖** | 7.2/10 | 基础功能覆盖好，已补充 Marketplace 浏览到下单完整链路，社交/时间线场景仍待扩展 |
+| **场景覆盖** | 7.6/10 | 基础功能覆盖好，已补充 Marketplace 全流程和社区笔记移动端流程，时间线场景仍待扩展 |
 | **问题发现能力** | 7.0/10 | 能测API契约和基础流程，难测并发/性能/真实故障 |
 | **综合评分** | **7.7/10** | 框架优秀，复杂业务覆盖开始成形，仍需补充并发、性能和更多真实交互模型 |
 
@@ -25,8 +25,8 @@ tests/
 ├── run.py / run.sh           # 入口脚本
 ├── runner.py                  # 测试发现/过滤/执行/报告
 ├── support.py                 # 本地 HTTP/WS/SSE fixture + 断言工具
-├── feature_manifest.py        # 67 个功能特性 → 用例映射
-├── feature_cases/             # 33 个功能级用例
+├── feature_manifest.py        # 68 个功能特性 → 用例映射
+├── feature_cases/             # 34 个功能级用例
 ├── regression_cases/          # 10 个回归/诊断用例
 ├── ssr-site/                  # 可选 Astro SSR fixture
 ├── COVERAGE.md / KNOWN_ISSUES.md / AUTOMATION_GUIDE.md
@@ -34,8 +34,8 @@ tests/
 ```
 
 **测试文件统计**：
-- Python 测试文件：52 个
-- 功能用例：33 个
+- Python 测试文件：53 个
+- 功能用例：34 个
 - 回归用例：10 个
 
 ---
@@ -77,7 +77,7 @@ tests/
 
 ### 3. 功能覆盖映射完善 (8.5/10)
 
-`feature_manifest.py` 提供 67 个功能特性的明确映射：
+`feature_manifest.py` 提供 68 个功能特性的明确映射：
 
 ```python
 FEATURES = [
@@ -163,6 +163,7 @@ def test_concurrent_iframe_loading():
 
 - ❌ 无登录 session 保持端到端测试
 - ✅ 已补充 Marketplace 浏览、搜索、详情、购物车、结算、订单结果的多步骤流程
+- ✅ 已补充社区笔记移动端瀑布流、移动 UA/视口、搜索、详情弹层、点赞收藏关注分享、评论和安全落地页
 - ❌ 社交信息流、评论互动、SPA 路由跳转仍待补充
 - ❌ 无 SPA 路由跳转测试
 - ❌ 无 WebSocket 长连接稳定性测试
@@ -424,10 +425,12 @@ def test_memory_stability(ctx):
 
 结论：原评估中“复杂业务场景偏弱”的判断成立。已有 `business-dashboard` 能覆盖大列表、筛选、加载更多和突发请求，但缺少更贴近生产页面的完整链路，例如商品筛选到结算、弹窗状态、懒加载推荐、合成反爬/拦截图、清除令牌 cookie 后再访问受保护资源等。
 
-本轮已在 `tests/ssr-site/` 增加两个确定性 SSR 场景，并扩展 `ssr_site_smoke`：
+当前已在 `tests/ssr-site/` 落地确定性复杂 SSR 场景，并扩展 `ssr_site_smoke`：
 
 | 场景 | 路由 | 覆盖点 |
 | --- | --- | --- |
+| Marketplace 完整链路 | `/scenarios/marketplace` | 首页、搜索筛选、商品详情、SKU、购物车、结算、订单结果。 |
+| 社区笔记移动端 | `/scenarios/social-notes` | 移动 UA/视口、打开 App 条、频道瀑布流、搜索、详情弹层、互动操作、评论、安全落地页。 |
 | 商品业务流 | `/cases/commerce` | 商品列表、筛选、排序、懒加载、推荐请求、购物车 POST、结算弹窗 POST。 |
 | Cloudflare-like 拦截 | `/cases/cloudflare-gate` | 托管挑战文案、Ray ID、`cf_clearance` cookie、受保护 JSON、WAF 403、429 `Retry-After`。 |
 
@@ -439,6 +442,12 @@ def test_memory_stability(ctx):
 - `/api/commerce/recommendations.json`
 - `/api/cf/protected.json`
 - `/cdn-cgi/challenge-platform/fixture-clearance`
+- `/api/marketplace/search.json`
+- `/api/marketplace/cart.json`
+- `/api/marketplace/checkout.json`
+- `/api/social-notes/feed.json`
+- `/api/social-notes/actions.json`
+- `/api/social-notes/comments.json`
 
 验证方式：
 
@@ -454,6 +463,8 @@ DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
     --include-online \
     --browser-path "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
     --case ssr_site_smoke \
+    --case ssr_marketplace_flow \
+    --case ssr_social_notes_mobile \
     --fail-on-failures
 ```
 

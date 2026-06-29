@@ -78,6 +78,9 @@ def run(ctx):
         'marketplace-cart',
         'marketplace-checkout',
         'marketplace-order-result',
+        'social-notes-mobile',
+        'social-note-detail',
+        'social-security-landing',
     ):
         assert_in(required, case_ids, 'manifest should include expected fixture case')
 

@@ -61,6 +61,7 @@ python tests/run.py --source current --list-cases --suite all
 主要业务场景：
 
 - `/scenarios/marketplace`：合成电商全流程，覆盖浏览、搜索筛选、商品详情、SKU、购物车、结算和订单结果。
+- `/scenarios/social-notes`：合成社区笔记移动端流程，覆盖移动 UA/视口、频道瀑布流、搜索、详情弹层、点赞收藏、关注、评论和安全落地页。
 - `/cases/business-dashboard`：大列表、筛选、批量选择、加载更多和突发请求。
 - `/cases/cloudflare-gate`：托管挑战、clearance cookie、403 和 429 响应模拟。
 
@@ -83,4 +84,11 @@ DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
 ```bash
 DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current --include-online --case ssr_marketplace_flow --fail-on-failures
+```
+
+运行社区笔记移动端流程：
+
+```bash
+DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+  ./tests/run.sh current --include-online --case ssr_social_notes_mobile --fail-on-failures
 ```

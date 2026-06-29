@@ -1,0 +1,49 @@
+---
+import ScenarioLayout from '../../../../layouts/ScenarioLayout.astro';
+import { getSocialNote, makeSocialComments, socialSteps } from '../../../../lib/socialNotes';
+
+export const prerender = false;
+const id = Astro.params.id || 'note-002';
+const note = getSocialNote(id);
+const comments = makeSocialComments(note.id);
+const steps = socialSteps(note.id);
+const coverage = [
+  { label: '详情直达', value: '移动详情页、作者、标签、正文、评论' },
+  { label: '底部操作', value: '点赞、收藏、评论、分享固定操作栏' },
+  { label: '定位', value: '稳定 data-testid 与 note id 数据属性' },
+  { label: '回退', value: '返回移动首页继续瀑布流' },
+];
+---
+<ScenarioLayout title="Social note detail" eyebrow="Mobile detail" summary="社区笔记详情直达页，用于测试移动端深链、详情定位和评论区域。" scenarioId="social-note-detail" steps={steps} coverage={coverage}>
+  <article class="detail-phone" data-testid="social-note-detail-root" data-note-id={note.id}>
+    <a href="/scenarios/social-notes" data-testid="social-detail-back">‹ 返回</a>
+    <div class="detail-cover" style={`--cover:${note.coverColor}`} data-testid="social-detail-cover">{note.coverLabel}</div>
+    <h1 data-testid="social-detail-title">{note.title}</h1>
+    <p class="author" data-testid="social-detail-author">{note.author} · {note.city}</p>
+    <p data-testid="social-detail-excerpt">{note.excerpt}</p>
+    <p class="tags" data-testid="social-detail-tags">{note.tags.join(' ')}</p>
+    <section data-testid="social-detail-comments">
+      <h2>评论</h2>
+      {comments.map((comment) => (
+        <article data-testid="social-detail-comment"><strong>{comment.author}</strong><span>{comment.text}</span><em>❤ {comment.likes}</em></article>
+      ))}
+    </section>
+    <nav class="action-bar" data-testid="social-detail-action-bar">
+      <button type="button">❤ {note.likes}</button>
+      <button type="button">收藏 {note.collects}</button>
+      <button type="button">评论 {note.comments}</button>
+      <button type="button">分享</button>
+    </nav>
+  </article>
+
+  <style>
+    .detail-phone { max-width: 430px; margin: 0 auto; padding: 14px 14px 76px; border: 1px solid #fecdd3; border-radius: 26px; background: #fff; }
+    .detail-phone a { color: #be123c; font-weight: 800; text-decoration: none; }
+    .detail-cover { display: grid; place-items: center; min-height: 360px; margin: 12px 0; border-radius: 22px; color: #fff; font-size: 30px; font-weight: 900; background: linear-gradient(135deg, var(--cover), #111827); }
+    .author, .tags { color: #be123c; }
+    [data-testid="social-detail-comment"] { display: grid; gap: 4px; padding: 10px; border-bottom: 1px solid #ffe4e6; }
+    [data-testid="social-detail-comment"] em { color: #ff2442; font-style: normal; }
+    .action-bar { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 0 0; background: #fff; }
+    .action-bar button { border-radius: 999px; padding: 9px 6px; background: #ff2442; font-size: 12px; }
+  </style>
+</ScenarioLayout>

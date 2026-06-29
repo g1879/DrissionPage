@@ -147,6 +147,7 @@ jobs:
             --include-online \
             --case ssr_site_smoke \
             --case ssr_marketplace_flow \
+            --case ssr_social_notes_mobile \
             --fail-on-failures \
             --report-json "$DP_TESTS_REPORT_DIR/ssr-smoke.json" \
             --report-md "$DP_TESTS_REPORT_DIR/ssr-smoke.md"

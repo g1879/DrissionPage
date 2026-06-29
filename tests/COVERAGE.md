@@ -43,8 +43,9 @@
 | 底层指针事件时序 | 使用有头浏览器或视觉交互专项验证。 |
 | SSR fixture 冒烟 | CI 启动本地 SSR fixture 并计入 coverage；私有远端 fixture 使用 `local` 分组和 `DP_PRIVATE_FIXTURE_URL`。 |
 | SSR Marketplace 全流程 | `feature_ssr_marketplace_flow` 使用合成电商站点覆盖首页、搜索、详情、购物车、结算和订单结果。 |
+| SSR 社区笔记移动端 | `feature_ssr_social_notes_mobile` 使用合成移动 H5 场景覆盖移动 UA/视口、瀑布流、搜索、详情弹层、点赞收藏、关注、评论和安全落地页。 |
 
-SSR fixture 额外覆盖商品筛选/排序/购物车/结算弹窗、Marketplace 浏览到下单完整链路、活动大列表、突发请求、Cloudflare-like 托管挑战、`cf_clearance`、WAF 403 和 429 限流响应。
+SSR fixture 额外覆盖商品筛选/排序/购物车/结算弹窗、Marketplace 浏览到下单完整链路、社区笔记移动端互动、活动大列表、突发请求、Cloudflare-like 托管挑战、`cf_clearance`、WAF 403 和 429 限流响应。
 
 ## 质量策略
 
