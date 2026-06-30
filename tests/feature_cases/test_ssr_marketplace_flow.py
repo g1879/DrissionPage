@@ -1,28 +1,17 @@
 """Optional SSR marketplace full-flow checks."""
 from __future__ import annotations
 
-import os
 import time
-from urllib.parse import urljoin
 
 from DrissionPage import SessionPage
 
 from support import assert_equal, assert_in, assert_nav_result, assert_true, make_browser
+from feature_cases.ssr_test_site import required_url_message, test_site_base_url, test_site_url
 
 
 FEATURE_ID = 'ssr_marketplace_flow'
 FEATURES = ('ssr_marketplace_flow',)
 BROWSER_PHASE = True
-PRIVATE_FIXTURE_URL_ENV = 'DP_PRIVATE_FIXTURE_URL'
-
-
-def site_url(path: str = '') -> str:
-    base = (os.environ.get(PRIVATE_FIXTURE_URL_ENV) or '').strip().rstrip('/')
-    if not base:
-        return ''
-    if not path:
-        return base
-    return urljoin(base + '/', path.lstrip('/'))
 
 
 def wait_text_contains(tab, selector: str, expected: str, *, timeout: float = 10.0, interval: float = 0.1) -> str:
@@ -41,13 +30,13 @@ def run(ctx):
     if not ctx.include_online:
         ctx.skip('SSR marketplace flow requires --include-online')
         return
-    base = site_url()
+    base = test_site_base_url()
     if not base:
-        ctx.skip(f'SSR marketplace flow requires {PRIVATE_FIXTURE_URL_ENV}')
+        ctx.skip(required_url_message('SSR marketplace flow'))
         return
 
     session_page = SessionPage()
-    search = session_page.get(site_url('/api/marketplace/search.json?query=耳机&count=4&delay=1'), timeout=20)
+    search = session_page.get(test_site_url('/api/marketplace/search.json?query=耳机&count=4&delay=1'), timeout=20)
     assert_nav_result(search, status=200, ok=True, label='marketplace search endpoint')
     search_json = search.Response.json()
     assert_true(search_json['ok'] is True, 'marketplace search endpoint should report ok=true')
@@ -63,14 +52,14 @@ def run(ctx):
     with make_browser(ctx.browser_path, page_load_timeout=20) as browser:
         tab = browser.latest_tab
 
-        home = tab.get(site_url('/scenarios/marketplace'))
+        home = tab.get(test_site_url('/scenarios/marketplace'))
         assert_nav_result(home, status=200, ok=True, label='marketplace home navigation')
         assert_true(tab('[data-testid="marketplace-root"]', timeout=10), 'marketplace home should expose root')
         assert_true(tab('[data-testid="marketplace-start-flow"]', timeout=10), 'marketplace home should expose flow entry')
         assert_true(tab.run_js('return document.querySelectorAll("[data-testid=marketplace-home-card]").length >= 12'),
                     'marketplace home should render a product feed')
 
-        listing = tab.get(site_url('/scenarios/marketplace/search?query=耳机'))
+        listing = tab.get(test_site_url('/scenarios/marketplace/search?query=耳机'))
         assert_nav_result(listing, status=200, ok=True, label='marketplace listing navigation')
         assert_true(tab('[data-testid="marketplace-search-root"]', timeout=10), 'marketplace listing should expose root')
         assert_true(tab.run_js('return document.querySelectorAll("[data-testid=marketplace-result-card]").length > 0'),
@@ -108,7 +97,7 @@ def run(ctx):
         assert_true(tab.run_js('return document.querySelectorAll("[data-testid=marketplace-result-card][data-category=digital]").length >= 24'),
                     'marketplace listing should contain digital result cards after filtering')
 
-        detail = tab.get(site_url('/scenarios/marketplace/item/2'))
+        detail = tab.get(test_site_url('/scenarios/marketplace/item/2'))
         assert_nav_result(detail, status=200, ok=True, label='marketplace item navigation')
         assert_equal(tab('[data-testid="marketplace-item-root"]', timeout=10).attr('data-id'), '2',
                      'marketplace item page should expose selected item id')
@@ -132,7 +121,7 @@ def run(ctx):
         assert_in('marketplace_cart_count=2', tab.run_js('return document.cookie'),
                   'marketplace cart cookie should be visible to browser flow')
 
-        cart = tab.get(site_url('/scenarios/marketplace/cart'))
+        cart = tab.get(test_site_url('/scenarios/marketplace/cart'))
         assert_nav_result(cart, status=200, ok=True, label='marketplace cart navigation')
         assert_equal(tab('[data-testid="marketplace-cart-root"]', timeout=10).attr('data-id'), '2',
                      'marketplace cart should restore item id from cookie')
@@ -144,7 +133,7 @@ def run(ctx):
         assert_in('/scenarios/marketplace/checkout?item=2&qty=3', checkout_href,
                   'marketplace cart checkout link should include selected item and quantity')
 
-        checkout = tab.get(site_url(checkout_href))
+        checkout = tab.get(test_site_url(checkout_href))
         assert_nav_result(checkout, status=200, ok=True, label='marketplace checkout navigation')
         assert_equal(tab('[data-testid="marketplace-checkout-root"]', timeout=10).attr('data-quantity'), '3',
                      'marketplace checkout should receive quantity from cart link')
@@ -172,7 +161,7 @@ def run(ctx):
         assert_in(order_id, tab('[data-testid="marketplace-order-result-link"]', timeout=10).attr('href'),
                   'marketplace checkout result link should include created order id')
 
-        result = tab.get(site_url(next_url))
+        result = tab.get(test_site_url(next_url))
         assert_nav_result(result, status=200, ok=True, label='marketplace order result navigation')
         assert_equal(tab('[data-testid="marketplace-order-result"]', timeout=10).attr('data-order'), order_id,
                      'marketplace result page should expose created order id')

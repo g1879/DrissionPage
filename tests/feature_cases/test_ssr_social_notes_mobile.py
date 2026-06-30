@@ -1,33 +1,22 @@
 """Optional SSR social notes mobile-flow checks."""
 from __future__ import annotations
 
-import os
 import time
-from urllib.parse import urljoin
 
 from DrissionPage import SessionPage
 
 from support import assert_equal, assert_in, assert_nav_result, assert_true, make_browser
+from feature_cases.ssr_test_site import required_url_message, test_site_base_url, test_site_url
 
 
 FEATURE_ID = 'ssr_social_notes_mobile'
 FEATURES = ('ssr_social_notes_mobile',)
 BROWSER_PHASE = True
-PRIVATE_FIXTURE_URL_ENV = 'DP_PRIVATE_FIXTURE_URL'
 MOBILE_UA = (
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) '
     'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 '
     'Mobile/15E148 Safari/604.1'
 )
-
-
-def site_url(path: str = '') -> str:
-    base = (os.environ.get(PRIVATE_FIXTURE_URL_ENV) or '').strip().rstrip('/')
-    if not base:
-        return ''
-    if not path:
-        return base
-    return urljoin(base + '/', path.lstrip('/'))
 
 
 def wait_text_contains(tab, selector: str, expected: str, *, timeout: float = 10.0, interval: float = 0.1) -> str:
@@ -60,13 +49,13 @@ def run(ctx):
     if not ctx.include_online:
         ctx.skip('SSR social notes mobile flow requires --include-online')
         return
-    base = site_url()
+    base = test_site_base_url()
     if not base:
-        ctx.skip(f'SSR social notes mobile flow requires {PRIVATE_FIXTURE_URL_ENV}')
+        ctx.skip(required_url_message('SSR social notes mobile flow'))
         return
 
     session_page = SessionPage()
-    feed = session_page.get(site_url('/api/social-notes/feed.json?channel=food&count=5&delay=1'), timeout=20)
+    feed = session_page.get(test_site_url('/api/social-notes/feed.json?channel=food&count=5&delay=1'), timeout=20)
     assert_nav_result(feed, status=200, ok=True, label='social notes feed endpoint')
     feed_json = feed.Response.json()
     assert_true(feed_json['ok'] is True, 'social feed endpoint should report ok=true')
@@ -74,7 +63,7 @@ def run(ctx):
     assert_equal(feed_json['count'], 5, 'social feed endpoint should return requested count')
     assert_equal(len(feed_json['items']), 5, 'social feed items should match count')
 
-    comments = session_page.get(site_url('/api/social-notes/comments.json?noteId=note-002'), timeout=20)
+    comments = session_page.get(test_site_url('/api/social-notes/comments.json?noteId=note-002'), timeout=20)
     assert_nav_result(comments, status=200, ok=True, label='social comments endpoint')
     assert_equal(len(comments.Response.json()['comments']), 4, 'social comments endpoint should return deterministic comments')
 
@@ -90,7 +79,7 @@ def run(ctx):
         tab = browser.latest_tab
         apply_mobile_profile(tab)
 
-        home = tab.get(site_url('/scenarios/social-notes'))
+        home = tab.get(test_site_url('/scenarios/social-notes'))
         assert_nav_result(home, status=200, ok=True, label='social notes mobile navigation')
         mobile_metrics = tab.run_js(
             'return {ua: navigator.userAgent, width: innerWidth, height: innerHeight, '
@@ -207,14 +196,14 @@ def run(ctx):
             tab.listen.stop()
         wait_text_contains(tab, '[data-testid="social-comment-output"]', 'status=posted')
 
-        detail = tab.get(site_url('/scenarios/social-notes/note/note-002'))
+        detail = tab.get(test_site_url('/scenarios/social-notes/note/note-002'))
         assert_nav_result(detail, status=200, ok=True, label='social note detail navigation')
         assert_equal(tab('[data-testid="social-note-detail-root"]', timeout=10).attr('data-note-id'), 'note-002',
                      'social note detail should expose requested note id')
         assert_equal(tab.run_js('return document.querySelectorAll("[data-testid=social-detail-comment]").length'), 4,
                      'social note detail should render deterministic comments')
 
-        security = tab.get(site_url('/scenarios/social-notes/security-check?original=/explore/note-404'))
+        security = tab.get(test_site_url('/scenarios/social-notes/security-check?original=/explore/note-404'))
         assert_nav_result(security, status=200, ok=True, label='social security landing navigation')
         assert_equal(tab('[data-testid="social-security-root"]', timeout=10).attr('data-original-url'), '/explore/note-404',
                      'social security landing should preserve original URL')

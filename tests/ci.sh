@@ -14,7 +14,7 @@ GATE_SUITE="${DP_TESTS_GATE_SUITE:-stable}"
 KNOWN_SUITE="${DP_TESTS_KNOWN_SUITE:-known}"
 RUN_KNOWN="${DP_TESTS_RUN_KNOWN:-1}"
 RUN_LOCAL_SSR="${DP_TESTS_RUN_LOCAL_SSR:-0}"
-LOCAL_SSR_URL="${DP_LOCAL_FIXTURE_URL:-}"
+LOCAL_SSR_URL="${DP_TEST_SITE_URL:-${DP_LOCAL_FIXTURE_URL:-}}"
 COVERAGE_DIR="$REPORT_DIR/coverage"
 COVERAGE_RCFILE="${DP_TESTS_COVERAGE_RCFILE:-$REPO_ROOT/.coveragerc}"
 COVERAGE_BIN="${DP_TESTS_COVERAGE_BIN:-$PYTHON_BIN -m coverage}"
@@ -180,6 +180,7 @@ if [[ -n "$BROWSER_PATH" && -x "$BROWSER_PATH" ]]; then
 
   if [[ "$RUN_LOCAL_SSR" == "1" && -n "$LOCAL_SSR_URL" ]]; then
     (
+      export DP_TEST_SITE_URL="$LOCAL_SSR_URL"
       export DP_PRIVATE_FIXTURE_URL="$LOCAL_SSR_URL"
       run_case_batch "current local SSR fixture scenarios gate" current current-local-ssr \
         --suite local --browser-path "$BROWSER_PATH" --include-online \

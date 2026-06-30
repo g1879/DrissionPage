@@ -118,14 +118,6 @@ test*
 !tests/**
 /tests/**/__pycache__/
 /tests/**/*.py[cod]
-/tests/ssr-site/node_modules/
-/tests/ssr-site/node_modules/**
-/tests/ssr-site/dist/
-/tests/ssr-site/dist/**
-/tests/ssr-site/.astro/
-/tests/ssr-site/.astro/**
-/tests/ssr-site/.vercel/
-/tests/ssr-site/.vercel/**
 .idea
 tmp
 # DrissionPage tests generated reports

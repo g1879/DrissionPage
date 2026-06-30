@@ -113,12 +113,12 @@ KNOWN_ISSUE_CASES: dict[str, str] = {
 
 
 # These are opt-in smoke tests. They require either public internet access or a
-# private fixture URL and should not decide the public CI badge.
+# configured shared/private test-site URL and should not decide the public CI badge.
 LOCAL_ONLY_CASES: dict[str, str] = {
     "feature_optional_online_smoke": "Requires live public websites and is intentionally opt-in.",
-    "feature_ssr_site_smoke": "Requires a local or private SSR fixture URL and is run by a guarded workflow step.",
-    "feature_ssr_marketplace_flow": "Requires a local or private SSR fixture URL and validates the marketplace full-flow scenario.",
-    "feature_ssr_social_notes_mobile": "Requires a local or private SSR fixture URL and validates the social-notes mobile scenario.",
+    "feature_ssr_site_smoke": "Requires a local shared DrissionPage test-site or private fixture URL and is run by a guarded workflow step.",
+    "feature_ssr_marketplace_flow": "Requires a local shared DrissionPage test-site or private fixture URL and validates the marketplace full-flow scenario.",
+    "feature_ssr_social_notes_mobile": "Requires a local shared DrissionPage test-site or private fixture URL and validates the social-notes mobile scenario.",
 }
 
 
@@ -126,6 +126,7 @@ SUITE_CHOICES = ("stable", "known", "local", "all")
 
 
 SENSITIVE_ENV_NAMES = (
+    "DP_TEST_SITE_URL",
     "DP_PRIVATE_FIXTURE_URL",
     "PUBLIC_OPTIONAL_WS_URL",
 )

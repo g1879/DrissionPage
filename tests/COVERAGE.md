@@ -41,7 +41,7 @@
 | 媒体录制与编码支持 | 使用平台相关的浏览器媒体能力验证。 |
 | 真实代理认证 | 使用外部代理基础设施或受控集成环境。 |
 | 底层指针事件时序 | 使用有头浏览器或视觉交互专项验证。 |
-| SSR fixture 冒烟 | CI 启动本地 SSR fixture 并计入 coverage；私有远端 fixture 使用 `local` 分组和 `DP_PRIVATE_FIXTURE_URL`。 |
+| SSR fixture 冒烟 | CI checkout 并启动独立 `DrissionPage-test-site`，计入 coverage；远端共享/私有 fixture 使用 `local` 分组和 `DP_TEST_SITE_URL`（兼容旧的 `DP_PRIVATE_FIXTURE_URL`）。 |
 | SSR Marketplace 全流程 | `feature_ssr_marketplace_flow` 使用合成电商站点覆盖首页、搜索、详情、购物车、结算和订单结果。 |
 | SSR 社区笔记移动端 | `feature_ssr_social_notes_mobile` 使用合成移动 H5 场景覆盖移动 UA/视口、瀑布流、搜索、详情弹层、点赞收藏、关注、评论和安全落地页。 |
 

@@ -1,6 +1,6 @@
 # 测试自动化指南
 
-本文档说明 DrissionPage 测试套件的本地运行、GitHub Actions、私有 fixture 配置和覆盖率上传方式。
+本文档说明 DrissionPage 测试套件的本地运行、GitHub Actions、共享/私有 fixture 配置和覆盖率上传方式。
 
 ## 测试入口
 
@@ -12,7 +12,7 @@
 | `tests/support.py` | 本地 HTTP/WebSocket/SSE fixture 和共享断言。 |
 | `tests/feature_cases/` | 功能级检查。 |
 | `tests/regression_cases/` | 回归和诊断复现用例。 |
-| `tests/ssr-site/` | 可选 Astro SSR fixture。 |
+| `../DrissionPage-test-site/` | 独立共享 Astro SSR test-site（需单独 checkout）。 |
 
 ## 测试分组
 
@@ -20,7 +20,7 @@
 | --- | --- |
 | `stable` | 必须通过的 CI 门禁。 |
 | `known` | 正在评估的问题复现报告。 |
-| `local` | 私有 fixture 或真实网络冒烟检查。 |
+| `local` | 共享/私有 fixture 或真实网络冒烟检查。 |
 | `all` | 手动诊断。 |
 
 ## 本地命令
@@ -73,16 +73,16 @@ workflow 文件：
 2. 安装 Python、Chrome 和 Node。
 3. 在依赖较重的步骤前运行 `tests/check_workflow_quality.py`。
 4. 安装 Python 依赖和 coverage 工具。
-5. 构建 SSR fixture 包。
-6. 启动本地 SSR fixture，并把 `DP_LOCAL_FIXTURE_URL` 传给 `tests/ci.sh`。
+5. Checkout 并构建独立 `DrissionPage-test-site` 包。
+6. 启动共享本地 SSR test-site，并把 `DP_TEST_SITE_URL` 传给 `tests/ci.sh`。
 7. 运行 `tests/ci.sh`，其中本地 SSR 冒烟、Marketplace 全流程和社区笔记移动端流程会计入当前源码 coverage。
 8. 配置 `CODECOV_TOKEN` 时上传覆盖率到 Codecov。
-9. 在非 pull request 事件中，如果配置了 `DP_PRIVATE_FIXTURE_URL`，执行私有 SSR 冒烟、Marketplace 全流程和社区笔记移动端检查。
+9. 在非 pull request 事件中，如果配置了 `DP_PRIVATE_FIXTURE_URL`，执行远端共享/私有 test-site 冒烟、Marketplace 全流程和社区笔记移动端检查。
 10. 上传测试报告和运行时产物。
 
 `stable` 分组失败会导致工作流失败。`known` 分组失败只写入报告，不改变工作流结果。
 
-私有 SSR 冒烟不会在 `pull_request` 事件中运行。每次 workflow 都会写入 `ssr-smoke-eligibility.txt`，用于确认事件类型、secret 是否可用以及本次是否满足运行条件；该文件只包含布尔状态，不包含 URL。
+远端共享/私有 SSR 冒烟不会在 `pull_request` 事件中运行。每次 workflow 都会写入 `ssr-smoke-eligibility.txt`，用于确认事件类型、secret 是否可用以及本次是否满足运行条件；该文件只包含布尔状态，不包含 URL。
 
 ## 仓库密钥
 
@@ -91,18 +91,18 @@ workflow 文件：
 | Secret | 用途 |
 | --- | --- |
 | `CODECOV_TOKEN` | 可选 Codecov 上传 token。 |
-| `DP_PRIVATE_FIXTURE_URL` | 可选私有 SSR fixture 基础 URL。 |
+| `DP_PRIVATE_FIXTURE_URL` | 可选远端共享/私有 SSR test-site 基础 URL；本地/CI 优先使用 `DP_TEST_SITE_URL`。 |
 
-不要提交私有 fixture URL。runner 会在生成报告时遮罩并脱敏 `DP_PRIVATE_FIXTURE_URL`。
+不要提交共享/私有 fixture URL。runner 会在生成报告时遮罩并脱敏 `DP_TEST_SITE_URL`（兼容旧的 `DP_PRIVATE_FIXTURE_URL`）。
 
-## 私有 SSR fixture
+## 共享 SSR test-site
 
-fixture 包位于 `tests/ssr-site/`。
+fixture 包位于独立仓库 `jumodada/DrissionPage-test-site`；本地推荐与 DrissionPage 同级 checkout 为 `../DrissionPage-test-site`。
 
 本地验证：
 
 ```bash
-cd tests/ssr-site
+cd ../DrissionPage-test-site
 npm ci
 npm run build
 npm run dev -- --host 127.0.0.1 --port 4321
@@ -111,7 +111,7 @@ npm run dev -- --host 127.0.0.1 --port 4321
 在仓库根目录另开终端运行 SSR 冒烟：
 
 ```bash
-DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+DP_TEST_SITE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current \
     --include-online \
     --browser-path "$DP_BROWSER_PATH" \
@@ -119,17 +119,17 @@ DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
     --fail-on-failures
 ```
 
-远端冒烟命令：
+远端共享/私有 test-site 冒烟命令：
 
 ```bash
-DP_PRIVATE_FIXTURE_URL="$PRIVATE_FIXTURE_URL" \
+DP_TEST_SITE_URL="$PRIVATE_FIXTURE_URL" \
   ./tests/run.sh current --include-online --case ssr_site_smoke --fail-on-failures
 ```
 
 Marketplace 完整业务流：
 
 ```bash
-DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+DP_TEST_SITE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current \
     --include-online \
     --browser-path "$DP_BROWSER_PATH" \
@@ -140,7 +140,7 @@ DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
 社区笔记移动端流程：
 
 ```bash
-DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+DP_TEST_SITE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current \
     --include-online \
     --browser-path "$DP_BROWSER_PATH" \
@@ -148,7 +148,7 @@ DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
     --fail-on-failures
 ```
 
-如需部署托管版本，使用 `tests/ssr-site` 作为项目根目录，并沿用 package 中定义的安装和构建命令。
+如需部署托管版本，使用 `DrissionPage-test-site` 仓库根目录，并沿用 package 中定义的安装和构建命令。
 
 ## 覆盖率上传
 
@@ -186,7 +186,7 @@ python tests/check_workflow_quality.py
 ```bash
 python tests/check_workflow_quality.py
 python -m compileall -q tests/run.py tests/runner.py tests/support.py tests/feature_cases tests/regression_cases
-cd tests/ssr-site && npm ci && npm run check
+cd ../DrissionPage-test-site && npm ci && npm run check
 cd ../..
 git -c core.whitespace=cr-at-eol diff --check
 ```

@@ -28,7 +28,7 @@ tests/
 ├── feature_manifest.py        # 68 个功能特性 → 用例映射
 ├── feature_cases/             # 34 个功能级用例
 ├── regression_cases/          # 10 个回归/诊断用例
-├── ssr-site/                  # 可选 Astro SSR fixture
+├── ../DrissionPage-test-site/  # 独立共享 Astro SSR test-site（仓库外 checkout）
 ├── COVERAGE.md / KNOWN_ISSUES.md / AUTOMATION_GUIDE.md
 └── README.md
 ```
@@ -50,7 +50,7 @@ tests/
 |------|------|---------|
 | `stable` | 稳定 CI 门禁 | 必须通过 |
 | `known` | 已确认问题复现 | 仅生成报告 |
-| `local` | 私有 fixture/真实网络 | 显式启用 |
+| `local` | 共享/私有 fixture/真实网络 | 显式启用 |
 | `all` | 全量诊断 | 手动使用 |
 
 **关键设计**：
@@ -103,10 +103,10 @@ EXCLUDED = [
 
 ### 5. CI/CD 集成成熟 (8.5/10)
 
-- ✅ **多阶段验证**：无浏览器 → 浏览器 → 私有 fixture 冒烟
+- ✅ **多阶段验证**：无浏览器 → 浏览器 → 共享/私有 fixture 冒烟
 - ✅ **Workflow 质量守卫**：`check_workflow_quality.py` 检查 action 版本、可变 ref、表达式错误
 - ✅ **Codecov 集成**：自动上传代码覆盖率
-- ✅ **私有 SSR fixture 守卫**：`pull_request` 事件不运行，避免泄密
+- ✅ **共享 SSR test-site 守卫**：`pull_request` 事件不运行，避免泄密
 
 ---
 
@@ -378,7 +378,7 @@ def test_memory_stability(ctx):
 | 🎯 **确定性强** | 本地 HTTP/WS/SSE 服务器完整，避免第三方依赖 |
 | 📋 **可追溯性** | 78 个功能特性映射，覆盖矩阵透明 |
 | 🚀 **CI/CD 成熟** | 多阶段验证 + 质量守卫 + 覆盖率上传 |
-| 🔒 **安全性** | 敏感信息脱敏，私有 fixture 守卫 |
+| 🔒 **安全性** | 敏感信息脱敏，共享/私有 fixture 守卫 |
 
 ### 核心问题
 
@@ -425,7 +425,7 @@ def test_memory_stability(ctx):
 
 结论：原评估中“复杂业务场景偏弱”的判断成立。已有 `business-dashboard` 能覆盖大列表、筛选、加载更多和突发请求，但缺少更贴近生产页面的完整链路，例如商品筛选到结算、弹窗状态、懒加载推荐、合成反爬/拦截图、清除令牌 cookie 后再访问受保护资源等。
 
-当前已在 `tests/ssr-site/` 落地确定性复杂 SSR 场景，并扩展 `ssr_site_smoke`：
+当前已在独立 `DrissionPage-test-site` 仓库落地确定性复杂 SSR 场景，并扩展 `ssr_site_smoke`：
 
 | 场景 | 路由 | 覆盖点 |
 | --- | --- | --- |
@@ -452,13 +452,13 @@ def test_memory_stability(ctx):
 验证方式：
 
 ```bash
-cd tests/ssr-site
+cd ../DrissionPage-test-site
 npm ci
 npm run check
 npm run dev -- --host 127.0.0.1 --port 4321
 
 # 仓库根目录另开终端
-DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+DP_TEST_SITE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current \
     --include-online \
     --browser-path "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \

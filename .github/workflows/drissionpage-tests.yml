@@ -40,6 +40,7 @@ jobs:
       DP_TESTS_TIMEOUT: '10'
       DP_TESTS_REQUIRE_BROWSER: '1'
       DP_TESTS_RUN_LOCAL_SSR: '1'
+      DP_TEST_SITE_URL: http://127.0.0.1:4321
       DP_LOCAL_FIXTURE_URL: http://127.0.0.1:4321
       HAS_PRIVATE_FIXTURE: ${{ secrets.DP_PRIVATE_FIXTURE_URL != '' }}
       RUN_PRIVATE_FIXTURE: ${{ github.event_name != 'pull_request' && secrets.DP_PRIVATE_FIXTURE_URL != '' }}
@@ -47,6 +48,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Checkout shared DrissionPage test site
+        uses: actions/checkout@v7
+        with:
+          repository: jumodada/DrissionPage-test-site
+          path: DrissionPage-test-site
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -66,7 +73,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: tests/ssr-site/package-lock.json
+          cache-dependency-path: DrissionPage-test-site/package-lock.json
 
       - name: Audit workflow quality
         run: python tests/check_workflow_quality.py
@@ -78,18 +85,18 @@ jobs:
           python -m pip install coverage[toml]
 
       - name: Build SSR test site
-        working-directory: tests/ssr-site
+        working-directory: DrissionPage-test-site
         run: |
           npm ci
           npm run build
 
       - name: Start local SSR test site
-        working-directory: tests/ssr-site
+        working-directory: DrissionPage-test-site
         run: |
           nohup npm run dev -- --host 127.0.0.1 --port 4321 > "$RUNNER_TEMP/drissionpage-ssr-site.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/drissionpage-ssr-site.pid"
           for _ in $(seq 1 60); do
-            if curl -fsS "$DP_LOCAL_FIXTURE_URL/api/health.json" >/dev/null; then
+            if curl -fsS "$DP_TEST_SITE_URL/api/health.json" >/dev/null; then
               exit 0
             fi
             sleep 1
@@ -128,6 +135,7 @@ jobs:
         if: ${{ env.RUN_PRIVATE_FIXTURE == 'true' }}
         env:
           DP_BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          DP_TEST_SITE_URL: ${{ secrets.DP_PRIVATE_FIXTURE_URL }}
           DP_PRIVATE_FIXTURE_URL: ${{ secrets.DP_PRIVATE_FIXTURE_URL }}
         run: |
           python - <<'PY'

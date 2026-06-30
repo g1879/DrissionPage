@@ -2,7 +2,7 @@
 
 `tests/` 提供 DrissionPage 的自动化验证套件。测试对象包括当前源码，以及按需安装到独立虚拟环境中的最新预发布包。
 
-默认测试使用本地 HTTP、WebSocket、SSE 和本地 SSR fixture。外部网络或私有 fixture 检查均为显式启用项，不作为 pull request 的必要条件。
+默认测试使用本地 HTTP、WebSocket 和 SSE fixture；复杂 SSR 场景由独立的 `DrissionPage-test-site` 仓库提供。外部网络或共享/私有 fixture 检查均为显式启用项，不作为 pull request 的必要条件。
 
 ## 测试分组
 
@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `stable` | 稳定、确定、预期通过的兼容性和回归检查。 | 必须通过。 |
 | `known` | 已确认或仍在评估的问题复现用例。 | 默认只生成报告。 |
-| `local` | 私有 fixture 或真实网络冒烟检查。 | 显式启用。 |
+| `local` | 共享/私有 fixture 或真实网络冒烟检查。 | 显式启用。 |
 | `all` | 全量诊断运行。 | 仅供手动使用。 |
 
 ## 快速开始
@@ -56,7 +56,7 @@ python tests/run.py --source current --list-cases --suite all
 
 ## SSR fixture
 
-`tests/ssr-site/` 是用于浏览器冒烟检查的 Astro SSR fixture，覆盖复杂业务流、动态页面和 Cloudflare-like 拦截页模拟。fixture URL 通过 `DP_PRIVATE_FIXTURE_URL` 提供；测试报告会脱敏该 URL 和 host。
+`DrissionPage-test-site` 是独立 Astro SSR fixture 仓库，可被 DrissionPage 和 DrissionMCP 共用，用于浏览器冒烟检查，覆盖复杂业务流、动态页面和 Cloudflare-like 拦截页模拟。fixture URL 通过 `DP_TEST_SITE_URL` 提供（兼容旧的 `DP_PRIVATE_FIXTURE_URL`）；测试报告会脱敏该 URL 和 host。
 
 主要业务场景：
 
@@ -66,7 +66,7 @@ python tests/run.py --source current --list-cases --suite all
 - `/cases/cloudflare-gate`：托管挑战、clearance cookie、403 和 429 响应模拟。
 
 ```bash 
-cd tests/ssr-site
+cd ../DrissionPage-test-site
 npm ci
 npm run build
 npm run dev -- --host 127.0.0.1 --port 4321
@@ -75,20 +75,20 @@ npm run dev -- --host 127.0.0.1 --port 4321
 在仓库根目录运行：
 
 ```bash
-DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+DP_TEST_SITE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current --include-online --case ssr_site_smoke --fail-on-failures
 ```
 
 运行 Marketplace 完整业务流：
 
 ```bash
-DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+DP_TEST_SITE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current --include-online --case ssr_marketplace_flow --fail-on-failures
 ```
 
 运行社区笔记移动端流程：
 
 ```bash
-DP_PRIVATE_FIXTURE_URL="http://127.0.0.1:4321" \
+DP_TEST_SITE_URL="http://127.0.0.1:4321" \
   ./tests/run.sh current --include-online --case ssr_social_notes_mobile --fail-on-failures
 ```
