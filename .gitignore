@@ -114,5 +114,12 @@ dmypy.json
 # Pyre type checker
 .pyre/
 test*
+!tests/
+!tests/**
+/tests/**/__pycache__/
+/tests/**/*.py[cod]
 .idea
 tmp
+# DrissionPage tests generated reports
+/reports/
+/tests/reports/
