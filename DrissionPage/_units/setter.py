@@ -416,61 +416,6 @@ class ChromiumTabSetter(ChromiumBaseSetter):
                                             ALLOW_VAL="', '".join(types.keys()), CURR_VAL=mode))
         self._owner.browser._dl_mgr.set_file_exists(self._owner.tab_id, mode)
 
-    def activate(self):  # 即将废弃
-        self._owner.browser.activate_tab(self._owner.tab_id)
-
-
-class ChromiumPageSetter(ChromiumTabSetter):
-    def __init__(self, owner):
-        super().__init__(owner)
-        self._session_setter = SessionPageSetter(self._owner)
-        self._chromium_setter = ChromiumPageSetter(self._owner)
-
-    @property
-    def cookies(self):
-        if self._cookies_setter is None:
-            self._cookies_setter = ChromiumTabCookiesSetter(self._owner)
-        return self._cookies_setter
-
-    def headers(self, headers):
-        if self._owner.mode == 's':
-            self._session_setter.headers(headers)
-        else:
-            self._chromium_setter.headers(headers)
-
-    def user_agent(self, ua, platform=None):
-        if self._owner.mode == 's':
-            self._session_setter.user_agent(ua)
-        else:
-            self._chromium_setter.user_agent(ua, platform)
-
-    def NoneElement_value(self, value=None, on_off=True):
-        super().NoneElement_value(value, on_off)
-        self._owner.browser._none_ele_return_value = on_off
-        self._owner.browser._none_ele_value = value
-
-    def retry_times(self, times):
-        super().retry_times(times)
-        self._owner.browser.retry_times = times
-
-    def retry_interval(self, interval):
-        super().retry_interval(interval)
-        self._owner.browser.retry_interval = interval
-
-    def download_path(self, path):
-        if path is None:
-            path = '.'
-        self._owner._download_path = str(Path(path).resolve())
-        self._owner.browser.set.download_path(path)
-        if self._owner._downloader:
-            self._owner._downloader.set.save_path(path)
-
-    def download_file_name(self, name=None, suffix=None):
-        self._owner.browser.set.download_file_name(name, suffix)
-
-    def when_download_file_exists(self, mode):
-        self._owner.browser.set.when_download_file_exists(mode)
-
 
 class ChromiumElementSetter(object):
     def __init__(self, ele):
@@ -522,8 +467,6 @@ class LoadMode(object):
             raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_VAL_, 'value',
                                             ALLOW_VAL="'normal', 'eager', 'none'", CURR_VAL=value))
         self._owner._load_mode = value
-        if self._owner._type == 'ChromiumPage':  # 即将废弃
-            self._owner.browser._load_mode = value
 
     def normal(self):
         self.__call__('normal')

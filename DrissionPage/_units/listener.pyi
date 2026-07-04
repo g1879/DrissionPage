@@ -562,16 +562,6 @@ class WebSocketPacket(object):
         ...
 
     @property
-    def payload(self) -> Union[dict, bytes, str]:
-        """数据包内容"""
-        ...
-
-    @property
-    def connect_info(self) -> Optional[WebSocketConnectInfo]:
-        """连接信息（如有）"""
-        ...
-
-    @property
     def url(self) -> Optional[str]:
         """触发数据包的请求的url"""
         ...
@@ -636,11 +626,6 @@ class SSEPacket(object):
     @property
     def data(self) -> str:
         """数据包数据"""
-        ...
-
-    @property
-    def connect_info(self) -> Optional[DataPacket]:
-        """连接信息（如有）"""
         ...
 
     @property

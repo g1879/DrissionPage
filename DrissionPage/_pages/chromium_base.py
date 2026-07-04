@@ -524,9 +524,6 @@ class ChromiumBase(BasePage, Messenger):
         if ele:
             self._run_cdp('DOM.removeNode', nodeId=ele._node_id, _ignore=ElementLostError)
 
-    def add_ele(self, html_or_info, insert_to=None, before=None):  # 即将废弃
-        return self.new_ele(html_or_info=html_or_info, insert_to=insert_to, before=before)
-
     def new_ele(self, html_or_info, insert_to=None, before=None):
         if isinstance(html_or_info, str):
             insert_to = self.ele(insert_to) if insert_to else self.ele('t:body')

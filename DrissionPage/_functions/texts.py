@@ -172,7 +172,9 @@ class Texts(object):
     BROWSER_CONNECT_ERR_INFO = ('\n1、用户文件夹没有和已打开的浏览器冲突\n'
                                 '2、如为无界面系统，请添加\'--headless=new\'启动参数\n'
                                 '3、如果是Linux系统，尝试添加\'--no-sandbox\'启动参数\n'
+                                '4、用户文件夹数据异常，删除重试\n'
                                 '可使用ChromiumOptions设置端口和用户文件夹路径。')
+    USERDATA = '用户文件夹路径'
     # ALLOW
     LOC_OR_IND = '定位符（str或长度为2的tuple）或序号'
     STR_ONLY = 'str格式且不支持xpath和css形式'
@@ -373,10 +375,12 @@ class English(Texts):
     ELE_STOP_MOVING = 'element stop moving'
     ELE_STATE_CHANGED_ = 'Failed to wait for element state change ({} seconds).'
     RUN_BY_ADMIN = 'Try to run with administrator rights.'
-    BROWSER_CONNECT_ERR_INFO = ('\n1, the user folder does not conflict with the open browser \n'
-                                '2, if no interface system, please add \'--headless=new\' startup parameter \n'
-                                '3, if the system is Linux, try adding \'--no-sandbox\' boot parameter \n'
+    BROWSER_CONNECT_ERR_INFO = ('\n1, The user folder does not conflict with the open browser \n'
+                                '2, If no interface system, please add \'--headless=new\' startup parameter \n'
+                                '3, If the system is Linux, try adding \'--no-sandbox\' boot parameter \n'
+                                '4, User folder data is abnormal. Deleting and retrying \n'
                                 'The port and user folder paths can be set using ChromiumOptions.')
+    USERDATA = 'user_data_path'
     # ALLOW
     LOC_OR_IND = 'A locator (str or tuple of length 2) or serial number.'
     STR_ONLY = 'Str format and not support xpath or css selector.'

@@ -305,10 +305,6 @@ class ChromiumFrame(ChromiumBase):
         return self.frame_ele.css_selector
 
     @property
-    def css_path(self):  # 即将废弃
-        return self.frame_ele.css_selector
-
-    @property
     def tab(self):
         return self._tab
 

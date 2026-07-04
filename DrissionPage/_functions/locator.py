@@ -548,17 +548,11 @@ def css_trans(txt):
 
 def _preprocess(loc):
     """对缩写进行处理，替换回完整写法"""
-    if loc.startswith('.'):
-        if loc.startswith(('.=', '.:', '.^', '.$')):
-            loc = loc.replace('.', '@class', 1)
-        else:
-            loc = loc.replace('.', '@class=', 1)
+    if loc.startswith(('.=', '.:', '.^', '.$')):
+        loc = loc.replace('.', '@class', 1)
 
-    elif loc.startswith('#'):
-        if loc.startswith(('#=', '#:', '#^', '#$')):
-            loc = loc.replace('#', '@id', 1)
-        else:
-            loc = loc.replace('#', '@id=', 1)
+    elif loc.startswith(('#=', '#:', '#^', '#$')):
+        loc = loc.replace('#', '@id', 1)
 
     elif loc.startswith(('t:', 't=')):
         loc = f'tag:{loc[2:]}'

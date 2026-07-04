@@ -128,11 +128,7 @@ class Clicker(object):
 
         when_file_exists = None
         tmp_path = None
-        if self._ele.tab._type.endswith('Page'):  # 即将废弃
-            obj = browser = self._ele.owner._browser
-            tid = 'browser'
-
-        elif new_tab:
+        if new_tab:
             obj = browser = self._ele.owner._browser
             tid = 'browser'
             t_settings = TabDownloadSettings(self._ele.owner.tab_id)

@@ -86,7 +86,7 @@ def connect_browser(opt):
     _run_browser(port, opt._browser_path, args)
 
     if not test_connect(ip, port):
-        raise BrowserConnectError(ADDRESS=address, TIP=_S._lang.BROWSER_CONNECT_ERR_INFO)
+        raise BrowserConnectError(ADDRESS=address, USERDATA=opt.user_data_path , TIP=_S._lang.BROWSER_CONNECT_ERR_INFO)
     return args
 
 

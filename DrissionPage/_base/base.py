@@ -127,10 +127,6 @@ class DrissionElement(BaseElement):
         return self._get_ele_path(xpath=False)
 
     @property
-    def css_path(self):  # 即将废弃
-        return self._get_ele_path(xpath=False)
-
-    @property
     def xpath(self):
         return self._get_ele_path()
 

@@ -339,12 +339,15 @@ class ChromiumOptions(object):
         """
         ...
 
-    def set_browser_path(self, path: Union[str, Path] = None, edge: bool = False) -> ChromiumOptions:
-        """设置浏览器可执行文件路径
+    def set_browser_path(self, path: Union[str, Path]) -> ChromiumOptions:
+        """设置浏览器可执行文件路径，会覆盖use_edge()设置
         :param path: 浏览器路径
-        :param edge: 是否使用edge浏览器，path为None时才生效
         :return: 当前对象
         """
+        ...
+
+    def use_edge(self) -> ChromiumOptions:
+        """设置使用edge浏览器，会覆盖set_browser_path()设置"""
         ...
 
     def set_download_path(self, path: Union[str, Path]) -> ChromiumOptions:

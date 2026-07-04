@@ -327,13 +327,12 @@ class ChromiumOptions(object):
         self._auto_port = False
         return self
 
-    def set_browser_path(self, path=None, edge=False):
-        if path:
-            self._browser_path = str(path)
-        elif edge:
-            self._browser_path = 'msedge'
-        else:
-            self._browser_path = 'chrome'
+    def set_browser_path(self, path):
+        self._browser_path = str(path)
+        return self
+
+    def use_edge(self):
+        self._browser_path = 'msedge'
         return self
 
     def set_download_path(self, path):

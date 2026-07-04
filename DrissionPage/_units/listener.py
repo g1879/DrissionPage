@@ -48,10 +48,7 @@ class BaseListener(object):
             self._res_type_setter = ResTypeSetter(self)
         return self._res_type_setter
 
-    def set_urls(self, urls=True, is_regex=False, targets=None):
-        if urls is None and targets is not None:  # 即将废弃
-            print('target参数即将废弃，请改用urls')
-            urls = targets
+    def set_urls(self, urls=True, is_regex=False):
         if urls is not None:
             if not isinstance(urls, (str, list, tuple, set)) and urls is not True:
                 raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'urls',
@@ -70,9 +67,6 @@ class BaseListener(object):
 
 
 class Listener(BaseListener):
-    _WEBSOCKET_METHOD = 'GET'
-    _WEBSOCKET_RESOURCE_TYPE = 'WebSocket'
-
     def __init__(self, owner):
         super().__init__(owner)
         self._caught = None
@@ -85,11 +79,7 @@ class Listener(BaseListener):
 
         self.tab_id = None
 
-    def start(self, urls=None, is_regex=None, targets=None):
-        if urls is None and targets is not None:  # 即将废弃
-            print('target参数即将废弃，请改用urls')
-            urls = targets
-
+    def start(self, urls=None, is_regex=None):
         if urls is not None and is_regex is None:
             is_regex = False
         if urls or is_regex is not None:
@@ -326,7 +316,7 @@ class Listener(BaseListener):
             self._caught.put(p)
 
     def _webSocketCreated(self, **kwargs):
-        target = in_targets(self, kwargs['url'], self._WEBSOCKET_METHOD, self._WEBSOCKET_RESOURCE_TYPE)
+        target = in_targets(self, kwargs['url'], 'GET', 'WebSocket')
         if target:
             self._ws_info[kwargs['requestId']] = WebSocketConnectInfo(self._owner, target, kwargs['requestId'],
                                                                       kwargs['url'], kwargs.get('initiator'))
@@ -450,15 +440,6 @@ class Listener(BaseListener):
             self._caught.put(packet)
             self._running_targets -= 1
 
-    @property
-    def targets(self):  # 即将废弃
-        print('target即将废弃，请改用urls')
-        return self._urls
-
-    def set_targets(self, targets=True, is_regex=False):  # 即将废弃
-        print('set_target参数即将废弃，请改用set_urls')
-        self.set_urls(urls=targets, is_regex=is_regex)
-
 
 class BrowserListener(BaseListener):
     def __init__(self, owner):
@@ -538,12 +519,11 @@ def in_targets(listener, url, method, res_type):
                 and (listener._res_type is True or res_type in listener._res_type)):
             return True, method, res_type
     else:
-        for target in listener._urls:
-            if (((listener._is_regex and search(target, url))
-                 or (not listener._is_regex and target in url))
+        for u in listener._urls:
+            if (((listener._is_regex and search(u, url)) or (not listener._is_regex and u in url))
                     and (listener._method is True or method in listener._method)
                     and (listener._res_type is True or res_type in listener._res_type)):
-                return target, method, res_type
+                return u, method, res_type
     return False
 
 
@@ -831,14 +811,6 @@ class WebSocketPacket(object):
         return self._payload
 
     @property
-    def payload(self):
-        return self.data
-
-    @property
-    def connect_info(self):
-        return self._connect_info
-
-    @property
     def url(self):
         return self._connect_info.url if self._connect_info else None
 
@@ -893,10 +865,6 @@ class SSEPacket(object):
     @property
     def data(self):
         return self._raw_data['data']
-
-    @property
-    def connect_info(self):
-        return self._connect_info
 
     @property
     def url(self):

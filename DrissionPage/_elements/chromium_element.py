@@ -33,7 +33,7 @@ from .._units.waiter import ElementWaiter
 from ..errors import (ContextLostError, ElementLostError, JavaScriptError, CDPError, NoResourceError,
                       AlertExistsError, NoRectError, LocatorError)
 
-__FRAME_ELEMENT__ = ('iframe', 'frame')
+__FRAME_ELEMENT__ = ('iframe', 'frame', 'object')
 
 
 class ChromiumElement(DrissionElement):

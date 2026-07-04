@@ -13,7 +13,6 @@ from .._browsers.chromium_context import ChromiumContext
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
-from .._pages.chromium_page import ChromiumPage
 from .._pages.chromium_tab import ChromiumTab
 
 
@@ -301,74 +300,6 @@ class ChromiumTabWaiter(BaseWaiter):
                      exclude: bool = False,
                      timeout: float = None,
                      raise_err: bool = None) -> Union[False, ChromiumTab]:
-        """等待title变成包含或不包含指定文本
-        :param text: 用于识别的文本
-        :param exclude: 是否排除，为True时当title不包含text指定文本时返回True
-        :param timeout: 超时时间（秒），为None使用页面设置
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等待成功返回页面对象，否则返回False
-        """
-        ...
-
-
-class ChromiumPageWaiter(ChromiumTabWaiter):
-    _owner: ChromiumPage = ...
-
-    def __init__(self, owner: ChromiumPage):
-        """
-        :param owner: Page对象
-        """
-        ...
-
-    def __call__(self,
-                 second: float,
-                 scope: float = None) -> ChromiumPage:
-        """等待若干秒，如传入两个参数，等待时间为这两个数间的一个随机数
-        :param second: 秒数
-        :param scope: 随机数范围
-        :return: ChromiumPage对象
-        """
-        ...
-
-    def new_tab(self,
-                timeout: float = None,
-                raise_err: bool = None) -> Union[str, bool]:
-        """等待新标签页出现
-        :param timeout: 超时时间（秒），为None则使用页面对象timeout属性
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等到新标签页返回其id，否则返回False
-        """
-        ...
-
-    def all_downloads_done(self,
-                           timeout: float = None,
-                           cancel_if_timeout: bool = True) -> bool:
-        """等待所有浏览器下载任务结束
-        :param timeout: 超时时间（秒），为None时无限等待
-        :param cancel_if_timeout: 超时时是否取消剩余任务
-        :return: 是否等待成功
-        """
-        ...
-
-    def url_change(self,
-                   text: str,
-                   exclude: bool = False,
-                   timeout: float = None,
-                   raise_err: bool = None) -> Union[False, ChromiumPage]:
-        """等待url变成包含或不包含指定文本
-        :param text: 用于识别的文本
-        :param exclude: 是否排除，为True时当url不包含text指定文本时返回True
-        :param timeout: 超时时间（秒）
-        :param raise_err: 等待失败时是否报错，为None时根据Settings设置
-        :return: 等待成功返回页面对象，否则返回False
-        """
-        ...
-
-    def title_change(self,
-                     text: str,
-                     exclude: bool = False,
-                     timeout: float = None,
-                     raise_err: bool = None) -> Union[False, ChromiumPage]:
         """等待title变成包含或不包含指定文本
         :param text: 用于识别的文本
         :param exclude: 是否排除，为True时当title不包含text指定文本时返回True

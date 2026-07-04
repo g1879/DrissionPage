@@ -31,7 +31,6 @@ class DownloadManager(object):
         self._flags = {}  # {tab_id: [bool, DownloadMission]}
         self._waiting_tab = set()  # click.to_download()专用
         self._tmp_path = '.'
-        self._page_id = None
 
         self._running = False
 
@@ -117,7 +116,7 @@ class DownloadManager(object):
         guid = kwargs['guid']
         context_id = self._browser._tabs.get_context_id(frame_id=kwargs['frameId'])
         tab_id = self._browser._tabs.frame_ids.get(kwargs['frameId'], 'browser')
-        tab = 'browser' if tab_id in ('browser', self._page_id) or self.get_flag('browser') is not None else tab_id
+        tab = 'browser' if tab_id == 'browser' or self.get_flag('browser') is not None else tab_id
         opener = self._browser._tabs.openers.get(tab_id)
         from_tab = None
         if opener and opener in self._waiting_tab:

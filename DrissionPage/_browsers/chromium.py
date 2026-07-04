@@ -206,7 +206,7 @@ class Chromium(Messenger):
     def _tab_ids(self, context_id):
         tabs = [i['targetId'] for i in self._run_cdp('Target.getTargets')['targetInfos']
                 if i['browserContextId'] == context_id and i['type'] in ('page', 'webview')
-                and not i['url'].startswith(('devtools://', 'chrome://newtab-footer'))]
+                and not i['url'].startswith(('chrome-extension://', 'devtools://', 'chrome://newtab-footer'))]
         return tabs if self._ws_only else [i['id'] for i in self._driver.get(f'http://{self.address}/json').json()
                                            if i['id'] in tabs]
 
@@ -467,7 +467,8 @@ class Chromium(Messenger):
         return [tab[_id] for tab in tabs] if as_id else [ChromiumTab(self, tab[_id], context_id) for tab in tabs]
 
     def _onTargetCreated(self, **kwargs):
-        if kwargs['targetInfo']['type'] == 'page' and not kwargs['targetInfo']['url'].startswith('devtools://'):
+        if kwargs['targetInfo']['type'] == 'page' and not kwargs['targetInfo']['url'].startswith(('chrome-extension://',
+                                                                                                  'devtools://')):
             tab_id = kwargs['targetInfo']['targetId']
             self._tabs.add_frame(tab_id, tab_id)
             sid = self._attach(tab_id)

@@ -20,7 +20,6 @@ from .._browsers.chromium_context import ChromiumContext
 from .._elements.chromium_element import ChromiumElement
 from .._pages.chromium_base import ChromiumBase
 from .._pages.chromium_frame import ChromiumFrame
-from .._pages.chromium_page import ChromiumPage
 from .._pages.chromium_tab import ChromiumTab
 from .._pages.session_page import SessionPage
 
@@ -442,23 +441,6 @@ class ChromiumTabSetter(ChromiumBaseSetter):
         :param mode: 可在 'rename', 'overwrite', 'skip', 'r', 'o', 's'中选择
         :return: None
         """
-        ...
-
-
-class ChromiumPageSetter(ChromiumTabSetter):
-    _owner: ChromiumPage = ...
-    _session_setter: SessionPageSetter = ...
-    _chromium_setter: ChromiumPageSetter = ...
-
-    def __init__(self, owner: ChromiumPage):
-        """
-        :param owner: ChromiumPage对象
-        """
-        ...
-
-    @property
-    def cookies(self) -> ChromiumTabCookiesSetter:
-        """返回用于设置cookies的对象"""
         ...
 
 
