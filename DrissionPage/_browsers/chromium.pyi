@@ -221,8 +221,9 @@ class Chromium(Messenger):
                 url: str = None,
                 tab_type: Union[str, list, tuple, None] = 'page',
                 as_id: bool = False) -> Union[ChromiumTab, str]:
-        """在默认浏览器子环境获取一个标签页对象，id_or_num不为None时，后面几个参数无效
-        :param id_or_num: 要获取的标签页id或序号，序号从1开始，可传入负数获取倒数第几个，不是视觉排列顺序，而是激活顺序
+        """在默认浏览器子环境获取一个标签页对象，title和url是与关系
+        :param id_or_num: 要获取的标签页id或序号，传入str时代表id，后续参数无效；
+                          传入int时代表后面3个参数匹配结果序号，从1开始，可传入负数获取倒数第几个，不是视觉排列顺序，而是激活顺序
         :param title: 要匹配title的文本，模糊匹配，为None则匹配所有
         :param url: 要匹配url的文本，模糊匹配，为None则匹配所有
         :param tab_type: tab类型，可用列表输入多个，如 'page', 'iframe' 等，为None则匹配所有
@@ -310,6 +311,20 @@ class Chromium(Messenger):
         :param target_id: 指定target的id
         :param obj: 要绑定的Messenger对象
         :return: session id
+        """
+        ...
+
+    def _get_tab_ids(self,
+                     context_id: str,
+                     tab_type: Union[None, str, tuple],
+                     title: Optional[str],
+                     url: Optional[str]) -> List[str]:
+        """获取符合要求的标签页id组成的list
+        :param context_id: context id
+        :param tab_type: 标签页类型，可用列表传入多个
+        :param title: title要包含的字符串，None为任意title
+        :param url: url要包含的字符串，None为任意url
+        :return: 符合要求的标签页id组成的list
         """
         ...
 

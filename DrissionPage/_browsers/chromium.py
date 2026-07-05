@@ -250,7 +250,7 @@ class Chromium(Messenger):
                              context_id=self._browser_id)
 
     def _new_tab(self, url=None, new_window=False, background=False, hidden=False, context_id=None, is_browser=True):
-        kwargs = {'url': ''}
+        kwargs = {'url': 'about:blank'}
         if hidden:
             kwargs['hidden'] = True
         else:
@@ -285,8 +285,8 @@ class Chromium(Messenger):
         return self._get_tab(self._browser_id, id_or_num=id_or_num, title=title,
                              url=url, tab_type=tab_type, as_id=as_id)
 
-    def get_tabs(self, title=None, url=None, tab_type='page'):
-        return self._get_tabs(self._browser_id, title=title, url=url, tab_type=tab_type, as_id=False)
+    def get_tabs(self, title=None, url=None, tab_type='page', as_id=False):
+        return self._get_tabs(self._browser_id, title=title, url=url, tab_type=tab_type, as_id=as_id)
 
     def close_tabs(self, tabs_or_ids, others=False):
         if isinstance(tabs_or_ids, str):
@@ -410,61 +410,42 @@ class Chromium(Messenger):
             self._driver.add_session_owner(sid, obj)
         return sid
 
-    def _get_tab(self, context_id, id_or_num=None, title=None, url=None, tab_type='page', as_id=False):
-        tab_ids = [t for t in self._run_cdp('Target.getTargets')['targetInfos'] if t['browserContextId'] == context_id]
+    def _get_tab_ids(self, context_id, tab_type, title, url):
+        if isinstance(tab_type, str):
+            tab_type = (tab_type,)
+        tab_ids = [t['targetId'] for t in self._run_cdp('Target.getTargets')['targetInfos']
+                   if t['browserContextId'] == context_id and (tab_type is None or t['type'] in tab_type)
+                   and (title is None or title in t['title']) and (url is None or url in t['url'])]
         if not self._ws_only:
-            tab_ids = [t for t in self._driver.get(f'http://{self.address}/json').json()
-                       if t['id'] in [i['targetId'] for i in tab_ids]]
-        if not tab_ids:
-            raise RuntimeError(_S._lang.joinn(_S._lang.NO_TAB))
+            tab_ids = [t['id'] for t in self._driver.get(f'http://{self.address}/json').json() if t['id'] in tab_ids]
+        return tab_ids
 
-        if id_or_num is not None:
-            if isinstance(id_or_num, int):
-                id_or_num = tab_ids[id_or_num - 1 if id_or_num > 0 else id_or_num]
-            elif isinstance(id_or_num, ChromiumTab):
-                return id_or_num.tab_id if as_id else ChromiumTab(self, id_or_num.tab_id, context_id)
-            else:
-                j = self._run_cdp('Target.getTargets')['targetInfos']
-                if id_or_num not in [i['targetId'] for i in j if i['browserContextId'] == context_id]:
-                    raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=tab_ids))
+    def _get_tab(self, context_id, id_or_num=None, title=None, url=None, tab_type='page', as_id=False):
+        if isinstance(id_or_num, str):
+            if id_or_num not in self._get_tab_ids(context_id, None, None, None):
+                raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB, ARG=id_or_num, ALL_TABS=id_or_num))
 
-        elif title == url is None and tab_type == 'page':
-            id_or_num = tab_ids[0]['id']
+        elif isinstance(id_or_num, ChromiumTab):
+            return id_or_num.tab_id if as_id else ChromiumTab(self, id_or_num.tab_id, context_id)
 
         else:
-            tabs = self._get_tabs(context_id, title=title, url=url, tab_type=tab_type, as_id=True)
-            if tabs:
-                id_or_num = tabs[0]
-            else:
+            tab_ids = self._get_tab_ids(context_id, tab_type=tab_type, title=title, url=url)
+            if not tab_ids:
                 raise RuntimeError(_S._lang.joinn(_S._lang.NO_SUCH_TAB,
                                                   ARGS={'id_or_num': id_or_num, 'title': title, 'url': url,
                                                         'tab_type': tab_type}))
 
+            if id_or_num is None:
+                id_or_num = tab_ids[0]
+
+            elif isinstance(id_or_num, int):
+                id_or_num = tab_ids[id_or_num - 1 if id_or_num > 0 else id_or_num]
+
         return id_or_num if as_id else ChromiumTab(self, id_or_num, context_id)
 
     def _get_tabs(self, context_id, title=None, url=None, tab_type='page', as_id=False):
-        tabs = [t for t in self._run_cdp('Target.getTargets')['targetInfos'] if t['browserContextId'] == context_id]
-        if self._ws_only:
-            _id = 'targetId'
-        else:
-            tabs = [t for t in self._driver.get(f'http://{self.address}/json').json()
-                    if t['id'] in [i['targetId'] for i in tabs]]
-            _id = 'id'
-        if not tabs:
-            raise RuntimeError(_S._lang.joinn(_S._lang.NO_TAB))
-
-        if isinstance(tab_type, str):
-            tab_type = {tab_type}
-        elif isinstance(tab_type, (list, tuple, set)):
-            tab_type = set(tab_type)
-        elif tab_type is not None:
-            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'tab_type',
-                                            ALLOW_TYPE='set, list, tuple, str, None', CURR_VAL=tab_type))
-
-        tabs = [i for i in tabs if ((title is None or title in i['title']) and (url is None or url in i['url'])
-                                    and (tab_type is None or i['type'] in tab_type))]
-
-        return [tab[_id] for tab in tabs] if as_id else [ChromiumTab(self, tab[_id], context_id) for tab in tabs]
+        tab_ids = self._get_tab_ids(context_id, tab_type=tab_type, title=title, url=url)
+        return tab_ids if as_id else [ChromiumTab(self, _id, context_id) for _id in tab_ids]
 
     def _onTargetCreated(self, **kwargs):
         if kwargs['targetInfo']['type'] == 'page' and not kwargs['targetInfo']['url'].startswith(('chrome-extension://',
