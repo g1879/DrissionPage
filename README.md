@@ -1,3 +1,126 @@
+# DrissionPage
+
+> 当前测试线：**5.0.0b0**。本版本删除 `ChromiumPage`，升级前请阅读下方兼容性告知。
+
+- 官方网站：[https://DrissionPage.cn](https://drissionpage.cn)
+- 项目地址：[GitHub](https://github.com/g1879/DrissionPage) | [Gitee](https://gitee.com/g1879/DrissionPage) | [GitCode](https://gitcode.com/g1879/DrissionPage)
+- 英文文档：[README_EN.md](./README_EN.md)
+- 更新日志：[CHANGELOG.md](./CHANGELOG.md)
+
+## 快速目录
+
+### 升级与版本
+
+- [5.0.0b0 兼容性告知](#500b0-兼容性告知)
+- [5.0.0b0 迭代内容](#500b0-迭代内容)
+- [迁移速览](#迁移速览)
+- [历史功能说明](#历史功能说明)
+- [完整更新日志](./CHANGELOG.md)
+- [English README](./README_EN.md)
+
+### 项目说明
+
+- [概述](#概述)
+- [运行环境](#运行环境)
+- [如何使用](#如何使用)
+- [理念](#理念)
+- [特性和亮点](#特性和亮点)
+- [使用条款](#使用条款)
+
+---
+
+## 5.0.0b0 兼容性告知
+
+由于测试版升级功能较多，并且底层实现进行了较大规模重构，项目不再继续发布 4.2 正式版，直接进入 5.0 测试线。
+
+5.0.0b0 是兼容性断点版本。随着新功能增加，旧 `ChromiumPage` 抽象与新版浏览器、标签页、上下文和监听模型的冲突越来越多，因此本版本彻底删除 `ChromiumPage`。升级前请检查项目中与浏览器入口、标签页管理、定位符、Edge 启动方式相关的代码。
+
+详细变更见：[CHANGELOG.md](./CHANGELOG.md)。
+
+<a id="历史功能说明"></a>
+
+## 历史功能说明
+
+- [4.2 功能说明](http://drissionpage.cn/features/4.2)
+- [4.1 功能说明](http://drissionpage.cn/features/4.1)
+- [4.0 功能说明](http://drissionpage.cn/features/4)
+- [3.x 功能说明](http://drissionpage.cn/features/3)
+
+## 5.0.0b0 迭代内容
+
+相比 4.2.0b20，5.0.0b0 的主要变化如下：
+
+### 破坏性变更
+
+- 彻底删除 `ChromiumPage`。
+- 定位符仅以 `.` 或 `#` 开头时按 CSS 匹配；后接 `=`、`:`、`^`、`$` 时才按 DrissionPage 定位符逻辑处理。
+- `ChromiumOptions.set_browser_path()` 删除 `edge` 参数。
+
+### 新增与恢复
+
+- 适配 `<object>` 元素。
+- `get_tabs()` 补回 `as_id` 参数。
+- `ChromiumOptions` 增加 `use_edge()` 方法。
+
+### 行为调整
+
+- `tab_ids` 属性忽略插件标签页。
+- `get_tab()` 的 `id_or_num` 参数为数字时，后面的 `title`、`url`、`tab_type` 三个条件参数现在会生效。
+
+### 修复
+
+- 修复监听 WebSocket 时某些情况下获取不到数据包的问题。
+- 修复控制手机 Edge 创建 tab 时卡住的问题。
+
+## 迁移速览
+
+### 从 `ChromiumPage` 迁移到 `Chromium`
+
+旧写法：
+
+```python
+from DrissionPage import ChromiumPage
+
+page = ChromiumPage()
+page.get('https://example.com')
+```
+
+新写法：
+
+```python
+from DrissionPage import Chromium
+
+browser = Chromium()
+tab = browser.latest_tab
+tab.get('https://example.com')
+```
+
+### Edge 启动方式
+
+旧写法：
+
+```python
+from DrissionPage import ChromiumOptions
+
+co = ChromiumOptions().set_browser_path(edge=True)
+```
+
+新写法：
+
+```python
+from DrissionPage import ChromiumOptions
+
+co = ChromiumOptions().use_edge()
+```
+
+### 定位符检查
+
+如果旧代码依赖 `.name` 或 `#id` 的 DrissionPage 定位符解析，请重新确认语义。5.0.0b0 中，单独以 `.` 或 `#` 开头的定位符会按 CSS 选择器处理。
+
+---
+
+<a id="概述"></a>
+
 # ✨️ 概述
 
 DrissionPage 是一个基于 Python 的网页自动化工具。
@@ -6,7 +129,7 @@ DrissionPage 是一个基于 Python 的网页自动化工具。
 
 官方网站：[https://DrissionPage.cn](https://drissionpage.cn)
 
-项目地址：[gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage)     |    [gitcode](https://gitcode.com/g1879/DrissionPage) 
+项目地址：[gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage)     |    [gitcode](https://gitcode.com/g1879/DrissionPage)
 
 您的星星是对我最大的支持💖
 
@@ -16,8 +139,8 @@ DrissionPage 是一个基于 Python 的网页自动化工具。
 
 ![](https://drissionpage.cn/img/yrx2.png)
 
-与猿人学平哥建立的 DrissionPage AI 逆向微信交流群。  
-扫码并备注 “dp” 即可申请加入。  
+与猿人学平哥建立的 DrissionPage AI 逆向微信交流群。
+扫码并备注 “dp” 即可申请加入。
 交流 AI 逆向，dp 使用方法、实践案例，以及后续功能更新，欢迎加入。
 
 ---
@@ -27,7 +150,9 @@ DrissionPage 是一个基于 Python 的网页自动化工具。
 <a href="https://www.ipwo.net/?ref=giteeg1879" target="_blank"><img src="https://drissionpage.cn/img/ad.png"/></a>
 <a href="https://www.ipwo.net/?ref=giteeg1879" target="_blank">学习者务必遵循法律！IPWO提供的真实住宅 IP，大幅降低被封禁风险。195 + 国家 / 地区精准定位，轻松应对大型爬虫任务。让爬虫更简单，让数据更安全。戳本信息注册可获得有效保护账号的高匿名ip流量。专属折扣码“<span style="color:red">dpdp</span>”。点击访问IPWO官网</a>
 
---- 
+---
+
+<a id="运行环境"></a>
 
 # 🛠 运行环境
 
@@ -39,9 +164,11 @@ python 版本：3.6 及以上
 
 ---
 
+<a id="如何使用"></a>
+
 # 🛠 如何使用
 
-点击查看：[教程]([https://drissionpage.cn/codes.png](https://drissionpage.cn/tutorials/xingqiu)
+点击查看：[教程](https://drissionpage.cn/tutorials/xingqiu)
 
 ---
 
@@ -64,11 +191,15 @@ python 版本：3.6 及以上
 
 ---
 
+<a id="理念"></a>
+
 # 💡 理念
 
 简洁而强大！
 
---- 
+---
+
+<a id="特性和亮点"></a>
 
 # ☀️ 特性和亮点
 
@@ -103,7 +234,7 @@ python 版本：3.6 及以上
 - 高度集成的便利功能，从每个细节中体现
 - 还有很多细节，这里不一一列举，欢迎实际使用中体验：D
 
---- 
+---
 
 # ☕ 请我喝咖啡
 
@@ -113,7 +244,9 @@ python 版本：3.6 及以上
 
 ![](https://drissionpage.cn/img/code.jpg)
 
----  
+---
+
+<a id="使用条款"></a>
 
 # 📝 使用条款
 
