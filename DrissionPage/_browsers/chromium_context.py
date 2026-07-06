@@ -49,8 +49,8 @@ class ChromiumContext(object):
         return self.browser._get_tab(self._context_id, id_or_num=id_or_num, title=title,
                                      url=url, tab_type=tab_type, as_id=as_id)
 
-    def get_tabs(self, title=None, url=None, tab_type='page'):
-        return self._browser._get_tabs(self._context_id, title=title, url=url, tab_type=tab_type, as_id=False)
+    def get_tabs(self, title=None, url=None, tab_type='page', as_id=False):
+        return self._browser._get_tabs(self._context_id, title=title, url=url, tab_type=tab_type, as_id=as_id)
 
     def close(self):
         if not self._default_context:
