@@ -83,8 +83,9 @@ def _get_arg(text) -> list:
 
 
 def is_str_loc(text):
-    return text.startswith(('.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:', 'text=',
-                            'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:', 'c='))
+    return text.startswith(('/', '.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$',
+                            'text:', 'text=', 'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:',
+                            'css=', 'c:', 'c='))
 
 
 def is_selenium_loc(loc):
@@ -146,10 +147,17 @@ def str_to_ax_loc(loc):
 
 def str_to_xpath_loc(loc):
     loc_by = 'xpath'
+    if loc.startswith(('/', './', '../')):
+        return loc_by, loc
     loc = _preprocess(loc)
 
+    # 纯 . / # 开头按 css selector 查找，.=/.:/.^/.$ 和 #=/#:/#^/#$ 已在 _preprocess() 中转为 DP 属性语法
+    if loc.startswith(('.', '#')):
+        loc_by = 'css selector'
+        loc_str = loc
+
     # 多属性查找
-    if loc.startswith(('@@', '@|', '@!')) and loc not in ('@@', '@|', '@!'):
+    elif loc.startswith(('@@', '@|', '@!')) and loc not in ('@@', '@|', '@!'):
         loc_str = _make_multi_xpath_str('*', loc)[1]
 
     # 单属性查找

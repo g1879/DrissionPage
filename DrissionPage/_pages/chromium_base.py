@@ -470,8 +470,11 @@ class ChromiumBase(BasePage, Messenger):
             bid = self._run_cdp('Accessibility.getRootAXNode', frameId=self._frame_id)['node']['backendDOMNodeId']
             return find_by_ax(self, bid, loc, index, timeout)
 
-        else:
+        elif mode == 'any':
             return find_by_any(self, loc, index, timeout)
+
+        else:
+            return find_by_syntax(self, loc, index, timeout)
 
     def refresh(self, ignore_cache=False):
         self._is_loading = True
@@ -914,41 +917,66 @@ class Alert(object):
         self.auto = auto
 
 
+def find_by_syntax(page, loc, index, timeout):
+    return wait_for_ele(do_find_syntax, target=page, timeout=timeout, index=index, page=page, loc=loc, ind=index)
+
+
 def do_find_syntax(page, loc, ind):
     r = page._run_cdp('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True, _ignore=True)
     searchId = r.get('searchId')
-    resultCount = r.get('resultCount')
-    if not resultCount or (ind and resultCount < abs(ind)):
-        page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
+    if not searchId:
         return None
+    resultCount = r.get('resultCount') or 0
 
-    r = page._run_cdp('DOM.getSearchResults', searchId=searchId, _ignore=True,
-                      fromIndex=0, toIndex=resultCount).get('nodeIds')
-    if not r or not r[0]:
-        return None
+    def get_node_ids(from_index, to_index):
+        ids = page._run_cdp('DOM.getSearchResults', searchId=searchId, _ignore=True,
+                            fromIndex=from_index, toIndex=to_index).get('nodeIds')
+        return [i for i in ids or () if i]
 
-    if ind is None:
-        r = make_chromium_eles(page, _ids=r, index=None, id_type='node_id', ele_only=True)
+    def get_ele(node_id):
+        ele = make_chromium_eles(page, _ids=node_id, id_type='node_id', ele_only=True)
+        return None if ele is False else ele
 
-    else:
-        eles = []
-        got = 0
-        for i in r:
-            n = page._run_cdp('DOM.describeNode', _ignore=True, nodeId=i).get('node')
-            if not n:
-                page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
-                return None
-            if n['nodeName'] not in ('#text', '#comment'):
-                eles.append(i)
-                got += 1
-                if (0 < ind == got) or (not ind and got == 1):
-                    break
-        if not got:
+    try:
+        if not resultCount:
             return None
-        r = make_chromium_eles(page, _ids=eles, index=ind, id_type='node_id')
 
-    page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
-    return None if r is False else r
+        if ind is None:
+            r = make_chromium_eles(page, _ids=get_node_ids(0, resultCount), index=None,
+                                   id_type='node_id', ele_only=True)
+            return None if r is False or not r else r
+
+        if ind < 0:
+            to_index = resultCount
+            left = -ind
+            while to_index > 0:
+                from_index = max(to_index - 50, 0)
+                for node_id in reversed(get_node_ids(from_index, to_index)):
+                    ele = get_ele(node_id)
+                    if ele is None:
+                        continue
+                    left -= 1
+                    if left == 0:
+                        return ele
+                to_index = from_index
+            return None
+
+        from_index = 0
+        left = ind or 1
+        while from_index < resultCount:
+            to_index = min(from_index + 50, resultCount)
+            for node_id in get_node_ids(from_index, to_index):
+                ele = get_ele(node_id)
+                if ele is None:
+                    continue
+                left -= 1
+                if left == 0:
+                    return ele
+            from_index = to_index
+        return None
+
+    finally:
+        page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
 
 
 def find_by_any(page, loc, index, timeout):
