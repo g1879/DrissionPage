@@ -591,7 +591,7 @@ class ChromiumBase(BasePage, Messenger):
         return NoneElement(self, 'get_frame()', args={'loc_ind_ele': loc_ind_ele, 'timeout': timeout})
 
     def get_frames(self, locator=None, timeout=None):
-        locator = locator or 'xpath://*[name()="iframe" or name()="frame"]'
+        locator = locator or 'xpath://*[name()="iframe" or name()="frame" or name()="object"]'
         return ChromiumElementsList(self, self._ele(locator, timeout=timeout, index=None, raise_err=False))
 
     def session_storage(self, item=None):
