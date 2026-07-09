@@ -38,7 +38,7 @@ class Chromium(Messenger):
     def __new__(cls, addr_or_opts=None, session_options=None):
         with cls._lock:
             opt = handle_options(addr_or_opts)
-            is_headless, browser_id, command_lines, ws_only, driver, incognito, guest = run_browser(opt)
+            is_headless, browser_id, command_line, ws_only, driver, incognito, guest, exists = run_browser(opt)
             if browser_id in cls._BROWSERS:
                 return cls._BROWSERS[browser_id]
             o = object.__new__(cls)
@@ -49,7 +49,8 @@ class Chromium(Messenger):
             o._guest = guest
             o._ws_only = ws_only
             o._browser_id = browser_id
-            o._is_exists, o._command_lines = (False, command_lines) if command_lines else (True, '')
+            o._is_exists = exists
+            o._command_line = command_line
             cls._BROWSERS[browser_id] = o
             return o
 
@@ -83,7 +84,7 @@ class Chromium(Messenger):
         self._tabs = Tabs()
         self._driver.owner = self
 
-        if (not self._ws_only
+        if (not self._chromium_options.ws_address and not self._ws_only
                 and (not self._chromium_options._ua_set and self._is_headless != self._chromium_options.is_headless)
                 or (self._is_exists and self._chromium_options._new_env)):
             self.quit(3, True)
@@ -120,9 +121,6 @@ class Chromium(Messenger):
 
         self._run_cdp('Target.setDiscoverTargets', discover=True)
         self._dl_mgr = DownloadManager(self)
-        # if not self._command_lines:
-        #     self._command_lines = get_command_line(self)
-        # self._can_access_form = '--disable-site-isolation-trials' in self._command_lines
         self._session_options = session_options
         if self._chromium_options.proxy:
             self._tabs.set_proxy('main', (self._chromium_options.proxy_url, self._chromium_options.proxy_usr,
@@ -202,6 +200,12 @@ class Chromium(Messenger):
             return self._get_tab(self._browser_id, id_or_num=ids[0], as_id=not _S.singleton_tab_obj)
         t = self.new_tab()
         return t if _S.singleton_tab_obj else t.tab_id
+
+    @property
+    def command_line(self):
+        if self._command_line is None:
+            self._command_line = get_command_line(self)
+        return self._command_line
 
     def _tab_ids(self, context_id):
         tabs = [i['targetId'] for i in self._run_cdp('Target.getTargets')['targetInfos']
@@ -414,7 +418,7 @@ class Chromium(Messenger):
         if isinstance(tab_type, str):
             tab_type = (tab_type,)
         tab_ids = [t['targetId'] for t in self._run_cdp('Target.getTargets')['targetInfos']
-                   if t['browserContextId'] == context_id and (tab_type is None or t['type'] in tab_type)
+                   if t.get('browserContextId') == context_id and (tab_type is None or t['type'] in tab_type)
                    and (title is None or title in t['title']) and (url is None or url in t['url'])]
         if not self._ws_only:
             tab_ids = [t['id'] for t in self._driver.get(f'http://{self.address}/json').json() if t['id'] in tab_ids]
@@ -516,7 +520,7 @@ def run_browser(options):
         browser_id = _get_browser_id(driver, incognito or guest)
         is_headless = 'headless' in driver.run('Browser.getVersion', _debug=_S._debug)['userAgent'].lower()
         if 'devtools/browser' not in options.ws_address:
-            return is_headless, browser_id, True, True, driver, incognito, guest
+            return is_headless, browser_id, None, True, driver, incognito, guest, True
 
         s = Session()
         s.trust_env = False
@@ -532,9 +536,10 @@ def run_browser(options):
         except:
             ws_only = True
         s.close()
-        return is_headless, browser_id, True, ws_only, driver, incognito, guest
+        return is_headless, browser_id, None, ws_only, driver, incognito, guest, True
 
-    command_lines = connect_browser(options)
+    command_line = connect_browser(options)
+    exists = bool(command_line)
     try:
         s = Session()
         s.trust_env = False
@@ -560,7 +565,7 @@ def run_browser(options):
     incognito = "'Browser.WindowCount.Incognito'" in info
     guest = "'Browser.WindowCount.Guest'" in info
     browser_id = _get_browser_id(driver, incognito or guest)
-    return is_headless, browser_id, command_lines, ws_only, driver, incognito, guest
+    return is_headless, browser_id, command_line, ws_only, driver, incognito, guest, exists
 
 
 def _get_browser_id(driver, incognito):
@@ -568,7 +573,8 @@ def _get_browser_id(driver, incognito):
         browser_id = driver.run('Target.getTargets', _debug=_S._debug)
         if 'error' in browser_id:
             raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
-        return browser_id['targetInfos'][0]['browserContextId']
+        if browser_id['targetInfos']:
+            return browser_id['targetInfos'][0]['browserContextId']
 
     browser_id = driver.run('Target.getBrowserContexts', _debug=_S._debug)
     if 'error' in browser_id:
@@ -739,12 +745,13 @@ def _new_tab_by_js(browser: Chromium, url, new_window, context_id):
     tid = browser.wait.new_tab(curr_tab=tid)
     return browser._get_tab(context_id, tid)
 
-# def get_command_line(browser):
-#     try:
-#         t = browser.get_tab(browser._run_cdp('Target.createTarget', url='chrome://version/', hidden=True)['targetId']
-#                             , tab_type=None)
-#         lines = t.ele('#command_line').text
-#         t.close()
-#     except:
-#         lines = ''
-#     return lines
+
+def get_command_line(browser):
+    try:
+        t = browser.get_tab(browser._run_cdp('Target.createTarget', url='chrome://version/', hidden=True)['targetId']
+                            , tab_type=None)
+        lines = t.ele('#command_line').text
+        t.close()
+    except:
+        lines = ''
+    return lines

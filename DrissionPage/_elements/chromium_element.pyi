@@ -6,8 +6,9 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from pathlib import Path
-from typing import Union, Tuple, List, Any, Literal, Optional
+from typing import Union, Tuple, List, Any, Literal, Optional, Callable
 
+from .none_element import NoneElement
 from .._base.base import DrissionElement, BaseElement
 from .._elements.session_element import SessionElement
 from .._functions.elements import SessionElementsList, ChromiumElementsList
@@ -756,7 +757,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def children(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> List[ChromiumElement]:
+    def children(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
         """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
         :param locator: 用于筛选的查询语法
         :param timeout: 查找超时时间（秒）
@@ -764,7 +765,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def nexts(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> List[ChromiumElement]:
+    def nexts(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
         """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
         :param locator: 用于筛选的查询语法
         :param timeout: 查找超时时间（秒）
@@ -772,7 +773,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def befores(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> List[ChromiumElement]:
+    def befores(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
         """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
         查找范围不限同级元素，而是整个DOM文档
         :param locator: 用于筛选的查询语法
@@ -781,7 +782,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def afters(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> List[ChromiumElement]:
+    def afters(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
         """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
         查找范围不限同级元素，而是整个DOM文档
         :param locator: 用于筛选的查询语法
@@ -871,19 +872,148 @@ def find_in_chromium_ele(ele: ChromiumElement,
     ...
 
 
-def find_by_ax(page, bid, loc, index, timeout): ...
+def find_by_ax(page: ChromiumBase,
+               bid: int,
+               loc: str,
+               index: Optional[int],
+               timeout: float) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """用无障碍树查找元素
+    :param page: ChromiumBase对象
+    :param bid: BackendNodeId
+    :param loc: xpath或css selector语句
+    :param index: 第几个，1开始，可输入负数，None代表全部
+    :param timeout: 超时时间
+    :return: 找到的元素
+    """
+    ...
 
 
-def find_by_xpath(ele, loc, index, timeout, relative): ...
+def find_by_xpath(ele: ChromiumElement,
+                  loc: str,
+                  index: Optional[int],
+                  timeout: float,
+                  relative: bool) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """用xpath查找元素
+    :param ele: 在这个元素中查找
+    :param loc: xpath语句
+    :param index: 第几个，1开始，可输入负数，None代表全部
+    :param timeout: 超时时间
+    :param relative: 是否相对定位
+    :return: 找到的元素
+    """
+    ...
 
 
-def find_by_css(page, nid, loc, index, timeout): ...
+def find_by_css(page: ChromiumBase,
+                nid: int,
+                loc: str,
+                index: Optional[int],
+                timeout: float) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """用css selector查找对象
+    :param page: ChromiumBase对象
+    :param nid: NodeId
+    :param loc: css selector
+    :param index: 第几个，1开始，可输入负数，None代表全部
+    :param timeout: 超时时间
+    :return: 找到的元素
+    """
+    ...
 
 
-def find_by_any(ele, loc, index, timeout, relative): ...
+def find_by_any(ele: ChromiumElement,
+                loc: str,
+                index: Optional[int],
+                timeout: float,
+                relative: bool) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """先用xpath或css selector查找元素，找不到改用文本查找
+    :param ele: 在这个元素中查找
+    :param loc: 定位符
+    :param index: 第几个，1开始，可输入负数，None代表全部
+    :param timeout: 超时时间
+    :param relative: 是否相对定位
+    :return: 找到的元素
+    """
+    ...
 
 
-def do_find_any(ele, loc, js, xpath, node_txt, cdp, css, arg, nid, ind): ...
+def find_by_sr_any(ele: ShadowRoot,
+                   loc: str,
+                   index: Optional[int],
+                   timeout: float) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """在shadow root中查找元素，先用xpath或css selector查找，找不到用文本查找
+    :param ele: ChromiumElement
+    :param loc: 定位符
+    :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
+    :param timeout: 超时时间
+    :return: 找到的元素或元素列表
+    """
+    ...
+
+
+def find_by_sr_xpath(page: ChromiumBase,
+                     index: Optional[int],
+                     timeout: float,
+                     ele: ShadowRoot,
+                     loc: str) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """在shadow root中用xpath查找元素
+    :param page: 元素所在页面
+    :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
+    :param timeout: 超时时间
+    :param ele: shadow root元素
+    :param loc: 定位符
+    :return: 找到的元素或元素列表
+    """
+    ...
+
+
+def do_find_any(ele: ChromiumElement,
+                loc: str,
+                js: str,
+                js1: str,
+                xpath: str,
+                node_txt: str,
+                cdp: str,
+                css: str,
+                arg: str,
+                nid: int,
+                ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
+    """执行先用xpath或css selector查找元素，找不到改用文本查找
+    :param ele: 在这个元素内查找
+    :param loc: 定位符
+    :param js: 按文本查找的js
+    :param js1: 按定位符查找的js
+    :param xpath: 按文本查找的xpath
+    :param node_txt: 区分是否iframe的根元素称呼
+    :param cdp: 使用的cdp命令
+    :param css: 定位符
+    :param arg: cdp参数名称
+    :param nid: nodeId
+    :param ind: 第几个，1开始，可输入负数，None代表全部
+    :return: 找到的元素，找不到时返回None
+    """
+    ...
+
+
+def do_find_sr_any(ele:ShadowRoot,
+                   loc:str,
+                   xpath:str,
+                   cdp:str,
+                   css:str,
+                   arg:str,
+                   nid:int,
+                   ind:Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
+    """执行在shadow root中查找元素，先按xpath或css selector查找，找不到用文本查找
+    :param ele: 在这个元素中查找
+    :param loc: 定位符
+    :param xpath: 根据文本查找xpath
+    :param cdp: cdp命令
+    :param css: 定位符
+    :param arg: cdp使用的参数名称
+    :param nid: nodeId
+    :param ind: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
+    :return: 找到的元素或元素列表，找不到返回NOne
+    """
+    ...
 
 
 def do_find_ax(page: Union[ChromiumBase, ChromiumTab, ChromiumFrame],
@@ -895,7 +1025,7 @@ def do_find_ax(page: Union[ChromiumBase, ChromiumTab, ChromiumFrame],
     :param bid: 在此元素中查找
     :param args: {'name': '***', 'role': '***'}
     :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-    :return: ChromiumElement或其组成的列表
+    :return: 元素或元素列表，找不到时返回None
     """
     ...
 
@@ -904,19 +1034,24 @@ def do_find_xpath(ele: ChromiumElement,
                   js: str,
                   xpath: str,
                   node_txt: str,
-                  ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList]:
+                  ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
     """执行用xpath在元素中查找元素
     :param ele: 在此元素中查找
     :param js: 执行的js
     :param xpath: 查找语句
     :param node_txt: js中node指代
     :param ind: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-    :return: ChromiumElement或其组成的列表
+    :return: 元素或元素列表，找不到时返回None
     """
     ...
 
 
-def do_find_css(page, cdp, css, arg, nid, ind) -> Union[ChromiumElement, ChromiumElementsList, None]:
+def do_find_css(page: ChromiumBase,
+                cdp: str,
+                css: str,
+                arg: str,
+                nid: int,
+                ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
     """执行用css selector在元素中查找元素
     :param page: 元素所在页面
     :param cdp: cdp命令
@@ -924,19 +1059,43 @@ def do_find_css(page, cdp, css, arg, nid, ind) -> Union[ChromiumElement, Chromiu
     :param arg: nodeId或nodeIds
     :param nid: 元素nodeId
     :param ind: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
-    :return: ChromiumElement或其组成的列表
+    :return: 元素或元素列表，找不到时返回None
     """
 
 
-def wait_for_ele(method, target, timeout, index, **kwargs): ...
+def do_find_sr_xpath(ele: ShadowRoot,
+                     loc: str,
+                     ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
+    """执行在shadow root中用xpath查找元素
+    :param ele: shadow root元素
+    :param loc: xpath语句
+    :param ind: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
+    :return: 元素或元素列表，找不到返回None
+    """
+    ...
+
+
+def wait_for_ele(method: Callable,
+                 target: ChromiumBase,
+                 timeout: float,
+                 index: Optional[int],
+                 **kwargs) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """等待元素
+    :param method: 执行的方法
+    :param target: 执行查找的对象
+    :param timeout: 超时时间
+    :param index: 第几个结果，从1开始，可传入负数获取倒数第几个，为None返回所有
+    :param kwargs: 方法需要使用的参数
+    :return: 找到的结果
+    """
+    ...
 
 
 def make_chromium_eles(page: Union[ChromiumBase, ChromiumTab, ChromiumFrame],
                        _ids: Union[tuple, list, str, int],
                        index: Optional[int] = 1,
                        id_type: str = 'obj_id',
-                       ele_only: bool = False
-                       ) -> Union[ChromiumElement, ChromiumFrame, ChromiumElementsList]:
+                       ele_only: bool = False) -> Union[ChromiumElement, ChromiumFrame, ChromiumElementsList]:
     """根据node id或object id生成相应元素对象
     :param page: ChromiumBase对象
     :param _ids: 元素的id列表

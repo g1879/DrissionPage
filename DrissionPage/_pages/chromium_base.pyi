@@ -15,6 +15,7 @@ from .._base.driver import Driver
 from .._browsers.chromium import Chromium
 from .._configs.session_options import SessionOptions
 from .._elements.chromium_element import ChromiumElement
+from .._elements.none_element import NoneElement
 from .._elements.session_element import SessionElement
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, ChromiumElementsList
@@ -71,7 +72,6 @@ class ChromiumBase(BasePage, Messenger):
     _console: Optional[Console] = ...
     _disconnect_flag: bool = ...
     _type: str = ...
-    _Accessibility_enabled: bool = ...
     _proxy_usr: Optional[str] = ...
     _proxy_pwd: Optional[str] = ...
     _proxy: Optional[str] = ...
@@ -635,8 +635,6 @@ class ChromiumBase(BasePage, Messenger):
         """
         ...
 
-    def _Accessibility_enable(self) -> None: ...
-
     def _d_connect(self,
                    url: str,
                    retry: int,
@@ -718,10 +716,62 @@ class Alert(object):
     next_text: Optional[str] = ...
     auto: Optional[bool] = ...
 
-    def __init__(self, auto: bool = None): ...
+    def __init__(self, auto: bool = None):
+        """
+        :param auto: 是否自动处理alert
+        """
+        ...
 
 
-def find_by_xpath(page: ChromiumBase,
-                  loc: str,
-                  index: Optional[int],
-                  timeout: Optional[float]): ...
+def find_by_syntax(page: ChromiumBase,
+                   loc: str,
+                   index: Optional[int],
+                   timeout: float) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """使用xpath或css selector查找元素
+    :param page: ChromiumBase对象
+    :param loc: xpath或css selector语句
+    :param index: 第几个，1开始，可输入负数，None代表全部
+    :param timeout: 超时时间
+    :return: 找到的元素或元素列表
+    """
+    ...
+
+
+def do_find_syntax(page: ChromiumBase,
+                   loc: str,
+                   ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
+    """使用xpath或css selector执行查找
+    :param page: ChromiumBase对象
+    :param loc: xpath或css selector语句
+    :param ind: 第几个，1开始，可输入负数，None代表全部
+    :return: 元素或元素列表，找不到时返回None
+    """
+    ...
+
+
+def find_by_any(page: ChromiumBase,
+                loc: str,
+                index: Optional[int],
+                timeout: float) -> Union[ChromiumElement, ChromiumElementsList, NoneElement]:
+    """先用xpath或css selector查找元素，找不到改用字符串查找
+    :param page: ChromiumBase对象
+    :param loc: xpath或css selector语句
+    :param index: 第几个，1开始，可输入负数，None代表全部
+    :param timeout: 超时时间
+    :return: 找到的元素或元素列表
+    """
+    ...
+
+
+def do_find_any(page: ChromiumBase,
+                loc: str,
+                xpath: str,
+                ind: Optional[int]) -> Union[ChromiumElement, ChromiumElementsList, None]:
+    """执行使用xpath或css selector查找元素，找不到改用字符串查找
+    :param page: ChromiumBase对象
+    :param loc: xpath或css selector语句
+    :param xpath: 字符串查找使用的xpath
+    :param ind: 第几个，1开始，可输入负数，None代表全部
+    :return: 元素或元素列表，找不到时返回None
+    """
+    ...

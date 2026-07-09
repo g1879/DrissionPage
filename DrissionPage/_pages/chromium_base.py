@@ -69,7 +69,6 @@ class ChromiumBase(BasePage, Messenger):
         self._init_jss = []
         self._disconnect_flag = False
         self._type = 'ChromiumBase'
-        self._Accessibility_enabled = False
         if not hasattr(self, '_listener'):
             self._listener = None
 
@@ -466,12 +465,12 @@ class ChromiumBase(BasePage, Messenger):
         self.wait.doc_loaded()
 
         if mode == 'ax':
-            self._Accessibility_enable()
             bid = self._run_cdp('Accessibility.getRootAXNode', frameId=self._frame_id)['node']['backendDOMNodeId']
             return find_by_ax(self, bid, loc, index, timeout)
-
-        else:
+        elif mode == 'any':
             return find_by_any(self, loc, index, timeout)
+        else:
+            return find_by_syntax(self, loc, index, timeout)
 
     def refresh(self, ignore_cache=False):
         self._is_loading = True
@@ -724,11 +723,6 @@ class ChromiumBase(BasePage, Messenger):
             pass
         return False
 
-    def _Accessibility_enable(self):
-        if not self._Accessibility_enabled:
-            self._enable_domain('Accessibility')
-            self._Accessibility_enabled = True
-
     def _get_status_code(self, **kwargs):
         if kwargs.get('frameId') == self._frame_id and kwargs['type'] == 'Document':
             self._nav_result.status = kwargs['response']['status']
@@ -949,6 +943,10 @@ def do_find_syntax(page, loc, ind):
 
     page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
     return None if r is False else r
+
+
+def find_by_syntax(page, loc, index, timeout):
+    return wait_for_ele(do_find_syntax, target=page, timeout=timeout, index=index, page=page, loc=loc, ind=index)
 
 
 def find_by_any(page, loc, index, timeout):

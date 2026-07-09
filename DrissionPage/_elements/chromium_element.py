@@ -884,7 +884,8 @@ def find_in_chromium_ele(ele, locator, index=1, timeout=None, relative=True):
 
 
 def find_by_ax(page, bid, loc, index, timeout):
-    page._Accessibility_enable()
+    if 'Accessibility' not in page._enabled:
+        page._enable_domain('Accessibility')
     return wait_for_ele(do_find_ax, target=page, timeout=timeout, index=index, page=page,
                         bid=bid, args=loc, ind=index)
 
@@ -1037,7 +1038,7 @@ def do_find_sr_xpath(ele, loc, ind):
             return None
 
     else:
-        r = []
+        r = ChromiumElementsList(ele.owner)
         for i in css:
             if i[0] is False:
                 r.append(i[1])
