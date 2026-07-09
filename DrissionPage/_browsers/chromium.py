@@ -83,9 +83,11 @@ class Chromium(Messenger):
         self._tabs = Tabs()
         self._driver.owner = self
 
-        if (not self._ws_only
-                and (not self._chromium_options._ua_set and self._is_headless != self._chromium_options.is_headless)
-                or (self._is_exists and self._chromium_options._new_env)):
+        if (not self._chromium_options.ws_address
+                and ((not self._ws_only
+                      and (not self._chromium_options._ua_set
+                           and self._is_headless != self._chromium_options.is_headless))
+                     or (self._is_exists and self._chromium_options._new_env))):
             self.quit(3, True)
             connect_browser(self._chromium_options)
             s = Session()
@@ -414,7 +416,7 @@ class Chromium(Messenger):
         if isinstance(tab_type, str):
             tab_type = (tab_type,)
         tab_ids = [t['targetId'] for t in self._run_cdp('Target.getTargets')['targetInfos']
-                   if t['browserContextId'] == context_id and (tab_type is None or t['type'] in tab_type)
+                   if t.get('browserContextId') == context_id and (tab_type is None or t['type'] in tab_type)
                    and (title is None or title in t['title']) and (url is None or url in t['url'])]
         if not self._ws_only:
             tab_ids = [t['id'] for t in self._driver.get(f'http://{self.address}/json').json() if t['id'] in tab_ids]
@@ -516,7 +518,7 @@ def run_browser(options):
         browser_id = _get_browser_id(driver, incognito or guest)
         is_headless = 'headless' in driver.run('Browser.getVersion', _debug=_S._debug)['userAgent'].lower()
         if 'devtools/browser' not in options.ws_address:
-            return is_headless, browser_id, True, True, driver, incognito, guest
+            return is_headless, browser_id, None, True, driver, incognito, guest
 
         s = Session()
         s.trust_env = False
@@ -532,7 +534,7 @@ def run_browser(options):
         except:
             ws_only = True
         s.close()
-        return is_headless, browser_id, True, ws_only, driver, incognito, guest
+        return is_headless, browser_id, None, ws_only, driver, incognito, guest
 
     command_lines = connect_browser(options)
     try:
@@ -564,23 +566,25 @@ def run_browser(options):
 
 
 def _get_browser_id(driver, incognito):
-    if incognito:
-        browser_id = driver.run('Target.getTargets', _debug=_S._debug)
-        if 'error' in browser_id:
-            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
-        return browser_id['targetInfos'][0]['browserContextId']
+    contexts = driver.run('Target.getBrowserContexts', _debug=_S._debug)
+    if 'error' in contexts:
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=contexts['error'])
 
-    browser_id = driver.run('Target.getBrowserContexts', _debug=_S._debug)
-    if 'error' in browser_id:
-        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
-    if 'defaultBrowserContextId' in browser_id:
-        browser_id = browser_id['defaultBrowserContextId']
-    else:
-        browser_id = driver.run('Target.getTargets', _debug=_S._debug)
-        if 'error' in browser_id:
-            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
-        browser_id = browser_id['targetInfos'][0]['browserContextId']
-    return browser_id
+    context_ids = contexts.get('browserContextIds') or ()
+    if incognito and context_ids:
+        return context_ids[0]
+    if contexts.get('defaultBrowserContextId'):
+        return contexts['defaultBrowserContextId']
+
+    targets = driver.run('Target.getTargets', _debug=_S._debug)
+    if 'error' in targets:
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=targets['error'])
+    for target in targets.get('targetInfos') or ():
+        context_id = target.get('browserContextId')
+        if context_id:
+            return context_id
+
+    raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO='No browser context found.')
 
 
 class Tabs(object):
