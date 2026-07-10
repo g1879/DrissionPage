@@ -209,7 +209,7 @@ class Chromium(Messenger):
 
     def _tab_ids(self, context_id):
         tabs = [i['targetId'] for i in self._run_cdp('Target.getTargets')['targetInfos']
-                if i['browserContextId'] == context_id and i['type'] in ('page', 'webview')
+                if i.get('browserContextId') == context_id and i['type'] in ('page', 'webview')
                 and not i['url'].startswith(('chrome-extension://', 'devtools://', 'chrome://newtab-footer'))]
         return tabs if self._ws_only else [i['id'] for i in self._driver.get(f'http://{self.address}/json').json()
                                            if i['id'] in tabs]
@@ -569,24 +569,72 @@ def run_browser(options):
 
 
 def _get_browser_id(driver, incognito):
-    if incognito:
-        browser_id = driver.run('Target.getTargets', _debug=_S._debug)
-        if 'error' in browser_id:
-            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
-        if browser_id['targetInfos']:
-            return browser_id['targetInfos'][0]['browserContextId']
+    contexts = driver.run('Target.getBrowserContexts', _debug=_S._debug)
+    if 'error' in contexts:
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=contexts['error'])
 
-    browser_id = driver.run('Target.getBrowserContexts', _debug=_S._debug)
-    if 'error' in browser_id:
-        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
-    if 'defaultBrowserContextId' in browser_id:
-        browser_id = browser_id['defaultBrowserContextId']
-    else:
-        browser_id = driver.run('Target.getTargets', _debug=_S._debug)
-        if 'error' in browser_id:
-            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=browser_id['error'])
-        browser_id = browser_id['targetInfos'][0]['browserContextId']
-    return browser_id
+    default_context_id = contexts.get('defaultBrowserContextId')
+    context_ids = contexts.get('browserContextIds') or ()
+    if default_context_id and not incognito:
+        return default_context_id
+
+    targets = driver.run('Target.getTargets', _debug=_S._debug)
+    if 'error' in targets:
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO=targets['error'])
+
+    page_context_ids = []
+    all_context_ids = []
+    seen_page_contexts = set()
+    seen_contexts = set()
+    for target in targets.get('targetInfos') or ():
+        context_id = target.get('browserContextId')
+        if not context_id:
+            continue
+        if context_id not in seen_contexts:
+            seen_contexts.add(context_id)
+            all_context_ids.append(context_id)
+        if (target.get('type') in ('page', 'webview')
+                and not target.get('url', '').startswith(('chrome-extension://', 'devtools://',
+                                                         'chrome://newtab-footer'))
+                and context_id not in seen_page_contexts):
+            seen_page_contexts.add(context_id)
+            page_context_ids.append(context_id)
+
+    if incognito:
+        # getBrowserContexts reports the default/created contexts, not the private context used by
+        # an existing incognito/guest page. new_tab() must stay with that page context and opens by JS.
+        known_context_ids = set(context_ids)
+        if default_context_id:
+            known_context_ids.add(default_context_id)
+        private_context_ids = [i for i in page_context_ids if i not in known_context_ids]
+        if len(private_context_ids) == 1:
+            return private_context_ids[0]
+        if private_context_ids:
+            raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2,
+                                      INFO=f'Multiple private page contexts found: {private_context_ids}.')
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO='No private page context found.')
+
+    if default_context_id:
+        return default_context_id
+    # A page target is stronger evidence of the working context than an empty context returned by
+    # getBrowserContexts. Only select it when the page context itself is unique.
+    if len(page_context_ids) == 1:
+        return page_context_ids[0]
+    if page_context_ids:
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2,
+                                  INFO=f'Multiple page contexts found: {page_context_ids}.')
+    if len(context_ids) == 1:
+        return context_ids[0]
+    if context_ids:
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2,
+                                  INFO=f'Multiple browser contexts found: {list(context_ids)}.')
+    if len(all_context_ids) == 1:
+        return all_context_ids[0]
+    if all_context_ids:
+        raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2,
+                                  INFO=f'Multiple target contexts found: {all_context_ids}.')
+
+    raise BrowserConnectError(_S._lang.BROWSER_CONNECT_ERR2, INFO='No browser context found.')
 
 
 class Tabs(object):
