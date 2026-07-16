@@ -52,8 +52,8 @@ jobs:
       - name: Checkout shared DrissionPage test site
         uses: actions/checkout@v7
         with:
-          repository: jumodada/DrissionPage-test-site
-          path: DrissionPage-test-site
+          repository: g1879/DrissionPageTestSite
+          path: DrissionPageTestSite
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -73,7 +73,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: DrissionPage-test-site/package-lock.json
+          cache-dependency-path: DrissionPageTestSite/package-lock.json
 
       - name: Audit workflow quality
         run: python tests/check_workflow_quality.py
@@ -85,13 +85,13 @@ jobs:
           python -m pip install coverage[toml]
 
       - name: Build SSR test site
-        working-directory: DrissionPage-test-site
+        working-directory: DrissionPageTestSite
         run: |
           npm ci
           npm run build
 
       - name: Start local SSR test site
-        working-directory: DrissionPage-test-site
+        working-directory: DrissionPageTestSite
         run: |
           nohup npm run dev -- --host 127.0.0.1 --port 4321 > "$RUNNER_TEMP/drissionpage-ssr-site.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/drissionpage-ssr-site.pid"

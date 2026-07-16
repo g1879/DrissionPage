@@ -12,7 +12,7 @@
 | `tests/support.py` | 本地 HTTP/WebSocket/SSE fixture 和共享断言。 |
 | `tests/feature_cases/` | 功能级检查。 |
 | `tests/regression_cases/` | 回归和诊断复现用例。 |
-| `../DrissionPage-test-site/` | 独立共享 Astro SSR test-site（需单独 checkout）。 |
+| `../DrissionPageTestSite/` | 独立共享 Astro SSR test-site（需单独 checkout）。 |
 
 ## 测试分组
 
@@ -73,7 +73,7 @@ workflow 文件：
 2. 安装 Python、Chrome 和 Node。
 3. 在依赖较重的步骤前运行 `tests/check_workflow_quality.py`。
 4. 安装 Python 依赖和 coverage 工具。
-5. Checkout 并构建独立 `DrissionPage-test-site` 包。
+5. Checkout 并构建独立 `g1879/DrissionPageTestSite` 包。
 6. 启动共享本地 SSR test-site，并把 `DP_TEST_SITE_URL` 传给 `tests/ci.sh`。
 7. 运行 `tests/ci.sh`，其中 Marketplace 和社区笔记移动端流程作为门禁并计入当前源码 coverage；完整 SSR 冒烟当前因 AX domain 已知问题以 report-only 方式运行。
 8. 配置 `CODECOV_TOKEN` 时上传覆盖率到 Codecov。
@@ -90,19 +90,19 @@ workflow 文件：
 
 | Secret | 用途 |
 | --- | --- |
-| `CODECOV_TOKEN` | 可选 Codecov 上传 token。 |
+| `CODECOV_TOKEN` | Codecov 仓库上传 token；要显示覆盖率徽章必须配置。 |
 | `DP_PRIVATE_FIXTURE_URL` | 可选远端共享/私有 SSR test-site 基础 URL；本地/CI 优先使用 `DP_TEST_SITE_URL`。 |
 
 不要提交共享/私有 fixture URL。runner 会在生成报告时遮罩并脱敏 `DP_TEST_SITE_URL`（兼容旧的 `DP_PRIVATE_FIXTURE_URL`）。
 
 ## 共享 SSR test-site
 
-fixture 包位于独立仓库 `jumodada/DrissionPage-test-site`；本地推荐与 DrissionPage 同级 checkout 为 `../DrissionPage-test-site`。
+fixture 包位于官方仓库 [`g1879/DrissionPageTestSite`](https://github.com/g1879/DrissionPageTestSite)；本地推荐与 DrissionPage 同级 checkout 为 `../DrissionPageTestSite`。
 
 本地验证：
 
 ```bash
-cd ../DrissionPage-test-site
+cd ../DrissionPageTestSite
 npm ci
 npm run build
 npm run dev -- --host 127.0.0.1 --port 4321
@@ -148,7 +148,7 @@ DP_TEST_SITE_URL="http://127.0.0.1:4321" \
     --fail-on-failures
 ```
 
-如需部署托管版本，使用 `DrissionPage-test-site` 仓库根目录，并沿用 package 中定义的安装和构建命令。
+如需部署托管版本，使用 `DrissionPageTestSite` 仓库根目录，并沿用 package 中定义的安装和构建命令。
 
 ## 覆盖率上传
 
@@ -158,7 +158,13 @@ DP_TEST_SITE_URL="http://127.0.0.1:4321" \
 tests-artifacts/reports/coverage/coverage.xml
 ```
 
-workflow 使用 `codecov/codecov-action@v7` 上传覆盖率。将 `CODECOV_TOKEN` 添加为仓库密钥后运行 workflow。通用 badge 格式：
+workflow 使用 `codecov/codecov-action@v7` 上传覆盖率。首次启用时需要：
+
+1. 用官方仓库管理员账号登录 Codecov，并激活 `g1879/DrissionPage`；
+2. 从该官方仓库的 Codecov 设置重新复制 upload token，添加为 GitHub Actions 仓库密钥 `CODECOV_TOKEN`（不要复用 fork 的 token）；
+3. 重新运行 `DrissionPage tests verification` workflow。
+
+当前 workflow 只有检测到 `CODECOV_TOKEN` 才执行上传。若 Codecov 仓库未激活或尚未接收有效报告，徽章会显示 `unknown`。badge 格式：
 
 ```md
 [![codecov](https://codecov.io/gh/<owner>/<repo>/branch/master/graph/badge.svg)](https://codecov.io/gh/<owner>/<repo>)
@@ -186,7 +192,7 @@ python tests/check_workflow_quality.py
 ```bash
 python tests/check_workflow_quality.py
 python -m compileall -q tests/run.py tests/runner.py tests/support.py tests/feature_cases tests/regression_cases
-cd ../DrissionPage-test-site && npm ci && npm run check
+cd ../DrissionPageTestSite && npm ci && npm run check
 cd ../..
 git -c core.whitespace=cr-at-eol diff --check
 ```

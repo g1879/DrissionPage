@@ -72,7 +72,7 @@ tests/
 ├── feature_manifest.py        # 68 个功能特性 → 用例映射
 ├── feature_cases/             # 34 个功能级用例
 ├── regression_cases/          # 10 个回归/诊断用例
-├── ../DrissionPage-test-site/  # 独立共享 Astro SSR test-site（仓库外 checkout）
+├── ../DrissionPageTestSite/   # 独立共享 Astro SSR test-site（仓库外 checkout）
 ├── COVERAGE.md / KNOWN_ISSUES.md / AUTOMATION_GUIDE.md
 └── README.md
 ```
@@ -469,7 +469,7 @@ def test_memory_stability(ctx):
 
 结论：原评估中“复杂业务场景偏弱”的判断成立。已有 `business-dashboard` 能覆盖大列表、筛选、加载更多和突发请求，但缺少更贴近生产页面的完整链路，例如商品筛选到结算、弹窗状态、懒加载推荐、合成反爬/拦截图、清除令牌 cookie 后再访问受保护资源等。
 
-当前已在独立 `DrissionPage-test-site` 仓库落地确定性复杂 SSR 场景，并扩展 `ssr_site_smoke`：
+当前已在独立 [`g1879/DrissionPageTestSite`](https://github.com/g1879/DrissionPageTestSite) 仓库落地确定性复杂 SSR 场景，并扩展 `ssr_site_smoke`：
 
 | 场景 | 路由 | 覆盖点 |
 | --- | --- | --- |
@@ -496,7 +496,7 @@ def test_memory_stability(ctx):
 验证方式：
 
 ```bash
-cd ../DrissionPage-test-site
+cd ../DrissionPageTestSite
 npm ci
 npm run check
 npm run dev -- --host 127.0.0.1 --port 4321
