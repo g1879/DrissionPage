@@ -1,5 +1,7 @@
-"""Feature: Chromium tab post() Response contract."""
+"""Feature: Chromium tab post() NavResult contract."""
 from __future__ import annotations
+
+from DrissionPage.items import NavResult
 
 from feature_cases.browser_interaction_server import browser_interaction_server
 from support import assert_equal, assert_true, chromium
@@ -14,7 +16,10 @@ def run(ctx):
     with browser_interaction_server() as base, chromium(ctx) as browser:
         tab = browser.latest_tab
         assert_true(tab.get(base + "/main"), "post test page should load")
-        response = tab.post(base + "/post", data="alpha=1", timeout=3)
-        assert_true(hasattr(response, "status_code"), "Chromium tab post() should return a requests Response object in session mode")
+        result = tab.post(base + "/post", data="alpha=1", timeout=3)
+        assert_true(isinstance(result, NavResult), "Chromium tab post() should return NavResult")
+        assert_equal(result.status, 200, "post() NavResult status mismatch")
+        response = result.Response
+        assert_true(response is not None, "post() NavResult should expose the requests Response")
         assert_equal(response.status_code, 200, "post() response status mismatch")
         assert_equal(response.json()["body"], "alpha=1", "post() should preserve request body")

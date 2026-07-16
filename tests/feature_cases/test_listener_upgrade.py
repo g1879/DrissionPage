@@ -36,11 +36,11 @@ def run(ctx):
 
 def test_listener_api_shape():
     start_params = signature(Listener.start).parameters
-    targets_params = signature(Listener.set_targets).parameters
+    urls_params = signature(Listener.set_urls).parameters
     assert_not_in('method', start_params, 'listen.start() should remove method parameter')
     assert_not_in('res_type', start_params, 'listen.start() should remove res_type parameter')
-    assert_not_in('method', targets_params, 'listen.set_targets() should remove method parameter')
-    assert_not_in('res_type', targets_params, 'listen.set_targets() should remove res_type parameter')
+    assert_not_in('method', urls_params, 'listen.set_urls() should not own method filtering')
+    assert_not_in('res_type', urls_params, 'listen.set_urls() should not own resource-type filtering')
     assert_true(hasattr(Listener, 'set_method'), 'Listener should expose set_method fluent setter')
     assert_true(hasattr(Listener, 'set_res_type'), 'Listener should expose set_res_type fluent setter')
 

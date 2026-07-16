@@ -24,8 +24,10 @@ def run(ctx: TestContext) -> None:
             ws_packet = wait_for_packet(tab, lambda p: isinstance(p, WebSocketPacket), timeout=ctx.timeout, desc="WebSocketPacket")
             if ws_packet.resourceType != "WebSocket":
                 errors.append(f"WebSocketPacket.resourceType mismatch: {ws_packet.resourceType!r}")
-            if ws_packet.connect_info is None:
-                errors.append("WebSocketPacket.connect_info should exist when listening before connect")
+            if not ws_packet.url or not ws_packet.url.endswith("/ws"):
+                errors.append(f"WebSocketPacket.url should expose its connection URL, got {ws_packet.url!r}")
+            if ws_packet.request is None or ws_packet.response is None:
+                errors.append("WebSocketPacket should expose handshake request and response")
         except Exception as e:
             errors.append(f"set_res_type.WebSocket(only=True) did not capture WebSocketPacket: {type(e).__name__}: {e}; internal _res_type={getattr(tab.listen, '_res_type', None)!r}")
         finally:
@@ -40,8 +42,10 @@ def run(ctx: TestContext) -> None:
                 errors.append(f"SSEPacket.resourceType mismatch: {sse_packet.resourceType!r}")
             if sse_packet.name != "check" or sse_packet.id != "7" or "sse" not in sse_packet.data:
                 errors.append(f"SSEPacket fields mismatch: name={sse_packet.name!r}, id={sse_packet.id!r}, data={sse_packet.data!r}")
-            if sse_packet.connect_info is None:
-                errors.append("SSEPacket.connect_info should exist when listening before connect")
+            if not sse_packet.url or "/events" not in sse_packet.url:
+                errors.append(f"SSEPacket.url should expose its request URL, got {sse_packet.url!r}")
+            if sse_packet.request is None or sse_packet.response is None:
+                errors.append("SSEPacket should expose its request and response")
         except Exception as e:
             errors.append(f"set_res_type.EventSource(only=True) did not capture SSEPacket: {type(e).__name__}: {e}; internal _res_type={getattr(tab.listen, '_res_type', None)!r}")
         finally:

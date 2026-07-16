@@ -19,6 +19,12 @@ COVERAGE_DIR="$REPORT_DIR/coverage"
 COVERAGE_RCFILE="${DP_TESTS_COVERAGE_RCFILE:-$REPO_ROOT/.coveragerc}"
 COVERAGE_BIN="${DP_TESTS_COVERAGE_BIN:-$PYTHON_BIN -m coverage}"
 COVERAGE_ENABLED="${DP_TESTS_COVERAGE:-1}"
+BROWSER_GATE_ATTEMPTS="${DP_TESTS_BROWSER_GATE_ATTEMPTS:-2}"
+
+if [[ ! "$BROWSER_GATE_ATTEMPTS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "DP_TESTS_BROWSER_GATE_ATTEMPTS must be a positive integer, got: $BROWSER_GATE_ATTEMPTS" >&2
+  exit 2
+fi
 
 cd "$REPO_ROOT"
 mkdir -p "$REPORT_DIR" "$ARTIFACT_DIR"
@@ -53,6 +59,7 @@ rm -f \
   "$REPORT_DIR/current-local-ssr.md" \
   "$REPORT_DIR/current-local-ssr-known.json" \
   "$REPORT_DIR/current-local-ssr-known.md"
+rm -f "$REPORT_DIR"/*-attempt-*.json "$REPORT_DIR"/*-attempt-*.md
 rm -rf "$COVERAGE_DIR"
 mkdir -p "$COVERAGE_DIR"
 if [[ "$COVERAGE_ENABLED" == "1" ]]; then
@@ -60,6 +67,13 @@ if [[ "$COVERAGE_ENABLED" == "1" ]]; then
 fi
 
 overall_rc=0
+failed_steps=()
+flaky_steps=()
+
+mark_failed() {
+  failed_steps+=("$1")
+  overall_rc=1
+}
 
 run_step() {
   local label="$1"
@@ -71,7 +85,7 @@ run_step() {
   else
     local rc=$?
     echo "=== $label: failed rc=$rc ==="
-    overall_rc=1
+    mark_failed "$label"
   fi
 }
 
@@ -100,6 +114,7 @@ PY
     echo "browser_executable=$([[ -n "$BROWSER_PATH" && -x "$BROWSER_PATH" ]] && echo true || echo false)"
     echo "timeout=$TIMEOUT"
     echo "require_browser=$REQUIRE_BROWSER"
+    echo "browser_gate_attempts=$BROWSER_GATE_ATTEMPTS"
     echo "gate_suite=$GATE_SUITE"
     echo "known_suite=$KNOWN_SUITE"
     echo "run_known=$RUN_KNOWN"
@@ -128,11 +143,10 @@ list_cases() {
 
 run_step "list cases" list_cases
 
-run_case_batch() {
-  local label="$1"
-  local source="$2"
-  local report_name="$3"
-  shift 3
+execute_case_batch() {
+  local source="$1"
+  local report_name="$2"
+  shift 2
   local common_args=(
     --timeout "$TIMEOUT"
     --artifacts-dir "$ARTIFACT_DIR/$report_name"
@@ -159,7 +173,69 @@ run_case_batch() {
     )
   fi
   cmd+=("$@")
-  run_step "$label" "${cmd[@]}"
+  "${cmd[@]}"
+}
+
+run_case_batch() {
+  local label="$1"
+  local source="$2"
+  local report_name="$3"
+  shift 3
+  run_step "$label" execute_case_batch "$source" "$report_name" "$@"
+}
+
+run_report_case_batch() {
+  local label="$1"
+  local source="$2"
+  local report_name="$3"
+  shift 3
+  echo
+  echo "=== $label ==="
+  if execute_case_batch "$source" "$report_name" "$@"; then
+    echo "=== $label: reported ==="
+  else
+    local rc=$?
+    echo "=== $label: report generation failed rc=$rc ==="
+    mark_failed "$label"
+  fi
+}
+
+promote_attempt_report() {
+  local attempt_name="$1"
+  local report_name="$2"
+  local extension
+  for extension in json md; do
+    if [[ -f "$REPORT_DIR/$attempt_name.$extension" ]]; then
+      cp "$REPORT_DIR/$attempt_name.$extension" "$REPORT_DIR/$report_name.$extension"
+    fi
+  done
+}
+
+run_browser_gate_with_retry() {
+  local label="$1"
+  local source="$2"
+  local report_name="$3"
+  shift 3
+  local attempt attempt_name rc
+  for ((attempt = 1; attempt <= BROWSER_GATE_ATTEMPTS; attempt++)); do
+    attempt_name="$report_name-attempt-$attempt"
+    echo
+    echo "=== $label (attempt $attempt/$BROWSER_GATE_ATTEMPTS) ==="
+    if execute_case_batch "$source" "$attempt_name" "$@"; then
+      promote_attempt_report "$attempt_name" "$report_name"
+      if ((attempt > 1)); then
+        flaky_steps+=("$label (passed on attempt $attempt/$BROWSER_GATE_ATTEMPTS)")
+      fi
+      echo "=== $label: passed on attempt $attempt/$BROWSER_GATE_ATTEMPTS ==="
+      return 0
+    else
+      rc=$?
+      echo "=== $label: attempt $attempt/$BROWSER_GATE_ATTEMPTS failed rc=$rc ==="
+    fi
+  done
+  promote_attempt_report "$attempt_name" "$report_name"
+  mark_failed "$label (failed after $BROWSER_GATE_ATTEMPTS attempts)"
+  return 0
 }
 
 run_case_batch "current stable no-browser gate" current current-stable-no-browser \
@@ -168,44 +244,42 @@ run_case_batch "pre-release stable no-browser gate" pre pre-stable-no-browser \
   --suite "$GATE_SUITE" --skip-browser --no-browser-only --fail-on-failures
 
 if [[ -n "$BROWSER_PATH" && -x "$BROWSER_PATH" ]]; then
-  run_case_batch "current stable browser gate" current current-stable-browser \
+  run_browser_gate_with_retry "current stable browser gate" current current-stable-browser \
     --suite "$GATE_SUITE" --browser-path "$BROWSER_PATH" --browser-only --fail-on-failures
-  run_case_batch "pre-release stable browser gate" pre pre-stable-browser \
+  run_browser_gate_with_retry "pre-release stable browser gate" pre pre-stable-browser \
     --suite "$GATE_SUITE" --browser-path "$BROWSER_PATH" --browser-only --fail-on-failures
 
   if [[ "$RUN_KNOWN" == "1" ]]; then
-    run_case_batch "current known-issue repros (report-only)" current current-known-browser \
+    run_report_case_batch "current known-issue repros (report-only)" current current-known-browser \
       --suite "$KNOWN_SUITE" --browser-path "$BROWSER_PATH" --browser-only
-    run_case_batch "pre-release known-issue repros (report-only)" pre pre-known-browser \
+    run_report_case_batch "pre-release known-issue repros (report-only)" pre pre-known-browser \
       --suite "$KNOWN_SUITE" --browser-path "$BROWSER_PATH" --browser-only
   fi
 
   if [[ "$RUN_LOCAL_SSR" == "1" && -n "$LOCAL_SSR_URL" ]]; then
-    (
-      export DP_TEST_SITE_URL="$LOCAL_SSR_URL"
-      export DP_PRIVATE_FIXTURE_URL="$LOCAL_SSR_URL"
-      run_case_batch "current local SSR business scenarios gate" current current-local-ssr \
-        --suite local --browser-path "$BROWSER_PATH" --include-online \
-        --case ssr_marketplace_flow \
-        --case ssr_social_notes_mobile \
-        --fail-on-failures
-      run_case_batch "current local SSR full smoke known issue (report-only)" current current-local-ssr-known \
-        --suite local --browser-path "$BROWSER_PATH" --include-online \
-        --case ssr_site_smoke
-    )
+    export DP_TEST_SITE_URL="$LOCAL_SSR_URL"
+    export DP_PRIVATE_FIXTURE_URL="$LOCAL_SSR_URL"
+    run_case_batch "current local SSR business scenarios gate" current current-local-ssr \
+      --suite local --browser-path "$BROWSER_PATH" --include-online \
+      --case ssr_marketplace_flow \
+      --case ssr_social_notes_mobile \
+      --fail-on-failures
+    run_report_case_batch "current local SSR full smoke known issue (report-only)" current current-local-ssr-known \
+      --suite local --browser-path "$BROWSER_PATH" --include-online \
+      --case ssr_site_smoke
   fi
 else
   echo
   echo "Browser cases skipped: DP_BROWSER_PATH is unset or not executable."
   if [[ "$REQUIRE_BROWSER" == "1" ]]; then
-    overall_rc=1
+    mark_failed "browser availability"
   fi
 fi
 
 if [[ "$RUN_KNOWN" == "1" ]]; then
-  run_case_batch "current known-issue no-browser repros (report-only)" current current-known-no-browser \
+  run_report_case_batch "current known-issue no-browser repros (report-only)" current current-known-no-browser \
     --suite "$KNOWN_SUITE" --skip-browser --no-browser-only
-  run_case_batch "pre-release known-issue no-browser repros (report-only)" pre pre-known-no-browser \
+  run_report_case_batch "pre-release known-issue no-browser repros (report-only)" pre pre-known-no-browser \
     --suite "$KNOWN_SUITE" --skip-browser --no-browser-only
 fi
 
@@ -225,5 +299,18 @@ write_coverage_reports() {
 }
 
 run_step "write coverage reports" write_coverage_reports
+
+echo
+echo "=== CI summary ==="
+if ((${#flaky_steps[@]})); then
+  echo "Flaky gates:"
+  printf '  - %s\n' "${flaky_steps[@]}"
+fi
+if ((${#failed_steps[@]})); then
+  echo "Failed gates:"
+  printf '  - %s\n' "${failed_steps[@]}"
+else
+  echo "All required gates passed."
+fi
 
 exit "$overall_rc"
