@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -41,14 +43,57 @@ def _child(browser_path: str, profile: str) -> int:
             pass
 
 
+def _stop_process_tree(proc: subprocess.Popen[str], profile: Path) -> None:
+    if os.name == "posix":
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    else:
+        subprocess.run(
+            ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    try:
+        proc.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        if os.name == "posix":
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        else:
+            proc.kill()
+        proc.wait(timeout=2)
+
+    if os.name == "posix":
+        for candidate in {str(profile), str(profile.resolve())}:
+            subprocess.run(
+                ["pkill", "-TERM", "-f", f"--user-data-dir={candidate}"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+
+
 def run(ctx: TestContext) -> None:
     browser_path = ctx.browser_path or DEFAULT_BROWSER
-    profile = Path(tempfile.gettempdir()) / f"dp-alert-on-open-{int(time.time() * 1000)}"
+    profile = (Path(tempfile.gettempdir()) / f"dp-alert-on-open-{int(time.time() * 1000)}").resolve()
     cmd = [sys.executable, __file__, "--child", browser_path, str(profile)]
+    proc = subprocess.Popen(
+        cmd,
+        cwd="/tmp",
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=os.name == "posix",
+    )
     try:
-        proc = subprocess.run(cmd, cwd="/tmp", text=True, capture_output=True, timeout=max(8.0, ctx.timeout + 4))
+        stdout, stderr = proc.communicate(timeout=max(8.0, ctx.timeout + 4))
     except subprocess.TimeoutExpired as e:
-        subprocess.run(["pkill", "-f", f"user-data-dir={profile}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _stop_process_tree(proc, profile)
         raise TestFailure(
             "Opening a page that immediately raises alert() hung past the check timeout; "
             f"cmd={' '.join(cmd)!r}; stdout={e.stdout!r}; stderr={e.stderr!r}"
@@ -56,7 +101,7 @@ def run(ctx: TestContext) -> None:
     finally:
         shutil.rmtree(profile, ignore_errors=True)
     if proc.returncode != 0:
-        raise TestFailure(f"alert-on-open child failed rc={proc.returncode}; stdout={proc.stdout!r}; stderr={proc.stderr!r}")
+        raise TestFailure(f"alert-on-open child failed rc={proc.returncode}; stdout={stdout!r}; stderr={stderr!r}")
 
 
 TEST_CASE = TestCase(

@@ -108,16 +108,11 @@ KNOWN_ISSUE_CASES: dict[str, str] = {
     "feature_find_api": "SessionElement.parent() plain CSS-like locators currently generate invalid relative XPath.",
     "api_surface": "Root exports, startup options, drag_in, and click(wait_stop) API/docs contracts currently differ.",
     "feature_cross_origin_iframe_listener": "Cross-host iframe fetch packets are not captured reliably by tab listener.",
-    "feature_listener_upgrade": "Browser-backed WS/SSE/HTTP restore checks still expose packet-shape regressions.",
+    "feature_listener_upgrade": "HTTP DataPacket capture does not recover after WS/SSE listener modes.",
     "feature_regression_basics": "The combined regression probe currently fails first on numeric-start id lookup.",
-    "feature_tab_management": "Current checkout passed locally; keep isolated pending pre-release and Linux CI confirmation.",
-    "feature_chromium_tab_management": "Current checkout passed locally; keep isolated pending pre-release and Linux CI confirmation.",
-    "feature_tab_post_response": "ChromiumTab.post() Response-object contract is not satisfied yet.",
     "alert_on_open": "Opening a page that raises alert() during initial load can hang in headless CI.",
-    "listener_ws_sse": "WebSocketPacket and SSEPacket connect_info contracts are not satisfied yet.",
-    "iframe_non_screenshot": "Current checkout passed locally; keep isolated for pre-release, OOPIF, and Linux CI comparison.",
     "context_get_tabs_as_id": "Current checkout passed locally; keep isolated pending pre-release and Linux CI confirmation.",
-    "locator_behavior": "AX lookup calls Accessibility.getRootAXNode before the Accessibility domain is enabled.",
+    "locator_behavior": "Current source fails AX setup first; pre-release continues to expose numeric-start id lookup.",
     "locator_explicit_syntax": "Explicit locator syntax currently falls back to text search before the locator fix is merged.",
 }
 

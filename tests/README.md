@@ -58,7 +58,3 @@ python tests/run.py --source current --case listener_ws_sse --browser-path "<Chr
 | `known` | 已知问题复现，默认只报告。 |
 | `local` | 需要外部网络或独立 test-site 的专项测试。 |
 | `all` | 手动运行全部测试。 |
-
-预发布包对比、SSR test-site、CI 和报告配置见
-[AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md)。当前已知问题见
-[KNOWN_ISSUES.md](./KNOWN_ISSUES.md)。

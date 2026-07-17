@@ -39,6 +39,7 @@ jobs:
       DP_TESTS_PRE_VENV: /tmp/dp-tests-pre-venv
       DP_TESTS_TIMEOUT: '10'
       DP_TESTS_REQUIRE_BROWSER: '1'
+      DP_TESTS_BROWSER_GATE_ATTEMPTS: '2'
       DP_TESTS_RUN_LOCAL_SSR: '1'
       DP_TEST_SITE_URL: http://127.0.0.1:4321
       DP_LOCAL_FIXTURE_URL: http://127.0.0.1:4321
@@ -76,7 +77,9 @@ jobs:
           cache-dependency-path: DrissionPageTestSite/package-lock.json
 
       - name: Audit workflow quality
-        run: python tests/check_workflow_quality.py
+        run: |
+          python tests/check_workflow_quality.py
+          python tests/check_ci_retry.py
 
       - name: Install Python dependencies
         run: |
@@ -158,7 +161,7 @@ jobs:
             --report-json "$DP_TESTS_REPORT_DIR/ssr-business-flows.json" \
             --report-md "$DP_TESTS_REPORT_DIR/ssr-business-flows.md"
 
-      - name: Report remote SSR full smoke known issue (report-only)
+      - name: Report remote SSR full smoke (report-only)
         if: ${{ env.RUN_PRIVATE_FIXTURE == 'true' }}
         env:
           DP_BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
@@ -169,8 +172,8 @@ jobs:
             --browser-path "$DP_BROWSER_PATH" \
             --include-online \
             --case ssr_site_smoke \
-            --report-json "$DP_TESTS_REPORT_DIR/ssr-full-smoke-known.json" \
-            --report-md "$DP_TESTS_REPORT_DIR/ssr-full-smoke-known.md"
+            --report-json "$DP_TESTS_REPORT_DIR/ssr-full-smoke.json" \
+            --report-md "$DP_TESTS_REPORT_DIR/ssr-full-smoke.md"
 
       - name: Upload tests reports
         if: always()
