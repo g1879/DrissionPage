@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from support import TestCase, TestContext, assert_equal, assert_true, chromium, local_server, wait_until
+from support import TestCase, TestContext, assert_equal, assert_true, chromium, local_server
 
 
 def run(ctx: TestContext) -> None:

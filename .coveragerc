@@ -10,6 +10,8 @@ omit =
 [report]
 show_missing = True
 skip_covered = False
+fail_under = 80
+precision = 2
 
 [xml]
 output = coverage.xml

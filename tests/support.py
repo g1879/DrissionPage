@@ -12,7 +12,6 @@ import hashlib
 import inspect
 import json
 import os
-import socket
 import struct
 import tempfile
 import threading

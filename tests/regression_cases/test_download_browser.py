@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from pathlib import Path
-
 from support import TestCase, TestContext, assert_equal, assert_true, chromium, local_server
 
 

@@ -94,8 +94,13 @@ run_step "compile Python test suite" \
     "$SCRIPT_DIR/run.py" \
     "$SCRIPT_DIR/runner.py" \
     "$SCRIPT_DIR/support.py" \
+    "$SCRIPT_DIR/check_runner_quality.py" \
     "$SCRIPT_DIR/feature_cases" \
     "$SCRIPT_DIR/regression_cases"
+
+run_step "validate test runner semantics" \
+  env "PYTHONPATH=$SCRIPT_DIR:$REPO_ROOT:${PYTHONPATH:-}" \
+  "$PYTHON_BIN" "$SCRIPT_DIR/check_runner_quality.py"
 
 write_environment() {
   {
