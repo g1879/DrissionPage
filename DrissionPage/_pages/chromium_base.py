@@ -910,39 +910,64 @@ class Alert(object):
 
 def do_find_syntax(page, loc, ind):
     r = page._run_cdp('DOM.performSearch', query=loc, includeUserAgentShadowDOM=True, _ignore=True)
-    searchId = r.get('searchId')
-    resultCount = r.get('resultCount')
-    if not resultCount or (ind and resultCount < abs(ind)):
-        page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
+    search_id = r.get('searchId')
+    if not search_id:
         return None
+    result_count = r.get('resultCount') or 0
 
-    r = page._run_cdp('DOM.getSearchResults', searchId=searchId, _ignore=True,
-                      fromIndex=0, toIndex=resultCount).get('nodeIds')
-    if not r or not r[0]:
-        return None
+    def get_node_ids(from_index, to_index):
+        node_ids = page._run_cdp('DOM.getSearchResults', searchId=search_id, _ignore=True,
+                                 fromIndex=from_index, toIndex=to_index).get('nodeIds')
+        return tuple(i for i in node_ids or () if i)
 
-    if ind is None:
-        r = make_chromium_eles(page, _ids=r, index=None, id_type='node_id', ele_only=True)
-
-    else:
-        eles = []
-        got = 0
-        for i in r:
-            n = page._run_cdp('DOM.describeNode', _ignore=True, nodeId=i).get('node')
-            if not n:
-                page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
-                return None
-            if n['nodeName'] not in ('#text', '#comment'):
-                eles.append(i)
-                got += 1
-                if (0 < ind == got) or (not ind and got == 1):
-                    break
-        if not got:
+    def is_element(node_id):
+        node = page._run_cdp('DOM.describeNode', _ignore=True, nodeId=node_id).get('node')
+        if not node:
             return None
-        r = make_chromium_eles(page, _ids=eles, index=ind, id_type='node_id')
+        return node['nodeName'] not in ('#text', '#comment')
 
-    page._run_cdp('DOM.discardSearchResults', searchId=searchId, _timeout=0, _ignore=True)
-    return None if r is False else r
+    def make_element(node_id):
+        ele = make_chromium_eles(page, _ids=node_id, id_type='node_id', ele_only=True)
+        return None if ele is False else ele
+
+    try:
+        if not result_count or (ind and result_count < abs(ind)):
+            return None
+
+        if ind is None:
+            node_ids = get_node_ids(0, result_count)
+            eles = make_chromium_eles(page, _ids=node_ids, index=None, id_type='node_id', ele_only=True)
+            return None if eles is False or not eles else eles
+
+        left = abs(ind) if ind else 1
+        if ind < 0:
+            to_index = result_count
+            while to_index > 0:
+                from_index = max(to_index - 50, 0)
+                for node_id in reversed(get_node_ids(from_index, to_index)):
+                    matched = is_element(node_id)
+                    if matched is None:
+                        return None
+                    if matched:
+                        left -= 1
+                        if left == 0:
+                            return make_element(node_id)
+                to_index = from_index
+            return None
+
+        for from_index in range(0, result_count, 50):
+            for node_id in get_node_ids(from_index, min(from_index + 50, result_count)):
+                matched = is_element(node_id)
+                if matched is None:
+                    return None
+                if matched:
+                    left -= 1
+                    if left == 0:
+                        return make_element(node_id)
+        return None
+
+    finally:
+        page._run_cdp('DOM.discardSearchResults', searchId=search_id, _timeout=0, _ignore=True)
 
 
 def find_by_syntax(page, loc, index, timeout):
