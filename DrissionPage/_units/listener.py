@@ -433,6 +433,7 @@ class Listener(BaseListener):
                     self._extra_info_ids.pop(kwargs['requestId'], None)
 
         self._request_ids.pop(r_id, None)
+        return packet
 
     def _loading_failed(self, **kwargs):
         packet = self._loading_failed_sse(**kwargs)
