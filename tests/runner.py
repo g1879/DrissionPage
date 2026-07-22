@@ -42,6 +42,22 @@ FEATURE_CASE_MODULES = [
     "feature_cases.test_element_core_behaviors",
     "feature_cases.test_options_settings",
     "feature_cases.test_chromium_options_environment",
+    "feature_cases.test_pure_function_contracts",
+    "feature_cases.test_locator_edge_contracts",
+    "feature_cases.test_config_session_contracts",
+    "feature_cases.test_collection_action_contracts",
+    "feature_cases.test_unit_wrapper_contracts",
+    "feature_cases.test_browser_helper_contracts",
+    "feature_cases.test_runtime_unit_contracts",
+    "feature_cases.test_chromium_element_contracts",
+    "feature_cases.test_listener_data_contracts",
+    "feature_cases.test_base_page_contracts",
+    "feature_cases.test_chromium_browser_contracts",
+    "feature_cases.test_waiter_setter_extra_contracts",
+    "feature_cases.test_small_unit_edge_contracts",
+    "feature_cases.test_chromium_base_extra_contracts",
+    "feature_cases.test_chromium_element_extra_contracts",
+    "feature_cases.test_browser_lifecycle_extra_contracts",
     "feature_cases.test_find_api",
     "feature_cases.test_chromium_tab_management",
     "feature_cases.test_console_and_cookie_formats",
@@ -65,6 +81,7 @@ REGRESSION_CASE_MODULES = [
     "regression_cases.test_context_get_tabs_as_id",
     "regression_cases.test_locator_behavior",
     "regression_cases.test_locator_explicit_syntax",
+    "regression_cases.test_no_browser_contract_gaps",
     "regression_cases.test_console_and_tabs",
     "regression_cases.test_download_browser",
     "regression_cases.test_iframe_non_screenshot",
@@ -114,6 +131,7 @@ KNOWN_ISSUE_CASES: dict[str, str] = {
     "context_get_tabs_as_id": "Current checkout passed locally; keep isolated pending pre-release and Linux CI confirmation.",
     "locator_behavior": "Current source fails AX setup first; pre-release continues to expose numeric-start id lookup.",
     "locator_explicit_syntax": "Explicit locator syntax currently falls back to text search before the locator fix is merged.",
+    "no_browser_contract_gaps": "Confirmed deterministic gaps in session options/elements, charset parsing, CDP values, locator tuples, tab POST, listener failure queueing, and tab bookkeeping.",
 }
 
 
@@ -179,7 +197,7 @@ def normalize_case_names(names: list[str] | None) -> set[str] | None:
             if not item:
                 continue
             stem = Path(item).stem
-            selected.add(CASE_ALIASES.get(item, CASE_ALIASES.get(stem, item)))
+            selected.add(CASE_ALIASES.get(item, CASE_ALIASES.get(stem, stem)))
     return selected
 
 
@@ -294,7 +312,7 @@ def build_report(results: list[TestResult], cases, started: float, ctx: TestCont
             feature_status = "covered-passed"
             message = ""
         elif result.status == "failed":
-            feature_status = "covered-by-failed-case"
+            feature_status = "executed-failed"
             message = result.message
         else:
             feature_status = result.status
@@ -306,8 +324,8 @@ def build_report(results: list[TestResult], cases, started: float, ctx: TestCont
             "message": redact_sensitive(message),
         })
     status_counts = {s: sum(1 for result in results if result.status == s) for s in ("passed", "failed", "skipped")}
-    covered = [feature for feature in covered_features if feature["status"] in {"covered-passed", "covered-by-failed-case"}]
-    passed_features = [feature for feature in covered_features if feature["status"] == "covered-passed"]
+    executed = [feature for feature in covered_features if feature["case_status"] in {"passed", "failed"}]
+    covered = [feature for feature in covered_features if feature["status"] == "covered-passed"]
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "duration_seconds": round(time.perf_counter() - started, 3),
@@ -321,10 +339,11 @@ def build_report(results: list[TestResult], cases, started: float, ctx: TestCont
             **status_counts,
             "features_total": len(FEATURES),
             "features_excluded": len(EXCLUDED),
+            "features_executed": len(executed),
             "features_covered_by_run": len(covered),
-            "features_passed": len(passed_features),
+            "features_passed": len(covered),
             "feature_coverage_percent": round(100 * len(covered) / len(FEATURES), 2) if FEATURES else 100.0,
-            "feature_pass_percent": round(100 * len(passed_features) / len(FEATURES), 2) if FEATURES else 100.0,
+            "feature_pass_percent": round(100 * len(covered) / len(FEATURES), 2) if FEATURES else 100.0,
         },
         "cases": [
             {

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from support import TestCase, TestContext, TestFailure, assert_equal, assert_true, function_accepts
+from support import TestCase, TestContext, TestFailure, function_accepts
 
 
 def run(ctx: TestContext) -> None:

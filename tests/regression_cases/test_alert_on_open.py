@@ -82,9 +82,14 @@ def run(ctx: TestContext) -> None:
     browser_path = ctx.browser_path or DEFAULT_BROWSER
     profile = (Path(tempfile.gettempdir()) / f"dp-alert-on-open-{int(time.time() * 1000)}").resolve()
     cmd = [sys.executable, __file__, "--child", browser_path, str(profile)]
+    env = os.environ.copy()
+    tests_dir = str(Path(__file__).resolve().parents[1])
+    pythonpath = [item for item in env.get("PYTHONPATH", "").split(os.pathsep) if item]
+    env["PYTHONPATH"] = os.pathsep.join([tests_dir, *[item for item in pythonpath if item != tests_dir]])
     proc = subprocess.Popen(
         cmd,
         cwd="/tmp",
+        env=env,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from support import TestFailure, TestCase, TestContext, assert_true, chromium, local_server
+from support import TestFailure, TestCase, TestContext, chromium, local_server
 from support import function_accepts
 
 
