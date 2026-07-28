@@ -40,7 +40,7 @@ class SessionElementsList(list):
 
     @property
     def texts(self):
-        return [t.text for t in self]
+        return [t if isinstance(t, str) else t.text for t in self]
 
 
 class ChromiumElementsList(SessionElementsList):

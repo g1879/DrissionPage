@@ -65,6 +65,8 @@ FEATURE_CASE_MODULES = [
     "feature_cases.test_scroll_and_waits",
     "feature_cases.test_element_multi_click",
     "feature_cases.test_tab_post_response",
+    "feature_cases.test_low_risk_bug_fixes",
+    "feature_cases.test_cdp_argument_values",
     "feature_cases.test_optional_online_smoke",
     "feature_cases.test_ssr_site_smoke",
     "feature_cases.test_ssr_marketplace_flow",

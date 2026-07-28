@@ -6,6 +6,7 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from json import loads
+from math import copysign, isinf, isnan
 from os.path import basename
 from pathlib import Path
 from platform import system
@@ -1303,14 +1304,17 @@ def convert_argument(arg):
     if isinstance(arg, ChromiumElement):
         return {'objectId': arg._obj_id}
 
-    elif isinstance(arg, (int, float, str, bool, dict)):
+    elif isinstance(arg, float):
+        if isnan(arg):
+            return {'unserializableValue': 'NaN'}
+        elif isinf(arg):
+            return {'unserializableValue': 'Infinity' if arg > 0 else '-Infinity'}
+        elif arg == 0 and copysign(1, arg) < 0:
+            return {'unserializableValue': '-0'}
         return {'value': arg}
 
-    from math import inf
-    if arg == inf:
-        return {'unserializableValue': 'Infinity'}
-    elif arg == -inf:
-        return {'unserializableValue': '-Infinity'}
+    elif isinstance(arg, (int, str, bool, dict)):
+        return {'value': arg}
 
     raise TypeError(_S._lang.joinn(_S._lang.UNSUPPORTED_ARG_TYPE_, arg, type(arg)))
 

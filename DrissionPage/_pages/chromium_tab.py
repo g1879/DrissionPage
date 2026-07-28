@@ -134,8 +134,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
     def post(self, url, retry=None, interval=None, timeout=None, raise_err=False, **kwargs):
         if self.mode == 'd':
             self.cookies_to_session()
-        if timeout is None:
-            kwargs['timeout'] = self.timeouts.page_load
+        kwargs['timeout'] = self.timeouts.page_load if timeout is None else timeout
         if self._session is None:
             self._create_session()
         return self._mode_obj.post(url=url, retry=retry, interval=interval, raise_err=raise_err, **kwargs)

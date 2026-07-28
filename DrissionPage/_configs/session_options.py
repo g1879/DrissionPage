@@ -229,7 +229,7 @@ class SessionOptions(object):
         return self._adapters
 
     def add_adapter(self, url, adapter):
-        self._adapters.append((url, adapter))
+        self.adapters.append((url, adapter))
         return self
 
     @property
