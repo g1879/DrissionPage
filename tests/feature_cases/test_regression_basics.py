@@ -63,12 +63,14 @@ def test_browser_regressions(executable):
             assert_in('123abc', css_selector, 'css_selector should include numeric-leading id without failing')
 
             tab.listen.start('/api')
-            tab.run_js("fetch('/api').catch(() => {});")
+            # Network.loadingFinished is emitted after the response body has
+            # been consumed; a headers-only fetch can remain pending in Chrome.
+            tab.run_js("fetch('/api').then(r => r.text()).catch(() => {});")
             first = tab.listen.wait(timeout=5)
             assert_equal(first.response.body, {'ok': True}, 'listener should capture first fetch')
             tab.listen.stop()
             tab.listen.start('/api')
-            tab.run_js("fetch('/api').catch(() => {});")
+            tab.run_js("fetch('/api').then(r => r.text()).catch(() => {});")
             second = tab.listen.wait(timeout=5)
             assert_equal(second.response.body, {'ok': True}, 'listener stop() then start() should capture later fetch')
             tab.listen.stop()

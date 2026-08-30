@@ -28,7 +28,7 @@ def run(ctx):
     test_connection_response_and_browser_discovery_contracts()
     test_browser_lazy_units_and_delegation_contracts()
     test_browser_lifecycle_bookkeeping_contracts()
-    test_driver_send_and_event_contracts()
+    test_driver_send_and_event_contracts(ctx.source)
     test_driver_start_stop_and_owner_contracts()
 
 
@@ -898,7 +898,7 @@ class _ImmediateEmptyQueue:
         raise Empty
 
 
-def test_driver_send_and_event_contracts():
+def test_driver_send_and_event_contracts(source='current'):
     mapping = ThreadSafeDict()
     mapping['one'] = 1
     del mapping['one']
@@ -958,6 +958,9 @@ def test_driver_send_and_event_contracts():
         )
     assert_equal(result, {'error': {'message': 'alert exists.'}},
                  'dialog state should interrupt Runtime and Input commands')
+    if source == 'current':
+        assert_equal(sender.method_results.get(6), None,
+                     'alert-interrupted commands should remove their pending response queue')
 
     sender.alert_flag.clear()
     with _patched(driver_module, Queue=_ImmediateEmptyQueue, perf_counter=iter((0.0, 2.0)).__next__):

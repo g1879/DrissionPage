@@ -8,6 +8,8 @@ import tempfile
 import time
 
 from DrissionPage import Chromium
+import DrissionPage._elements.chromium_element as chromium_element_module
+import DrissionPage._units.listener as listener_module
 from DrissionPage._browsers.chromium_context import ChromiumContext
 from DrissionPage._elements.chromium_element import ChromiumElement
 from DrissionPage._functions.settings import Settings
@@ -44,6 +46,11 @@ def test_api_shape_contracts():
     assert_false(hasattr(Chromium, 'tabs_count'), 'Chromium.tabs_count should be removed')
     assert_false(hasattr(ChromiumTab, 'reconnect'), 'ChromiumTab.reconnect() should be removed')
     assert_false(hasattr(ChromiumFrame, 'reconnect'), 'ChromiumFrame.reconnect() should be removed')
+
+    assert_false(hasattr(chromium_element_module, '_make_ele'),
+                 'private _make_ele compatibility alias should remain removed')
+    assert_false(hasattr(listener_module, 'in_targets'),
+                 'renamed in_targets compatibility alias should remain removed')
 
     assert_in('offset_x', signature(Actions.drag_in).parameters, 'Actions.drag_in() should expose offset_x')
     assert_in('offset_y', signature(Actions.drag_in).parameters, 'Actions.drag_in() should expose offset_y')

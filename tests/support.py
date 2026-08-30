@@ -40,6 +40,7 @@ class TestContext:
     artifacts_dir: Path = field(default_factory=lambda: Path(tempfile.gettempdir()) / "dp-tests-artifacts")
     timeout: float = 5.0
     headless: bool = True
+    source: str = field(default_factory=lambda: os.environ.get("DP_TESTS_SOURCE", "current"))
 
     @property
     def skip_browser(self) -> bool:

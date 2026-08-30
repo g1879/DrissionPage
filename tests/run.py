@@ -114,6 +114,7 @@ def main(argv=None) -> int:
         cmd.append("--fail-on-failures")
 
     env = os.environ.copy()
+    env["DP_TESTS_SOURCE"] = args.source
     if args.source == "current":
         env["PYTHONPATH"] = os.pathsep.join([str(ROOT), str(repo_root), env.get("PYTHONPATH", "")]).rstrip(os.pathsep)
         cwd = str(repo_root)

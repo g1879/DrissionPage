@@ -28,7 +28,7 @@ REQUIRES_BROWSER = False
 def run(ctx):
     _check_base_parser_and_element_contracts()
     _check_base_page_contracts()
-    _check_messenger_contracts()
+    _check_messenger_contracts(ctx)
     _check_session_page_properties_and_elements()
     _check_session_page_connections()
     _check_session_helpers()
@@ -211,7 +211,7 @@ def _check_base_page_contracts():
     page._session.close()
 
 
-def _check_messenger_contracts():
+def _check_messenger_contracts(ctx):
     messenger = Messenger()
     driver_calls = []
     messenger._driver = SimpleNamespace(run=lambda command, **kwargs: driver_calls.append((command, kwargs)) or {"ok": 1})
@@ -239,6 +239,11 @@ def _check_messenger_contracts():
     messenger._recv_event({"method": "Page.event", "params": {"value": 2}})
     assert_equal(messenger._event_queue.get_nowait()["method"], "Page.event",
                  "ordinary events should enter the event queue")
+    if ctx.source == "current":
+        messenger._set_callback("Network.event", callback, immediate=True)
+        messenger._recv_event({"method": "Network.event", "sessionId": "child-1", "params": {"value": 3}})
+        assert_equal(seen[-1], {"value": 3, "_session_id": "child-1"},
+                     "flat-session events should preserve the emitting session id")
 
     domain_calls = []
     messenger._run_func = lambda command, **kwargs: domain_calls.append((command, kwargs))

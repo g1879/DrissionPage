@@ -35,7 +35,7 @@ from .._units.setter import ChromiumBaseSetter
 from .._units.states import PageStates
 from .._units.waiter import BaseWaiter
 from ..errors import (ContextLostError, CDPError, PageDisconnectedError, ElementLostError, JavaScriptError,
-                      BrowserConnectError, LocatorError)
+                      BrowserConnectError, LocatorError, AlertExistsError)
 
 
 class ChromiumBase(BasePage, Messenger):
@@ -68,6 +68,11 @@ class ChromiumBase(BasePage, Messenger):
         self._load_end_time = 0
         self._init_jss = []
         self._disconnect_flag = False
+        # Out-of-process iframes have independent CDP targets. Keep their
+        # sessions attached to this page while a page listener is active so
+        # Network events are observable through the page's callbacks.
+        self._oopif_sessions = {}
+        self._oopif_auto_attach = False
         self._type = 'ChromiumBase'
         if not hasattr(self, '_listener'):
             self._listener = None
@@ -82,6 +87,8 @@ class ChromiumBase(BasePage, Messenger):
             'Page.frameStoppedLoading': [self._onFrameStoppedLoading],
             'Page.frameAttached': [self._onFrameAttached],
             'Page.frameDetached': [self._onFrameDetached],
+            'Target.attachedToTarget': [self._on_target_attached],
+            'Target.detachedFromTarget': [self._on_target_detached],
         }
         self._imm_events = {'Page.javascriptDialogOpening'}
         self._d_set_runtime_settings()
@@ -101,6 +108,65 @@ class ChromiumBase(BasePage, Messenger):
 
     def __call__(self, locator, index=1, timeout=None):
         return self.ele(locator, index, timeout)
+
+    def _stop_messenger(self):
+        self._stop_oopif_network()
+        super()._stop_messenger()
+
+    def _on_target_attached(self, sessionId, targetInfo, waitingForDebugger=False, **kwargs):
+        """Forward auto-attached OOPIF events through the owning page.
+
+        In flat mode CDP delivers ``Target.attachedToTarget`` on the parent
+        session. This callback therefore runs on the page messenger thread,
+        where child-session setup commands can be issued safely.
+        """
+        target_id = targetInfo.get('targetId')
+        if targetInfo.get('type') == 'iframe' and target_id:
+            self._oopif_sessions[sessionId] = target_id
+            self.browser._tabs.add_frame(target_id, self.tab_id)
+            self._driver.add_session_owner(sessionId, self)
+            if self._oopif_auto_attach:
+                self._driver.run('Network.enable', _session_id=sessionId)
+                # Recurse so nested OOPIFs are covered too.
+                self._driver.run('Target.setAutoAttach', autoAttach=True,
+                                 waitForDebuggerOnStart=True, flatten=True,
+                                 _session_id=sessionId)
+
+        # Every paused auto-attached target must be resumed, including target
+        # kinds that are not iframe network sources (for example workers).
+        if waitingForDebugger:
+            self._driver.run('Runtime.runIfWaitingForDebugger', _session_id=sessionId)
+
+    def _on_target_detached(self, sessionId, **kwargs):
+        if sessionId in self._oopif_sessions:
+            self._oopif_sessions.pop(sessionId, None)
+            self._driver.remove_session_owner(sessionId)
+
+    def _start_oopif_network(self):
+        """Attach related iframe targets while the page listener is active."""
+        if self._oopif_auto_attach:
+            return
+        self._oopif_auto_attach = True
+        result = self._run_cdp('Target.setAutoAttach', autoAttach=True,
+                               waitForDebuggerOnStart=True, flatten=True, _ignore=True)
+        if 'error' in result:
+            self._oopif_auto_attach = False
+            return
+        for session_id in tuple(self._oopif_sessions):
+            self._driver.run('Network.enable', _session_id=session_id)
+
+    def _stop_oopif_network(self):
+        if not getattr(self, '_oopif_auto_attach', False):
+            return
+        self._oopif_auto_attach = False
+        try:
+            self._run_cdp('Target.setAutoAttach', autoAttach=False, flatten=True, _ignore=True)
+        except Exception:
+            pass
+        for session_id in tuple(self._oopif_sessions):
+            self._driver.run('Network.disable', _session_id=session_id, _timeout=0)
+            self._driver.remove_session_owner(session_id)
+        self._oopif_sessions.clear()
 
     def _d_set_runtime_settings(self):
         pass
@@ -465,6 +531,9 @@ class ChromiumBase(BasePage, Messenger):
         self.wait.doc_loaded()
 
         if mode == 'ax':
+            # Accessibility.getRootAXNode requires Accessibility.enable first.
+            if 'Accessibility' not in self._enabled:
+                self._enable_domain('Accessibility')
             bid = self._run_cdp('Accessibility.getRootAXNode', frameId=self._frame_id)['node']['backendDOMNodeId']
             return find_by_ax(self, bid, loc, index, timeout)
         elif mode == 'any':
@@ -506,12 +575,16 @@ class ChromiumBase(BasePage, Messenger):
             self._run_cdp('Page.navigateToHistoryEntry', entryId=nid)
 
     def stop_loading(self):
+        if self._has_alert:
+            # Page.stopLoading is itself blocked while a modal dialog is open.
+            self._ready_state = 'complete'
+            return
         try:
             self._run_cdp('Page.stopLoading')
             end_time = perf_counter() + 5
             while self._ready_state != 'complete' and perf_counter() < end_time:
                 sleep(.02)
-        except (PageDisconnectedError, CDPError):
+        except (PageDisconnectedError, CDPError, AlertExistsError):
             pass
         finally:
             self._ready_state = 'complete'
@@ -743,9 +816,21 @@ class ChromiumBase(BasePage, Messenger):
         self._set_callback('Network.requestWillBeSent', self._get_request)
         for t in range(retry + 1):
             err = None
+            # Page.navigate returns before the frame lifecycle events are
+            # delivered. Clear the previous document state so an immediate
+            # navigation (notably after closing a JavaScript dialog) cannot
+            # treat the stale ``complete`` state as the new load.
+            self._ready_state = 'connecting'
+            self._doc_got = False
             end_time = perf_counter() + timeout
             try:
-                result = self._run_cdp('Page.navigate', frameId=self._frame_id, url=url, _timeout=timeout)
+                result = self._run_cdp('Page.navigate', frameId=self._frame_id, url=url, _timeout=timeout,
+                                       _ignore=AlertExistsError)
+                # An open JavaScript dialog suspends navigation until
+                # Page.handleJavaScriptDialog is called. Return promptly and
+                # let the caller handle the modal instead of waiting for load.
+                if result.get('error') == 'alert exists.' or self._has_alert:
+                    break
                 if 'errorText' in result:
                     self._nav_result.status = result['errorText']
                     err = ConnectionError(_S._lang.joinn(_S._lang.CONNECT_ERR, INFO=result['errorText']))
@@ -768,6 +853,8 @@ class ChromiumBase(BasePage, Messenger):
                 self._disable_domain('Network')
                 return self._nav_result
 
+            if self._has_alert:
+                break
             yu = end_time - perf_counter()
             ok = self._wait_loaded(1 if yu <= 0 else yu)
             if not ok:

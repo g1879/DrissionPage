@@ -23,7 +23,7 @@ from .._functions.locator import get_loc, quotes_escape
 from .._functions.settings import Settings as _S
 from .._functions.tools import raise_error
 from .._functions.web import format_html
-from ..errors import ElementNotFoundError, LocatorError, PageDisconnectedError
+from ..errors import AlertExistsError, ElementNotFoundError, LocatorError, PageDisconnectedError
 
 
 class BaseParser(object):
@@ -398,12 +398,23 @@ class Messenger(object):
         return r if 'error' not in r or _ignore is True else raise_error(r, self._browser, ignore=_ignore, user=_user)
 
     def _recv_event(self, msg):
+        params = msg['params']
+        # Flat CDP sessions multiplex several targets over one websocket. Keep
+        # the outer session id with event callbacks so listeners can issue
+        # follow-up commands (for example Network.getResponseBody) to the
+        # target that emitted the event.
+        if msg.get('sessionId') is not None:
+            params = dict(params)
+            params['_session_id'] = msg['sessionId']
         if self._imm_events and msg.get('method') in self._imm_events:
             functions = self._event_handlers.get(msg['method'])
             if functions:
                 for func in functions:
-                    func(**msg['params'])
+                    func(**params)
             return
+        if params is not msg['params']:
+            msg = dict(msg)
+            msg['params'] = params
         self._event_queue.put(msg)
 
     def _handle_event_loop(self):
@@ -437,7 +448,13 @@ class Messenger(object):
         if domain in self._enabled:
             self._enabled[domain] -= 1
             if self._enabled[domain] <= 0:
-                self._run_cdp(f'{domain}.disable', **kwargs)
+                try:
+                    self._run_cdp(f'{domain}.disable', **kwargs)
+                except AlertExistsError:
+                    # A modal JavaScript dialog can block domain cleanup. The
+                    # dialog handler clears it; release local bookkeeping now
+                    # so teardown does not wait for the CDP timeout.
+                    pass
                 self._enabled.pop(domain, None)
 
     def _set_callback(self, event, callback, immediate=False):

@@ -70,6 +70,7 @@ def run(ctx: TestContext) -> None:
         issues.append(f"ChromiumTab.post(timeout=3) forwarded timeout={mode_calls[-1].get('timeout')!r}")
 
     listener = object.__new__(Listener)
+    listener._owner = SimpleNamespace(_session_id=None)
     listener._running_requests = 1
     packet = SimpleNamespace(_raw_fail_info=None, _resource_type=None, is_failed=False)
     listener._request_ids = {"request-1": packet}

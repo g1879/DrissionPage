@@ -49,15 +49,17 @@ class BaseListener(object):
         return self._res_type_setter
 
     def set_urls(self, urls=True, is_regex=False):
-        if not isinstance(urls, (str, list, tuple, set)) and urls is not True:
-            raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'urls',
-                                            ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(urls)))
-        if urls is True:
-            self._urls = True
-        else:
-            self._urls = {urls} if isinstance(urls, str) else set(urls)
+        if urls is not None:
+            if not isinstance(urls, (str, list, tuple, set)) and urls is not True:
+                raise ValueError(_S._lang.joinn(_S._lang.INCORRECT_TYPE_, 'urls',
+                                                ALLOW_TYPE='str, list, tuple, set, True', CURR_TYPE=type(urls)))
+            if urls is True:
+                self._urls = True
+            else:
+                self._urls = {urls} if isinstance(urls, str) else set(urls)
 
-        self._is_regex = is_regex
+        if is_regex is not None:
+            self._is_regex = is_regex
 
     def resume(self):
         self._init_callback()
@@ -77,6 +79,25 @@ class Listener(BaseListener):
 
         self.tab_id = None
 
+    def _session_key(self, request_id, session_id=None):
+        """Namespace request ids emitted by child flat CDP sessions."""
+        owner_session = getattr(self._owner, '_session_id', None)
+        return ((session_id, request_id)
+                if session_id is not None and session_id != owner_session else request_id)
+
+    def _run_cdp_for_event(self, command, session_id, **kwargs):
+        """Run a follow-up command on the session that emitted an event."""
+        owner_session = getattr(self._owner, '_session_id', None)
+        if session_id is not None and session_id != owner_session:
+            return self._owner._driver.run(command, _session_id=session_id, **kwargs)
+        return self._owner._run_cdp(command, **kwargs)
+
+    @staticmethod
+    def _without_session(kwargs):
+        if '_session_id' not in kwargs:
+            return kwargs
+        return {k: v for k, v in kwargs.items() if k != '_session_id'}
+
     def start(self, urls=None, is_regex=False):
         if urls is not None:
             self.set_urls(urls, is_regex)
@@ -84,6 +105,8 @@ class Listener(BaseListener):
         if not self.listening:
             self.resume()
             self._owner._enable_domain('Network')
+            if hasattr(self._owner, '_start_oopif_network'):
+                self._owner._start_oopif_network()
 
     def wait(self, count=1, timeout=None, fit_count=True, raise_err=None):
         if not self.listening:
@@ -226,6 +249,8 @@ class Listener(BaseListener):
         if self.listening:
             self.pause(clear=True)
         self._owner._disable_domain('Network')
+        if hasattr(self._owner, '_stop_oopif_network'):
+            self._owner._stop_oopif_network()
 
     def pause(self, clear=True):
         if self.listening:
@@ -304,25 +329,29 @@ class Listener(BaseListener):
             self._owner._set_callback('Network.eventSourceMessageReceived', self._eventSourceMessageReceived)
 
     def _eventSourceMessageReceived(self, **kwargs):
-        i = self._request_ids.get(kwargs['requestId'])
+        session_id = kwargs.get('_session_id')
+        key = self._session_key(kwargs['requestId'], session_id)
+        i = self._request_ids.get(key)
         if self._urls is True or i:
-            p = SSEPacket(self._owner, i.target if i else None, kwargs)
+            p = SSEPacket(self._owner, i.target if i else None, self._without_session(kwargs))
             if i:
                 p._connect_info = i
             self._caught.put(p)
 
     def _webSocketFrameSent(self, **kwargs):
-        i = self._ws_info.get(kwargs['requestId'])
+        session_id = kwargs.get('_session_id')
+        i = self._ws_info.get(self._session_key(kwargs['requestId'], session_id))
         if self._urls is True or i:
-            p = WebSocketPacket(self._owner, i.target if i else None, kwargs, True)
+            p = WebSocketPacket(self._owner, i.target if i else None, self._without_session(kwargs), True)
             if i:
                 p._connect_info = i
             self._caught.put(p)
 
     def _webSocketFrameReceived(self, **kwargs):
-        i = self._ws_info.get(kwargs['requestId'])
+        session_id = kwargs.get('_session_id')
+        i = self._ws_info.get(self._session_key(kwargs['requestId'], session_id))
         if self._urls is True or i:
-            p = WebSocketPacket(self._owner, i.target if i else None, kwargs, False)
+            p = WebSocketPacket(self._owner, i.target if i else None, self._without_session(kwargs), False)
             if i:
                 p._connect_info = i
             self._caught.put(p)
@@ -330,67 +359,94 @@ class Listener(BaseListener):
     def _webSocketCreated(self, **kwargs):
         target = is_target(self, kwargs['url'], 'GET', 'WebSocket')
         if target:
-            self._ws_info[kwargs['requestId']] = WebSocketConnectInfo(self._owner, target, kwargs['requestId'],
-                                                                      kwargs['url'], kwargs.get('initiator'))
+            session_id = kwargs.get('_session_id')
+            key = self._session_key(kwargs['requestId'], session_id)
+            self._ws_info[key] = WebSocketConnectInfo(self._owner, target, kwargs['requestId'],
+                                                      kwargs['url'], kwargs.get('initiator'))
 
     def _webSocketClosed(self, **kwargs):
-        self._ws_info.pop(kwargs['requestId'], None)
+        self._ws_info.pop(self._session_key(kwargs['requestId'], kwargs.get('_session_id')), None)
 
     def _webSocketHandshakeResponseReceived(self, **kwargs):
-        i = self._ws_info.get(kwargs['requestId'])
+        i = self._ws_info.get(self._session_key(kwargs['requestId'], kwargs.get('_session_id')))
         if i:
-            i.response = kwargs
+            i.response = self._without_session(kwargs)
 
     def _webSocketWillSendHandshakeRequest(self, **kwargs):
-        i = self._ws_info.get(kwargs['requestId'])
+        i = self._ws_info.get(self._session_key(kwargs['requestId'], kwargs.get('_session_id')))
         if i:
-            i.request = kwargs
+            i.request = self._without_session(kwargs)
 
     def _requestWillBeSent(self, **kwargs):
+        session_id = kwargs.get('_session_id')
+        key = self._session_key(kwargs['requestId'], session_id)
+        event = self._without_session(kwargs)
         self._running_requests += 1
         p = False
         target = is_target(self, kwargs['request']['url'], kwargs['request']['method'], kwargs.get('type', ''))
         if target:
             self._running_targets += 1
             rid = kwargs['requestId']
-            p = self._request_ids.setdefault(rid, DataPacket(self._owner, target))
-            p._raw_request = kwargs
+            p = self._request_ids.setdefault(key, DataPacket(self._owner, target))
+            p._session_id = session_id
+            p._raw_request = event
             if kwargs['request'].get('hasPostData') and not kwargs['request'].get('postDataEntries'):
-                p._raw_post_data = self._owner._run_cdp('Network.getRequestPostData',
-                                                        requestId=rid, _ignore=True).get('postData')
-        self._extra_info_ids.setdefault(kwargs['requestId'], {})['obj'] = p
+                p._raw_post_data = self._run_cdp_for_event(
+                    'Network.getRequestPostData', session_id, requestId=rid, _ignore=True).get('postData')
+        r = self._extra_info_ids.setdefault(key, {})
+        r['obj'] = p
+        if isinstance(p, DataPacket):
+            if r.get('request') is not None:
+                p._requestExtraInfo = r['request']
+            if r.get('response') is not None:
+                p._responseExtraInfo = r['response']
+            if r.get('request') is not None and r.get('response') is not None:
+                self._extra_info_ids.pop(key, None)
 
     def _requestWillBeSentExtraInfo(self, **kwargs):
-        self._running_requests += 1
-        self._extra_info_ids.setdefault(kwargs['requestId'], {})['request'] = kwargs
+        # Extra-info events are optional metadata and may arrive before or
+        # after their base request/response events. They are not a second
+        # active request for wait_silent() accounting.
+        key = self._session_key(kwargs['requestId'], kwargs.get('_session_id'))
+        event = self._without_session(kwargs)
+        r = self._extra_info_ids.setdefault(key, {})
+        r['request'] = event
+        obj = r.get('obj')
+        if isinstance(obj, DataPacket):
+            obj._requestExtraInfo = event
+            if r.get('response') is not None:
+                obj._responseExtraInfo = r['response']
+                self._extra_info_ids.pop(key, None)
 
     def _response_received(self, **kwargs):
-        request = self._request_ids.get(kwargs['requestId'])
+        request = self._request_ids.get(self._session_key(kwargs['requestId'], kwargs.get('_session_id')))
         if request:
             request._raw_response = kwargs['response']
             request._resource_type = kwargs['type']
             request.timestamp = kwargs['timestamp']
 
     def _responseReceivedExtraInfo(self, **kwargs):
-        self._running_requests -= 1
-        r = self._extra_info_ids.get(kwargs['requestId'])
-        if r:
-            obj = r.get('obj')
-            if obj is False:
-                self._extra_info_ids.pop(kwargs['requestId'], None)
-            elif isinstance(obj, DataPacket):
-                obj._requestExtraInfo = r.get('request')
-                obj._responseExtraInfo = kwargs
-                self._extra_info_ids.pop(kwargs['requestId'], None)
-            else:
-                r['response'] = kwargs
+        key = self._session_key(kwargs['requestId'], kwargs.get('_session_id'))
+        event = self._without_session(kwargs)
+        r = self._extra_info_ids.setdefault(key, {})
+        r['response'] = event
+        obj = r.get('obj')
+        if obj is False:
+            self._extra_info_ids.pop(key, None)
+        elif isinstance(obj, DataPacket):
+            obj._responseExtraInfo = event
+            if r.get('request') is not None:
+                obj._requestExtraInfo = r['request']
+                self._extra_info_ids.pop(key, None)
 
     def _loading_finished_sse(self, **kwargs):
         self._running_requests -= 1
         rid = kwargs['requestId']
-        packet = self._request_ids.get(rid)
+        session_id = kwargs.get('_session_id')
+        key = self._session_key(rid, session_id)
+        packet = self._request_ids.get(key)
         if packet:
-            r = self._owner._run_cdp('Network.getResponseBody', requestId=rid, _ignore=True)
+            r = self._run_cdp_for_event('Network.getResponseBody', session_id, requestId=rid, _ignore=True)
             if 'body' in r:
                 packet._raw_body = r['body']
                 packet._base64_body = r['base64Encoded']
@@ -400,21 +456,23 @@ class Listener(BaseListener):
 
             if (packet._raw_request['request'].get('hasPostData')
                     and not packet._raw_request['request'].get('postDataEntries')):
-                r = self._owner._run_cdp('Network.getRequestPostData', requestId=rid, _timeout=1, _ignore=True)
+                r = self._run_cdp_for_event('Network.getRequestPostData', session_id,
+                                             requestId=rid, _timeout=1, _ignore=True)
                 packet._raw_post_data = r.get('postData')
 
-        r = self._extra_info_ids.get(kwargs['requestId'])
+        r = self._extra_info_ids.get(key)
         if r:
             obj = r.get('obj')
-            if obj is False or (isinstance(obj, DataPacket) and not self._extra_info_ids.get('request')):
-                self._extra_info_ids.pop(kwargs['requestId'], None)
-            elif isinstance(obj, DataPacket) and self._extra_info_ids.get('response'):
-                response = r.get('response')
-                obj._requestExtraInfo = r['request']
-                obj._responseExtraInfo = response
-                self._extra_info_ids.pop(kwargs['requestId'], None)
+            if obj is False:
+                self._extra_info_ids.pop(key, None)
+            elif isinstance(obj, DataPacket):
+                # Both extra-info events are independently optional and their
+                # order is not guaranteed by CDP. Preserve whatever arrived.
+                obj._requestExtraInfo = r.get('request')
+                obj._responseExtraInfo = r.get('response')
+                self._extra_info_ids.pop(key, None)
 
-        self._request_ids.pop(rid, None)
+        self._request_ids.pop(key, None)
         return packet
 
     def _loading_finished(self, **kwargs):
@@ -426,25 +484,26 @@ class Listener(BaseListener):
     def _loading_failed_sse(self, **kwargs):
         self._running_requests -= 1
         r_id = kwargs['requestId']
-        packet = self._request_ids.get(r_id)
+        key = self._session_key(r_id, kwargs.get('_session_id'))
+        packet = self._request_ids.get(key)
         if packet:
-            packet._raw_fail_info = kwargs
+            packet._raw_fail_info = self._without_session(kwargs)
             packet._resource_type = kwargs['type']
             packet.is_failed = True
 
-        r = self._extra_info_ids.get(kwargs['requestId'])
+        r = self._extra_info_ids.get(key)
         if r:
             obj = r.get('obj')
-            if obj is False and r.get('response'):
-                self._extra_info_ids.pop(kwargs['requestId'], None)
-            elif isinstance(obj, DataPacket):
-                response = r.get('response')
-                if response:
-                    obj._requestExtraInfo = r['request']
-                    obj._responseExtraInfo = response
-                    self._extra_info_ids.pop(kwargs['requestId'], None)
+            if isinstance(obj, DataPacket):
+                # Extra-info events are optional; a failed request may have
+                # response metadata without request metadata (or neither).
+                # Attach whatever arrived and always release the terminal
+                # request's correlation record.
+                obj._requestExtraInfo = r.get('request')
+                obj._responseExtraInfo = r.get('response')
+            self._extra_info_ids.pop(key, None)
 
-        self._request_ids.pop(r_id, None)
+        self._request_ids.pop(key, None)
         return packet
 
     def _loading_failed(self, **kwargs):
@@ -530,13 +589,13 @@ def is_target(listener, url, method, res_type):
     if listener._urls is True:
         if ((listener._method is True or method in listener._method)
                 and (listener._res_type is True or res_type in listener._res_type)):
-            return listener._urls, listener._method, listener._res_type
+            return listener._urls, method, res_type
     else:
         for u in listener._urls:
             if (((listener._is_regex and search(u, url)) or (not listener._is_regex and u in url))
                     and (listener._method is True or method in listener._method)
                     and (listener._res_type is True or res_type in listener._res_type)):
-                return listener._urls, listener._method, listener._res_type
+                return u, method, res_type
     return False
 
 

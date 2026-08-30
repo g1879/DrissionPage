@@ -18,7 +18,7 @@ def run(ctx):
             """
             <body>
               <div id="inside-frame">Frame Domain</div>
-              <script>fetch('/api/data').catch(() => {});</script>
+              <script>fetch('/api/data').then(r => r.text()).catch(() => {});</script>
             </body>
             """,
             title='child frame',
@@ -32,7 +32,10 @@ def run(ctx):
                 title='parent page',
             ),
         }
-        with local_server(parent_routes, host='127.0.0.1') as parent_base, make_browser(ctx.browser_path) as browser:
+        # Force site isolation so the child is a real OOPIF/CDP target rather
+        # than an in-process frame hidden by the default test flags.
+        with local_server(parent_routes, host='127.0.0.1') as parent_base, make_browser(
+                ctx.browser_path, force_oopif=True) as browser:
             tab = browser.latest_tab
             tab.listen.start('/api/data')
             try:

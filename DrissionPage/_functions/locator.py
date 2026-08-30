@@ -146,10 +146,21 @@ def str_to_ax_loc(loc):
 
 def str_to_xpath_loc(loc):
     loc_by = 'xpath'
+    # XPath expressions can be passed without a prefix. Keep them as XPath
+    # instead of treating a leading slash as a text locator.
+    if loc.startswith(('/', './', '../')):
+        return loc_by, loc
     loc = _preprocess(loc)
 
+    # A leading dot/hash is the documented CSS shorthand. This distinction is
+    # also important for relative parent/child lookups, where a CSS shorthand
+    # must be translated to an element predicate rather than text matching.
+    if loc.startswith(('.', '#')):
+        loc_by = 'css selector'
+        loc_str = css_escape_selector(loc)
+
     # 多属性查找
-    if loc.startswith(('@@', '@|', '@!')) and loc not in ('@@', '@|', '@!'):
+    elif loc.startswith(('@@', '@|', '@!')) and loc not in ('@@', '@|', '@!'):
         loc_str = _make_multi_xpath_str('*', loc)[1]
 
     # 单属性查找
@@ -515,10 +526,10 @@ def translate_css_loc(loc):
         loc_str = loc[1]
 
     elif loc_0 == By.ID:
-        loc_str = f'#{css_trans(loc[1])}'
+        loc_str = f'#{css_escape_identifier(loc[1])}'
 
     elif loc_0 == By.CLASS_NAME:
-        loc_str = f'.{css_trans(loc[1])}'
+        loc_str = f'.{css_escape_identifier(loc[1])}'
 
     elif loc_0 == By.LINK_TEXT:
         loc_by = By.XPATH
@@ -544,6 +555,30 @@ def css_trans(txt):
     c = ('!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@',
          '[', '\\', ']', '^', '`', ',', '{', '|', '}', '~', ' ')
     return ''.join([fr'\{i}' if i in c else i for i in txt])
+
+
+def css_escape_identifier(txt):
+    """Escape a CSS identifier, including an initial ASCII digit."""
+    result = css_trans(txt)
+    if txt and txt[0].isdigit():
+        result = f'\\3{txt[0]} {result[1:]}'
+    return result
+
+
+def css_escape_selector(selector):
+    """Escape shorthand class/id identifiers that begin with a digit.
+
+    Full CSS selectors are otherwise passed through unchanged. The helper is
+    intentionally small because ``css_trans`` already handles punctuation and
+    attribute values; only the identifier immediately following ``.`` or ``#``
+    needs the leading-digit rule here.
+    """
+    if len(selector) < 2:
+        return selector
+    prefix = selector[0]
+    if prefix not in '.#' or not selector[1].isdigit():
+        return selector
+    return prefix + css_escape_identifier(selector[1:])
 
 
 def _preprocess(loc):

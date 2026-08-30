@@ -96,8 +96,13 @@ class Driver(object):
                 return result
 
             except Empty:
-                if (self.alert_flag and message['sessionId'] in self.alert_flag
-                        and message['method'].startswith(('Input.', 'Runtime.'))):
+                if (self.alert_flag and message.get('sessionId') in self.alert_flag
+                        and (message['method'].startswith(('Input.', 'Runtime.'))
+                             or message['method'] in ('Page.navigate', 'Page.stopLoading', 'Network.disable'))):
+                    # The command cannot complete while the modal dialog is
+                    # open. Drop its response queue before returning so a
+                    # later dialog close cannot leave an orphaned entry.
+                    self.method_results.pop(ws_id, None)
                     return {'error': {'message': 'alert exists.'}}
 
                 if timeout is not None and perf_counter() > end_time:

@@ -143,7 +143,10 @@ def test_websocket_sse_and_http_restore(executable):
                 tab.listen.set_method.all()
                 tab.listen.start('/api')
                 try:
-                    tab.run_js("fetch('/api').catch(() => {});")
+                    # Network.loadingFinished is emitted once the response
+                    # body has been consumed; a headers-only fetch can remain
+                    # pending in Chrome and is not a listener restart signal.
+                    tab.run_js("fetch('/api').then(r => r.text()).catch(() => {});")
                     http_packet = tab.listen.wait(timeout=5)
                     assert_equal(getattr(http_packet, 'type', 'DataPacket'), 'DataPacket',
                                  'normal listener should return DataPacket after WS/SSE modes')
@@ -156,7 +159,7 @@ def test_websocket_sse_and_http_restore(executable):
                 tab.listen.set_method.GET(only=True)
                 tab.listen.start('/api')
                 try:
-                    tab.run_js("fetch('/api', {method: 'POST'}).catch(() => {});")
+                    tab.run_js("fetch('/api', {method: 'POST'}).then(r => r.text()).catch(() => {});")
                     assert_false(tab.listen.wait(timeout=0.8), 'set_method.GET(only=True) should filter out POST fetch')
                 finally:
                     tab.listen.stop()

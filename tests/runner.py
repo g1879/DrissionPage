@@ -120,18 +120,19 @@ CASE_ALIASES = {
 KNOWN_ISSUE_CASES: dict[str, str] = {
     "feature_recommended_chromium_entry": "ChromiumPage root import compatibility is not implemented on the current branch.",
     "feature_startup_settings": "ChromiumOptions.set_browser_path(edge=True) compatibility is not implemented on the current branch.",
-    "feature_element_locators": "AX lookup calls Accessibility.getRootAXNode before the Accessibility domain is enabled.",
-    "feature_element_core_behaviors": "Plain-string parent locators currently generate invalid relative XPath.",
-    "feature_find_api": "SessionElement.parent() plain CSS-like locators currently generate invalid relative XPath.",
+    # These cases pass on the checkout after the CDP/locator fixes. Keep them
+    # report-only so the gate can still compare the unchanged PyPI 5.0.0b1
+    # wheel, where the original regressions remain reproducible.
+    "feature_element_locators": "Fixed in the checkout; PyPI 5.0.0b1 still calls Accessibility.getRootAXNode before enabling Accessibility.",
+    "feature_element_core_behaviors": "Fixed in the checkout; PyPI 5.0.0b1 still emits invalid relative XPath for plain parent locators.",
+    "feature_find_api": "Fixed in the checkout; PyPI 5.0.0b1 still emits invalid relative XPath for plain parent locators.",
     "api_surface": "Root exports, startup options, drag_in, and click(wait_stop) API/docs contracts currently differ.",
-    "feature_cross_origin_iframe_listener": "Cross-host iframe fetch packets are not captured reliably by tab listener.",
-    "feature_listener_upgrade": "HTTP DataPacket capture does not recover after WS/SSE listener modes.",
-    "feature_regression_basics": "The combined regression probe currently fails first on numeric-start id lookup.",
-    "alert_on_open": "Opening a page that raises alert() during initial load can hang in headless CI.",
-    "context_get_tabs_as_id": "Current checkout passed locally; keep isolated pending pre-release and Linux CI confirmation.",
-    "locator_behavior": "Current source fails AX setup first; pre-release continues to expose numeric-start id lookup.",
-    "locator_explicit_syntax": "Explicit locator syntax currently falls back to text search before the locator fix is merged.",
-    "no_browser_contract_gaps": "Confirmed deterministic gaps in session options/elements, charset parsing, CDP values, locator tuples, tab POST, listener failure queueing, and tab bookkeeping.",
+    "feature_cross_origin_iframe_listener": "Fixed in the checkout; retained report-only for pre-release comparison.",
+    "feature_listener_upgrade": "Fixed in the checkout; retained report-only for pre-release comparison.",
+    "feature_regression_basics": "Fixed in the checkout; retained report-only for pre-release comparison.",
+    "alert_on_open": "Fixed in the checkout; PyPI 5.0.0b1 can still hang while a modal dialog blocks navigation.",
+    "locator_behavior": "Fixed in the checkout; PyPI 5.0.0b1 still fails Accessibility setup and numeric-leading ID lookup.",
+    "locator_explicit_syntax": "Fixed in the checkout; PyPI 5.0.0b1 still falls back to text search for explicit locators.",
 }
 
 
@@ -331,6 +332,7 @@ def build_report(results: list[TestResult], cases, started: float, ctx: TestCont
         "duration_seconds": round(time.perf_counter() - started, 3),
         "drissionpage": import_version(),
         "browser_path": ctx.browser_path,
+        "source": ctx.source,
         "include_browser": ctx.include_browser,
         "artifacts_dir": str(ctx.artifacts_dir),
         "suite": suite,
@@ -371,6 +373,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
     lines.append("")
     lines.append(f"- Generated: `{report['generated_at']}`")
     lines.append(f"- DrissionPage: `{report['drissionpage']['version']}` from `{report['drissionpage']['module']}`")
+    lines.append(f"- Source under test: `{report.get('source', 'current')}`")
     lines.append(f"- Browser: `{report['browser_path']}`")
     lines.append(f"- Suite: `{report.get('suite', 'unknown')}`")
     lines.append(f"- Cases: {summary['passed']} passed / {summary['failed']} failed / {summary['skipped']} skipped / {summary['cases_total']} total")

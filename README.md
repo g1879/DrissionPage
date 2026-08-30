@@ -46,7 +46,11 @@ python 版本：3.6 及以上
 
 # 🛠 如何使用
 
-点击查看：[教程]([https://drissionpage.cn/codes.png](https://drissionpage.cn/tutorials/xingqiu)
+入门资料：
+
+- [仓库内新手实战教程](docs/drissionpage-beginner-guide.md)
+- [生态工具与内容机会评估](docs/drissionpage-ecosystem-opportunities.md)
+- [官方在线教程](https://drissionpage.cn/)
 
 ---
 
