@@ -18,7 +18,7 @@ from DrissionPage._elements.chromium_element import (
     _get_node_by_node_id,
     _get_node_by_obj_id,
     _get_node_info,
-    _make_ele,
+    make_ele,
     convert_argument,
     do_find_any,
     do_find_ax,
@@ -521,8 +521,8 @@ def _check_node_factory_contracts():
                  "node factory should filter text entries for ele_only")
     assert_true(isinstance(make_chromium_eles(page, [1, 3], index=-1, id_type="node_id"), ChromiumElement),
                 "node factory should support negative indexes")
-    assert_true(isinstance(_make_ele(page, "obj", {"node": page.node_map[1]}), ChromiumElement),
-                "_make_ele should preserve ordinary element types")
+    assert_true(isinstance(make_ele(page, "obj", {"node": page.node_map[1]}), ChromiumElement),
+                "make_ele should preserve ordinary element types")
 
     for type_txt in ("9", "7", "2", "1", "3"):
         script = make_js_for_find_ele_by_xpath("//div[@id='a']", type_txt, "this")
