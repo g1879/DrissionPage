@@ -9,6 +9,7 @@ from base64 import b64decode
 from json import JSONDecodeError, loads
 from queue import Queue
 from re import search
+from threading import Lock
 from time import perf_counter, sleep
 
 from ftfy import fix_text
@@ -70,6 +71,9 @@ class Listener(BaseListener):
         self._caught = None
         self._running_requests = 0
         self._running_targets = 0
+        self._counter_lock = Lock()
+        self._active_request_ids = set()
+        self._active_target_ids = set()
 
         self._request_ids = None
         self._extra_info_ids = None
@@ -247,12 +251,15 @@ class Listener(BaseListener):
             self.clear()
 
     def clear(self):
-        self._request_ids = {}
-        self._extra_info_ids = {}
-        self._ws_info = {}
-        self._caught = Queue(maxsize=0)
-        self._running_requests = 0
-        self._running_targets = 0
+        with self._counter_lock:
+            self._request_ids = {}
+            self._extra_info_ids = {}
+            self._ws_info = {}
+            self._caught = Queue(maxsize=0)
+            self._active_request_ids.clear()
+            self._active_target_ids.clear()
+            self._running_requests = 0
+            self._running_targets = 0
 
     def wait_silent(self, timeout=None, targets_only=False, limit=0):
         if not self.listening:
@@ -347,21 +354,28 @@ class Listener(BaseListener):
             i.request = kwargs
 
     def _requestWillBeSent(self, **kwargs):
-        self._running_requests += 1
+        rid = kwargs['requestId']
+        # CDP reuses one requestId for every hop in a redirect chain.
         p = False
         target = is_target(self, kwargs['request']['url'], kwargs['request']['method'], kwargs.get('type', ''))
-        if target:
-            self._running_targets += 1
-            rid = kwargs['requestId']
-            p = self._request_ids.setdefault(rid, DataPacket(self._owner, target))
-            p._raw_request = kwargs
-            if kwargs['request'].get('hasPostData') and not kwargs['request'].get('postDataEntries'):
-                p._raw_post_data = self._owner._run_cdp('Network.getRequestPostData',
-                                                        requestId=rid, _ignore=True).get('postData')
-        self._extra_info_ids.setdefault(kwargs['requestId'], {})['obj'] = p
+        with self._counter_lock:
+            if rid not in self._active_request_ids:
+                self._active_request_ids.add(rid)
+                self._running_requests = len(self._active_request_ids)
+            if target:
+                if rid not in self._active_target_ids:
+                    self._active_target_ids.add(rid)
+                    self._running_targets = len(self._active_target_ids)
+                p = self._request_ids.setdefault(rid, DataPacket(self._owner, target))
+                p._raw_request = kwargs
+            self._extra_info_ids.setdefault(rid, {})['obj'] = p
+
+        if (p and kwargs['request'].get('hasPostData')
+                and not kwargs['request'].get('postDataEntries')):
+            p._raw_post_data = self._owner._run_cdp('Network.getRequestPostData',
+                                                    requestId=rid, _ignore=True).get('postData')
 
     def _requestWillBeSentExtraInfo(self, **kwargs):
-        self._running_requests += 1
         self._extra_info_ids.setdefault(kwargs['requestId'], {})['request'] = kwargs
 
     def _response_received(self, **kwargs):
@@ -372,7 +386,6 @@ class Listener(BaseListener):
             request.timestamp = kwargs['timestamp']
 
     def _responseReceivedExtraInfo(self, **kwargs):
-        self._running_requests -= 1
         r = self._extra_info_ids.get(kwargs['requestId'])
         if r:
             obj = r.get('obj')
@@ -386,8 +399,8 @@ class Listener(BaseListener):
                 r['response'] = kwargs
 
     def _loading_finished_sse(self, **kwargs):
-        self._running_requests -= 1
         rid = kwargs['requestId']
+        self._finish_request(rid)
         packet = self._request_ids.get(rid)
         if packet:
             r = self._owner._run_cdp('Network.getResponseBody', requestId=rid, _ignore=True)
@@ -421,11 +434,10 @@ class Listener(BaseListener):
         packet = self._loading_finished_sse(**kwargs)
         if packet:
             self._caught.put(packet)
-            self._running_targets -= 1
 
     def _loading_failed_sse(self, **kwargs):
-        self._running_requests -= 1
         r_id = kwargs['requestId']
+        self._finish_request(r_id)
         packet = self._request_ids.get(r_id)
         if packet:
             packet._raw_fail_info = kwargs
@@ -451,7 +463,13 @@ class Listener(BaseListener):
         packet = self._loading_failed_sse(**kwargs)
         if packet:
             self._caught.put(packet)
-            self._running_targets -= 1
+
+    def _finish_request(self, request_id):
+        with self._counter_lock:
+            self._active_request_ids.discard(request_id)
+            self._running_requests = len(self._active_request_ids)
+            self._active_target_ids.discard(request_id)
+            self._running_targets = len(self._active_target_ids)
 
 
 class BrowserListener(BaseListener):

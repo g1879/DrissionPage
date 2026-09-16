@@ -143,7 +143,7 @@ def test_websocket_sse_and_http_restore(executable):
                 tab.listen.set_method.all()
                 tab.listen.start('/api')
                 try:
-                    tab.run_js("fetch('/api').catch(() => {});")
+                    tab.run_js("fetch('/api').then(response => response.text()).catch(() => {});")
                     http_packet = tab.listen.wait(timeout=5)
                     assert_equal(getattr(http_packet, 'type', 'DataPacket'), 'DataPacket',
                                  'normal listener should return DataPacket after WS/SSE modes')
