@@ -1,6 +1,8 @@
 """Feature: frame, shadow-root, link, and setter contracts."""
 from __future__ import annotations
 
+from time import perf_counter
+
 from feature_cases.browser_interaction_server import browser_interaction_server
 from support import assert_equal, assert_in, assert_true, chromium
 
@@ -30,6 +32,12 @@ def run(ctx):
         assert_equal(shadow.ele("#shadow-btn", timeout=3).attr("data-role"), "shadow", "shadow root CSS lookup should find inner button")
 
         primary = tab.ele("#primary")
+        t0 = perf_counter()
+        sr = primary.shadow_root
+        elapsed = perf_counter() - t0
+        assert_true(sr is None, "shadow_root should be None when there's no shadow root")
+        assert_true(elapsed < 1, "shadow_root took too long - should not wait out ele.timeout", elapsed=elapsed)
+
         primary.set.property("dpProp", "value41")
         primary.set.style("border", "3px solid rgb(1, 2, 3)")
         assert_equal(primary.property("dpProp"), "value41", "set.property() should update DOM property")
