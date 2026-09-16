@@ -12,7 +12,7 @@ from DrissionPage._units.listener import (
     SSEPacket,
     WebSocketConnectInfo,
     WebSocketPacket,
-    in_targets,
+    is_target,
     sse2list,
 )
 from DrissionPage.errors import WaitTimeoutError
@@ -21,6 +21,11 @@ from support import assert_equal, assert_false, assert_in, assert_true
 
 FEATURE_ID = "listener_data_contracts"
 REQUIRES_BROWSER = False
+
+HTTP_TARGET = ({"/api"}, {"GET", "POST"}, True)
+WEBSOCKET_TARGET = ({"/socket"}, {"GET", "POST"}, {"WebSocket"})
+SSE_TARGET = ({"/events"}, {"GET", "POST"}, {"EventSource"})
+BROWSER_TARGET = ({"/browser-api"}, {"POST"}, {"XHR"})
 
 
 class _Owner:
@@ -71,7 +76,7 @@ def run(ctx):
 def _make_packet(*, raw_post_data=None, post_data_entries=None, body='{"ok": true}', base64_body=False):
     owner = _Owner()
     owner.listen = SimpleNamespace(listening=True)
-    packet = DataPacket(owner, ("/api", "POST", "Fetch"))
+    packet = DataPacket(owner, HTTP_TARGET)
     request = {
         "url": "https://example.test/api?one=1&blank=&one=last",
         "method": "POST",
@@ -111,7 +116,7 @@ def _check_data_packet_contracts():
 
     assert_equal(packet.type, "DataPacket", "DataPacket should expose its packet type")
     assert_equal(packet.tab_id, "tab-17", "DataPacket should retain the owner tab id")
-    assert_equal(packet.target, ("/api", "POST", "Fetch"), "DataPacket should retain the matched target")
+    assert_equal(packet.target, HTTP_TARGET, "DataPacket should retain the configured target filters")
     assert_equal(packet.url, "https://example.test/api?one=1&blank=&one=last",
                  "DataPacket.url should delegate to the request URL")
     assert_equal(packet.method, "POST", "DataPacket.method should delegate to the request method")
@@ -148,7 +153,7 @@ def _check_data_packet_contracts():
     assert_false(packet.is_failed, "new DataPacket instances should not be marked failed")
     assert_equal(packet.fail_info.errorText, None, "missing failure fields should resolve to None")
     assert_equal(repr(packet),
-                 '<DataPacket target="(\'/api\', \'POST\', \'Fetch\')" url="https://example.test/api?one=1&blank=&one=last">',
+                 f'<DataPacket target="{HTTP_TARGET}" url="https://example.test/api?one=1&blank=&one=last">',
                  "DataPacket repr should include the target and URL")
     assert_true(packet.request is packet.request, "request wrappers should be cached")
     assert_true(packet.response is packet.response, "response wrappers should be cached")
@@ -210,7 +215,7 @@ def _check_body_and_post_data_parsing():
 
 def _check_websocket_and_sse_packets():
     owner = _Owner()
-    connection = WebSocketConnectInfo(owner, ("socket", "GET", "WebSocket"), "ws-1",
+    connection = WebSocketConnectInfo(owner, WEBSOCKET_TARGET, "ws-1",
                                       "wss://example.test/socket", {"type": "script"})
     connection.request = {"headers": {"Upgrade": "websocket"}}
     connection.response = {"response": {"status": 101}}
@@ -223,6 +228,8 @@ def _check_websocket_and_sse_packets():
     text_packet._connect_info = connection
     assert_equal(text_packet.type, "WebSocketPacket", "WebSocketPacket should expose its packet type")
     assert_equal(text_packet.resourceType, "WebSocket", "WebSocketPacket should expose its resource type")
+    assert_equal(text_packet.target, WEBSOCKET_TARGET,
+                 "WebSocketPacket should retain the configured target filters")
     assert_equal(text_packet.tab_id, "tab-17", "WebSocketPacket should retain the owner tab id")
     assert_true(text_packet.is_sent, "sent websocket frames should retain their direction")
     assert_equal(text_packet.timestamp, 20.5, "WebSocketPacket should expose its timestamp")
@@ -237,24 +244,25 @@ def _check_websocket_and_sse_packets():
     assert_equal(repr(text_packet), '<WebSocketPacket sent requestId=ws-1 timestamp=20.5>',
                  "WebSocketPacket repr should include direction, request id, and timestamp")
 
-    raw_text = WebSocketPacket(owner, True, {
+    raw_text = WebSocketPacket(owner, (True, True, True), {
         "requestId": "ws-2", "timestamp": 21, "response": {"opcode": 1, "payloadData": "not-json"}
     }, False)
     assert_equal(raw_text.data, "not-json", "non-JSON websocket text should remain text")
     assert_equal(raw_text.url, None, "unconnected websocket frames should not invent a URL")
 
-    binary = WebSocketPacket(owner, True, {
+    binary = WebSocketPacket(owner, (True, True, True), {
         "requestId": "ws-3", "timestamp": 22,
         "response": {"opcode": 2, "payloadData": b64encode(b"frame-bytes").decode()},
     }, False)
     assert_equal(binary.data, b"frame-bytes", "binary websocket frames should decode from base64")
 
-    event = SSEPacket(owner, ("events", "GET", "EventSource"), {
+    event = SSEPacket(owner, SSE_TARGET, {
         "requestId": "sse-1", "timestamp": 30.5, "eventName": "update", "eventId": "evt-7",
         "data": '{"ready": true}',
     })
     assert_equal(event.type, "SSEPacket", "SSEPacket should expose its packet type")
     assert_equal(event.resourceType, "EventSource", "SSEPacket should expose its resource type")
+    assert_equal(event.target, SSE_TARGET, "SSEPacket should retain the configured target filters")
     assert_equal(event.name, "update", "SSEPacket should expose the event name")
     assert_equal(event.id, "evt-7", "SSEPacket should expose the event id")
     assert_equal(event.data, '{"ready": true}', "SSEPacket data should preserve the CDP event text")
@@ -288,9 +296,8 @@ def _check_filter_setters_and_target_matching():
     listener.set_urls(["/api", "/asset", "/api"], is_regex=True)
     assert_equal(listener.urls, {"/api", "/asset"}, "URL filters should remove duplicates")
     assert_true(listener._is_regex, "set_urls should retain regex mode")
-    listener.set_urls(None, is_regex=False)
-    assert_equal(listener.urls, {"/api", "/asset"}, "None should preserve the current URL filters")
-    assert_false(listener._is_regex, "regex mode should update independently of URL filters")
+    _expect_error(ValueError, lambda: listener.set_urls(None, is_regex=False),
+                  "None should be rejected as an invalid URL filter")
     listener.set_urls(True)
     assert_true(listener.urls is True, "True should reset URL matching to all requests")
     _expect_error(ValueError, lambda: listener.set_urls(17), "unsupported URL filter types should be rejected")
@@ -324,20 +331,22 @@ def _check_filter_setters_and_target_matching():
     listener.set_urls(["/api", r"/items/\d+"], is_regex=False)
     listener._method = {"GET"}
     listener._res_type = {"Fetch"}
-    assert_equal(in_targets(listener, "https://host.test/api/list", "GET", "Fetch"),
-                 ("/api", "GET", "Fetch"), "literal target matching should return the matched filter and metadata")
-    assert_false(in_targets(listener, "https://host.test/api/list", "POST", "Fetch"),
+    assert_equal(is_target(listener, "https://host.test/api/list", "GET", "Fetch"),
+                 ({"/api", r"/items/\d+"}, {"GET"}, {"Fetch"}),
+                 "literal target matching should return all configured filters")
+    assert_false(is_target(listener, "https://host.test/api/list", "POST", "Fetch"),
                  "method filters should reject non-matching requests")
-    assert_false(in_targets(listener, "https://host.test/api/list", "GET", "XHR"),
+    assert_false(is_target(listener, "https://host.test/api/list", "GET", "XHR"),
                  "resource filters should reject non-matching requests")
     listener.set_urls(r"/items/\d+", is_regex=True)
-    assert_equal(in_targets(listener, "https://host.test/items/42", "GET", "Fetch"),
-                 (r"/items/\d+", "GET", "Fetch"), "regex URL filters should use regular-expression matching")
+    assert_equal(is_target(listener, "https://host.test/items/42", "GET", "Fetch"),
+                 ({r"/items/\d+"}, {"GET"}, {"Fetch"}),
+                 "regex URL filters should return the configured filter set")
     listener.set_urls(True)
     listener._method = True
     listener._res_type = True
-    assert_equal(in_targets(listener, "https://host.test/anything", "OPTIONS", "Other"),
-                 (True, "OPTIONS", "Other"), "all filters should retain request metadata in the target tuple")
+    assert_equal(is_target(listener, "https://host.test/anything", "OPTIONS", "Other"),
+                 (True, True, True), "all filters should return the three all-request sentinels")
 
 
 def _check_listener_lifecycle_and_queues():
@@ -451,8 +460,8 @@ def _check_http_event_correlation():
 
     packet = listener.wait(timeout=0.01)
     assert_true(isinstance(packet, DataPacket), "normal HTTP callbacks should enqueue a DataPacket")
-    assert_equal(packet.target, ("/api", "GET", "Fetch"),
-                 "HTTP callback correlation should retain matched target metadata")
+    assert_equal(packet.target, ({"/api"}, {"GET", "POST"}, True),
+                 "HTTP callback correlation should retain the configured target filters")
     assert_equal(packet.frameId, "frame-http", "HTTP callback correlation should retain frame identity")
     assert_equal(packet.response.body, {"ok": True}, "loading completion should attach and parse the response body")
     assert_equal(packet.request.headers["x-request-extra"], "yes",
@@ -538,7 +547,9 @@ def _check_browser_data_packet_contracts():
         "responseStatusText": "Accepted",
         "body": {"body": b64encode(b'{"queued": true}').decode(), "base64Encoded": True},
     }
-    packet = BrowserDataPacket("tab-fetch", ("/browser-api", "POST", "XHR"), raw)
+    packet = BrowserDataPacket("tab-fetch", BROWSER_TARGET, raw)
+    assert_equal(packet.target, BROWSER_TARGET,
+                 "BrowserDataPacket should retain the configured target filters")
     assert_equal(packet.url, "https://example.test/browser-api?item=7&blank=",
                  "BrowserDataPacket should expose the intercepted URL")
     assert_equal(packet.method, "POST", "BrowserDataPacket should expose the intercepted method")
@@ -558,7 +569,7 @@ def _check_browser_data_packet_contracts():
     assert_in("BrowserDataRacket", repr(packet), "BrowserDataPacket repr should remain readable")
 
     failed_raw = dict(raw, responseErrorReason="Failed")
-    failed_packet = BrowserDataPacket("tab-fetch", True, failed_raw)
+    failed_packet = BrowserDataPacket("tab-fetch", (True, True, True), failed_raw)
     assert_true(failed_packet.is_failed, "responseErrorReason should mark BrowserDataPacket failures")
     assert_equal(failed_packet.response.errorReason, "Failed", "browser response errors should remain available")
 
