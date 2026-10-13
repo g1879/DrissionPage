@@ -22,26 +22,14 @@ DrissionPage 是一个基于 python 的网页自动化工具。
   <tr>
     <td><a href="https://www.ipwo.net/?ref=giteeg1879" target="_blank"><img src="https://drissionpage.cn/img/ipwo.png"/></a><a href="https://www.ipwo.net/?ref=giteeg1879" target="_blank">IPWO 提供全球多个地区的住宅代理 IP，为网页自动化和数据采集项目提供代理网络选择。<br/>对于使用 DrissionPage 的开发者，可根据任务需求配置不同地区的代理，用于网页访问、跨境数据采集、市场调研及自动化测试等场景。</a></td>
     <td><a href="https://www.nextproxy.com?utm_source=drissionpage" target="_blank"><img src="https://www.nextproxy.com/affiliate-banners/zh/nextproxy-1500x176-motion.svg?v=aligned-layout-20260910"/></a>
-<a href="https://www.nextproxy.com?utm_source=drissionpage" target="_blank">NextProxy 是面向开发者与企业的全球优质代理服务商，拥有 1 亿+高纯度住宅 IP，出口来自真实家庭网络，支持国家、州省及城市级定位。独立出口配合指纹隔离，可降低账号关联与风控概率，适用于跨境电商、社媒运营、广告验证和数据采集。</a></td>
-    
-    
-  </tr>
-  
-  <tr>
-    <td><a href="https://mangoproxy.com/?utm_source=drissionpage&utm_medium=partner&utm_campaign=drissionpage_github"><img src="https://drissionpage.cn/img/MangoProxy.png"/></a>
-    <a href="https://mangoproxy.com/?utm_source=drissionpage&utm_medium=partner&utm_campaign=drissionpage_github">MangoProxy is a Residential, ISP, Mobile, and Datacenter proxy service designed for professional tasks where stability, speed, and anonymity matter.</a> <br/>DRISSION - 8% off Static ISP Proxies</td>
-    <td><a href="https://sx.org/c/drisson" target="_blank"><img src="https://drissionpage.cn/img/sxorg.jpg"/></a>
-<a href="https://sx.org/c/drisson" target="_blank">SX.org 完美适用于数据爬取、自动化与程序开发，保障连接稳定与安全。所有新用户均可享受 3GB 免费试用。提供 24/7 全天候技术支持。</a></td>
-    
-    
+<a href="https://www.nextproxy.com?utm_source=drissionpage" target="_blank">NextProxy 是面向开发者与企业的全球优质代理服务商，拥有 1 亿+高纯度住宅 IP，出口来自真实家庭网络，支持国家、州省及城市级定位。独立出口配合指纹隔离，可降低账号关联与风控概率，适用于跨境电商、社媒运营、广告验证和数据采集。</a></td>   
   </tr>
   
   <tr>
     <td><a href="https://www.rapidproxy.io/?ref=master"><img src="https://drissionpage.cn/img/Rapidproxy.png"/></a><br/>
     <a href="https://www.rapidproxy.io/?ref=master">RapidProxy 是专为自动化任务和多账号业务打造的高性能代理服务商，提供纯净住宅代理和原生静态 ISP IP。支持 9000 万+ 全球住宅 IP、智能轮换、稳定 Session 和高并发请求，适用于网页数据采集、浏览器自动化、社媒账号运营、电商业务和批量注册等场景。住宅代理低至 $0.55/GB，流量长期有效不过期。使用优惠码 RAPID10 可享 9 折优惠</a></td>
-    <td></td>
-    
-    
+    <td><a href="https://proxylane.dev/redeem?code=DRISSIONPAGE3GB&utm_source=drissionpage&utm_medium=partnership&utm_campaign=drissionpage_sponsor_202610&utm_content=github_readme" target="_blank"><img src="https://drissionpage.cn/img/proxylane.png"/></a><br/>
+    <a href="https://proxylane.dev/redeem?code=DRISSIONPAGE3GB&utm_source=drissionpage&utm_medium=partnership&utm_campaign=drissionpage_sponsor_202610&utm_content=github_readme" target="_blank">ProxyLane 住宅代理覆盖 195 个国家，含中国电信、联通、移动住宅 IP；95%+ IP 获 Scamalytics 低风险评级，可按城市、ISP、ASN 定向，粘性会话最长 72 小时。DrissionPage 5.0 起，set_proxy() 和 new_context(proxy=...) 直接支持账号密码代理：每个上下文一个会话名、一个独立住宅 IP，适合多账号、批量注册、AI Agent 和分地区采集。新用户凭优惠码 DRISSIONPAGE3GB 注册即可免费领取 3GB，付费流量永不过期。</a></td>
   </tr>
   </table>
 
