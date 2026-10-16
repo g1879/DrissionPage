@@ -141,12 +141,9 @@ class ChromiumElement(DrissionElement):
 
     @property
     def sr(self):
-        def do():
-            info = self.owner._run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
-            return (ShadowRoot(self, backend_id=info['shadowRoots'][0]['backendNodeId']) if info.get('shadowRoots')
-                    else None)
-
-        return wait_until(do, timeout=self.timeout)
+        info = self.owner._run_cdp('DOM.describeNode', backendNodeId=self._backend_id)['node']
+        return (ShadowRoot(self, backend_id=info['shadowRoots'][0]['backendNodeId']) if info.get('shadowRoots')
+                else None)
 
     @property
     def shadow_root(self):
