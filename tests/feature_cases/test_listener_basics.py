@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from feature_cases.core_feature_server import core_feature_server
-from support import assert_equal, assert_true, chromium, wait_for_packet
+from support import assert_equal, assert_false, assert_true, chromium, wait_for_packet
 
 FEATURE_ID = "listener_basics"
 REQUIRES_BROWSER = True
@@ -30,8 +30,38 @@ def run(ctx):
         finally:
             tab.listen.stop()
 
+        tab.listen.start("/redirect")
+        try:
+            assert_true(tab.get(base + "/redirect/start"), "redirect chain should navigate successfully")
+            redirected = wait_for_packet(
+                tab,
+                lambda p: getattr(p, "url", "").endswith("/redirect/final"),
+                timeout=ctx.timeout,
+                desc="redirect chain final packet",
+            )
+            assert_equal(redirected.response.status, 200,
+                         "redirect listener packet should expose the final response")
+            assert_equal(redirected.response.body["kind"], "redirect-final",
+                         "redirect listener packet should preserve the final response body")
+            assert_true(isinstance(redirected.request.timestamp, (int, float)),
+                        "Request.timestamp should expose the requestWillBeSent monotonic timestamp")
+            assert_true("timestamp" in redirected._raw_request,
+                        "requestWillBeSent should retain timestamp on the event envelope")
+            assert_false("timestamp" in redirected._raw_request["request"],
+                         "Network.Request should not be given a synthetic timestamp field")
+            assert_true(tab.listen.wait_silent(timeout=ctx.timeout),
+                        "redirect completion should release all active request accounting")
+            assert_equal(tab.listen._running_requests, 0,
+                         "redirect completion should leave no active request count")
+            assert_equal(tab.listen._running_targets, 0,
+                         "redirect completion should leave no active target count")
+        finally:
+            tab.listen.stop()
+
         tab.listen.start("/api?again=1")
         try:
+            assert_true(tab.get(base + "/listener"),
+                        "listener restart fixture should be restored after redirect navigation")
             tab("#again").click(by_js=True)
             restarted = wait_for_packet(
                 tab,

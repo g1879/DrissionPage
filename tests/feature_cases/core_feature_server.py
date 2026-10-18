@@ -11,6 +11,13 @@ def core_feature_routes():
     return {
         "/": lambda req: html("<body><h1 id='home'>core fixture</h1></body>", title="core home"),
         "/api": lambda req: json_response({"ok": True, "kind": "core"}),
+        "/redirect/start": lambda req: (
+            302, "text/plain; charset=utf-8", "redirect-start", {"Location": "/redirect/middle"}
+        ),
+        "/redirect/middle": lambda req: (
+            307, "text/plain; charset=utf-8", "redirect-middle", {"Location": "/redirect/final"}
+        ),
+        "/redirect/final": lambda req: json_response({"ok": True, "kind": "redirect-final"}),
         "/listener": lambda req: html(
             """
             <button id='again' onclick="fetch('/api?again=1').then(r => r.json()).then(j => window.again = j.kind)">again</button>
