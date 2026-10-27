@@ -23,7 +23,11 @@ DrissionPage 是一个基于 python 的网页自动化工具。
 <td width="50%"><a href="https://proxy-seller.com/?utm_source=drissionpage&utm_medium=referral&utm_campaign=partner_promo&utm_term=drissionpage&partner=889CD46F1F2942CD" target="_blank"><img src="https://drissionpage.cn/img/Proxy-Seller.png"/></a><a href="https://proxy-seller.com/?utm_source=drissionpage&utm_medium=referral&utm_campaign=partner_promo&utm_term=drissionpage&partner=889CD46F1F2942CD" target="_blank">
 Proxy-Seller - Reliable Proxies for Web Scraping & Automation
 <br/>Proxy-Seller provides high-quality Residential, ISP, Datacenter IPv4/IPv6, and Mobile proxies across 195+ locations worldwide. With HTTP(S) and SOCKS5 support, flexible pricing starting at just $0.70 per IP, and 24/7 customer support, Proxy-Seller is an excellent choice for web scraping, data collection, browser automation, and other online tasks.
-<br/>Exclusive 15% Discount - Use Code: DRISSIONPAGE</a></td>
+<br/>Exclusive 15% Discount - Use Code: DRISSIONPAGE
+<br/>
+提供覆盖全球 195+ 地区的住宅、ISP、IPv4/IPv6 及移动代理，支持 HTTP(S)/SOCKS5 协议，价格低至 $0.70/IP，提供 24/7 客服支持。适用于网络爬虫、数据采集及浏览器自动化。
+<br/>专属 85 折优惠码：DRISSIONPAGE</a>
+</td>
 
 <td width="50%"><a href="https://proxylane.dev/redeem?code=DRISSIONPAGE3GB&utm_source=drissionpage&utm_medium=partnership&utm_campaign=drissionpage_sponsor_202610&utm_content=github_readme" target="_blank"><img src="https://drissionpage.cn/img/proxylane.png"/></a><br/>
 <a href="https://proxylane.dev/redeem?code=DRISSIONPAGE3GB&utm_source=drissionpage&utm_medium=partnership&utm_campaign=drissionpage_sponsor_202610&utm_content=github_readme" target="_blank">ProxyLane 住宅代理覆盖 195 个国家，含中国电信、联通、移动住宅 IP；95%+ IP 获 Scamalytics 低风险评级，可按城市、ISP、ASN 定向，粘性会话最长 72 小时。DrissionPage 5.0 起，set_proxy() 和 new_context(proxy=...) 直接支持账号密码代理：每个上下文一个会话名、一个独立住宅 IP，适合多账号、批量注册、AI Agent 和分地区采集。新用户凭优惠码 DRISSIONPAGE3GB 注册即可免费领取 3GB，付费流量永不过期。</a></td>
