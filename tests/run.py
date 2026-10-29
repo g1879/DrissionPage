@@ -14,9 +14,18 @@ ROOT = Path(__file__).resolve().parent
 
 
 def _has_drissionpage(py: Path) -> bool:
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.pop("PYTHONHOME", None)
     result = subprocess.run(
-        [str(py), "-c", "import DrissionPage"],
+        [
+            str(py),
+            "-I",
+            "-c",
+            "from importlib.metadata import version; version('DrissionPage'); import DrissionPage",
+        ],
         cwd="/tmp",
+        env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,

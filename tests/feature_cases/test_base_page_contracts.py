@@ -70,7 +70,8 @@ def _check_base_parser_and_element_contracts():
             return values.get(locator)
 
     parser = Parser()
-    assert_equal(parser("first"), "one", "BaseParser.__call__() should delegate to ele()")
+    assert_false(callable(parser), "BaseParser should not expose the removed __call__() convenience API")
+    assert_equal(parser.ele("first"), "one", "BaseParser.ele() should delegate to _ele()")
     assert_equal(parser.ele("first", index=2, timeout=3), "one", "ele() should return its delegated lookup")
     assert_equal(parser.eles("many", timeout=4), ["one", "two"], "eles() should request all results")
     assert_equal(parser.calls[:3], [

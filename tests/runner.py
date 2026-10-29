@@ -112,6 +112,43 @@ CASE_ALIASES = {
 }
 
 
+def _module_case_name(module_name: str, *, feature: bool) -> str:
+    """Return the case name encoded by a test module filename.
+
+    Case modules keep their public name in the filename (``test_<case>``),
+    which lets explicit ``--case`` runs select imports without importing every
+    test module first. The imported module remains authoritative for its
+    metadata and executable callback.
+    """
+    stem = module_name.rsplit(".", 1)[-1]
+    if stem.startswith("test_"):
+        stem = stem[5:]
+    return f"feature_{stem}" if feature else stem
+
+
+FEATURE_CASE_MODULE_BY_NAME = {
+    _module_case_name(module_name, feature=True): module_name
+    for module_name in FEATURE_CASE_MODULES
+}
+REGRESSION_CASE_MODULE_BY_NAME = {
+    _module_case_name(module_name, feature=False): module_name
+    for module_name in REGRESSION_CASE_MODULES
+}
+CASE_MODULE_BY_NAME = {
+    **FEATURE_CASE_MODULE_BY_NAME,
+    **REGRESSION_CASE_MODULE_BY_NAME,
+}
+STATIC_CASE_NAMES = set(CASE_MODULE_BY_NAME)
+# Feature modules historically accept both ``feature_<id>`` and the shorter
+# ``<id>`` spelling on the command line. Add aliases for contract modules that
+# are not represented in the public feature manifest yet.
+for _case_name in FEATURE_CASE_MODULE_BY_NAME:
+    if _case_name.startswith("feature_"):
+        _short_name = _case_name.removeprefix("feature_")
+        if _short_name not in REGRESSION_CASE_MODULE_BY_NAME:
+            CASE_ALIASES.setdefault(_short_name, _case_name)
+
+
 # CI is a stability gate. Cases listed here are still valuable repros, but they
 # describe behavior that is either failing on the current branch, version-skewed
 # against the latest pre-release, or still under design discussion. Keep them out
@@ -215,11 +252,29 @@ def _case_from_feature_module(module_name: str):
     })()
 
 
-def load_cases():
+def load_cases(selected: set[str] | None = None):
+    """Load all cases, or only modules that can provide selected case names.
+
+    Explicit case runs are commonly used to isolate a failing contract. Keep
+    unrelated module import errors from preventing that diagnostic while still
+    allowing import errors in selected modules to surface normally.
+    """
+    if selected:
+        selected_modules = {
+            CASE_MODULE_BY_NAME[name]
+            for name in selected
+            if name in CASE_MODULE_BY_NAME
+        }
+        feature_modules = [name for name in FEATURE_CASE_MODULES if name in selected_modules]
+        regression_modules = [name for name in REGRESSION_CASE_MODULES if name in selected_modules]
+    else:
+        feature_modules = FEATURE_CASE_MODULES
+        regression_modules = REGRESSION_CASE_MODULES
+
     cases = []
-    for module_name in FEATURE_CASE_MODULES:
+    for module_name in feature_modules:
         cases.append(_case_from_feature_module(module_name))
-    for module_name in REGRESSION_CASE_MODULES:
+    for module_name in regression_modules:
         mod = importlib.import_module(module_name)
         cases.append(getattr(mod, "TEST_CASE", None))
     return [case for case in cases if case is not None]
@@ -269,8 +324,9 @@ def validate_selected_cases(selected: set[str] | None, cases) -> set[str]:
 def print_unknown_case_error(unknown: set[str], cases) -> None:
     print(f"错误：--case 没有匹配到任何测试：{', '.join(sorted(unknown))}", file=sys.stderr)
     print("可用 case 名称：", file=sys.stderr)
-    for case in cases:
-        print(f"  - {case.name}", file=sys.stderr)
+    names = STATIC_CASE_NAMES | {case.name for case in cases}
+    for name in sorted(names):
+        print(f"  - {name}", file=sys.stderr)
     print("提示：可直接使用 case 名称，也支持 feature id，例如 `--case sse_packet`。", file=sys.stderr)
 
 
@@ -437,8 +493,8 @@ def main(argv=None) -> int:
         # not hide a requested known/local case just because the default suite is
         # the CI gate.
         effective_suite = "all"
-    all_cases = load_cases()
-    unknown = validate_selected_cases(selected, all_cases)
+    all_cases = load_cases(selected)
+    unknown = (selected - {case.name for case in all_cases}) if selected else set()
     if unknown:
         print_unknown_case_error(unknown, all_cases)
         return 2
