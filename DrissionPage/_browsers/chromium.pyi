@@ -384,6 +384,11 @@ def handle_options(addr_or_opts: Union[str, ChromiumOptions, Driver]):
     ...
 
 
+def _get_browser_id(driver: Driver, incognito: bool) -> str:
+    """获取唯一可确定的浏览器工作上下文 id，候选不唯一时抛出连接错误。"""
+    ...
+
+
 def run_browser(options: ChromiumOptions) -> Tuple[bool, str, Optional[str], bool, Driver, bool, bool, bool]:
     """连接浏览器
     :param options: ChromiumOptions对象
