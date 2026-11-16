@@ -43,6 +43,7 @@ FEATURE_CASE_MODULES = [
     "feature_cases.test_options_settings",
     "feature_cases.test_chromium_options_environment",
     "feature_cases.test_pure_function_contracts",
+    "feature_cases.test_query_locator",
     "feature_cases.test_locator_edge_contracts",
     "feature_cases.test_config_session_contracts",
     "feature_cases.test_collection_action_contracts",

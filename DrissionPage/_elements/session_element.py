@@ -15,6 +15,7 @@ from .none_element import NoneElement
 from .._base.base import DrissionElement, BasePage, BaseElement
 from .._functions.elements import SessionElementsList
 from .._functions.locator import get_loc, quotes_escape, is_selenium_loc
+from .._functions.query_locator import Q, to_xpath
 from .._functions.settings import Settings as _S
 from .._functions.web import get_ele_txt, make_absolute_link
 from ..errors import LocatorError
@@ -163,7 +164,7 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
             return html_or_ele
         mode = 'xpath'
         loc = '.'
-    elif isinstance(loc, str) or is_selenium_loc(loc):
+    elif isinstance(loc, (str, Q)) or is_selenium_loc(loc):
         mode, loc = get_loc(loc)
     else:
         raise LocatorError(ALLOW_VAL=_S._lang.LOC_FORMAT, CURR_VAL=loc)
@@ -245,7 +246,9 @@ def make_session_ele(html_or_ele, loc=None, index=1, method=None):
 
     # ---------------执行查找-----------------
     try:
-        if mode == 'xpath':  # 用lxml内置方法获取lxml的元素对象列表
+        if mode == 'query':  # hybrid 查询：XPath 预筛 + 本地精筛
+            eles = [e for e in html_or_ele.xpath(to_xpath(loc, relative=True)) if loc.match(e)]
+        elif mode == 'xpath':  # 用lxml内置方法获取lxml的元素对象列表
             eles = html_or_ele.xpath(loc)
         elif mode == 'css selector':  # 用css selector获取元素对象列表
             eles = html_or_ele.cssselect(loc)

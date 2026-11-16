@@ -7,6 +7,7 @@
 """
 from typing import Union, Tuple, List, Optional
 
+from .._functions.query_locator import Q
 from .._elements.chromium_element import ChromiumElement
 
 
@@ -91,7 +92,7 @@ class SelectElement(object):
         ...
 
     def by_locator(self,
-                   locator: Union[Tuple[str, str], str],
+                   locator: Union[Tuple[str, str], str, Q],
                    timeout: float = None) -> ChromiumElement:
         """用定位符选择指定的项
         :param locator: 定位符
@@ -139,7 +140,7 @@ class SelectElement(object):
         ...
 
     def cancel_by_locator(self,
-                          locator: Union[Tuple[str, str], str],
+                          locator: Union[Tuple[str, str], str, Q],
                           timeout: float = None) -> ChromiumElement:
         """用定位符取消选择指定的项
         :param locator: 定位符

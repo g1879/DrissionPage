@@ -8,11 +8,26 @@
 from re import split
 
 from .by import By
+from .query_locator import Q, is_pure_xpath, parse_query, to_xpath
 from .._functions.settings import Settings as _S
 from ..errors import LocatorError
 
 
+def is_query_loc(loc):
+    """识别新引擎定位符：Q 对象或以 '?' 开头的查询字符串。"""
+    return isinstance(loc, Q) or (isinstance(loc, str) and loc.startswith('?'))
+
+
+def query_to_loc(loc):
+    """把 Q / '?' 查询编译为定位元组：pure-xpath 返回 ('xpath', xp)，hybrid 返回 ('query', ast)。"""
+    ast = loc.ast if isinstance(loc, Q) else parse_query(loc)
+    return ('xpath', to_xpath(ast)) if is_pure_xpath(ast) else ('query', ast)
+
+
 def locator_to_tuple(loc):
+    if is_query_loc(loc):
+        return ('query', loc.ast if isinstance(loc, Q) else parse_query(loc))
+
     loc = _preprocess(loc)
 
     # 多属性查找
@@ -83,8 +98,8 @@ def _get_arg(text) -> list:
 
 
 def is_str_loc(text):
-    return text.startswith(('.', '#', '@', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:', 'text=',
-                            'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:', 'c='))
+    return text.startswith(('.', '#', '@', '?', 't:', 't=', 'tag:', 'tag=', 'tx:', 'tx=', 'tx^', 'tx$', 'text:',
+                            'text=', 'text^', 'text$', 'xpath:', 'xpath=', 'x:', 'x=', 'css:', 'css=', 'c:', 'c='))
 
 
 def is_selenium_loc(loc):
@@ -94,7 +109,10 @@ def is_selenium_loc(loc):
 
 
 def get_loc(loc, translate_css=False):
-    if isinstance(loc, tuple):
+    if is_query_loc(loc):
+        loc = query_to_loc(loc)
+
+    elif isinstance(loc, tuple):
         loc = translate_loc(loc)
 
     elif isinstance(loc, str):

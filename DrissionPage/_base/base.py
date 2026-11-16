@@ -142,7 +142,7 @@ class DrissionElement(BaseElement):
 
         elif isinstance(level_or_loc, (tuple, str)):
             mode, loc = get_loc(level_or_loc, True)
-            if mode in ('css selector', 'ax'):
+            if mode in ('css selector', 'ax', 'query'):
                 raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
             loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
             loc = f'xpath:./ancestor::{loc}[{index}]'
@@ -161,7 +161,7 @@ class DrissionElement(BaseElement):
             loc = '*' if ele_only else 'node()'
         else:
             mode, loc = get_loc(locator, True)
-            if mode in ('css selector', 'ax'):
+            if mode in ('css selector', 'ax', 'query'):
                 raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
             loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 
@@ -186,7 +186,7 @@ class DrissionElement(BaseElement):
             loc = '*' if ele_only else 'node()'
         else:
             mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if mode in ('css selector', 'ax'):
+            if mode in ('css selector', 'ax', 'query'):
                 raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
             loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 
@@ -222,7 +222,7 @@ class DrissionElement(BaseElement):
             loc = '*' if ele_only else 'node()'
         else:
             mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if mode in ('css selector', 'ax'):
+            if mode in ('css selector', 'ax', 'query'):
                 raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
             loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 

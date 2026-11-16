@@ -14,6 +14,7 @@ from DrissionGet import DrissionGet
 from requests import Session
 from requests.structures import CaseInsensitiveDict
 
+from .._functions.query_locator import Q
 from .driver import Driver
 from .._browsers.chromium import Chromium
 from .._configs.session_options import SessionOptions
@@ -31,11 +32,11 @@ class BaseParser(object):
     timeout: float
 
     def ele(self,
-            locator: Union[Tuple[str, str], str, BaseElement],
+            locator: Union[Tuple[str, str], str, Q, BaseElement],
             index: int = 1,
             timeout: float = None): ...
 
-    def eles(self, locator: Union[Tuple[str, str], str], timeout=None): ...
+    def eles(self, locator: Union[Tuple[str, str], str, Q], timeout=None): ...
 
     def find(self,
              locators: Union[str, List[str], tuple],
@@ -59,20 +60,20 @@ class BaseParser(object):
     def html(self) -> str: ...
 
     def s_ele(self,
-              locator: Union[Tuple[str, str], str, BaseElement, None] = None,
+              locator: Union[Tuple[str, str], str, Q, BaseElement, None] = None,
               index: int = 1) -> SessionElement: ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList: ...
+    def s_eles(self, locator: Union[Tuple[str, str], str, Q]) -> SessionElementsList: ...
 
     def _ele(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None,
              index: Optional[int] = 1,
              raise_err: bool = None,
              method: str = None): ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str],
+                       locator: Union[Tuple[str, str], str, Q],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = False,
@@ -118,7 +119,7 @@ class BaseElement(BaseParser):
         ...
 
     def _ele(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None,
              index: Optional[int] = 1,
              relative: bool = False,
@@ -181,7 +182,7 @@ class DrissionElement(BaseElement):
         ...
 
     def child(self,
-              locator: Union[Tuple[str, str], str, int] = '',
+              locator: Union[Tuple[str, str], str, Q, int] = '',
               index: int = 1,
               timeout: float = None,
               ele_only: bool = True) -> Union[DrissionElement, str, NoneElement]:
@@ -195,7 +196,7 @@ class DrissionElement(BaseElement):
         ...
 
     def prev(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = None,
              ele_only: bool = True) -> Union[DrissionElement, str, NoneElement]:
@@ -209,7 +210,7 @@ class DrissionElement(BaseElement):
         ...
 
     def next(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = None,
              ele_only: bool = True) -> Union[DrissionElement, str, NoneElement]:
@@ -223,7 +224,7 @@ class DrissionElement(BaseElement):
         ...
 
     def before(self,
-               locator: Union[Tuple[str, str], str, int] = '',
+               locator: Union[Tuple[str, str], str, Q, int] = '',
                index: int = 1,
                timeout: float = None,
                ele_only: bool = True) -> Union[DrissionElement, str, NoneElement]:
@@ -237,7 +238,7 @@ class DrissionElement(BaseElement):
         ...
 
     def after(self,
-              locator: Union[Tuple[str, str], str, int] = '',
+              locator: Union[Tuple[str, str], str, Q, int] = '',
               index: int = 1,
               timeout: float = None,
               ele_only: bool = True) -> Union[DrissionElement, str, NoneElement]:
@@ -251,7 +252,7 @@ class DrissionElement(BaseElement):
         ...
 
     def children(self,
-                 locator: Union[Tuple[str, str], str] = '',
+                 locator: Union[Tuple[str, str], str, Q] = '',
                  timeout: float = None,
                  ele_only: bool = True) -> List[Union[DrissionElement, str]]:
         """返回直接子元素元素或节点组成的列表，可用查询语法筛选
@@ -263,7 +264,7 @@ class DrissionElement(BaseElement):
         ...
 
     def prevs(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = None,
               ele_only: bool = True) -> List[Union[DrissionElement, str]]:
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
@@ -275,7 +276,7 @@ class DrissionElement(BaseElement):
         ...
 
     def nexts(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = None,
               ele_only: bool = True) -> List[Union[DrissionElement, str]]:
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
@@ -287,7 +288,7 @@ class DrissionElement(BaseElement):
         ...
 
     def befores(self,
-                locator: Union[Tuple[str, str], str] = '',
+                locator: Union[Tuple[str, str], str, Q] = '',
                 timeout: float = None,
                 ele_only: bool = True) -> List[Union[DrissionElement, str]]:
         """返回后面全部兄弟元素或节点组成的列表，可用查询语法筛选
@@ -299,7 +300,7 @@ class DrissionElement(BaseElement):
         ...
 
     def afters(self,
-               locator: Union[Tuple[str, str], str] = '',
+               locator: Union[Tuple[str, str], str, Q] = '',
                timeout: float = None,
                ele_only: bool = True) -> List[Union[DrissionElement, str]]:
         """返回前面全部兄弟元素或节点组成的列表，可用查询语法筛选
@@ -314,7 +315,7 @@ class DrissionElement(BaseElement):
                       func: str,
                       direction: str,
                       brother: bool,
-                      locator: Union[Tuple[str, str], str] = '',
+                      locator: Union[Tuple[str, str], str, Q] = '',
                       index: int = 1,
                       timeout: float = None,
                       ele_only: bool = True) -> DrissionElement:
@@ -331,7 +332,7 @@ class DrissionElement(BaseElement):
 
     def _get_relatives(self,
                        index: int = None,
-                       locator: Union[Tuple[str, str], str] = '',
+                       locator: Union[Tuple[str, str], str, Q] = '',
                        direction: str = 'following',
                        brother: bool = True,
                        timeout: float = 0.5,

@@ -7,6 +7,7 @@
 """
 from typing import Union, Tuple, Any
 
+from .._functions.query_locator import Q
 from .downloader import DownloadMission
 from .._browsers.chromium import Chromium
 from .._browsers.chromium_context import ChromiumContext
@@ -134,7 +135,7 @@ class BaseWaiter(OriginWaiter):
         ...
 
     def eles_loaded(self,
-                    locators: Union[Tuple[str, str], str, list, tuple],
+                    locators: Union[Tuple[str, str], str, Q, list, tuple],
                     timeout: float = None,
                     any_one: bool = False,
                     raise_err: bool = None) -> bool:

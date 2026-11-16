@@ -11,6 +11,7 @@ from typing import Any, Union, Tuple, Optional
 from requests import Session, Response
 from requests.structures import CaseInsensitiveDict
 
+from .._functions.query_locator import Q
 from .._base.base import BasePage
 from .._configs.session_options import SessionOptions
 from .._elements.session_element import SessionElement
@@ -44,7 +45,7 @@ class SessionPage(BasePage):
         ...
 
     def __call__(self,
-                 locator: Union[Tuple[str, str], str, SessionElement],
+                 locator: Union[Tuple[str, str], str, Q, SessionElement],
                  index: int = 1,
                  timeout: float = None) -> SessionElement:
         """在内部查找元素
@@ -201,7 +202,7 @@ class SessionPage(BasePage):
         ...
 
     def ele(self,
-            locator: Union[Tuple[str, str], str, SessionElement],
+            locator: Union[Tuple[str, str], str, Q, SessionElement],
             index: int = 1,
             timeout: float = None) -> SessionElement:
         """返回页面中符合条件的一个元素、属性或节点文本
@@ -213,7 +214,7 @@ class SessionPage(BasePage):
         ...
 
     def eles(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None) -> SessionElementsList:
         """返回页面中所有符合条件的元素、属性或节点文本
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
@@ -223,7 +224,7 @@ class SessionPage(BasePage):
         ...
 
     def s_ele(self,
-              locator: Union[Tuple[str, str], str, SessionElement] = None,
+              locator: Union[Tuple[str, str], str, Q, SessionElement] = None,
               index: int = 1) -> SessionElement:
         """返回页面中符合条件的一个元素、属性或节点文本
         :param locator: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
@@ -232,7 +233,7 @@ class SessionPage(BasePage):
         """
         ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList:
+    def s_eles(self, locator: Union[Tuple[str, str], str, Q]) -> SessionElementsList:
         """返回页面中符合条件的所有元素、属性或节点文本
         :param locator: 元素的定位信息，可以是元素对象，loc元组，或查询字符串
         :return: SessionElement对象或属性、文本
@@ -240,7 +241,7 @@ class SessionPage(BasePage):
         ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str, SessionElement],
+                       locator: Union[Tuple[str, str], str, Q, SessionElement],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = True,

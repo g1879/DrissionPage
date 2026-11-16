@@ -10,6 +10,7 @@ from typing import Union, Tuple, Any, Optional, Literal
 
 from requests import Session
 
+from .._functions.query_locator import Q
 from .._base.base import BasePage, Messenger
 from .._base.driver import Driver
 from .._browsers.chromium import Chromium
@@ -90,7 +91,7 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def __call__(self,
-                 locator: Union[Tuple[str, str], str, ChromiumElement],
+                 locator: Union[Tuple[str, str], str, Q, ChromiumElement],
                  index: int = 1,
                  timeout: float = None) -> ChromiumElement:
         """在内部查找元素
@@ -400,7 +401,7 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def ele(self,
-            locator: Union[Tuple[str, str], str, ChromiumElement, ChromiumFrame],
+            locator: Union[Tuple[str, str], str, Q, ChromiumElement, ChromiumFrame],
             index: int = 1,
             timeout: float = None) -> ChromiumElement:
         """获取一个符合条件的元素对象
@@ -412,7 +413,7 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def eles(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None) -> ChromiumElementsList:
         """获取所有符合条件的元素对象
         :param locator: 定位符或元素对象
@@ -422,7 +423,7 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def s_ele(self,
-              locator: Union[Tuple[str, str], str] = None,
+              locator: Union[Tuple[str, str], str, Q] = None,
               index: int = 1,
               timeout: float = None) -> SessionElement:
         """查找一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高
@@ -434,7 +435,7 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def s_eles(self,
-               locator: Union[Tuple[str, str], str],
+               locator: Union[Tuple[str, str], str, Q],
                timeout: float = None) -> SessionElementsList:
         """查找所有符合条件的元素以SessionElement列表形式返回
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
@@ -444,7 +445,7 @@ class ChromiumBase(BasePage, Messenger):
         ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str, ChromiumElement, ChromiumFrame],
+                       locator: Union[Tuple[str, str], str, Q, ChromiumElement, ChromiumFrame],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = False,

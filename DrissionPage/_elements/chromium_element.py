@@ -21,6 +21,7 @@ from .._base.base import DrissionElement, BaseElement
 from .._functions.elements import ChromiumElementsList, SessionElementsList
 from .._functions.keys import input_text_or_keys, Keys
 from .._functions.locator import get_loc, locator_to_tuple, quotes_escape
+from .._functions.query_locator import Q, to_xpath
 from .._functions.settings import Settings as _S
 from .._functions.tools import wait_until
 from .._functions.web import make_absolute_link, get_ele_txt, format_html, is_js_func, get_blob
@@ -244,8 +245,8 @@ class ChromiumElement(DrissionElement):
                 if bid else NoneElement(page=self.owner, method='over()', args={'timeout': timeout}))
 
     def offset(self, locator=None, x=None, y=None, timeout=None):
-        if locator and not (isinstance(locator, str) and not locator.startswith(
-                ('x:', 'xpath:', 'x=', 'xpath=', 'c:', 'css:', 'c=', 'css='))):
+        if locator and not ((isinstance(locator, str) and not locator.startswith(
+                ('x:', 'xpath:', 'x=', 'xpath=', 'c:', 'css:', 'c=', 'css='))) or isinstance(locator, Q)):
             raise LocatorError(ALLOW_TYPE=_S._lang.STR_ONLY, CURR_VAL=locator)
 
         if x == y is None:
@@ -290,8 +291,9 @@ class ChromiumElement(DrissionElement):
         return self._get_relative_eles(mode='north', locator=loc_or_pixel, index=index)
 
     def _get_relative_eles(self, mode='north', locator=None, index=1):
-        if locator and not (isinstance(locator, str) and not locator.startswith(
-                ('x:', 'xpath:', 'x=', 'xpath=', 'c:', 'css:', 'c=', 'css=')) or isinstance(locator, int)):
+        if locator and not ((isinstance(locator, str) and not locator.startswith(
+                ('x:', 'xpath:', 'x=', 'xpath=', 'c:', 'css:', 'c=', 'css='))) or isinstance(locator, int)
+                or isinstance(locator, Q)):
             raise LocatorError(ALLOW_TYPE=_S._lang.STR_ONLY, CURR_VAL=locator)
         rect = self.states.has_rect
         if not rect:
@@ -725,7 +727,7 @@ class ShadowRoot(BaseElement):
 
         elif isinstance(level_or_loc, (tuple, str)):
             mode, loc = get_loc(level_or_loc, True)
-            if mode in ('css selector', 'ax'):
+            if mode in ('css selector', 'ax', 'query'):
                 raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
             loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
             loc = f'xpath:./ancestor-or-self::{loc}[{index}]'
@@ -741,7 +743,7 @@ class ShadowRoot(BaseElement):
             loc = '*'
         else:
             mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if mode in ('css selector', 'ax'):
+            if mode in ('css selector', 'ax', 'query'):
                 raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
             loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
 
@@ -753,7 +755,7 @@ class ShadowRoot(BaseElement):
 
     def next(self, locator='', index=1, timeout=None):
         mode, loc = get_loc(locator, True)
-        if mode in ('css selector', 'ax'):
+        if mode in ('css selector', 'ax', 'query'):
             raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
         loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
         loc = f'xpath:./{loc}'
@@ -764,7 +766,7 @@ class ShadowRoot(BaseElement):
 
     def before(self, locator='', index=1, timeout=None):
         mode, loc = get_loc(locator, True)
-        if mode in ('css selector', 'ax'):
+        if mode in ('css selector', 'ax', 'query'):
             raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
         loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
         loc = f'xpath:./preceding::{loc}'
@@ -783,7 +785,7 @@ class ShadowRoot(BaseElement):
             loc = '*'
         else:
             mode, loc = get_loc(locator, True)  # 把定位符转换为xpath
-            if mode in ('css selector', 'ax'):
+            if mode in ('css selector', 'ax', 'query'):
                 raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
             loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
         loc = f'xpath:./{loc}'
@@ -791,7 +793,7 @@ class ShadowRoot(BaseElement):
 
     def nexts(self, locator='', timeout=None):
         mode, loc = get_loc(locator, True)
-        if mode in ('css selector', 'ax'):
+        if mode in ('css selector', 'ax', 'query'):
             raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
         loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
         loc = f'xpath:./{loc}'
@@ -799,7 +801,7 @@ class ShadowRoot(BaseElement):
 
     def befores(self, locator='', timeout=None):
         mode, loc = get_loc(locator, True)
-        if mode in ('css selector', 'ax'):
+        if mode in ('css selector', 'ax', 'query'):
             raise LocatorError(_S._lang.UNSUPPORTED_SYNTAX)
         loc = f'*/text()[contains(., {quotes_escape(loc)})]/..' if mode == 'any' else loc.lstrip('./')
         loc = f'xpath:./preceding::{loc}'
@@ -828,7 +830,10 @@ class ShadowRoot(BaseElement):
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
         mode, loc = get_loc(locator)
-        if mode == 'ax':
+        if mode == 'query':
+            return find_by_sr_query(self, loc, index, timeout)
+
+        elif mode == 'ax':
             return find_by_ax(self.owner, self._backend_id, loc, index, timeout)
 
         elif mode == 'css selector':
@@ -856,7 +861,7 @@ class ShadowRoot(BaseElement):
 
 def find_in_chromium_ele(ele, locator, index=1, timeout=None, relative=True):
     # ---------------处理定位符---------------
-    if isinstance(locator, (str, tuple)):
+    if isinstance(locator, (str, tuple, Q)):
         mode, loc = get_loc(locator)
     else:
         raise LocatorError(ALLOW_TYPE=_S._lang.LOC_FORMAT, CURR_VAL=locator)
@@ -870,7 +875,9 @@ def find_in_chromium_ele(ele, locator, index=1, timeout=None, relative=True):
         timeout = ele.timeout
 
     # ---------------执行查找-----------------
-    if mode == 'xpath':
+    if mode == 'query':
+        return find_by_query_ele(ele, loc, index, timeout, relative)
+    elif mode == 'xpath':
         return find_by_xpath(ele, loc, index, timeout, relative)
     elif mode == 'css selector':
         return find_by_css(ele.owner, ele._node_id, loc, index, timeout)
@@ -878,6 +885,33 @@ def find_in_chromium_ele(ele, locator, index=1, timeout=None, relative=True):
         return find_by_ax(ele.owner, ele._backend_id, loc, index, timeout)
     else:  # any
         return find_by_any(ele, loc, index, timeout, relative)
+
+
+def filter_query_eles(eles, ast, index):
+    """对候选元素列表执行 ast.match() 本地精筛，按 index 语义返回元素、列表或 None。"""
+    matched = [e for e in eles if ast.match(e)]
+    if index is None:
+        return matched if matched else ChromiumElementsList(owner=getattr(eles, 'owner', None))
+    index = index or 1
+    if not matched or abs(index) > len(matched):
+        return None
+    return matched[index - 1] if index > 0 else matched[index]
+
+
+def find_by_query_ele(ele, ast, index, timeout, relative=True):
+    """元素内 hybrid 查询：XPath 预筛候选集 + 本地精筛。"""
+    loc = to_xpath(ast, relative=True)
+    node_txt = 'this.contentDocument' if ele.tag in __FRAME_ELEMENT__ and not relative else 'this'
+    js = make_js_for_find_ele_by_xpath(loc, '7', node_txt)  # 预筛必须取全量候选集
+    return wait_for_ele(do_find_query_ele, target=ele.owner, timeout=timeout, index=index,
+                        ele=ele, ast=ast, js=js, xpath=loc, node_txt=node_txt, ind=index)
+
+
+def do_find_query_ele(ele, ast, js, xpath, node_txt, ind):
+    eles = do_find_xpath(ele, js, xpath, node_txt, None)
+    if not eles or isinstance(eles, NoneElement):
+        return None
+    return filter_query_eles(eles, ast, ind) or None
 
 
 def find_by_ax(page, bid, loc, index, timeout):
@@ -1007,7 +1041,26 @@ def do_find_sr_xpath(ele, loc, ind):
         return eles
     elif not eles:
         return None
+    return _map_sr_eles(ele, eles, ind)
 
+
+def find_by_sr_query(ele, ast, index, timeout):
+    """ShadowRoot 内 hybrid 查询：lxml 预筛 + 本地精筛，再映射回 Chromium 元素。"""
+    return wait_for_ele(do_find_sr_query, target=ele.owner, timeout=timeout, index=index, ele=ele, ast=ast, ind=index)
+
+
+def do_find_sr_query(ele, ast, ind):
+    eles = make_session_ele(ele, f'xpath:{to_xpath(ast, relative=True)}', index=None)
+    if not eles or isinstance(eles, (float, str, int)):
+        return None
+    matched = [e for e in eles if ast.match(e)]
+    if not matched:
+        return None
+    return _map_sr_eles(ele, matched, ind) or None
+
+
+def _map_sr_eles(ele, eles, ind):
+    """把 lxml 元素列表按 css 路径映射回 Chromium 元素，ind 为 None 时返回列表。"""
     css = []
     for i in eles:
         if hasattr(i, 'css_selector'):
@@ -1340,9 +1393,12 @@ class Pseudo(object):
 def _check_ele(ele, loc_data):
     """检查元素是否符合loc_data指定的要求
     :param ele: 元素对象
-    :param loc_data: 格式： {'and': bool, 'args': ['属性名称', '匹配方式', '属性值', 是否否定]}
+    :param loc_data: 格式： {'and': bool, 'args': ['属性名称', '匹配方式', '属性值', 是否否定]}，或 ('query', ast)
     :return: bool
     """
+    if isinstance(loc_data, tuple) and len(loc_data) == 2 and loc_data[0] == 'query':
+        return loc_data[1].match(ele)
+
     attrs = ele.attrs
     if loc_data['and']:
         ok = True
@@ -1352,7 +1408,7 @@ def _check_ele(ele, loc_data):
                 arg = ele.tag
                 symbol = '='
             elif name == 'text()':
-                arg = ele.raw_text
+                arg = ele.text
             elif name is None:
                 arg = None
             else:
@@ -1370,7 +1426,7 @@ def _check_ele(ele, loc_data):
     else:
         ok = False
         for i in loc_data['args']:
-            name, value, symbol, deny = i
+            name, symbol, value, deny = i
             if name == 'tag()':
                 arg = ele.tag
                 symbol = '='
