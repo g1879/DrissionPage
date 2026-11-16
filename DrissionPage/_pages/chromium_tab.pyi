@@ -12,6 +12,7 @@ from typing import Union, Tuple, Any, Optional, Literal
 
 from requests import Session, Response
 
+from .._functions.query_locator import Q
 from .chromium_base import ChromiumBase
 from .chromium_frame import ChromiumFrame
 from .session_page import SessionPage
@@ -56,7 +57,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
         ...
 
     def __call__(self,
-                 locator: Union[Tuple[str, str], str, ChromiumElement, SessionElement],
+                 locator: Union[Tuple[str, str], str, Q, ChromiumElement, SessionElement],
                  index: int = 1,
                  timeout: float = None) -> Union[ChromiumElement, SessionElement]:
         """在内部查找元素
@@ -236,7 +237,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
         ...
 
     def ele(self,
-            locator: Union[Tuple[str, str], str, ChromiumElement, SessionElement],
+            locator: Union[Tuple[str, str], str, Q, ChromiumElement, SessionElement],
             index: int = 1,
             timeout: float = None) -> Union[ChromiumElement, SessionElement]:
         """返回第一个符合条件的元素、属性或节点文本
@@ -248,7 +249,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
         ...
 
     def eles(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None) -> Union[ChromiumElementsList, SessionElementsList]:
         """返回页面中所有符合条件的元素、属性或节点文本
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
@@ -258,7 +259,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
         ...
 
     def s_ele(self,
-              locator: Union[Tuple[str, str], str] = None,
+              locator: Union[Tuple[str, str], str, Q] = None,
               index: int = 1,
               timeout: float = None) -> SessionElement:
         """查找第一个符合条件的元素以SessionElement形式返回，d模式处理复杂页面时效率很高
@@ -269,7 +270,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
         """
         ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str], timeout: float = None) -> SessionElementsList:
+    def s_eles(self, locator: Union[Tuple[str, str], str, Q], timeout: float = None) -> SessionElementsList:
         """查找所有符合条件的元素以SessionElement形式返回，d模式处理复杂页面时效率很高
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间（秒），默认与页面等待时间一致
@@ -316,7 +317,7 @@ class ChromiumTab(ChromiumBase, SessionPage):
         ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str, ChromiumElement, SessionElement, ChromiumFrame],
+                       locator: Union[Tuple[str, str], str, Q, ChromiumElement, SessionElement, ChromiumFrame],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = False,

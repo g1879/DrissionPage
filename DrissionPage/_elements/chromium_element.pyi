@@ -8,6 +8,7 @@
 from pathlib import Path
 from typing import Union, Tuple, List, Any, Literal, Optional, Callable
 
+from .._functions.query_locator import Q
 from .none_element import NoneElement
 from .._base.base import DrissionElement, BaseElement
 from .._elements.session_element import SessionElement
@@ -57,7 +58,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def __call__(self,
-                 locator: Union[Tuple[str, str], str],
+                 locator: Union[Tuple[str, str], str, Q],
                  index: int = 1,
                  timeout: float = None) -> ChromiumElement:
         """在内部查找元素
@@ -169,7 +170,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def child(self,
-              locator: Union[Tuple[str, str], str, int] = '',
+              locator: Union[Tuple[str, str], str, Q, int] = '',
               index: int = 1,
               timeout: float = None,
               ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -183,7 +184,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def prev(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = None,
              ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -197,7 +198,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def next(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = None,
              ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -211,7 +212,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def before(self,
-               locator: Union[Tuple[str, str], str, int] = '',
+               locator: Union[Tuple[str, str], str, Q, int] = '',
                index: int = 1,
                timeout: float = None,
                ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -226,7 +227,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def after(self,
-              locator: Union[Tuple[str, str], str, int] = '',
+              locator: Union[Tuple[str, str], str, Q, int] = '',
               index: int = 1,
               timeout: float = None,
               ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -241,7 +242,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def children(self,
-                 locator: Union[Tuple[str, str], str] = '',
+                 locator: Union[Tuple[str, str], str, Q] = '',
                  timeout: float = None,
                  ele_only: bool = True) -> Union[ChromiumElementsList, List[Union[ChromiumElement, str]]]:
         """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
@@ -253,7 +254,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def prevs(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = None,
               ele_only: bool = True) -> Union[ChromiumElementsList, List[Union[ChromiumElement, str]]]:
         """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -265,7 +266,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def nexts(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = None,
               ele_only: bool = True) -> Union[ChromiumElementsList, List[Union[ChromiumElement, str]]]:
         """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -277,7 +278,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def befores(self,
-                locator: Union[Tuple[str, str], str] = '',
+                locator: Union[Tuple[str, str], str, Q] = '',
                 timeout: float = None,
                 ele_only: bool = True) -> Union[ChromiumElementsList, List[Union[ChromiumElement, str]]]:
         """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -290,7 +291,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def afters(self,
-               locator: Union[Tuple[str, str], str] = '',
+               locator: Union[Tuple[str, str], str, Q] = '',
                timeout: float = None,
                ele_only: bool = True) -> Union[ChromiumElementsList, List[Union[ChromiumElement, str]]]:
         """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -425,7 +426,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def ele(self,
-            locator: Union[Tuple[str, str], str],
+            locator: Union[Tuple[str, str], str, Q],
             index: int = 1,
             timeout: float = None) -> ChromiumElement:
         """返回当前元素下级符合条件的一个元素、属性或节点文本
@@ -437,7 +438,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def eles(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None) -> ChromiumElementsList:
         """返回当前元素下级所有符合条件的子元素、属性或节点文本
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
@@ -447,7 +448,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def s_ele(self,
-              locator: Union[Tuple[str, str], str] = None,
+              locator: Union[Tuple[str, str], str, Q] = None,
               index: int = 1,
               timeout: float = None) -> SessionElement:
         """查找一个符合条件的元素，以SessionElement形式返回
@@ -459,7 +460,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def s_eles(self,
-               locator: Union[Tuple[str, str], str] = None,
+               locator: Union[Tuple[str, str], str, Q] = None,
                timeout: float = None) -> SessionElementsList:
         """查找所有符合条件的元素，以SessionElement列表形式返回
         :param locator: 定位符
@@ -469,7 +470,7 @@ class ChromiumElement(DrissionElement):
         ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str],
+                       locator: Union[Tuple[str, str], str, Q],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = False,
@@ -621,7 +622,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def __call__(self,
-                 locator: Union[Tuple[str, str], str],
+                 locator: Union[Tuple[str, str], str, Q],
                  index: int = 1,
                  timeout: float = None) -> ChromiumElement:
         """在内部查找元素
@@ -712,7 +713,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def child(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               index: int = 1, timeout: float = None) -> ChromiumElement:
         """返回直接子元素元素或节点组成的列表，可用查询语法筛选
         :param locator: 用于筛选的查询语法
@@ -723,7 +724,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def next(self,
-             locator: Union[Tuple[str, str], str] = '',
+             locator: Union[Tuple[str, str], str, Q] = '',
              index: int = 1, timeout: float = None) -> ChromiumElement:
         """返回当前元素后面一个符合条件的同级元素，可用查询语法筛选，可指定返回筛选结果的第几个
         :param locator: 用于筛选的查询语法
@@ -734,7 +735,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def before(self,
-               locator: Union[Tuple[str, str], str] = '',
+               locator: Union[Tuple[str, str], str, Q] = '',
                index: int = 1, timeout: float = None) -> ChromiumElement:
         """返回文档中当前元素前面符合条件的一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
         查找范围不限同级元素，而是整个DOM文档
@@ -746,7 +747,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def after(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               index: int = 1, timeout: float = None) -> ChromiumElement:
         """返回文档中此当前元素后面符合条件的一个元素，可用查询语法筛选，可指定返回筛选结果的第几个
         查找范围不限同级元素，而是整个DOM文档
@@ -757,7 +758,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def children(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
+    def children(self, locator: Union[Tuple[str, str], str, Q] = '', timeout: float = None) -> ChromiumElementsList:
         """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
         :param locator: 用于筛选的查询语法
         :param timeout: 查找超时时间（秒）
@@ -765,7 +766,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def nexts(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
+    def nexts(self, locator: Union[Tuple[str, str], str, Q] = '', timeout: float = None) -> ChromiumElementsList:
         """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
         :param locator: 用于筛选的查询语法
         :param timeout: 查找超时时间（秒）
@@ -773,7 +774,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def befores(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
+    def befores(self, locator: Union[Tuple[str, str], str, Q] = '', timeout: float = None) -> ChromiumElementsList:
         """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
         查找范围不限同级元素，而是整个DOM文档
         :param locator: 用于筛选的查询语法
@@ -782,7 +783,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def afters(self, locator: Union[Tuple[str, str], str] = '', timeout: float = None) -> ChromiumElementsList:
+    def afters(self, locator: Union[Tuple[str, str], str, Q] = '', timeout: float = None) -> ChromiumElementsList:
         """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
         查找范围不限同级元素，而是整个DOM文档
         :param locator: 用于筛选的查询语法
@@ -792,7 +793,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def ele(self,
-            locator: Union[Tuple[str, str], str],
+            locator: Union[Tuple[str, str], str, Q],
             index: int = 1,
             timeout: float = None) -> ChromiumElement:
         """返回当前元素下级符合条件的一个元素
@@ -804,7 +805,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def eles(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None) -> ChromiumElementsList:
         """返回当前元素下级所有符合条件的子元素
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
@@ -814,7 +815,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def s_ele(self,
-              locator: Union[Tuple[str, str], str] = None,
+              locator: Union[Tuple[str, str], str, Q] = None,
               index: int = 1,
               timeout: float = None) -> SessionElement:
         """查找一个符合条件的元素以SessionElement形式返回，处理复杂页面时效率很高
@@ -825,7 +826,7 @@ class ShadowRoot(BaseElement):
         """
         ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str], timeout: float = None) -> SessionElementsList:
+    def s_eles(self, locator: Union[Tuple[str, str], str, Q], timeout: float = None) -> SessionElementsList:
         """查找所有符合条件的元素以SessionElement列表形式返回，处理复杂页面时效率很高
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
         :param timeout: 查找元素超时时间（秒），默认与元素所在页面等待时间一致
@@ -834,7 +835,7 @@ class ShadowRoot(BaseElement):
         ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str],
+                       locator: Union[Tuple[str, str], str, Q],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = False,

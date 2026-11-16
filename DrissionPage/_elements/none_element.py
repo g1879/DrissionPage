@@ -6,6 +6,7 @@
 @Copyright: (c) 2020 by g1879, Inc. All Rights Reserved.
 """
 from .._functions.settings import Settings
+from .._functions.query_locator import Q, parse_query
 from ..errors import ElementNotFoundError
 
 
@@ -30,7 +31,19 @@ class NoneElement(object):
             return self
 
     def __repr__(self):
-        return f'<NoneElement method={self.method}, {", ".join([f"{k}={v}" for k, v in self.args.items()])}>'
+        return f'<NoneElement method={self.method}, {", ".join([f"{k}={v}" for k, v in self.args.items()])}{self._parsed()}>'
+
+    def _parsed(self):
+        """查询定位符未命中时回显解析后的标准式，便于发现拼写错误。"""
+        loc = self.args.get('locator')
+        try:
+            if isinstance(loc, Q):
+                return f', parsed={loc.canonical()}'
+            if isinstance(loc, str) and loc.startswith('?'):
+                return f", parsed={parse_query(loc).canonical()}"
+        except Exception:
+            pass
+        return ''
 
     def __getattr__(self, item):
         if not self._none_ele_return_value:

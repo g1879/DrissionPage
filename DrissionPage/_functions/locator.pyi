@@ -7,12 +7,24 @@
 """
 from typing import Union
 
+from .query_locator import Q
 
-def locator_to_tuple(loc: str) -> dict:
+
+def locator_to_tuple(loc: Union[str, Q]) -> dict:
     """解析定位字符串生成dict格式数据
     :param loc: 待处理的字符串
-    :return: 格式： {'and': bool, 'args': ['属性名称', '匹配方式', '属性值', 是否否定]}
+    :return: 格式： {'and': bool, 'args': ['属性名称', '匹配方式', '属性值', 是否否定]}，查询定位符返回 ('query', ast)
     """
+    ...
+
+
+def is_query_loc(loc: Union[str, Q]) -> bool:
+    """返回loc是否新引擎查询定位符（Q 对象或 '?' 开头字符串）"""
+    ...
+
+
+def query_to_loc(loc: Union[str, Q]) -> tuple:
+    """把 Q / '?' 查询编译为定位元组：pure-xpath 返回 ('xpath', xp)，hybrid 返回 ('query', ast)"""
     ...
 
 
@@ -26,7 +38,7 @@ def is_selenium_loc(loc: tuple) -> bool:
     ...
 
 
-def get_loc(loc: Union[tuple, str],
+def get_loc(loc: Union[tuple, str, Q],
             translate_css: bool = False) -> tuple:
     """接收本库定位语法或selenium定位元组，转换为标准定位元组，可翻译css selector为xpath
     :param loc: 本库定位语法或selenium定位元组

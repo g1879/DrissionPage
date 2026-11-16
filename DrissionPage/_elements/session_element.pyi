@@ -9,6 +9,7 @@ from typing import Union, List, Tuple, Optional
 
 from lxml.html import HtmlElement
 
+from .._functions.query_locator import Q
 from .._base.base import DrissionElement, BaseElement
 from .._elements.chromium_element import ChromiumElement
 from .._functions.elements import SessionElementsList
@@ -26,7 +27,7 @@ class SessionElement(DrissionElement):
         self.page: SessionPage = ...
 
     def __call__(self,
-                 locator: Union[Tuple[str, str], str],
+                 locator: Union[Tuple[str, str], str, Q],
                  index: int = 1,
                  timeout: float = None) -> SessionElement:
         """在内部查找元素
@@ -88,7 +89,7 @@ class SessionElement(DrissionElement):
         ...
 
     def child(self,
-              locator: Union[Tuple[str, str], str, int] = '',
+              locator: Union[Tuple[str, str], str, Q, int] = '',
               index: int = 1,
               timeout: float = None,
               ele_only: bool = True) -> Union[SessionElement, str]:
@@ -102,7 +103,7 @@ class SessionElement(DrissionElement):
         ...
 
     def prev(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = None,
              ele_only: bool = True) -> Union[SessionElement, str]:
@@ -116,7 +117,7 @@ class SessionElement(DrissionElement):
         ...
 
     def next(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = None,
              ele_only: bool = True) -> Union[SessionElement, str]:
@@ -130,7 +131,7 @@ class SessionElement(DrissionElement):
         ...
 
     def before(self,
-               locator: Union[Tuple[str, str], str, int] = '',
+               locator: Union[Tuple[str, str], str, Q, int] = '',
                index: int = 1,
                timeout: float = None,
                ele_only: bool = True) -> Union[SessionElement, str]:
@@ -145,7 +146,7 @@ class SessionElement(DrissionElement):
         ...
 
     def after(self,
-              locator: Union[Tuple[str, str], str, int] = '',
+              locator: Union[Tuple[str, str], str, Q, int] = '',
               index: int = 1,
               timeout: float = None,
               ele_only: bool = True) -> Union[SessionElement, str]:
@@ -160,7 +161,7 @@ class SessionElement(DrissionElement):
         ...
 
     def children(self,
-                 locator: Union[Tuple[str, str], str] = '',
+                 locator: Union[Tuple[str, str], str, Q] = '',
                  timeout: float = None,
                  ele_only: bool = True) -> Union[SessionElementsList, List[Union[SessionElement, str]]]:
         """返回当前元素符合条件的直接子元素或节点组成的列表，可用查询语法筛选
@@ -172,7 +173,7 @@ class SessionElement(DrissionElement):
         ...
 
     def prevs(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = None,
               ele_only: bool = True) -> Union[SessionElementsList, List[Union[SessionElement, str]]]:
         """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -184,7 +185,7 @@ class SessionElement(DrissionElement):
         ...
 
     def nexts(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = None,
               ele_only: bool = True) -> Union[SessionElementsList, List[Union[SessionElement, str]]]:
         """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -196,7 +197,7 @@ class SessionElement(DrissionElement):
         ...
 
     def befores(self,
-                locator: Union[Tuple[str, str], str] = '',
+                locator: Union[Tuple[str, str], str, Q] = '',
                 timeout: float = None,
                 ele_only: bool = True) -> Union[SessionElementsList, List[Union[SessionElement, str]]]:
         """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -209,7 +210,7 @@ class SessionElement(DrissionElement):
         ...
 
     def afters(self,
-               locator: Union[Tuple[str, str], str] = '',
+               locator: Union[Tuple[str, str], str, Q] = '',
                timeout: float = None,
                ele_only: bool = True) -> Union[SessionElementsList, List[Union[SessionElement, str]]]:
         """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -229,7 +230,7 @@ class SessionElement(DrissionElement):
         ...
 
     def ele(self,
-            locator: Union[Tuple[str, str], str],
+            locator: Union[Tuple[str, str], str, Q],
             index: int = 1,
             timeout: float = None) -> SessionElement:
         """返回当前元素下级符合条件的一个元素、属性或节点文本
@@ -241,7 +242,7 @@ class SessionElement(DrissionElement):
         ...
 
     def eles(self,
-             locator: Union[Tuple[str, str], str],
+             locator: Union[Tuple[str, str], str, Q],
              timeout: float = None) -> SessionElementsList:
         """返回当前元素下级所有符合条件的子元素、属性或节点文本
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
@@ -251,7 +252,7 @@ class SessionElement(DrissionElement):
         ...
 
     def s_ele(self,
-              locator: Union[Tuple[str, str], str] = None,
+              locator: Union[Tuple[str, str], str, Q] = None,
               index: int = 1) -> SessionElement:
         """返回当前元素下级符合条件的一个元素、属性或节点文本
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
@@ -260,7 +261,7 @@ class SessionElement(DrissionElement):
         """
         ...
 
-    def s_eles(self, locator: Union[Tuple[str, str], str]) -> SessionElementsList:
+    def s_eles(self, locator: Union[Tuple[str, str], str, Q]) -> SessionElementsList:
         """返回当前元素下级所有符合条件的子元素、属性或节点文本
         :param locator: 元素的定位信息，可以是loc元组，或查询字符串
         :return: SessionElement对象或属性、文本组成的列表
@@ -268,7 +269,7 @@ class SessionElement(DrissionElement):
         ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str],
+                       locator: Union[Tuple[str, str], str, Q],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = False,

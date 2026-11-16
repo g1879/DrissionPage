@@ -16,12 +16,13 @@ from DrissionRecord.tools import make_valid_name
 
 from .._base.base import BasePage, Messenger
 from .._configs.session_options import SessionOptions
-from .._elements.chromium_element import run_js, make_chromium_eles, find_by_ax, wait_for_ele, make_ele
+from .._elements.chromium_element import run_js, make_chromium_eles, find_by_ax, wait_for_ele, make_ele, filter_query_eles
 from .._elements.none_element import NoneElement
 from .._elements.session_element import make_session_ele
 from .._functions.cookies import CookiesList
 from .._functions.elements import SessionElementsList, get_frame, ChromiumElementsList
 from .._functions.locator import get_loc, quotes_escape
+from .._functions.query_locator import Q, to_xpath
 from .._functions.settings import Settings as _S
 from .._functions.tools import wait_until
 from .._functions.web import location_in_viewport, NavResult
@@ -456,7 +457,7 @@ class ChromiumBase(BasePage, Messenger):
                 if self.wait.eles_loaded(locator, timeout=timeout) else SessionElementsList())
 
     def _find_elements(self, locator, timeout, index=1, relative=False, raise_err=None):
-        if isinstance(locator, (str, tuple)):
+        if isinstance(locator, (str, tuple, Q)):
             mode, loc = get_loc(locator)
         elif locator._type in ('ChromiumElement', 'ChromiumFrame'):
             return locator
@@ -464,7 +465,9 @@ class ChromiumBase(BasePage, Messenger):
             raise LocatorError(ALLOW_TYPE=_S._lang.ELE_OR_LOC, CURR_VAL=locator)
         self.wait.doc_loaded()
 
-        if mode == 'ax':
+        if mode == 'query':
+            return find_by_query(self, loc, index, timeout)
+        elif mode == 'ax':
             self._enable_domain('Accessibility')
             bid = self._run_cdp('Accessibility.getRootAXNode', frameId=self._frame_id)['node']['backendDOMNodeId']
             return find_by_ax(self, bid, loc, index, timeout)
@@ -995,6 +998,19 @@ def discardSearchResults(page, searchId):
 
 def find_by_syntax(page, loc, index, timeout):
     return wait_for_ele(do_find_syntax, target=page, timeout=timeout, index=index, page=page, loc=loc, ind=index)
+
+
+def find_by_query(page, ast, index, timeout):
+    """hybrid 查询：XPath 预筛出候选集，再用 ast.match() 本地精筛。"""
+    return wait_for_ele(do_find_query, target=page, timeout=timeout, index=index,
+                        page=page, ast=ast, ind=index)
+
+
+def do_find_query(page, ast, ind):
+    eles = do_find_syntax(page, to_xpath(ast), None)
+    if not eles:
+        return None
+    return filter_query_eles(eles, ast, ind) or None
 
 
 def find_by_any(page, loc, index, timeout):

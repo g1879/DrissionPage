@@ -8,6 +8,7 @@
 from pathlib import Path
 from typing import Union, Tuple, List, Any, Optional, Literal
 
+from .._functions.query_locator import Q
 from .chromium_base import ChromiumBase
 from .chromium_tab import ChromiumTab
 from .._elements.chromium_element import ChromiumElement, ShadowRoot
@@ -48,7 +49,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def __call__(self,
-                 locator: Union[Tuple[str, str], str],
+                 locator: Union[Tuple[str, str], str, Q],
                  index: int = 1,
                  timeout: float = None) -> ChromiumElement:
         """在内部查找元素
@@ -279,7 +280,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def parent(self,
-               level_or_loc: Union[Tuple[str, str], str, int] = 1,
+               level_or_loc: Union[Tuple[str, str], str, Q, int] = 1,
                index: int = 1,
                timeout: float = 0) -> ChromiumElement:
         """返回上面某一级父元素，可指定层数或用查询语法定位
@@ -291,7 +292,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def prev(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = 0,
              ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -305,7 +306,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def next(self,
-             locator: Union[Tuple[str, str], str, int] = '',
+             locator: Union[Tuple[str, str], str, Q, int] = '',
              index: int = 1,
              timeout: float = 0,
              ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -319,7 +320,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def before(self,
-               locator: Union[Tuple[str, str], str, int] = '',
+               locator: Union[Tuple[str, str], str, Q, int] = '',
                index: int = 1,
                timeout: float = None,
                ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -334,7 +335,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def after(self,
-              locator: Union[Tuple[str, str], str, int] = '',
+              locator: Union[Tuple[str, str], str, Q, int] = '',
               index: int = 1,
               timeout: float = None,
               ele_only: bool = True) -> Union[ChromiumElement, str]:
@@ -349,7 +350,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def prevs(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = 0,
               ele_only: bool = True) -> List[Union[ChromiumElement, str]]:
         """返回当前元素前面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -361,7 +362,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def nexts(self,
-              locator: Union[Tuple[str, str], str] = '',
+              locator: Union[Tuple[str, str], str, Q] = '',
               timeout: float = 0,
               ele_only: bool = True) -> List[Union[ChromiumElement, str]]:
         """返回当前元素后面符合条件的同级元素或节点组成的列表，可用查询语法筛选
@@ -373,7 +374,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def befores(self,
-                locator: Union[Tuple[str, str], str] = '',
+                locator: Union[Tuple[str, str], str, Q] = '',
                 timeout: float = None,
                 ele_only: bool = True) -> List[Union[ChromiumElement, str]]:
         """返回文档中当前元素前面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -386,7 +387,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def afters(self,
-               locator: Union[Tuple[str, str], str] = '',
+               locator: Union[Tuple[str, str], str, Q] = '',
                timeout: float = None,
                ele_only: bool = True) -> List[Union[ChromiumElement, str]]:
         """返回文档中当前元素后面符合条件的元素或节点组成的列表，可用查询语法筛选
@@ -435,7 +436,7 @@ class ChromiumFrame(ChromiumBase):
         ...
 
     def _find_elements(self,
-                       locator: Union[Tuple[str, str], str, ChromiumElement, ChromiumFrame],
+                       locator: Union[Tuple[str, str], str, Q, ChromiumElement, ChromiumFrame],
                        timeout: float,
                        index: Optional[int] = 1,
                        relative: bool = False,

@@ -23,5 +23,10 @@ from ._browsers.chromium import Chromium
 from ._pages.session_page import SessionPage
 from ._configs.chromium_options import ChromiumOptions
 from ._configs.session_options import SessionOptions
+from ._functions.query_locator import Q, explain_loc
+from .errors import LocatorError
 
 from .version import __version__
+
+__all__ = ['Chromium', 'SessionPage', 'ChromiumOptions', 'SessionOptions', 'Q', 'LocatorError', 'explain_loc',
+           '__version__']
